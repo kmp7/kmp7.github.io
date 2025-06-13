@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini+kmp</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - UK Languages (Table 1): Goal: Inform scale. Viz: Chart.js Bar Chart. Interaction: Hover. Justification: Clear comparison.
+        - "X-glish" Details (Chinglish, Spanglish, etc. + Table 2 data + qualitative text): Goal: Detail specific mixes. Presentation: Tabbed textual content, info cards. Interaction: Click tabs to switch. Justification: Organized exploration of each mix and its context.
+        - Explanations (Intro, Why No Stats, Significance): Goal: Contextualize/Summarize. Presentation: Formatted text. Interaction: Read. Justification: Convey report's narrative.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+         header {
+            background-color: var(--primary-color);
+            color: var(--header-text-color);
+            padding: 20px 0;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            background-image: linear-gradient(135deg, var(--primary-color) 0%, #2c3e50 100%);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+		body { font-family: 'Inter', sans-serif; background-color: #fdfbf7; color: #333; }
+        .tab-button { transition: all 0.3s ease; }
+        .tab-button.active { background-color: #4A5568; color: white; }
+        .tab-button:hover:not(.active) { background-color: #E2E8F0; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .chart-container { position: relative; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; height: 400px; max-height: 50vh; }
+        h1, h2, h3 { color: #2D3748; }
+        .nav-button.active { background-color: #2c5282; color: white; }
+        .nav-button:hover:not(.active) { background-color: #bee3f8; }
+        .card { background-color: #fff; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
+        .accent-color { color: #3871C1; } /* A calm blue accent */
+        .bg-accent { background-color: #3871C1; }
+        .border-accent { border-color: #3871C1; }
+		 header {
+            background-color: var(--primary-color);
+            color: var(--header-text-color);
+            padding: 20px 0;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            background-image: linear-gradient(135deg, var(--primary-color) 0%, #2c3e50 100%);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+		
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="antialiased">
+    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-5xl">
+
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold mb-2">Языковая мозаика Лондона</h1>
+            <p class="text-lg text-gray-600">Интерактивное LLM-исследование стохастических языковых смешений</p>
+			
+        </header>
+
+        <nav class="mb-8 flex flex-wrap justify-center gap-2">
+            <button class="nav-button text-sm sm:text-base py-2 px-3 sm:px-4 rounded-lg font-semibold text-gray-700 bg-gray-200 shadow-sm" data-target="intro">Введение</button>
+            <button class="nav-button text-sm sm:text-base py-2 px-3 sm:px-4 rounded-lg font-semibold text-gray-700 bg-gray-200 shadow-sm" data-target="landscape">Языковой Ландшафт</button>
+            <button class="nav-button text-sm sm:text-base py-2 px-3 sm:px-4 rounded-lg font-semibold text-gray-700 bg-gray-200 shadow-sm" data-target="xglishes">"X-глиши"</button>
+            <button class="nav-button text-sm sm:text-base py-2 px-3 sm:px-4 rounded-lg font-semibold text-gray-700 bg-gray-200 shadow-sm" data-target="no_stats">Статистика</button>
+            <button class="nav-button text-sm sm:text-base py-2 px-3 sm:px-4 rounded-lg font-semibold text-gray-700 bg-gray-200 shadow-sm" data-target="significance">Роль</button>
+			<button class="nav-button text-sm sm:text-base py-2 px-3 sm:px-4 rounded-lg font-semibold text-gray-700 bg-gray-200 shadow-sm" data-target="kmp">Об исследовании</button>
+        </nav>
+
+        <main>
+            <section id="intro" class="main-content-section card p-6 rounded-lg mb-6">
+                <h2 class="text-2xl font-semibold mb-4">Добро пожаловать!</h2>
+                <p class="mb-3 text-gray-700 leading-relaxed">Лондон – это смешение культур и языков. Здесь говорят более чем на 300 языках, что создает уникальную среду для их стохастического взаимодействия и смешения.  </p>
+				 <p class="mb-3 text-gray-700 leading-relaxed">В результате появляются так называемые "X-глиши" – гибридные формы языка, такие как Чинглиш, Спанглиш, Арабглиш и другие. Они отражают активное переключение кодов и трансъязыковые практики в мультикультурных сообществах города.</p>
+                <p class="text-gray-700 leading-relaxed">Точные количественные данные о распространенности этих стохастических языковых смешений отсутствуют. Поэтому исследование сосредоточено на качественных данных, демографических показателях и социолингвистических, чтобы осветить природу, функции и значение этих стохастических языковых явлений. Их существование, даже без точных цифр, является мощным показателем глубокой мультиязыковой интеграции Лондона.</p>
+            </section>
+
+            <section id="landscape" class="main-content-section card p-6 rounded-lg mb-6" style="display: none;">
+                <h2 class="text-2xl font-semibold mb-4">Языковой ландшафт Великобритании</h2>
+                <p class="mb-4 text-gray-700 leading-relaxed">Чтобы понять контекст языковых смешений, важно взглянуть на общую картину. Хотя английский является основным языком, в Великобритании представлено множество других языков. Данные переписи 2021 года и недавних опросов показывают масштабы этого разнообразия. Эта информация не дает прямых оценок распространенности "X-глишей", но указывает на размер сообществ, где такие смешения наиболее вероятны.</p>
+                <div class="chart-container my-6">
+                    <canvas id="ukLanguagesChart"></canvas>
+                </div>
+                <p class="text-sm text-gray-600 text-center">Наведите курсор на столбцы для получения точных данных.</p>
+            </section>
+
+            <section id="xglishes" class="main-content-section card p-6 rounded-lg mb-6" style="display: none;">
+                <h2 class="text-2xl font-semibold mb-4">"X-глиши" в Лондоне: подробный Обзор</h2>
+                <p class="mb-6 text-gray-700 leading-relaxed">Здесь вы можете подробно ознакомиться с различными видами "X-глишей", упомянутых в отчете. Выберите интересующий вас языковой гибрид, чтобы узнать о его характеристиках, связанных с ним сообществах и особенностях использования в Лондоне. Помните, что точной статистики распространенности этих форм нет, но мы предоставляем контекстную информацию о численности соответствующих языковых групп.</p>
+                <div class="flex flex-wrap justify-center gap-2 mb-6">
+                    <button class="tab-button py-2 px-4 rounded-md font-medium" data-xglishtarget="chinglish">Чинглиш</button>
+                    <button class="tab-button py-2 px-4 rounded-md font-medium" data-xglishtarget="spanglish">Спанглиш</button>
+                    <button class="tab-button py-2 px-4 rounded-md font-medium" data-xglishtarget="arabglish">Арабглиш</button>
+                    <button class="tab-button py-2 px-4 rounded-md font-medium" data-xglishtarget="hinglish_pinglish">Хинглиш/Пинглиш</button>
+                    <button class="tab-button py-2 px-4 rounded-md font-medium" data-xglishtarget="runglish">Рунглиш</button>
+                    <button class="tab-button py-2 px-4 rounded-md font-medium" data-xglishtarget="franglais">Франгле</button>
+                    <button class="tab-button py-2 px-4 rounded-md font-medium" data-xglishtarget="denglish">Денглиш</button>
+                </div>
+
+                <div id="xGlishContent" class="mt-4 space-y-4">
+                    </div>
+            </section>
+
+            <section id="no_stats" class="main-content-section card p-6 rounded-lg mb-6" style="display: none;">
+                <h2 class="text-2xl font-semibold mb-4">Почему нет точной статистики распространенности "X-глишей"?</h2>
+                <p class="mb-3 text-gray-700 leading-relaxed">Основной запрос пользователя часто касается статистики или приблизительных оценок распространенности языковых смешений. Однако важно понимать, почему такая количественная оценка по своей сути трудна для этих динамичных лингвистических явлений.</p>
+                <ul class="list-disc list-inside space-y-2 text-gray-700 leading-relaxed">
+                    <li><strong>Различие между присутствием языка и активным смешением:</strong> Официальные данные (переписи, опросы) фиксируют количество носителей языка, но не то, как часто они используют гибридные формы. Например, знание числа носителей польского языка не говорит о распространенности "понглиша".</li>
+                    <li><strong>Методологические трудности:</strong> Языковое смешение (переключение кодов, трансъязычие) – текучее, часто бессознательное явление, сильно зависящее от контекста. Это делает его устойчивым к статическим, крупномасштабным статистическим измерениям. Традиционные опросы с трудом фиксируют спонтанное, неформальное использование языка.</li>
+                    <li><strong>Сложность определения:</strong> Точное определение того, что считать отдельной разновидностью "X-глиш" (в отличие от общего переключения кодов или заимствований), часто неоднозначно и обсуждается в лингвистике.</li>
+                    <li><strong>Опора на качественные исследования:</strong> Большинство данных о языковом смешении в Лондоне получено из академических исследований, фокусирующихся на том, *как* и *почему* эти явления происходят (например, для формирования идентичности, в определенных социальных ситуациях). Эти методы дают богатые детали, но не количественную статистику распространенности.</li>
+                </ul>
+                 <p class="mt-4 text-gray-700 leading-relaxed">Таким образом, отсутствие точных цифр не означает отсутствия явления. Это подчеркивает, что "X-глиши" – это качественные, перформативные аспекты языка, отражающие живой опыт многоязычия.</p>
+            </section>
+
+            <section id="significance" class="main-content-section card p-6 rounded-lg mb-6" style="display: none;">
+                <h2 class="text-2xl font-semibold mb-4">Социолингвистическое значение и культурные последствия</h2>
+                <p class="mb-3 text-gray-700 leading-relaxed">Явления "X-глиш" в Лондоне – это не просто лингвистическое любопытство. Они имеют глубокое социолингвистическое и культурное значение:</p>
+                <ul class="list-disc list-inside space-y-3 text-gray-700 leading-relaxed">
+                    <li><strong>Формирование идентичности:</strong> Языковое смешение позволяет говорящим ориентироваться в различных аспектах своей идентичности, формировать чувство принадлежности к сообществу и сохранять свое наследие, особенно для потомков мигрантов.</li>
+                    <li><strong>Социальная сплоченность:</strong> Внутри сообществ гибридные языковые формы могут функционировать как "инсайдерский жаргон", укрепляя внутригрупповые связи.</li>
+                    <li><strong>Культурное выражение:</strong> "X-глиши" отражают гибридные идентичности людей, живущих в транснациональном пространстве, и являются творческой лингвистической манипуляцией, расширяющей грамматические границы.</li>
+                    <li><strong>Восприятие и отношение:</strong> Несмотря на свою функциональность, языковое смешение может подвергаться социальной стигматизации. Давление говорить на "более престижном" акценте может непропорционально затрагивать рабочие классы и этнические меньшинства. Однако наблюдается и обратная тенденция: молодые поколения все чаще "узаконивают" практику языкового смешения (например, Хинглиш).</li>
+                    <li><strong>Эволюция языка:</strong> Эти смешения активно способствуют формированию и эволюции новых городских английских языков, таких как Мультикультурный Лондонский Английский (MLE).</li>
+                </ul>
+                <p class="mt-4 font-semibold text-gray-800 leading-relaxed">В конечном счете, явления "X-глиш" подчеркивают идентичность Лондона как по-настоящему глобального города, где языковые границы текучи, постоянно обсуждаются и обогащают его культурную ткань. Их распространенность – это качественный показатель глубокой мультикультурной интеграции и продолжающейся языковой эволюции.</p>
+            </section>
+			
+			
+			<section id="kmp" class="main-content-section card p-6 rounded-lg mb-6" style="display: none;">
+                <h2 class="text-2xl font-semibold mb-4">Об исследовании</h2>
+                <p class="mb-3 text-gray-700 leading-relaxed">Исследование запросу <strong>kmp </strong></p>
+				 <p class="mb-3 text-gray-700 leading-relaxed">Исследование проведено <strong> LLM Gemini 2.5</strong>  в режиме Deep Research</p>
+				 <p class="mb-3 text-gray-700 leading-relaxed"><strong>Дата проведения исследования </strong> 25.05.2025</p>
+				 <p class="mb-3 text-gray-700 leading-relaxed"><strong>Время проведения исследования </strong>   19:07 - 19:11</p><br>
+				
+				<h2 class="text-2xl font-semibold mb-4">kmp-prompt (запрос на исследование):</h2>
+				<p class="mb-3 text-gray-700 leading-relaxed">В Лондоне, как и в других крупных мегаполисах, английский язык представляет собой мозаику различных диалектов и языковых влияний. Примеры таких языковых смешений:</p>	
+                <ul class="list-disc list-inside space-y-3 text-gray-700 leading-relaxed">
+                    <li>Chinglish (Китайский английский)</li>
+					<li>Spanglish (Испанский английский)</li>
+					<li>Hinglish (Хинди английский)</li></ul><br>
+                <p class="mb-3 text-gray-700 leading-relaxed">Есть ли статистика или любые другие приблизительные оценки распространенности языковых смешений?</p><br><br>
+				
+				<h2 class="text-2xl font-semibold mb-4">Gemini 2.5:</h2>
+				 <p class="mb-3 text-gray-700 leading-relaxed">Вот какой получился план. Если вы хотите что-то изменить, прежде чем я начну исследование, сообщите мне.</p>
+				 <p class="mb-3 text-gray-700 leading-relaxed"><strong>Языковые смешения Лондона: статистика</strong></p>
+				 <p class="mb-3 text-gray-700 leading-relaxed"><strong>Исследовать сайты</strong></p>
+				  <ul class="list-disc list-inside space-y-3 text-gray-700 leading-relaxed">
+                    <li>(1) Найти официальные статистические данные или отчеты о языковом использовании и лингвистическом разнообразии в Лондоне, уделяя особое внимание распространенности языков, на которых говорят различные общины.</li>
+					<li>(2) Искать академические исследования, лингвистические работы или социологические отчеты, конкретно анализирующие языковые контакты, переключение кодов и появление гибридных языков (таких как Chinglish, Spanglish и т.д.) в различных иммигрантских общинах Лондона.</li>
+					<li>(3) Изучить демографические данные по основным этническим и языковым общинам Лондона (например, китайской, латиноамериканской, арабской, индийской, пакистанской, русской, французской, немецкой), чтобы понять потенциальный размер и распределение населения, где эти языковые смешения могут быть распространены.</li>
+					<li>(4) Искать отчеты или публикации культурных центров, общественных организаций или языковых институтов в Лондоне, которые документируют или обсуждают использование этих конкретных языковых смешений в соответствующих общинах.</li>
+					<li>(5) Проанализировать полученные данные из этих источников для выявления любых количественных данных, опросов или качественных оценок, которые предоставляют приблизительные оценки или индикаторы частоты или распространенности Chinglish, Spanglish, Arablish, Hinglish, Pinglish, Runglish, Franglais и Denglish в Лондоне.</li></ul><br>
+				 <p class="mb-3 text-gray-700 leading-relaxed"><strong>Ещё</strong></p>
+				 <p class="mb-3 text-gray-700 leading-relaxed">Анализировать результаты</p>
+				 <p class="mb-3 text-gray-700 leading-relaxed">Создать отчет</p>
+				<p class="mb-3 text-gray-700 leading-relaxed">Результат будет готов через несколько минут</p><br><br>
+
+				<h2 class="text-2xl font-semibold mb-4">kmp-примечание</h2>
+				<p class="mb-3 text-gray-700 leading-relaxed">В отчете Gemini 2.5 использованы внешние сетевые зависимости:</p>	
+                <ul class="list-disc list-inside space-y-3 text-gray-700 leading-relaxed">
+                    <li>https://cdn.tailwindcss.com</li>
+					<li>https://cdn.jsdelivr.net/npm/chart.js</li>
+					<li>https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap</li></ul><br>
+                
+				<p class="text-sm italic text-gray-600 bg-yellow-50 p-2 rounded-md">Для корректного отображения отчета должна быть доступность этих ресурсов для пользователя</p>
+				 
+				 
+				 
+				 
+
+
+            </section>
+			
+        </main>
+
+        <footer class="text-center mt-12 py-6 border-t border-gray-300">
+            <p class="text-sm text-gray-500">&copy; <span id="currentYear"></span> Языковая Мозаика Лондона.<br> <br>Бережная образовательная kmp-адаптация экспертного отчета Gemini 2.5.</p>
+        </footer>
+    </div>
+
+    <script>
+        const ukLanguagesData = {
+            labels: ['Польский', 'Пенджабский', 'Урду', 'Бенгальский/Силхетский', 'Румынский', 'Арабский', 'Португальский', 'Испанский', 'Гуджарати', 'Французский'],
+            datasets: [{
+                label: 'Количество носителей в Великобритании (приблизительно)',
+                data: [1100000, 543000, 541000, 479000, 472000, 367000, 224000, 215000, 213000, 204000],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                    'rgba(199, 199, 199, 0.7)',
+                    'rgba(83, 102, 255, 0.7)',
+                    'rgba(100, 255, 100, 0.7)',
+                    'rgba(255, 100, 100, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)',
+                    'rgba(199, 199, 199, 1)',
+                    'rgba(83, 102, 255, 1)',
+                    'rgba(100, 255, 100, 1)',
+                    'rgba(255, 100, 100, 1)'
+                ],
+                borderWidth: 1
+            }]
+        };
+
+        const xGlishDetails = {
+            chinglish: {
+                title: "Чинглиш (Китайский английский)",
+                definition: "Смесь китайского и английского языков, часто под влиянием культурных и когнитивных особенностей китайских носителей. Характеризуется специфическими лексическими и синтаксическими особенностями (например, 'good good study, day day up').",
+                community: "Растущее китайское население Лондона, особенно в районах как Чайнатаун. Языковые школы предлагают уроки мандаринского и кантонского.",
+                insights_title: "Ключевые наблюдения:",
+                insights: [
+                    "Может препятствовать межкультурной коммуникации, но также признается как отдельная разновидность.",
+                    "Академически различают 'чинглиш' (гибрид) и 'китайский английский' (China English, CE) – признанную разновидность.",
+                    "Глобальное распространение китайского английского подчеркивает эволюцию английского языка."
+                ],
+                stats_note: "Точных данных о распространенности чинглиша в Лондоне нет, но активное китайское языковое присутствие создает условия для его использования."
+            },
+            spanglish: {
+                title: "Спанглиш (Испанский английский)",
+                definition: "Смесь испанского и английского языков, распространенная среди латиноамериканских сообществ.",
+                community: "В Лондоне проживает до 300 000 испаноязычных латиноамериканцев, сосредоточенных в Ламбете, Саутворке (район Элефант-энд-Касл известен как 'Латинский квартал').",
+                insights_title: "Ключевые наблюдения:",
+                insights: [
+                    "Исследования не предоставляют данных о распространенности 'спанглиша' в Лондоне, но отмечают использование обоих языков латиноамериканскими мигрантами.",
+                    "Частый разрыв во владении английским между детьми, родившимися в Великобритании, и мигрантами первого поколения может способствовать смешению.",
+                    "Отсутствие данных может указывать на то, что явление менее формализовано или изучено в Великобритании по сравнению с США."
+                ],
+                stats_note: "Конкретных статистических данных о спанглише в Лондоне нет, но размер и концентрация сообщества указывают на потенциал для языкового контакта."
+            },
+            arabglish: {
+                title: "Арабглиш (Арабский английский)",
+                definition: "Смесь арабского и английского языков.",
+                community: "В Лондоне проживает около 40% арабского населения Великобритании (около 140 000 в 2021 г.), с концентрацией в Вестминстере, Бренте, Кенсингтоне и Челси, Илинге.",
+                insights_title: "Ключевые наблюдения:",
+                insights: [
+                    "Исследования показывают, что дети в арабоязычных общинах Лондона часто используют смесь английского и разговорного арабского с взрослыми.",
+                    "Наблюдается языковой сдвиг: уровень владения арабским у детей ниже, что указывает на межпоколенческий языковой разрыв.",
+                    "'Арабглиш' может служить функциональной адаптацией для общения между поколениями с разным уровнем владения языками.",
+                    "Лингвистические влияния арабоязычных сообществ могут вносить вклад в Мультикультурный Лондонский Английский (MLE)."
+                ],
+                stats_note: "Прямых статистических данных о распространенности арабглиша нет, но качественные исследования подтверждают его использование в арабских общинах."
+            },
+            hinglish_pinglish: {
+                title: "Хинглиш (Хинди-Английский) и Пинглиш (Пенджабский-Английский)",
+                definition: "Хинглиш – смесь хинди и английского. Пинглиш – смесь пенджабского и английского, часто используется взаимозаменяемо с 'пакистанским английским'.",
+                community: "Пенджабский и урду – одни из самых распространенных языков в Великобритании. Бенгальский/силхетский также широко представлены. Сообщества сосредоточены в Тауэр-Хамлетс (бенгальский), Саутхолле и Уэмбли (пенджабский/урду).",
+                insights_title: "Ключевые наблюдения:",
+                insights: [
+                    "Хинглиш популярен среди молодежи, распространяется из неформальных контекстов в более формальные.",
+                    "Пинглиш включает заимствования из персидского, арабского и широко используется в соцсетях.",
+                    "Оба включают активное переключение кодов и творческое смешение (например, 'dance kar').",
+                    "Ключевая демографическая группа – иммигранты второго/третьего поколения, двуязычные.",
+                    "Прогнозируется, что число носителей хинглиша в мире может превысить число носителей английского как родного."
+                ],
+                stats_note: "Точных цифр по Лондону нет, но глобальная значимость и размер южноазиатской диаспоры указывают на широкое использование."
+            },
+            runglish: {
+                title: "Рунглиш (Русский английский)",
+                definition: "Смесь русского и английского языков. Может относиться к базилектальной подразновидности русского английского или к более широкому англо-русскому взаимодействию.",
+                community: "В Лондоне существует русскоязычное сообщество, однако конкретные данные о его численности и концентрации в контексте 'рунглиша' в отчете не детализированы так, как для других групп.",
+                insights_title: "Ключевые наблюдения:",
+                insights: [
+                    "Иногда ассоциируется с пародийным русским английским или лингвистической игрой.",
+                    "Русскоязычные сталкиваются с определенными трудностями в произношении английского.",
+                    "Академические обсуждения 'рунглиша' часто фокусируются на внутрироссийской коммуникации или контекстах за пределами Великобритании (например, Брайтон-Бич, США).",
+                    "Специфическое проявление и изучение 'рунглиша' в лондонской диаспоре может быть менее формально задокументировано."
+                ],
+                stats_note: "Информация о распространенности или характеристиках рунглиша в Лондоне в предоставленном отчете ограничена."
+            },
+            franglais: {
+                title: "Франгле (Французский английский)",
+                definition: "Появление англицизмов или американизмов во французском языке. В контексте Лондона – смешение языков франкоязычными жителями.",
+                community: "Французский – один из наиболее распространенных языков в Великобритании, часто слышен в Лондоне. Значительное присутствие франкоязычных.",
+                insights_title: "Ключевые наблюдения:",
+                insights: [
+                    "'Лондонско-французское трансъязычие' функционирует как спонтанный инсайдерский жаргон, способствуя формированию идентичности сообщества.",
+                    "Смешение часто описывается как 'когнитивно более легкое' для говорящих.",
+                    "Может приводить к социальной стигматизации при взаимодействии с монолингвальными франкоязычными во Франции из-за законодательной защиты французского языка там.",
+                    "Это создает 'расщепленный габитус' для двуязычных в диаспоре."
+                ],
+                stats_note: "Статистики распространенности франгле нет, но качественные исследования подтверждают его роль в лондонском франкоязычном сообществе."
+            },
+            denglish: {
+                title: "Денглиш (Немецкий английский)",
+                definition: "Сочетание немецкого и английского, характеризующееся интеграцией английских слов и фраз в немецкие предложения.",
+                community: "В Лондоне проживает большая община немцев, с концентрацией в северо-западных и южных районах, а также в Ричмонде.",
+                insights_title: "Ключевые наблюдения:",
+                insights: [
+                    "Часто встречается в профессиональной среде (английская терминология воспринимается как современная).",
+                    "Включает прямые англицизмы ('Show') и псевдоанглицизмы ('Handy' для мобильного телефона).",
+                    "Анекдотические свидетельства указывают на использование 'гинглиша' (денглиша) в неформальной обстановке, например, в пабах, для когнитивной легкости.",
+                    "Ненормативная лексика часто используется на немецком или 'гинглише'."
+                ],
+                stats_note: "Количественных данных нет, но анекдотические свидетельства и размер немецкой общины указывают на его использование в определенных контекстах."
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+            const ctx = document.getElementById('ukLanguagesChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: ukLanguagesData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString('ru-RU');
+                                    }
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    autoSkip: false,
+                                    maxRotation: 45,
+                                    minRotation: 45,
+                                    callback: function(value, index, values) {
+                                        const label = this.getLabelForValue(value);
+                                        return label.length > 16 ? label.substring(0, 16) + '...' : label;
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            label += context.parsed.y.toLocaleString('ru-RU');
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const navButtons = document.querySelectorAll('.nav-button');
+            const mainSections = document.querySelectorAll('.main-content-section');
+            const xGlishTabButtons = document.querySelectorAll('#xglishes .tab-button');
+            const xGlishContentDiv = document.getElementById('xGlishContent');
+
+            function activateMainSection(targetId) {
+                mainSections.forEach(section => {
+                    section.style.display = section.id === targetId ? 'block' : 'none';
+                    section.classList.toggle('active', section.id === targetId);
+                });
+                navButtons.forEach(button => {
+                    button.classList.toggle('active', button.dataset.target === targetId);
+                });
+            }
+            
+            navButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    activateMainSection(this.dataset.target);
+                });
+            });
+
+            activateMainSection('intro');
+
+
+            function displayXGlishContent(xGlishKey) {
+                const detail = xGlishDetails[xGlishKey];
+                if (!detail) {
+                    xGlishContentDiv.innerHTML = '<p class="text-gray-600">Информация не найдена.</p>';
+                    return;
+                }
+
+                let insightsHtml = '';
+                if (detail.insights && detail.insights.length > 0) {
+                    insightsHtml = detail.insights.map(insight => `<li class="text-gray-700 leading-relaxed">${insight}</li>`).join('');
+                }
+
+                xGlishContentDiv.innerHTML = `
+                    <div class="p-4 border border-gray-200 rounded-lg bg-white shadow">
+                        <h3 class="text-xl font-semibold mb-2 accent-color">${detail.title}</h3>
+                        <p class="mb-3 text-gray-800"><strong>Определение:</strong> ${detail.definition}</p>
+                        <p class="mb-3 text-gray-800"><strong>Сообщество в Лондоне:</strong> ${detail.community}</p>
+                        ${detail.insights_title ? `<h4 class="text-md font-semibold mt-3 mb-1 text-gray-700">${detail.insights_title}</h4>` : ''}
+                        <ul class="list-disc list-inside space-y-1 mb-3">
+                            ${insightsHtml}
+                        </ul>
+                        <p class="text-sm italic text-gray-600 bg-yellow-50 p-2 rounded-md"><strong>Примечание о статистике:</strong> ${detail.stats_note}</p>
+                    </div>
+                `;
+            }
+            
+            xGlishTabButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    xGlishTabButtons.forEach(btn => btn.classList.remove('active', 'bg-accent', 'text-white'));
+                    this.classList.add('active', 'bg-accent', 'text-white');
+                    displayXGlishContent(this.dataset.xglishtarget);
+                });
+            });
+
+            if (xGlishTabButtons.length > 0) {
+                xGlishTabButtons[0].click();
+            }
+        });
+    </script>
+</body>
+</html>

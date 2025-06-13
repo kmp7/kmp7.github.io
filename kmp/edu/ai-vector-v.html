@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+	<script src="d3.v7.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --header-color: #325980;
+            --accent-color: #3498db;
+            --content-color: #ffffff;
+            --text-color: #333333;
+            --secondary-text: #555555;
+            --border-color: #dddddd;
+			--primary-color: #3e76ad;
+		--header-text-color: #ffffff;
+		--border-radius: 8px;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --header-color: #4a6d8c;
+            --accent-color: #2980b9;
+            --content-color: #2c2c2c;
+            --text-color: #f0f0f0;
+            --secondary-text: #cccccc;
+            --border-color: #444444;
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--header-text-color);
+            padding: 20px 0;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            background-image: linear-gradient(135deg, var(--primary-color) 0%, #2c3e50 100%);
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            margin-top: 0;
+        }
+
+        header h1 {
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .panel {
+            background-color: var(--content-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        .visualization-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .visualization-container {
+                flex-direction: row;
+            }
+            
+            .word-selector {
+                width: 25%;
+            }
+            
+            .visualization {
+                width: 75%;
+            }
+        }
+
+        .word-selector {
+            background-color: var(--content-color);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .visualization {
+            background-color: var(--content-color);
+            border-radius: 8px;
+            padding: 1rem;
+            height: 500px;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .word-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .word-item {
+            padding: 0.6rem 1rem;
+            margin-bottom: 0.5rem;
+            background-color: var(--bg-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: 1px solid var(--border-color);
+        }
+
+        .word-item:hover, .word-item.selected {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--header-color);
+        }
+
+        #modeToggle {
+            margin-bottom: 1rem;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: white;
+        }
+
+        .tooltip {
+    position: absolute;
+    background-color: var(--content-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    max-width: 300px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    /* Добавляем стили для лучшей читаемости */
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* Добавляем стили для темной темы */
+[data-theme="dark"] .tooltip {
+    background-color: rgba(44, 44, 44, 0.95);
+}
+
+/* Добавляем стили для светлой темы */
+.tooltip {
+    background-color: rgba(255, 255, 255, 0.95);
+}
+
+        .word-vector {
+            font-family: monospace;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--secondary-text);
+        }
+
+        .related-words {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .related-word {
+            display: inline-block;
+            background-color: var(--bg-color);
+            padding: 0.2rem 0.5rem;
+            margin: 0.2rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+        }
+
+        .info-block {
+            background-color: var(--content-color);
+            border-left: 4px solid var(--accent-color);
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .tab-container {
+            display: flex;
+            margin-bottom: 1rem;
+        }
+
+        .tab {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            margin-right: 0.5rem;
+        }
+
+        .tab.active {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0 4px 4px 4px;
+            background-color: var(--content-color);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+		
+		.visualization {
+    background-color: var(--content-color);
+    border-radius: 8px;
+    padding: 1rem;
+    height: 500px;
+    position: relative;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    overflow: hidden; /* Предотвращаем выход за границы */
+}
+
+#svg {
+    width: 100%;
+    height: 100%;
+    display: block; /* Убираем лишние отступы */
+}
+footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 10px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Контекстуальная семантика</h1>
+        <button class="theme-toggle" id="themeToggle">☀️</button>
+    </header>
+
+    <div class="container">
+        <div class="panel">
+            <button id="modeToggle">Переключить режим: Структурные связи</button>
+            
+            <div class="visualization-container">
+                <div class="word-selector">
+                    <h3>Выберите слова</h3>
+                    <ul class="word-list" id="wordList">
+                        <li class="word-item" data-word="пес">пес</li>
+                        <li class="word-item" data-word="волк">волк</li>
+                        <li class="word-item" data-word="кот">кот</li>
+                        <li class="word-item" data-word="царь">царь</li>
+                        <li class="word-item" data-word="принцесса">принцесса</li>
+                        <li class="word-item" data-word="дерево">дерево</li>
+                        <li class="word-item" data-word="яблоко">яблоко</li>
+                        <li class="word-item" data-word="книга">книга</li>
+                        <li class="word-item" data-word="вода">вода</li>
+                        <li class="word-item" data-word="солнце">солнце</li>
+                    </ul>
+                </div>
+                
+                <div class="visualization" id="visualization">
+                    <div id="tooltip" class="tooltip"></div>
+                    <svg id="svg" width="100%" height="100%"></svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="tab-container">
+                <div class="tab active" data-tab="explanation">Теоретическое объяснение</div>
+                <div class="tab" data-tab="functional">Функциональность</div>
+                <div class="tab" data-tab="technical">Технические детали</div>
+            </div>
+            
+            <div class="tab-content active" id="explanation">
+                <h2>Связь структурного и векторного подхода</h2>
+                
+                <div class="info-block">
+                    <h3>Структурный подход (структурализм)</h3>
+                    <p>В структурализме, основанном на идеях Фердинанда де Соссюра, значение слова определяется через его отношения с другими словами в языковой системе. Слово не имеет значения само по себе, а только через различия и противопоставления с другими словами.</p>
+                    <p>Например, слово "пес" получает своё значение через отношения с "волк" (оба млекопитающие, но один домашний, другой дикий), "кот" (оба домашние животные, но разные виды) и т.д.</p>
+                </div>
+                
+                <div class="info-block">
+                    <h3>Векторный подход (LLM)</h3>
+                    <p>В современных языковых моделях слова представляются как векторы в многомерном пространстве. Семантически близкие слова располагаются рядом в этом пространстве. Значение слова определяется его положением относительно других слов.</p>
+                    <p>В этом смысле векторные модели можно рассматривать как численную реализацию идей структурализма: значение через отношения, но в многомерном математическом пространстве.</p>
+                </div>
+                
+                <h3>Аналогия с числом "3" в разных системах</h3>
+                <p>Подобно тому, как число "3" имеет разное значение в зависимости от контекста математической системы:</p>
+                <ul>
+                    <li><strong>В натуральных числах:</strong> 3 – это просто третье число в последовательности.</li>
+                    <li><strong>В рациональных числах:</strong> 3 – это 3/1, или 6/2, или бесконечное множество эквивалентных дробей.</li>
+                    <li><strong>В вещественных числах:</strong> 3 – это точка на числовой прямой с определенными свойствами.</li>
+                </ul>
+                <p>Так и слово получает свое значение в зависимости от контекста – либо через сеть структурных связей с другими словами, либо через положение в семантическом векторном пространстве.</p>
+                
+                <div class="info-block">
+                    <h3>Ключевая идея</h3>
+                    <p>Значение слова – это не фиксированная сущность, а функция контекста. Идеи структурализма (значение через различие) оказываются удивительно созвучны современным подходам к обработке языка (значение через векторное расположение в семантическом пространстве).</p>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="functional">
+                <h2>Функциональность приложения</h2>
+                
+                <h3>1. Режимы визуализации</h3>
+                <ul>
+                    <li><strong>Режим структурных связей:</strong> Отображает выбранные слова и связи между ними, иллюстрирующие лингвистические отношения (синонимия, гипонимия и т.д.).</li>
+                    <li><strong>Режим векторного пространства:</strong> Показывает те же слова как точки в двумерном пространстве, где расстояния моделируют семантическую близость на основе упрощенных векторных представлений.</li>
+                </ul>
+                
+                <h3>2. Интерактивные элементы</h3>
+                <ul>
+                    <li><strong>Выбор слов:</strong> Нажмите на слова из списка, чтобы добавить или удалить их из визуализации.</li>
+                    <li><strong>Переключение режимов:</strong> Используйте кнопку "Переключить режим" для смены между структурным и векторным представлением.</li>
+                    <li><strong>Наведение на слово:</strong> При наведении курсора на слово отображается подробная информация о нем (векторное представление, ближайшие слова).</li>
+                    <li><strong>Переключение темы:</strong> Кнопка ☀️/🌙 в правом верхнем углу переключает между светлой и темной темой.</li>
+                </ul>
+                
+                <h3>3. Образовательная ценность</h3>
+                <p>Приложение визуально демонстрирует, как один и тот же набор слов может быть представлен по-разному (структурно или векторно), но в обоих случаях значение определяется через отношения с другими словами.</p>
+                <p>Это помогает студентам понять связь между классическими теориями лингвистики и современными методами обработки естественного языка.</p>
+            </div>
+            
+            <div class="tab-content" id="technical">
+                <h2>Технические детали</h2>
+                
+                <h3>Использованные технологии</h3>
+                <ul>
+                    <li><strong>HTML5/CSS3:</strong> Для структуры и стилей приложения.</li>
+                    <li><strong>JavaScript:</strong> Для интерактивной логики приложения.</li>
+                    <li><strong>D3.js (v7):</strong> Библиотека для создания динамических визуализаций данных. Используется для отображения структурных связей и векторного пространства.</li>
+                </ul>
+                
+                <h3>Дизайн</h3>
+                <ul>
+                    <li><strong>Адаптивный интерфейс:</strong> Приложение корректно отображается на устройствах с разными размерами экрана.</li>
+                    <li><strong>Цветовая схема:</strong> 
+                        <ul>
+                            <li>Фон: #f5f5f5 (светлый режим) / #1a1a1a (темный режим)</li>
+                            <li>Заголовки: #325980 (светлый режим) / #4a6d8c (темный режим)</li>
+                            <li>Акценты: #3498db (светлый режим) / #2980b9 (темный режим)</li>
+                            <li>Контент: #ffffff (светлый режим) / #2c2c2c (темный режим)</li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <h3>Данные</h3>
+                <p>В приложении используются два типа данных:</p>
+                <ol>
+                    <li><strong>Структурные связи:</strong> Предопределенный набор лингвистических отношений между словами (синонимия, гипонимия и т.д.).</li>
+                    <li><strong>Векторные представления:</strong> Упрощенные векторные представления слов в многомерном пространстве, которые проецируются на двумерную плоскость для визуализации.</li>
+                </ol>
+                
+                <p>Все данные хранятся локально в JavaScript-объектах. В реальном образовательном приложении можно было бы использовать более точные векторные представления из предобученных моделей.</p>
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Добавьте эту функцию в начало скрипта
+function handleResize() {
+    const visualization = document.getElementById('visualization');
+    const svg = d3.select('#svg');
+    
+    // Обновляем размеры SVG
+    svg
+        .attr('width', visualization.clientWidth)
+        .attr('height', visualization.clientHeight);
+    
+    // Обновляем визуализацию
+    updateVisualization();
+}
+
+// Данные для демонстрации
+        // ------------------------
+
+        // Структурные связи между словами
+        const structuralLinks = [
+            { source: "пес", target: "волк", type: "родственный вид" },
+            { source: "пес", target: "кот", type: "домашнее животное" },
+            { source: "волк", target: "кот", type: "млекопитающее" },
+            { source: "царь", target: "принцесса", type: "королевская семья" },
+            { source: "принцесса", target: "царь", type: "иерархия" },
+            { source: "дерево", target: "яблоко", type: "производит" },
+            { source: "яблоко", target: "дерево", type: "растет на" },
+            { source: "книга", target: "дерево", type: "материал" },
+            { source: "вода", target: "яблоко", type: "содержится в" },
+            { source: "солнце", target: "дерево", type: "питает" },
+            { source: "солнце", target: "вода", type: "испаряет" }
+        ];
+
+        // Упрощенные векторные представления слов в 2D
+        // В реальности векторы имеют гораздо больше измерений
+        const vectorRepresentations = {
+            "пес": { x: 0.1, y: 0.3, vector: [0.12, -0.88, 0.44, 0.29, -0.37], related: ["волк", "кот", "собака"] },
+            "волк": { x: 0.3, y: 0.2, vector: [0.18, -0.76, 0.39, 0.15, -0.42], related: ["пес", "лиса", "зверь"] },
+            "кот": { x: -0.1, y: 0.4, vector: [-0.05, -0.82, 0.51, 0.32, -0.29], related: ["пес", "мурлыкать", "кошка"] },
+            "царь": { x: -0.8, y: -0.5, vector: [-0.72, 0.38, 0.19, -0.65, 0.28], related: ["король", "власть", "принцесса"] },
+            "принцесса": { x: -0.7, y: -0.3, vector: [-0.61, 0.29, 0.24, -0.48, 0.33], related: ["царевна", "королева", "царь"] },
+            "дерево": { x: 0.6, y: -0.4, vector: [0.58, 0.32, -0.46, -0.22, 0.41], related: ["лес", "листья", "яблоко"] },
+            "яблоко": { x: 0.5, y: -0.2, vector: [0.44, 0.18, -0.39, -0.15, 0.36], related: ["фрукт", "дерево", "красный"] },
+            "книга": { x: 0.2, y: -0.7, vector: [0.15, 0.61, -0.23, -0.68, 0.22], related: ["читать", "страница", "автор"] },
+            "вода": { x: 0.7, y: 0.6, vector: [0.65, -0.34, -0.52, 0.41, 0.19], related: ["жидкость", "река", "море"] },
+            "солнце": { x: -0.5, y: 0.7, vector: [-0.42, -0.45, -0.38, 0.62, 0.25], related: ["свет", "тепло", "яркий"] }
+        };
+
+        // Основные функции приложения
+        // ----------------------------
+        document.addEventListener('DOMContentLoaded', function() {
+            // Инициализация состояния
+            let currentMode = 'structure'; // 'structure' или 'vector'
+            let selectedWords = []; // Выбранные слова
+            let isDarkTheme = false; // Текущая тема
+
+            // Основные DOM-элементы
+            const svg = d3.select('#svg');
+            const wordList = document.getElementById('wordList');
+            const modeToggle = document.getElementById('modeToggle');
+            const themeToggle = document.getElementById('themeToggle');
+            const tooltip = d3.select('#tooltip');
+            const tabs = document.querySelectorAll('.tab');
+            
+            // Обработчики вкладок
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Убираем активный класс со всех вкладок и содержимого
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Добавляем активный класс выбранной вкладке
+                    tab.classList.add('active');
+                    
+                    // Показываем соответствующее содержимое
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+
+            // Обработчик выбора слов
+            wordList.addEventListener('click', function(e) {
+                if (e.target.classList.contains('word-item')) {
+                    const word = e.target.getAttribute('data-word');
+                    
+                    // Добавляем или удаляем слово из выборки
+                    if (e.target.classList.contains('selected')) {
+                        e.target.classList.remove('selected');
+                        selectedWords = selectedWords.filter(w => w !== word);
+                    } else {
+                        e.target.classList.add('selected');
+                        selectedWords.push(word);
+                    }
+                    
+                    // Обновляем визуализацию
+                    updateVisualization();
+                }
+            });
+
+            // Обработчик переключения режима
+            modeToggle.addEventListener('click', function() {
+                currentMode = currentMode === 'structure' ? 'vector' : 'structure';
+                modeToggle.textContent = `Переключить режим: ${currentMode === 'structure' ? 'Структурные связи' : 'Векторное пространство'}`;
+                updateVisualization();
+            });
+
+            // Обработчик переключения темы
+            themeToggle.addEventListener('click', function() {
+                isDarkTheme = !isDarkTheme;
+                document.documentElement.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+                themeToggle.textContent = isDarkTheme ? '🌙' : '☀️';
+            });
+
+            // Функция обновления визуализации
+            function updateVisualization() {
+                // Очищаем предыдущую визуализацию
+                svg.selectAll('*').remove();
+                
+                // Если нет выбранных слов, ничего не отображаем
+                if (selectedWords.length === 0) return;
+                
+                // Создаем группу для всех элементов
+                const g = svg.append('g');
+                
+                if (currentMode === 'structure') {
+                    // Режим структурных связей
+                    drawStructuralLinks(g);
+                } else {
+                    // Режим векторного пространства
+                    drawVectorSpace(g);
+                }
+                
+                // Добавляем возможность масштабирования и перемещения
+                setupZoom();
+            }
+            
+            // Функция для отрисовки структурных связей
+            function drawStructuralLinks(g) {
+                // Фильтруем связи, оставляя только те, где оба слова выбраны
+                const links = structuralLinks.filter(link => 
+                    selectedWords.includes(link.source) && selectedWords.includes(link.target)
+                );
+                
+                // Создаем объекты узлов
+                const nodes = selectedWords.map(word => ({
+                    id: word,
+                    ...vectorRepresentations[word]
+                }));
+                
+                // Получаем актуальные размеры SVG-контейнера
+const width = svg.node().getBoundingClientRect().width;
+const height = svg.node().getBoundingClientRect().height;
+
+// Настраиваем силовую симуляцию с учетом размеров
+const simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id).distance(100))
+    .force('charge', d3.forceManyBody().strength(-300))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(40))  // Предотвращаем наложение узлов
+    .force('x', d3.forceX(width / 2).strength(0.1))   // Мягкое притяжение к центру по X
+    .force('y', d3.forceY(height / 2).strength(0.1)); // Мягкое притяжение к центру по Y
+                
+                // Создаем линии для связей
+                const link = g.append('g')
+                    .selectAll('line')
+                    .data(links)
+                    .enter().append('line')
+                    .attr('stroke', 'var(--accent-color)')
+                    .attr('stroke-opacity', 0.6)
+                    .attr('stroke-width', 2);
+                
+                // Добавляем подписи к связям
+                const linkLabels = g.append('g')
+                    .selectAll('text')
+                    .data(links)
+                    .enter().append('text')
+                    .attr('fill', 'var(--secondary-text)')
+                    .attr('font-size', '10px')
+                    .attr('text-anchor', 'middle')
+                    .text(d => d.type);
+                
+                // Создаем узлы (слова)
+                const node = g.append('g')
+                    .selectAll('g')
+                    .data(nodes)
+                    .enter().append('g')
+                    .call(d3.drag()
+                        .on('start', dragstarted)
+                        .on('drag', dragged)
+                        .on('end', dragended));
+                
+                // Добавляем круги для узлов
+                node.append('circle')
+                    .attr('r', 30)
+                    .attr('fill', 'var(--content-color)')
+                    .attr('stroke', 'var(--accent-color)')
+                    .attr('stroke-width', 2);
+                
+                // Добавляем текст узлов
+                node.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('dy', '.35em')
+                    .attr('fill', 'var(--text-color)')
+                    .text(d => d.id);
+                
+                // Добавляем обработчики наведения для узлов
+                node.on('mouseover', function(event, d) {
+                    showTooltip(event, d);
+                })
+                .on('mouseout', function() {
+                    hideTooltip();
+                });
+                
+                // Обновляем позиции при работе симуляции
+                simulation.on('tick', () => {
+                    link
+                        .attr('x1', d => d.source.x)
+                        .attr('y1', d => d.source.y)
+                        .attr('x2', d => d.target.x)
+                        .attr('y2', d => d.target.y);
+                        
+                    linkLabels
+                        .attr('x', d => (d.source.x + d.target.x) / 2)
+                        .attr('y', d => (d.source.y + d.target.y) / 2);
+                        
+                    node
+                        .attr('transform', d => `translate(${d.x},${d.y})`);
+                });
+                
+                // Функции для перетаскивания узлов
+                function dragstarted(event, d) {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
+                }
+                
+                function dragged(event, d) {
+                    d.fx = event.x;
+                    d.fy = event.y;
+                }
+                
+                function dragended(event, d) {
+                    if (!event.active) simulation.alphaTarget(0);
+                    d.fx = null;
+                    d.fy = null;
+                }
+            }
+            
+            // Функция для отрисовки векторного пространства
+            function drawVectorSpace(g) {
+const width = svg.node().getBoundingClientRect().width;
+const height = svg.node().getBoundingClientRect().height;
+const padding = Math.min(width, height) * 0.1; // Адаптивные отступы
+
+// Создаем масштабирование для осей с учетом отступов
+const xScale = d3.scaleLinear()
+    .domain([-1, 1])
+    .range([padding, width - padding]);
+    
+const yScale = d3.scaleLinear()
+    .domain([-1, 1])
+    .range([height - padding, padding]);
+                
+                // Создаем оси
+                const xAxis = d3.axisBottom(xScale);
+                const yAxis = d3.axisLeft(yScale);
+                
+                g.append('g')
+                    .attr('transform', `translate(0,${height - padding})`)
+                    .call(xAxis);
+                    
+                g.append('g')
+                    .attr('transform', `translate(${padding},0)`)
+                    .call(yAxis);
+                
+                // Добавляем подписи к осям
+                g.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('x', width / 2)
+                    .attr('y', height - 10)
+                    .text('Компонента 1')
+                    .attr('fill', 'var(--secondary-text)');
+                    
+                g.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('transform', `translate(15,${height / 2})rotate(-90)`)
+                    .text('Компонента 2')
+                    .attr('fill', 'var(--secondary-text)');
+                
+                // Фильтруем данные по выбранным словам
+                const nodes = selectedWords.map(word => ({
+                    id: word,
+                    ...vectorRepresentations[word]
+                }));
+                
+                // Создаем группы для точек
+                const node = g.append('g')
+                    .selectAll('g')
+                    .data(nodes)
+                    .enter().append('g')
+                    .attr('transform', d => `translate(${xScale(d.x)},${yScale(d.y)})`);
+                
+                // Добавляем круги
+                node.append('circle')
+                    .attr('r', 20)
+                    .attr('fill', 'var(--content-color)')
+                    .attr('stroke', 'var(--accent-color)')
+                    .attr('stroke-width', 2);
+                
+                // Добавляем текст
+                node.append('text')
+                    .attr('text-anchor', 'middle')
+                    .attr('dy', '.35em')
+                    .attr('fill', 'var(--text-color)')
+                    .text(d => d.id);
+                
+                // Добавляем обработчики наведения
+                node.on('mouseover', function(event, d) {
+                    showTooltip(event, d);
+                })
+                .on('mouseout', function() {
+                    hideTooltip();
+                });
+            }
+            
+            // Функция для настройки масштабирования и перемещения
+            function setupZoom() {
+    const width = svg.node().getBoundingClientRect().width;
+    const height = svg.node().getBoundingClientRect().height;
+    
+    const zoom = d3.zoom()
+        .scaleExtent([0.5, 5])
+        .on('zoom', (event) => {
+            svg.select('g').attr('transform', event.transform);
+        });
+    
+    // Начальное центрирование
+    const initialScale = 0.9;
+    const transform = d3.zoomIdentity
+        .translate(width / 2, height / 2)
+        .scale(initialScale)
+        .translate(-width / 2, -height / 2);
+    
+    svg.call(zoom)
+       .call(zoom.transform, transform);
+}
+
+
+
+            
+            function showTooltip(event, d) {
+    // Получаем размеры и позицию SVG-контейнера
+    const svgRect = svg.node().getBoundingClientRect();
+    const visualization = document.getElementById('visualization');
+    const visRect = visualization.getBoundingClientRect();
+    
+    // Получаем координаты мыши относительно SVG
+    const mouseX = event.clientX - visRect.left;
+    const mouseY = event.clientY - visRect.top;
+    
+    // Создаем содержимое подсказки
+    const vectorData = vectorRepresentations[d.id];
+    const vectorString = vectorData.vector.map(v => v.toFixed(2)).join(', ');
+    const relatedWords = vectorData.related.map(word => 
+        `<span class="related-word">${word}</span>`
+    ).join(' ');
+    
+    // Обновляем содержимое подсказки
+    const tooltipElement = tooltip.node();
+    tooltip.html(`
+        <div><strong>${d.id}</strong></div>
+        <div class="word-vector">[${vectorString}]</div>
+        <div class="related-words">
+            <div>Ближайшие слова:</div>
+            ${relatedWords}
+        </div>
+    `);
+    
+    // Получаем размеры подсказки
+    const tooltipRect = tooltipElement.getBoundingClientRect();
+    
+    // Вычисляем позицию подсказки
+    let tooltipX = mouseX + 10;
+    let tooltipY = mouseY - 10;
+    
+    // Проверяем, не выходит ли подсказка за правый край
+    if (tooltipX + tooltipRect.width > visRect.width) {
+        tooltipX = mouseX - tooltipRect.width - 10;
+    }
+    
+    // Проверяем, не выходит ли подсказка за нижний край
+    if (tooltipY + tooltipRect.height > visRect.height) {
+        tooltipY = mouseY - tooltipRect.height - 10;
+    }
+    
+    // Проверяем, не выходит ли подсказка за верхний край
+    if (tooltipY < 0) {
+        tooltipY = 10;
+    }
+    
+    // Проверяем, не выходит ли подсказка за левый край
+    if (tooltipX < 0) {
+        tooltipX = 10;
+    }
+    
+    // Применяем позицию
+    tooltip
+        .style('left', `${tooltipX}px`)
+        .style('top', `${tooltipY}px`)
+        .style('opacity', 1);
+}
+            
+            // Функция для скрытия всплывающей подсказки
+            function hideTooltip() {
+                tooltip.style('opacity', 0);
+            }
+            
+            // Выберем несколько слов по умолчанию для начальной визуализации
+            const defaultWords = ["пес", "волк", "кот", "царь"];
+            defaultWords.forEach(word => {
+                const wordItem = document.querySelector(`.word-item[data-word="${word}"]`);
+                if (wordItem) {
+                    wordItem.classList.add('selected');
+                    selectedWords.push(word);
+                }
+            });
+            
+            // Инициализируем визуализацию
+            updateVisualization();
+        });
+		
+		window.addEventListener('resize', handleResize);
+    </script>
+</body>
+</html>
