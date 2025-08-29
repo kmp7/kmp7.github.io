@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --primary-bg: #ffffff;
+            --secondary-bg: #f5f5f5;
+            --header-color: #325980;
+            --accent-color: #3498db;
+            --divider-color: #f1f1f1;
+            --text-color: #333333;
+            --error-color: #e74c3c;
+            --success-color: #2ecc71;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--secondary-bg);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: var(--header-color);
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .card {
+            background-color: var(--primary-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .welcome-screen, .test-screen, .results-screen {
+            display: none;
+        }
+        
+        .active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--header-color);
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--divider-color);
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+            outline: none;
+        }
+        
+        .error {
+            color: var(--error-color);
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn:disabled {
+            background-color: var(--divider-color);
+            cursor: not-allowed;
+        }
+        
+        .progress-container {
+            width: 100%;
+            height: 10px;
+            background-color: var(--divider-color);
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: var(--accent-color);
+            border-radius: 5px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .question-container {
+            margin-bottom: 30px;
+        }
+        
+        .question {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: var(--header-color);
+        }
+        
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .option {
+            padding: 12px 15px;
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--divider-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .option:hover {
+            background-color: var(--divider-color);
+        }
+        
+        .option.selected {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+        
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .question-counter {
+            text-align: center;
+            margin: 10px 0;
+            color: var(--header-color);
+        }
+        
+        .result-message {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .success {
+            color: var(--success-color);
+        }
+        
+        .failure {
+            color: var(--error-color);
+        }
+        
+        .result-details {
+            margin: 20px 0;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--divider-color);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            overflow: auto;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            background-color: var(--primary-bg);
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.5s;
+        }
+        
+        @keyframes slideDown {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .close:hover {
+            color: var(--text-color);
+        }
+        
+        .certificate {
+            text-align: center;
+            padding: 20px;
+            border: 2px solid var(--header-color);
+            margin-top: 20px;
+			background-image: linear-gradient(45deg, var(--primary-bg) 85%, rgba(52, 152, 219, 0.1) 100%);
+            position: relative;
+        }
+        
+        .certificate:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzM0OThkYiIgc3Ryb2tlLXdpZHRoPSIxIiBvcGFjaXR5PSIwLjA1Ii8+PC9zdmc+');
+            opacity: 0.1;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        .certificate-title {
+            font-size: 24px;
+            color: var(--header-color);
+            margin-bottom: 15px;
+        }
+        
+        .certificate-name {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--header-color);
+            margin: 15px 0;
+        }
+        
+        .certificate-description {
+            margin: 15px 0;
+        }
+        
+        .certificate-details {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+        
+        .certificate-detail {
+            text-align: center;
+        }
+        
+        .certificate-detail-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--header-color);
+        }
+        
+        .print-btn {
+            margin-top: 20px;
+            background-color: var(--header-color);
+        }
+        
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .modal-content, .modal-content * {
+                visibility: visible;
+            }
+            .modal-content {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                box-shadow: none;
+            }
+            .close, .print-btn {
+                display: none;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ТЕСТ</h1>
+            <p class="subtitle">Критическое мышление в образовательной коммуникации с LLM</p>
+        </header>
+        
+        <div class="welcome-screen card active">
+            <div class="form-group">
+                <label for="surname">Введите свои Фамилию Имя Отчество:</label>
+                <input type="text" id="surname" placeholder="Фамилия Имя Отчество">
+                <div class="error" id="surname-error">Пожалуйста, введите ФИО</div>
+            </div>
+            
+            <button class="btn" id="start-test-btn">Начать тест</button>
+        </div>
+        
+        <div class="test-screen card">
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            
+            <div class="question-counter">Вопрос <span id="current-question">1</span> из <span id="total-questions">15</span></div>
+            
+            <div class="question-container">
+                <div class="question" id="question-text">Вопрос будет здесь</div>
+                <div class="options" id="options-container">
+                    <!-- Варианты ответов будут добавлены через JavaScript -->
+                </div>
+            </div>
+            
+            <div class="navigation">
+                <button class="btn" id="prev-btn" disabled>Назад</button>
+                <button class="btn" id="next-btn">Далее</button>
+            </div>
+        </div>
+        
+        <div class="results-screen card">
+            <h2>Результаты теста</h2>
+            <div class="result-message" id="result-message"></div>
+            
+            <div class="result-details">
+                <div class="result-item">
+                    <span>Правильных ответов:</span>
+                    <span id="correct-answers">0</span>
+                </div>
+                <div class="result-item">
+                    <span>Процент выполнения:</span>
+                    <span id="completion-percentage">0%</span>
+                </div>
+                <div class="result-item">
+                    <span>Затраченное время:</span>
+                    <span id="time-spent">0 мин 0 сек</span>
+                </div>
+            </div>
+            
+            <div class="navigation">
+                <button class="btn" id="retake-btn">Пройти заново</button>
+                <button class="btn" id="view-certificate-btn" style="display: none;">Просмотреть сертификат</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="certificate-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="certificate">
+                <h2 class="certificate-title">СЕРТИФИКАТ</h2>
+                <p>Настоящим подтверждается, что</p>
+                <div class="certificate-name" id="certificate-name">Фамилия И.О.</div>
+                <p class="certificate-description">успешно прошел(ла) тест по теме<br>"Критическое мышление в образовательной коммуникации с LLM"<br>и продемонстрировал(а) отличное понимание материала</p>
+                
+                <div class="certificate-details">
+                    <div class="certificate-detail">
+                        <div class="certificate-detail-label">Дата</div>
+                        <div id="certificate-date">01.01.2025</div>
+                    </div>
+                    <div class="certificate-detail">
+                        <div class="certificate-detail-label">Время</div>
+                        <div id="certificate-time">12:00</div>
+                    </div>
+                    <div class="certificate-detail">
+                        <div class="certificate-detail-label">Результат</div>
+                        <div id="certificate-result">100%</div>
+                    </div>
+                    <div class="certificate-detail">
+                        <div class="certificate-detail-label">Длительность</div>
+                        <div id="certificate-duration">10 мин</div>
+                    </div>
+                </div>
+            </div>
+            <button class="btn print-btn" id="print-certificate-btn">Распечатать сертификат</button>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | Искусственный интеллект в профессиональной деятельности<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Защита от просмотра кода
+        (function() {
+            // Отключение просмотра исходного кода через контекстное меню
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Отключение F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+            document.addEventListener('keydown', function(e) {
+                if (
+                    e.keyCode === 123 || // F12
+                    (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+                    (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
+                    (e.ctrlKey && e.keyCode === 85) // Ctrl+U
+                ) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+            
+            // Дополнительная защита от DevTools
+            const devToolsDetector = {
+                isOpen: false,
+                orientation: null,
+                
+                checkDevTools: function() {
+                    const threshold = 160;
+                    const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+                    const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+                    
+                    if (
+                        !(heightThreshold && widthThreshold) && 
+                        ((window.Firebug && window.Firebug.chrome && window.Firebug.chrome.isInitialized) || 
+                        widthThreshold || 
+                        heightThreshold)
+                    ) {
+                        if (!this.isOpen) {
+                            this.isOpen = true;
+                            alert("Пожалуйста, закройте инструменты разработчика для продолжения теста.");
+                        }
+                    } else {
+                        this.isOpen = false;
+                    }
+                }
+            };
+            
+            // Проверка каждые 1000 мс
+            setInterval(function() {
+                devToolsDetector.checkDevTools();
+            }, 1000);
+        })();
+
+        // Основной код приложения
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM элементы
+            const welcomeScreen = document.querySelector('.welcome-screen');
+            const testScreen = document.querySelector('.test-screen');
+            const resultsScreen = document.querySelector('.results-screen');
+            const surnameInput = document.getElementById('surname');
+            const surnameError = document.getElementById('surname-error');
+            const startTestBtn = document.getElementById('start-test-btn');
+            const progressBar = document.getElementById('progress-bar');
+            const currentQuestionEl = document.getElementById('current-question');
+            const totalQuestionsEl = document.getElementById('total-questions');
+            const questionText = document.getElementById('question-text');
+            const optionsContainer = document.getElementById('options-container');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const resultMessage = document.getElementById('result-message');
+            const correctAnswersEl = document.getElementById('correct-answers');
+            const completionPercentageEl = document.getElementById('completion-percentage');
+            const timeSpentEl = document.getElementById('time-spent');
+            const retakeBtn = document.getElementById('retake-btn');
+            const viewCertificateBtn = document.getElementById('view-certificate-btn');
+            const certificateModal = document.getElementById('certificate-modal');
+            const certificateName = document.getElementById('certificate-name');
+            const certificateDate = document.getElementById('certificate-date');
+            const certificateTime = document.getElementById('certificate-time');
+            const certificateResult = document.getElementById('certificate-result');
+            const certificateDuration = document.getElementById('certificate-duration');
+            const printCertificateBtn = document.getElementById('print-certificate-btn');
+            const closeModalBtn = document.querySelector('.close');
+            
+            // Параметры теста
+            const requiredPercentage = 80; // Минимальный процент для успешного прохождения теста
+            let currentQuestion = 0;
+            let userAnswers = [];
+            let startTime = null;
+            let endTime = null;
+            let surname = '';
+            
+            // Вопросы теста
+            const questions = [
+ {
+        "question": "Какое из определений подчеркивает способность критического мышления к выявлению имплицитных смыслов и риторических стратегий?",
+        "options": [
+            "Психологическое",
+            "Лингвистическое",
+            "Техническое",
+            "Педагогическое"
+        ],
+        "correctIndex": 1
+    },
+    {
+        "question": "Что такое «эпистемическая скромность» в контексте критического мышления?",
+        "options": [
+            "Отказ от логики в спорных вопросах",
+            "Готовность принимать мнение большинства",
+            "Осознание ограниченности собственного знания и готовность к его пересмотру",
+            "Способность доказывать свою правоту любой ценой"
+        ],
+        "correctIndex": 2
+    },
+    {
+        "question": "Какая из стадий развития критического мышления идет сразу после 'Осознания'?",
+        "options": [
+            "Метакогнитивная рефлексия",
+            "Интернализация",
+            "Приобретение инструментов",
+            "Экспертный уровень"
+        ],
+        "correctIndex": 2
+    },
+    {
+        "question": "Какой тип мышления характеризуется нелогичными связями и верой в сверхъестественное?",
+        "options": [
+            "Наивное",
+            "Системное",
+            "Магическое",
+            "Критическое"
+        ],
+        "correctIndex": 2
+    },
+    {
+        "question": "Какое определение рассматривает критическое мышление как обучаемую компетенцию?",
+        "options": [
+            "Психологическое",
+            "Гносеологическое",
+            "Педагогическое",
+            "Лингвистическое"
+        ],
+        "correctIndex": 2
+    },
+    {
+        "question": "Какой компонент критического мышления связан с разложением информации на части и выявлением связей?",
+        "options": [
+            "Интерпретация",
+            "Анализ",
+            "Саморегуляция",
+            "Фальсифицируемость"
+        ],
+        "correctIndex": 1
+    },
+    {
+        "question": "Что является одной из когнитивных практик развития критического мышления?",
+        "options": [
+            "Создание тестов на робастность",
+            "Ведение рефлексивного дневника",
+            "Анализ обучающих данных",
+            "Адвокат дьявола"
+        ],
+        "correctIndex": 1
+    },
+    {
+        "question": "Какой риск связан с уверенным стилем LLM при ответах?",
+        "options": [
+            "Понижение мотивации",
+            "Искажение синтаксиса",
+            "Создание иллюзии достоверности",
+            "Неспособность к генерации кода"
+        ],
+        "correctIndex": 2
+    },
+    {
+        "question": "Что из перечисленного НЕ относится к функциям LLM в развитии критического мышления?",
+        "options": [
+            "Создание учебных материалов",
+            "Верификация научных фактов",
+            "Генерация контраргументов",
+            "Выявление слабых мест в рассуждении"
+        ],
+        "correctIndex": 1
+    },
+    {
+        "question": "Какой тип мышления строится на поверхностных связях и стереотипах?",
+        "options": [
+            "Магическое",
+            "Наивное",
+            "Системное",
+            "Творческое"
+        ],
+        "correctIndex": 1
+    },
+    {
+        "question": "Что означает 'переформулировка стилмена' в ежедневной практике КМ?",
+        "options": [
+            "Критика всех позиций кроме своей",
+            "Упрощение аргумента оппонента",
+            "Максимально благожелательная переформулировка чужой позиции перед её критикой",
+            "Имитация нейтральной позиции"
+        ],
+        "correctIndex": 2
+    },
+    {
+        "question": "Какая практика относится к лингвистическим методам развития КМ?",
+        "options": [
+            "Разработка методологий обучения",
+            "Выявление генеративных искажений в текстах LLM",
+            "Сравнительный анализ аргументов в спорах",
+            "Анализ моральных дилемм"
+        ],
+        "correctIndex": 1
+    },
+    {
+        "question": "Что включает в себя определение критического мышления от передовой LLM?",
+        "options": [
+            "Готовность к сотрудничеству и эмпатии",
+            "Оценку вероятностей, распознавание шаблонов, отслеживание источников",
+            "Изучение риторики и логики",
+            "Формулирование убедительных эмоциональных посланий"
+        ],
+        "correctIndex": 1
+    },
+    {
+        "question": "Какое из утверждений верно о процессе формирования критического мышления?",
+        "options": [
+            "Это врожденная способность, не поддающаяся обучению",
+            "Это состояние, которое можно включить по желанию",
+            "Это система, формирующаяся через обучение и практику",
+            "Это реакция на стрессовые ситуации"
+        ],
+        "correctIndex": 2
+    },
+    {
+        "question": "Какая рекомендация дана для продуктивного использования LLM?",
+        "options": [
+            "Избегать взаимодействия с LLM по важным вопросам",
+            "Использовать LLM только для поиска литературы",
+            "Использовать LLM как собеседника-тренажера и генерировать альтернативные перспективы",
+            "Всегда принимать ответы LLM как достоверные"
+        ],
+        "correctIndex": 2
+    }
+];
+
+// Инициализация
+function init() {
+    // Перемешивание вопросов
+    shuffleArray(questions);
+    
+    // Установка общего количества вопросов
+    totalQuestionsEl.textContent = questions.length;
+    
+    // Обработчики событий
+    startTestBtn.addEventListener('click', startTest);
+    prevBtn.addEventListener('click', goToPrevQuestion);
+    nextBtn.addEventListener('click', goToNextQuestion);
+    retakeBtn.addEventListener('click', retakeTest);
+    viewCertificateBtn.addEventListener('click', showCertificate);
+    closeModalBtn.addEventListener('click', closeModal);
+    printCertificateBtn.addEventListener('click', printCertificate);
+    
+    // Закрытие модального окна при клике вне содержимого
+    window.addEventListener('click', function(event) {
+        if (event.target === certificateModal) {
+            closeModal();
+        }
+    });
+}
+
+// Начало теста
+function startTest() {
+    surname = surnameInput.value.trim();
+    
+    if (!surname) {
+        surnameError.style.display = 'block';
+        return;
+    }
+    
+    surnameError.style.display = 'none';
+    
+    // Инициализация ответов пользователя
+    userAnswers = new Array(questions.length).fill(null);
+    
+    // Запуск таймера
+    startTime = new Date();
+    
+    // Переключение на экран теста
+    welcomeScreen.classList.remove('active');
+    testScreen.classList.add('active');
+    
+    // Отображение первого вопроса
+    showQuestion(0);
+}
+
+// Отображение текущего вопроса
+function showQuestion(index) {
+    currentQuestion = index;
+    currentQuestionEl.textContent = index + 1;
+    
+    // Обновление прогресс-бара
+    const progress = ((index + 1) / questions.length) * 100;
+    progressBar.style.width = `${progress}%`;
+    
+    // Отображение вопроса
+    const question = questions[index];
+    questionText.textContent = question.question;
+    
+    // Очистка и заполнение вариантов ответа
+    optionsContainer.innerHTML = '';
+    question.options.forEach((option, i) => {
+        const optionElement = document.createElement('div');
+        optionElement.className = 'option';
+        optionElement.textContent = option;
+        
+        // Если пользователь уже выбрал этот вариант ранее
+        if (userAnswers[index] === i) {
+            optionElement.classList.add('selected');
+        }
+        
+        optionElement.addEventListener('click', () => selectOption(i));
+        optionsContainer.appendChild(optionElement);
+    });
+    
+    // Обновление состояния кнопок навигации
+    prevBtn.disabled = index === 0;
+    
+    // Изменение текста кнопки "Далее" на последнем вопросе
+    if (index === questions.length - 1) {
+        nextBtn.textContent = 'Завершить тест';
+                } else {
+                    nextBtn.textContent = 'Далее';
+                }
+                
+                // Проверка возможности перехода к следующему вопросу
+                updateNextButtonState();
+            }
+            
+            // Выбор варианта ответа
+            function selectOption(optionIndex) {
+                userAnswers[currentQuestion] = optionIndex;
+                
+                // Обновление стилей выбранного варианта
+                const optionElements = optionsContainer.querySelectorAll('.option');
+                optionElements.forEach((element, index) => {
+                    if (index === optionIndex) {
+                        element.classList.add('selected');
+                    } else {
+                        element.classList.remove('selected');
+                    }
+                });
+                
+                // Проверка возможности перехода к следующему вопросу
+                updateNextButtonState();
+            }
+            
+            // Обновление состояния кнопки "Далее"
+            function updateNextButtonState() {
+                // Кнопка активна, если выбран вариант ответа
+                nextBtn.disabled = userAnswers[currentQuestion] === null;
+            }
+            
+            // Переход к предыдущему вопросу
+            function goToPrevQuestion() {
+                if (currentQuestion > 0) {
+                    showQuestion(currentQuestion - 1);
+                }
+            }
+            
+            // Переход к следующему вопросу или завершение теста
+            function goToNextQuestion() {
+                if (currentQuestion < questions.length - 1) {
+                    showQuestion(currentQuestion + 1);
+                } else {
+                    finishTest();
+                }
+            }
+            
+            // Завершение теста и подсчет результатов
+            function finishTest() {
+                // Запись времени окончания
+                endTime = new Date();
+                
+                // Подсчет правильных ответов
+                let correctCount = 0;
+                userAnswers.forEach((answer, index) => {
+                    if (answer === questions[index].correctAnswer) {
+                        correctCount++;
+                    }
+                });
+                
+                // Расчет процента правильных ответов
+                const percentage = Math.round((correctCount / questions.length) * 100);
+                
+                // Расчет затраченного времени
+                const timeSpent = Math.floor((endTime - startTime) / 1000); // в секундах
+                const minutes = Math.floor(timeSpent / 60);
+                const seconds = timeSpent % 60;
+                
+                // Отображение результатов
+                correctAnswersEl.textContent = `${correctCount} из ${questions.length}`;
+                completionPercentageEl.textContent = `${percentage}%`;
+                timeSpentEl.textContent = `${minutes} мин ${seconds} сек`;
+                
+                // Определение успешности прохождения
+                if (percentage >= requiredPercentage) {
+                    resultMessage.textContent = 'Поздравляем! Вы успешно прошли тест.';
+                    resultMessage.className = 'result-message success';
+                    viewCertificateBtn.style.display = 'block';
+                } else {
+                    resultMessage.textContent = `К сожалению, вы не набрали необходимый минимум (${requiredPercentage}%). Рекомендуем повторить материал и пройти тест снова.`;
+                    resultMessage.className = 'result-message failure';
+                    viewCertificateBtn.style.display = 'none';
+                }
+                
+                // Переключение на экран результатов
+                testScreen.classList.remove('active');
+                resultsScreen.classList.add('active');
+            }
+            
+            // Повторное прохождение теста
+            function retakeTest() {
+                // Сброс ответов
+                userAnswers = new Array(questions.length).fill(null);
+                
+                // Перемешивание вопросов
+                shuffleArray(questions);
+                
+                // Перезапуск таймера
+                startTime = new Date();
+                
+                // Переключение на экран теста
+                resultsScreen.classList.remove('active');
+                testScreen.classList.add('active');
+                
+                // Отображение первого вопроса
+                showQuestion(0);
+            }
+            
+            // Отображение сертификата
+            function showCertificate() {
+                // Форматирование данных для сертификата
+                const now = new Date();
+                const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+                const formattedDate = now.toLocaleDateString('ru-RU', dateOptions);
+                const formattedTime = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                
+                // Расчет затраченного времени
+                const timeSpent = Math.floor((endTime - startTime) / 1000); // в секундах
+                const minutes = Math.floor(timeSpent / 60);
+                const seconds = timeSpent % 60;
+                const formattedDuration = `${minutes} мин ${seconds} сек`;
+                
+                // Расчет процента правильных ответов
+                let correctCount = 0;
+                userAnswers.forEach((answer, index) => {
+                    if (answer === questions[index].correctAnswer) {
+                        correctCount++;
+                    }
+                });
+                const percentage = Math.round((correctCount / questions.length) * 100);
+                
+                // Заполнение данных сертификата
+                certificateName.textContent = surname;
+                certificateDate.textContent = formattedDate;
+                certificateTime.textContent = formattedTime;
+                certificateResult.textContent = `${percentage}%`;
+                certificateDuration.textContent = formattedDuration;
+                
+                // Отображение модального окна с сертификатом
+                certificateModal.style.display = 'block';
+            }
+            
+            // Закрытие модального окна
+            function closeModal() {
+                certificateModal.style.display = 'none';
+            }
+            
+            // Печать сертификата
+            function printCertificate() {
+                window.print();
+            }
+            
+            // Функция перемешивания массива (алгоритм Фишера-Йейтса)
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+            
+            // Запуск приложения
+            init();
+        });
+    </script>
+</body>
+</html>
