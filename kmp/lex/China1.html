@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Граф терминов ИИ на китайском</title>
+  <script src="https://d3js.org/d3.v7.min.min.js"></script> 
+  <style>
+    :root {
+      --bg-color: white;
+      --text-color: black;
+      --node-fill: steelblue;
+      --link-color: #999;
+    }
+
+    .dark-mode {
+      --bg-color: #121212;
+      --text-color: white;
+      --node-fill: #bb86fc;
+      --link-color: #ccc;
+    }
+
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      overflow: hidden;
+    }
+
+    svg {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    .node circle {
+      fill: var(--node-fill);
+      stroke: var(--text-color);
+      stroke-width: 1.5px;
+      cursor: grab;
+    }
+
+    .node text {
+      font-size: 14px;
+      pointer-events: none;
+      dominant-baseline: middle;
+      text-anchor: middle;
+    }
+
+    .link {
+      stroke: var(--link-color);
+      stroke-width: 1.5px;
+    }
+
+    #theme-toggle {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      padding: 8px 12px;
+      background-color: var(--node-fill);
+      color: var(--text-color);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .node text {
+        font-size: 10px;
+      }
+
+      .node circle {
+        r: 14;
+      }
+
+      #theme-toggle {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <button id="theme-toggle">🌙 Темная тема</button>
+  <svg></svg>
+
+  <script>
+    const nodes = [
+      { id: "人工智能", name: "Искусственный интеллект", pinyin: "rén gōng zhì néng", eng: "Artificial Intelligence" },
+      { id: "机器学习", name: "Машинное обучение", pinyin: "jī qì xué xí", eng: "Machine Learning" },
+      { id: "深度学习", name: "Глубокое обучение", pinyin: "shēn dù xué xí", eng: "Deep Learning" },
+      { id: "神经网络", name: "Нейронная сеть", pinyin: "shén jīng wǎng luò", eng: "Neural Network" },
+      { id: "自然语言处理", name: "Обработка естественного языка", pinyin: "zì rán yǔ yán chǔ lǐ", eng: "NLP" },
+      { id: "计算机视觉", name: "Компьютерное зрение", pinyin: "jì suàn jī shì jué", eng: "Computer Vision" },
+      { id: "数据挖掘", name: "Добыча данных", pinyin: "shù jù zuàn kuàng", eng: "Data Mining" },
+      { id: "强化学习", name: "Подкрепляющее обучение", pinyin: "qiǎng huà xué xí", eng: "Reinforcement Learning" }
+    ];
+
+    const links = [
+      { source: "人工智能", target: "机器学习" },
+      { source: "机器学习", target: "深度学习" },
+      { source: "深度学习", target: "神经网络" },
+      { source: "神经网络", target: "自然语言处理" },
+      { source: "神经网络", target: "计算机视觉" },
+      { source: "人工智能", target: "数据挖掘" },
+      { source: "机器学习", target: "强化学习" },
+      { source: "人工智能", target: "计算机视觉" }
+    ];
+
+    const svg = d3.select("svg");
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    const zoom = d3.zoom().on("zoom", (event) => {
+      g.attr("transform", event.transform);
+    });
+
+    svg.call(zoom);
+
+    const g = svg.append("g");
+
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id(d => d.id).distance(120))
+      .force("charge", d3.forceManyBody().strength(-300))
+      .force("center", d3.forceCenter(width / 2, height / 2));
+
+    const link = g.append("g")
+      .attr("stroke", "#999")
+      .selectAll("line")
+      .data(links)
+      .join("line")
+      .attr("class", "link");
+
+    const node = g.append("g")
+      .selectAll("circle")
+      .data(nodes)
+      .join("circle")
+      .attr("r", 16)
+      .attr("class", "node")
+      .call(drag(simulation));
+
+    const label = g.append("g")
+      .selectAll("text")
+      .data(nodes)
+      .join("text")
+      .text(d => d.id)
+      .attr("dy", ".35em")
+      .attr("class", "label");
+
+    simulation.on("tick", () => {
+      link
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+
+      node
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y);
+
+      label
+        .attr("x", d => d.x)
+        .attr("y", d => d.y);
+    });
+
+    // Tooltip on hover
+    const tooltip = d3.select("body").append("div")
+      .attr("class", "tooltip")
+      .style("position", "absolute")
+      .style("background", "#222")
+      .style("color", "#fff")
+      .style("padding", "6px 10px")
+      .style("border-radius", "4px")
+      .style("opacity", 0);
+
+    node.on("mouseover", function(event, d) {
+      tooltip.transition().duration(200).style("opacity", .9);
+      tooltip.html(`
+        <strong>${d.id}</strong><br/>
+        ${d.name}<br/>
+        Пиньинь: ${d.pinyin}<br/>
+        Eng: ${d.eng}
+      `)
+      .style("left", (event.pageX + 10) + "px")
+      .style("top", (event.pageY - 30) + "px");
+    })
+    .on("mouseout", function() {
+      tooltip.transition().duration(500).style("opacity", 0);
+    });
+
+    // Drag handler
+    function drag(simulation) {
+      function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      }
+
+      function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+      }
+
+      function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      }
+
+      return d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended);
+    }
+
+    // Toggle theme
+    document.getElementById("theme-toggle").addEventListener("click", function () {
+      document.body.classList.toggle("dark-mode");
+    });
+  </script>
+</body>
+</html>

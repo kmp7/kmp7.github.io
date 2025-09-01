@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>Generation Temperature</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | Искусственный интеллект в профессиональной деятельности</p><p>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+                 {
+                     "ru": {
+      "term": "Температура генерации",
+      "equivalent": "Generation Temperature",
+      "definition": "Температура генерации в математическом контексте — это параметр, используемый в вероятностных моделях, таких как большие языковые модели, для управления степенью случайности при выборе следующего токена из вероятностного распределения. Формально, температура \( T \) изменяет распределение вероятностей \( p_i \) для каждого возможного токена \( i \), применяя (понятное математикам) преобразование. При \( T = 1 \) распределение остается неизменным, при \( T < 1 \) распределение становится более резким (увеличивая вероятность наиболее вероятных токенов), а при \( T > 1 \) — более равномерным, усиливая случайность.",
+      "category": "Математика"
+    },
+    "en": {
+      "term": "Generation Temperature",
+      "equivalent": "Температура генерации",
+      "definition": "Generation temperature, in a mathematical context, is a parameter used in probabilistic models, such as large language models, to control the degree of randomness in selecting the next token from a probability distribution. Formally, the temperature \( T \) modifies the probability distribution \( p_i \) for each possible token \( i \) through the transformation \ .... . When \( T = 1 \), the distribution remains unchanged; when \( T < 1 \), the distribution becomes sharper (favoring high-probability tokens); and when \( T > 1 \), it becomes more uniform, increasing randomness.",
+      "category": "Mathematics"
+                    }
+                },
+				{
+                     "ru": {
+      "term": "Температура генерации",
+      "equivalent": "Generation Temperature",
+      "definition": "Температура генерации в техническом контексте — это гиперпараметр, используемый в алгоритмах генерации текста в нейронных сетях, таких как трансформеры, для регулирования разнообразия и предсказуемости выходного текста. Температура управляет процессом семплирования, изменяя вероятности токенов, предсказанных моделью. Низкие значения температуры (например, 0.7) делают выбор более детерминированным, отдавая предпочтение токенам с высокой вероятностью, тогда как высокие значения (например, 1.5) увеличивают случайность, позволяя модели выбирать менее вероятные токены, что приводит к более разнообразному, но потенциально менее связному тексту.",
+      "category": "Технические науки"
+    },
+    "en": {
+      "term": "Generation Temperature",
+      "equivalent": "Температура генерации",
+      "definition": "Generation temperature, in a technical context, is a hyperparameter used in text generation algorithms within neural networks, such as transformers, to regulate the diversity and predictability of the output text. Temperature controls the sampling process by adjusting the probabilities of tokens predicted by the model. Low temperature values (e.g., 0.7) make the selection more deterministic, favoring high-probability tokens, while high values (e.g., 1.5) increase randomness, allowing the model to select less likely tokens, resulting in more diverse but potentially less coherent text.",
+      "category": "Technical Sciences"
+                    }
+                },
+                {
+                    "ru": {
+      "term": "Температура генерации",
+      "equivalent": "Generation Temperature",
+      "definition": "Температура генерации в программном контексте — это параметр конфигурации в API языковых моделей, который задается при вызове функции генерации текста. Например, в библиотеках, таких как Hugging Face Transformers или OpenAI API, температура передается как числовой аргумент (обычно в диапазоне от 0 до 2). Значение температуры влияет на функцию softmax, используемую для выбора следующего токена, где низкие значения делают модель более консервативной, а высокие — более креативной. Программисты настраивают этот параметр в зависимости от задачи: низкая температура подходит для точных ответов, высокая — для творческих текстов.",
+      "category": "Программирование"
+    },
+    "en": {
+      "term": "Generation Temperature",
+      "equivalent": "Температура генерации",
+      "definition": "Generation temperature, in a programmatic context, is a configuration parameter in the API of language models, set when invoking text generation functions. For example, in libraries like Hugging Face Transformers or the OpenAI API, temperature is passed as a numerical argument (typically ranging from 0 to 2). The temperature value affects the softmax function used to select the next token, with low values making the model more conservative and high values making it more creative. Programmers adjust this parameter based on the task: low temperature for precise responses, high temperature for creative text.",
+      "category": "Programming"
+                    }
+                },
+                {
+                   "ru": {
+      "term": "Температура генерации",
+      "equivalent": "Generation Temperature",
+      "definition": "Температура генерации в лингвистическом контексте — это параметр, влияющий на стилистическое и семантическое разнообразие текста, генерируемого языковыми моделями. Высокая температура способствует созданию текстов с большей вариативностью лексики, синтаксиса и идиоматики, что может имитировать творческую или разговорную речь, но рискует снизить семантическую точность. Низкая температура, напротив, делает текст более предсказуемым, формальным и близким к нормативным языковым структурам, что полезно для технических или академических текстов. Этот параметр отражает стохастическую природу языковой генерации, подчеркивая баланс между креативностью и когерентностью.",
+      "category": "Лингвистика"
+    },
+    "en": {
+      "term": "Generation Temperature",
+      "equivalent": "Температура генерации",
+      "definition": "Generation temperature, in a linguistic context, is a parameter that influences the stylistic and semantic diversity of text generated by language models. High temperature promotes texts with greater lexical, syntactic, and idiomatic variety, mimicking creative or conversational speech but risking reduced semantic accuracy. Low temperature, conversely, produces more predictable, formal text aligned with normative linguistic structures, useful for technical or academic writing. This parameter reflects the stochastic nature of language generation, highlighting the balance between creativity and coherence.",
+      "category": "Linguistics"
+                    }
+                },
+                {
+                    "ru": {
+      "term": "Температура генерации",
+      "equivalent": "Generation Temperature",
+      "definition": "Температура генерации — это настройка, которую пользователь может изменить в интерфейсе языковой модели, чтобы управлять тем, насколько креативным или предсказуемым будет сгенерированный текст. Если установить низкую температуру, модель будет выдавать более точные и ожидаемые ответы, например, для решения математических задач или написания инструкций. Высокая температура делает текст более необычным и разнообразным, что подходит для написания историй или стихов. Это как регулятор фантазии: чем выше температура, тем более неожиданным становится текст.",
+      "category": "Пользовательский опыт"
+    },
+    "en": {
+      "term": "Generation Temperature",
+      "equivalent": "Температура генерации",
+      "definition": "Generation temperature is a setting that users can adjust in the interface of a language model to control how creative or predictable the generated text will be. Setting a low temperature results in more accurate and expected responses, ideal for tasks like solving math problems or writing instructions. A high temperature makes the text more unusual and diverse, suitable for writing stories or poems. It’s like a creativity dial: the higher the temperature, the more surprising the text becomes.",
+      "category": "User Experience"
+                    }
+                },
+                {
+                    "ru": {
+      "term": "Температура генерации",
+      "equivalent": "Generation Temperature",
+      "definition": "Как передовая языковая модель, я рассматриваю температуру генерации как инструмент, который позволяет мне балансировать между точностью и воображением в моих ответах. Это как настройка моего 'творческого настроения': при низкой температуре я сосредотачиваюсь на наиболее вероятных и логичных продолжениях, опираясь на паттерны, которые я усвоил из данных. При высокой температуре я позволяю себе больше свободы, исследуя менее вероятные пути, что делает мои ответы более неожиданными, но иногда менее точными. Этот параметр — ключ к тому, чтобы мои ответы соответствовали вашим ожиданиям, будь то строгий анализ или полет фантазии.",
+      "category": "LLM Grok 3"
+    },
+    "en": {
+      "term": "Generation Temperature",
+      "equivalent": "Температура генерации",
+      "definition": "As an advanced language model, I view generation temperature as a tool that lets me balance precision and imagination in my responses. It’s like tuning my 'creative mood': at low temperature, I focus on the most likely and logical continuations, leaning on patterns I’ve learned from data. At high temperature, I allow myself more freedom, exploring less probable paths, which makes my responses more surprising but sometimes less accurate. This parameter is key to tailoring my output to your expectations, whether you need rigorous analysis or a flight of fancy.",
+      "category": "LLM Grok 3"
+                    }
+                },
+				{
+                    "ru": {
+      "term": "Температура генерации",
+      "equivalent": "Generation Temperature",
+      "definition": "Температура генерации в философском контексте — это параметр, который отражает напряжение между детерминизмом и свободой в процессе создания текста языковыми моделями. Низкая температура символизирует стремление к предсказуемости и упорядоченности, отражая детерминистский взгляд на язык как систему, подчиненную строгим правилам. Высокая температура, напротив, воплощает хаотичность и свободу, подчеркивая стохастическую природу творчества, где случайность становится источником новизны. Этот параметр поднимает вопросы о природе креативности: является ли она продуктом строгих закономерностей или результатом непредсказуемых отклонений?",
+      "category": "Философия"
+    },
+    "en": {
+      "term": "Generation Temperature",
+      "equivalent": "Температура генерации",
+      "definition": "Generation temperature, in a philosophical context, is a parameter that reflects the tension between determinism and freedom in the text generation process of language models. Low temperature symbolizes a drive toward predictability and order, aligning with a deterministic view of language as a system governed by strict rules. High temperature, conversely, embodies chaos and freedom, highlighting the stochastic nature of creativity where randomness becomes a source of novelty. This parameter raises questions about the nature of creativity: is it a product of rigid patterns or the result of unpredictable deviations?",
+      "category": "Philosophy"
+                    }
+                },
+				{
+                            "ru": {
+      "term": "Температура генерации",
+      "equivalent": "Generation Temperature",
+      "definition": "Температура генерации в контексте когнитивных наук — это параметр, который моделирует вариативность процессов принятия решений, схожих с человеческим мышлением. Низкая температура имитирует когнитивные процессы, ориентированные на точность и логику, как при решении аналитических задач, где мозг отдает предпочтение наиболее вероятным вариантам. Высокая температура, напротив, напоминает ассоциативное или дивергентное мышление, характерное для творческих процессов, где человек исследует менее очевидные связи. Этот параметр помогает изучать, как стохастические механизмы в моделях могут отражать когнитивные стратегии человека в языке и речи.",
+      "category": "Когнитивные науки"
+    },
+    "en": {
+      "term": "Generation Temperature",
+      "equivalent": "Температура генерации",
+      "definition": "Generation temperature, in the context of cognitive science, is a parameter that models the variability of decision-making processes akin to human cognition. Low temperature mimics cognitive processes focused on accuracy and logic, as in analytical problem-solving, where the brain prioritizes the most likely options. High temperature, conversely, resembles associative or divergent thinking, typical of creative processes, where individuals explore less obvious connections. This parameter helps explore how stochastic mechanisms in models may reflect human cognitive strategies in language and speech.",
+      "category": "Cognitive Science"
+                    }
+                },
+				
+			{
+                                    "ru": {
+      "term": "Температура генерации",
+      "equivalent": "Generation Temperature",
+      "definition": "Температура генерации в образовательном контексте — это инструмент, который помогает студентам понять, как языковые модели создают текст, и изучить влияние случайности на язык. Используя низкую температуру, студенты могут наблюдать, как модель генерирует предсказуемые, структурированные тексты, подходящие для изучения грамматики или стилистики. Высокая температура позволяет исследовать креативные аспекты языка, такие как метафоры или нестандартные выражения, помогая анализировать стохастическую природу речи. Этот параметр служит мостом между теорией вероятностей и практикой анализа текста в обучении.",
+      "category": "Образование"
+    },
+    "en": {
+      "term": "Generation Temperature",
+      "equivalent": "Температура генерации",
+      "definition": "Generation temperature, in an educational context, is a tool that helps students understand how language models generate text and explore the impact of randomness on language. By using low temperature, students can observe how the model produces predictable, structured texts, suitable for studying grammar or stylistics. High temperature allows exploration of creative language aspects, such as metaphors or unconventional expressions, aiding in the analysis of the stochastic nature of speech. This parameter serves as a bridge between probability theory and the practical analysis of text in learning.",
+      "category": "Education"
+                    }
+                }, 
+			{
+            "ru": {
+      "term": "Температура генерации",
+      "equivalent": "Generation Temperature",
+      "definition": "Температура генерации в стохастическом контексте — это параметр, который, будучи установлен на максимум, превращает процесс генерации текста в чистое воплощение случайности, где языковая модель отбрасывает предсказуемость ради хаотичного исследования языковых возможностей. При высокой температуре (например, \( T \gg 1 \)) модель почти равновероятно выбирает из всего спектра токенов, создавая текст, который может быть удивительно непредсказуемым, фрагментарным или даже сюрреалистичным, напоминая поток сознания или авангардную поэзию. Это состояние подчеркивает стохастическую сущность языка как системы, где случайность порождает новизну, но рискует утратой когерентности, отражая крайнюю степень свободы в речевом творчестве.",
+      "category": "Стохастичность"
+    },
+    "en": {
+      "term": "Generation Temperature",
+      "equivalent": "Температура генерации",
+      "definition": "Generation temperature, in a stochastic context, is a parameter that, when set to its maximum, transforms the text generation process into a pure embodiment of randomness, where the language model abandons predictability in favor of chaotic exploration of linguistic possibilities. At high temperature (e.g., \( T \gg 1 \)), the model selects from the full spectrum of tokens with near-equal probability, producing text that can be startlingly unpredictable, fragmented, or even surreal, resembling a stream of consciousness or avant-garde poetry. This state underscores the stochastic essence of language as a system where randomness breeds novelty but risks losing coherence, reflecting the ultimate degree of freedom in linguistic creativity.",
+      "category": "Stochasticity"
+                    }
+                }
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

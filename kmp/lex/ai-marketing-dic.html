@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>kmp+</title>
+  <style>
+    :root {
+      --primary-bg: #ffffff;
+      --secondary-bg: #f5f5f5;
+      --header-color: #325980;
+      --interactive: #3498db;
+      --divider: #f1f1f1;
+      --text: #333333;
+	  	--primary-color: #3e76ad;
+		--header-text-color: #ffffff;
+		--border-radius: 8px;
+    }
+
+    [data-theme="dark"] {
+      --primary-bg: #1e1e1e;
+      --secondary-bg: #2c2c2c;
+      --header-color: #89aaf2;
+      --interactive: #4aa3df;
+      --divider: #444444;
+      --text: #f5f5f5;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--primary-bg);
+      color: var(--text);
+      line-height: 1.6;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    header {
+            background-color: var(--primary-color);
+            color: var(--header-text-color);
+            padding: 20px 0;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            background-image: linear-gradient(135deg, var(--primary-color) 0%, #2c3e50 100%);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+    .theme-toggle {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      font-size: 1.5rem;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: white;
+      transition: color 0.3s;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1rem;
+      background-color: var(--secondary-bg);
+      padding: 1rem;
+      border-radius: 8px;
+    }
+
+    input[type='text'],
+    select {
+      width: 100%;
+      padding: 0.8rem;
+      border: 1px solid var(--divider);
+      border-radius: 4px;
+      font-size: 1rem;
+      background-color: var(--primary-bg);
+      color: var(--text);
+    }
+
+    button {
+      background-color: var(--interactive);
+      color: white;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    .glossary {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .term-card {
+      background-color: var(--primary-bg);
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 1.5rem;
+      transition: transform 0.3s;
+    }
+
+    .term-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .term-title {
+      color: var(--header-color);
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .term-translation {
+      color: var(--interactive);
+      font-style: italic;
+      margin-bottom: 0.5rem;
+    }
+
+    .term-description {
+      margin-bottom: 0.5rem;
+    }
+
+    .term-example {
+      font-size: 0.9rem;
+      background-color: var(--secondary-bg);
+      padding: 0.5rem;
+      border-radius: 4px;
+      border-left: 3px solid var(--interactive);
+    }
+
+    .term-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      margin-top: 0.5rem;
+    }
+
+    .tag {
+      background-color: var(--divider);
+      color: var(--text);
+      padding: 0.2rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+    }
+
+    @media (max-width: 768px) {
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .theme-toggle {
+        font-size: 1.2rem;
+      }
+    }
+	
+	.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0,0,0,0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--primary-bg);
+  color: var(--text);
+  padding: 2rem;
+  border-radius: 8px;
+    max-width: 600px;
+  width: 90%;
+  max-height: 90vh;        /* Ограничиваем высоту окна */
+  overflow-y: auto;        /* Добавляем прокрутку при необходимости */
+  padding: 1.5rem;         /* Чуть меньше отступы */
+  background: var(--primary-bg);
+  color: var(--text);
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 20px rgba(0,0,0,0.2);
+}
+.modal-content input,
+.modal-content textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+  background: var(--secondary-bg);
+  color: var(--text);
+}
+.modal-content button {
+  margin-top: 1rem;
+}
+
+  footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Dictionary of AI hyperbole</h1>
+    <p>мультиязычный интерактивный словарь маркетинговых лексических преувеличений в сфере ИИ</p>
+    <button class="theme-toggle" id="theme-toggle">🌙</button>
+  </header>
+
+  <div class="container">
+    <div class="controls">
+      <input type="text" id="search" placeholder="Поиск термина..." />
+      <button id="add-term-btn">Добавить термин</button>
+      <select id="language-select">
+        <option value="ru">Русский</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+<div class="modal" id="term-modal">
+  <div class="modal-content">
+    <h2>Добавить термин</h2>
+    <form id="term-form">
+      <label>Термин (RU): <input type="text" id="term-ru" required /></label><br /><br />
+      <label>Термин (EN): <input type="text" id="term-en" required /></label><br /><br />
+      <label>Описание (RU): <textarea id="desc-ru" required></textarea></label><br /><br />
+      <label>Описание (EN): <textarea id="desc-en" required></textarea></label><br /><br />
+      <label>Пример (RU): <textarea id="ex-ru" required></textarea></label><br /><br />
+      <label>Пример (EN): <textarea id="ex-en" required></textarea></label><br /><br />
+      <label>Теги (через запятую): <input type="text" id="tags" /></label><br /><br />
+      <button type="submit">Сохранить</button>
+      <button type="button" id="close-modal" style="margin-left: 1rem;">Отмена</button>
+    </form>
+  </div>
+</div>
+    <div class="glossary" id="glossary-container"></div>
+  </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    
+  <script>
+    const glossaryData = [
+      
+	  {
+            id: 1,
+            term: {
+                en: "AI Hype Cycle",
+                ru: "Цикл ажиотажа вокруг ИИ"
+            },
+            description: {
+                en: "Based on Gartner's Hype Cycle, describes how AI technologies typically move from inflated expectations to disillusionment before reaching practical implementation.",
+                ru: "По модели Gartner: цикл от завышенных ожиданий → разочарования → реалистичного внедрения технологий ИИ."
+            },
+            example: {
+                en: "\"AGI coming tomorrow!\" → \"Why did ChatGPT make this mistake?\" → \"Here's how we're using LLMs effectively in our workflow\"",
+                ru: "\"AGI уже завтра\" → \"Почему ChatGPT ошибся?\" → \"Вот как мы эффективно используем LLM в рабочем процессе\""
+            },
+            tags: ["marketing", "expectations", "implementation", "маркетинг", "ожидания", "внедрение"]
+        },
+        {
+            id: 2,
+            term: {
+                en: "AI Snake Oil",
+                ru: "ИИ-змеиное масло"
+            },
+            description: {
+                en: "Deliberately exaggerated or false claims about AI capabilities, referencing the fake 'miracle cures' of the 19th century.",
+                ru: "Намеренно раздутые или ложные заявления о возможностях ИИ (отсылка к «чудо-средствам» 19 века)."
+            },
+            example: {
+                en: "\"Our AI solves all business problems without needing any data or training.\"",
+                ru: "\"Наш ИИ решает все бизнес-проблемы без данных или обучения.\""
+            },
+            tags: ["false claims", "marketing", "exaggeration", "ложные заявления", "маркетинг", "преувеличение"]
+        },
+        {
+            id: 3,
+            term: {
+                en: "Potemkin AI",
+                ru: "Потемкинский ИИ"
+            },
+            description: {
+                en: "A demonstration of an apparently 'intelligent' interface that actually conceals manual labor or simple algorithms behind the scenes.",
+                ru: "Демонстрация «умного» интерфейса, за которым скрывается ручной труд или простые алгоритмы."
+            },
+            example: {
+                en: "A chatbot that appears to understand complex queries but actually routes them to human operators.",
+                ru: "Чатбот, который якобы понимает сложные запросы, но на самом деле передает их живым операторам."
+            },
+            tags: ["deception", "interface", "human-in-the-loop", "обман", "интерфейс", "человек-в-цикле"]
+        },
+        {
+            id: 4,
+            term: {
+                en: "Vaporware AI",
+                ru: "Испарившийся ИИ"
+            },
+            description: {
+                en: "Announcements of nonexistent AI products to attract investment or attention, with no realistic path to delivery.",
+                ru: "Анонсы несуществующих продуктов для привлечения инвестиций или внимания, без реалистичного пути к релизу."
+            },
+            example: {
+                en: "\"We've developed mind-reading AI technology that will be released in 5 years.\"",
+                ru: "\"У нас есть ИИ для чтения мыслей, релиз через 5 лет.\""
+            },
+            tags: ["investment", "announcements", "speculation", "инвестиции", "анонсы", "спекуляция"]
+        },
+        {
+            id: 5,
+            term: {
+                en: "AI Washing",
+                ru: "ИИ-промывка"
+            },
+            description: {
+                en: "Attributing 'artificial intelligence' capabilities to ordinary software to increase market valuation or appeal.",
+                ru: "Приписывание обычному софту «искусственного интеллекта» для роста капитализации или привлекательности."
+            },
+            example: {
+                en: "Excel with filters and basic statistics marketed as \"AI-powered analytics\"",
+                ru: "Excel с фильтрами и базовой статистикой, продаваемый как \"ИИ-аналитика\""
+            },
+            tags: ["marketing", "rebranding", "valuation", "маркетинг", "ребрендинг", "оценка"]
+        },
+        {
+            id: 6,
+            term: {
+                en: "AGI (Artificial General Intelligence)",
+                ru: "ИОИ (Искусственный общий интеллект)"
+            },
+            description: {
+                en: "Hypothetical AI that equals human-level intelligence across all domains. Marketing often conflates narrow AI with AGI.",
+                ru: "Гипотетический ИИ, равный человеческому интеллекту во всех областях. Маркетинг часто смешивает узкий ИИ (Narrow AI) с AGI."
+            },
+            example: {
+                en: "\"Our language model shows signs of AGI\" (when it's actually just trained to predict text).",
+                ru: "\"Наша языковая модель показывает признаки ИОИ\" (когда она просто обучена предсказывать текст)."
+            },
+            tags: ["speculation", "intelligence", "capabilities", "спекуляция", "интеллект", "возможности"]
+        },
+        {
+            id: 7,
+            term: {
+                en: "Ethical Debt",
+                ru: "Этический долг"
+            },
+            description: {
+                en: "Accumulated risks due to rushing AI implementation without proper checks for bias, safety, and other ethical concerns.",
+                ru: "Накопленные риски из-за спешки внедрить ИИ без проверки на предвзятость, безопасность и другие этические вопросы."
+            },
+            example: {
+                en: "A facial recognition system deployed without testing across diverse demographics, leading to discrimination.",
+                ru: "Система распознавания лиц, развернутая без тестирования на разных демографических группах, приводящая к дискриминации."
+            },
+            tags: ["ethics", "implementation", "risks", "этика", "внедрение", "риски"]
+        },
+        {
+            id: 8,
+            term: {
+                en: "Automation Bias",
+                ru: "Предвзятость автоматизации"
+            },
+            description: {
+                en: "The blind belief that algorithms are always more objective than humans, despite being trained on human-generated data.",
+                ru: "Слепая вера в то, что алгоритмы всегда объективнее людей, хотя они учатся на человеческих данных."
+        },
+        example: {
+            en: "\"The AI made this hiring decision, so it must be fair and unbiased.\"",
+            ru: "\"ИИ принял это решение о найме, значит оно справедливо и непредвзято.\""
+        },
+        tags: ["bias", "objectivity", "decision-making", "предвзятость", "объективность", "принятие решений"]
+    },
+    {
+        id: 9,
+        term: {
+            en: "Benchmark Hacking",
+            ru: "Взлом тестовых показателей"
+        },
+        description: {
+            en: "Manipulating test data to demonstrate model 'leadership' without improving real-world performance.",
+            ru: "Подгонка тестовых данных для демонстрации «лидерства» модели без улучшения производительности в реальном мире."
+        },
+        example: {
+            en: "Inflating accuracy metrics by training specifically for a narrow dataset that doesn't represent actual usage.",
+            ru: "Завышение показателей точности путем обучения специально для узкого набора данных, который не представляет реальное использование."
+        },
+        tags: ["metrics", "evaluation", "deception", "метрики", "оценка", "обман"]
+    },
+    {
+        id: 10,
+        term: {
+            en: "Human-like intelligence",
+            ru: "Человекоподобный интеллект"
+        },
+        description: {
+            en: "Marketing label implying consciousness or understanding. LLMs only imitate language patterns without having consciousness or emotions.",
+            ru: "Маркетинговый ярлык, подразумевающий сознание или понимание. LLM лишь имитируют речь, не обладая сознанием или эмоциями."
+        },
+        example: {
+            en: "\"Our chatbot thinks and feels like a human\" (when it's actually pattern-matching from training data).",
+            ru: "\"Наш чатбот думает и чувствует как человек\" (когда он просто сопоставляет шаблоны из обучающих данных)."
+        },
+        tags: ["consciousness", "imitation", "language", "сознание", "имитация", "язык"]
+    },
+    {
+        id: 11,
+        term: {
+            en: "Stochastic Parrot",
+            ru: "Стохастический попугай"
+        },
+        description: {
+            en: "Term coined by researchers to describe large language models as sophisticated text prediction systems that mimic patterns without understanding.",
+            ru: "Термин, предложенный исследователями для описания больших языковых моделей как сложных систем предсказания текста, имитирующих шаблоны без понимания."
+        },
+        example: {
+            en: "The LLM confidently generated a detailed biography of a non-existent person, demonstrating it's just a stochastic parrot.",
+            ru: "Языковая модель уверенно сгенерировала подробную биографию несуществующего человека, демонстрируя, что она просто стохастический попугай."
+        },
+        tags: ["language models", "prediction", "understanding", "языковые модели", "предсказание", "понимание"]
+    },
+    {
+        id: 12,
+        term: {
+            en: "FrankenAI",
+            ru: "ФранкенИИ"
+        },
+        description: {
+            en: "AI systems cobbled together from disparate components without coherent design, often leading to unpredictable behavior.",
+            ru: "ИИ-системы, собранные из разрозненных компонентов без целостного дизайна, часто приводящие к непредсказуемому поведению."
+        },
+        example: {
+            en: "The company combined five different models without proper integration, creating a FrankenAI that gave contradictory outputs.",
+            ru: "Компания объединила пять разных моделей без должной интеграции, создав ФранкенИИ, который выдавал противоречивые результаты."
+        },
+        tags: ["integration", "design", "reliability", "интеграция", "дизайн", "надежность"]
+    },
+    {
+        id: 13,
+        term: {
+            en: "Techno-solutionism",
+            ru: "Техно-солюшионизм"
+        },
+        description: {
+            en: "The belief that AI will automatically solve complex social problems without addressing systemic causes.",
+            ru: "Вера в то, что ИИ автоматически решит сложные социальные проблемы без устранения системных причин."
+        },
+        example: {
+            en: "\"Our AI will eradicate poverty\" without considering economic structures and policy requirements.",
+            ru: "\"Наш ИИ искоренит бедность\" без учета экономических структур и требований к политике."
+        },
+        tags: ["social issues", "oversimplification", "policy", "социальные проблемы", "упрощение", "политика"]
+    },
+    {
+        id: 14,
+        term: {
+            en: "Self-learning system",
+            ru: "Самообучающаяся система"
+        },
+        description: {
+            en: "Usually means retraining on new data, not autonomous development as the term implies.",
+            ru: "Обычно означает дообучение на новых данных, а не автономное развитие, как подразумевает термин."
+        },
+        example: {
+            en: "\"Our self-learning AI improves itself\" (when it actually requires engineers to feed it new data and retrain it).",
+            ru: "\"Наш самообучающийся ИИ совершенствует себя\" (когда на самом деле инженеры должны подавать ему новые данные и переобучать его)."
+        },
+        tags: ["learning", "autonomy", "training", "обучение", "автономность", "тренировка"]
+    },
+	
+	{
+            id: 15,
+            term: {
+                en: "Orlova Eva",
+                ru: "Орлова Ева Адамовна"
+            },
+            description: {
+                en: "Orlova Eva is a virtual kmp-character of an ideal student who completes work before it is made.",
+                ru: "Орлова Ева - виртуальный kmp-персонаж идеальной студентки, которая выполняет работы раньше, чем они изготовлены."
+            },
+            example: {
+                en: "\"I study AI\" → \"Why is this important to me?\" → \"Because I strive to be successful, needed and happy.",
+                ru: "\"Я изучаю ИИ\" → \"Почему это важно меня?\" → \"Потому, что стремлюсь быть успешной, нужной и счастливой."
+            },
+            tags: ["attention", "study", "understanding", "внимание", "изучение", "понимание"]
+        }
+    ];
+
+    let currentLanguage = 'ru';
+
+    function renderGlossary(data) {
+      const container = document.getElementById('glossary-container');
+      container.innerHTML = '';
+      data.forEach(term => {
+        const card = document.createElement('div');
+        card.className = 'term-card';
+        const translationLang = currentLanguage === 'ru' ? 'en' : 'ru';
+
+        const tags = term.tags.filter(tag =>
+          currentLanguage === 'ru' ? /[а-яА-Я]/.test(tag) : /[a-zA-Z]/.test(tag)
+        );
+
+        card.innerHTML = `
+          <div class="term-title">${term.term[currentLanguage]}</div>
+          <div class="term-translation">${term.term[translationLang]}</div>
+          <div class="term-description">${term.description[currentLanguage]}</div>
+          <div class="term-example">${term.example[currentLanguage]}</div>
+          <div class="term-tags">
+            ${tags.map(t => `<span class="tag">${t}</span>`).join('')}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    document.getElementById('language-select').addEventListener('change', (e) => {
+      currentLanguage = e.target.value;
+      renderGlossary(glossaryData);
+    });
+
+    document.getElementById('search').addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      const filtered = glossaryData.filter(term =>
+        term.term[currentLanguage].toLowerCase().includes(query) ||
+        term.description[currentLanguage].toLowerCase().includes(query) ||
+        term.example[currentLanguage].toLowerCase().includes(query)
+      );
+      renderGlossary(filtered);
+    });
+
+    // Theme toggle
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      const dark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', dark ? 'light' : 'dark');
+      document.getElementById('theme-toggle').textContent = dark ? '🌙' : '☀️';
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderGlossary(glossaryData);
+    });
+	
+	// DOM для модалки
+const modal = document.getElementById('term-modal');
+const openBtn = document.getElementById('add-term-btn');
+const closeBtn = document.getElementById('close-modal');
+const form = document.getElementById('term-form');
+
+openBtn.addEventListener('click', () => modal.style.display = 'flex');
+closeBtn.addEventListener('click', () => modal.style.display = 'none');
+window.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
+
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const newTerm = {
+    term: {
+      ru: document.getElementById('term-ru').value.trim(),
+      en: document.getElementById('term-en').value.trim()
+    },
+    description: {
+      ru: document.getElementById('desc-ru').value.trim(),
+      en: document.getElementById('desc-en').value.trim()
+    },
+    example: {
+      ru: document.getElementById('ex-ru').value.trim(),
+      en: document.getElementById('ex-en').value.trim()
+    },
+    tags: document.getElementById('tags').value.split(',').map(tag => tag.trim())
+  };
+
+  glossaryData.push(newTerm);
+  renderGlossary(glossaryData);
+  form.reset();
+  modal.style.display = 'none';
+});
+  </script>
+</body>
+</html>

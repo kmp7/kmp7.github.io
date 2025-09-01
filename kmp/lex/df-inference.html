@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>ИНФЕРЕНС</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp |  CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+                       {
+  "ru": {
+    "term": "Инференс",
+    "equivalent": "Inference",
+    "definition": "Инференс — процесс применения функции F, которая была обучена на наборе данных D-train, к новому набору данных D .",
+    "category": "Математика"
+  },
+  "en": {
+    "term": "Inference",
+    "equivalent": "Инференс",
+    "definition": "Inference is the process of applying a function F that was trained on a dataset D-train to a new dataset D.",
+    "category": "Mathematics"
+  }
+},
+{
+  "ru": {
+    "term": "Инференс",
+    "equivalent": "Inference",
+    "definition": "Инференс — это фаза применения обученной модели, в которой она, получив входные данные, генерирует предсказания или ответы без изменения параметров.",
+    "category": "Технологии"
+  },
+  "en": {
+    "term": "Inference",
+    "equivalent": "Инференс",
+    "definition": "Inference is the stage where a trained model, given input data, generates predictions or outputs without altering its parameters.",
+    "category": "Technology"
+  }
+},
+{
+  "ru": {
+    "term": "Инференс",
+    "equivalent": "Inference",
+    "definition": "Инференс — это вывод, который слушатель или читатель делает на основе языкового контекста, пресуппозиций и импликатур, неявно присутствующих в высказывании.",
+    "category": "Лингвистика"
+  },
+  "en": {
+    "term": "Inference",
+    "equivalent": "Инференс",
+    "definition": "Inference is a conclusion drawn by a listener or reader based on linguistic context, presuppositions, and implicatures implicitly present in an utterance.",
+    "category": "Linguistics"
+  }
+},
+{
+  "ru": {
+    "term": "Инференс",
+    "equivalent": "Inference",
+    "definition": "Инференс — это момент, когда ИИ, получив ваш запрос, начинает формировать ответ, основываясь на обученных знаниях.",
+    "category": "Пользователь"
+  },
+  "en": {
+    "term": "Inference",
+    "equivalent": "Инференс",
+    "definition": "Inference is the moment when an AI, having received your input, starts forming a response based on its learned knowledge.",
+    "category": "User"
+  }
+},
+{
+  "ru": {
+    "term": "Инференс",
+    "equivalent": "Inference",
+    "definition": "Инференс — это когда умная программа думает и решает, что сказать, используя то, чему она раньше научилась.",
+    "category": "Школьник"
+  },
+  "en": {
+    "term": "Inference",
+    "equivalent": "Инференс",
+    "definition": "Inference is when a smart program thinks and decides what to say using what it has learned before.",
+    "category": "School-level"
+  }
+},
+{
+  "ru": {
+    "term": "Инференс",
+    "equivalent": "Inference",
+    "definition": "Инференс — это проекция вероятностной структуры модели на заданное входное пространство, направленная на выбор наиболее вероятной конфигурации выходных данных согласно дистрибуции, заданной весами модели.",
+    "category": "Академия"
+  },
+  "en": {
+    "term": "Inference",
+    "equivalent": "Инференс",
+    "definition": "Inference is the projection of the model's probabilistic structure onto a given input space, aimed at selecting the most probable configuration of output data according to the distribution defined by the model's weights.",
+    "category": "Academia"
+  }
+},
+{
+  "ru": {
+    "term": "Инференс",
+    "equivalent": "Inference",
+    "definition": "Инференс — это форма интерпретации, встроенная в цифровую культуру, где ИИ учится извлекать смысл из текстов и взаимодействий, моделируя человеческие процессы понимания.",
+    "category": "Культура"
+  },
+  "en": {
+    "term": "Inference",
+    "equivalent": "Инференс",
+    "definition": "Inference is a form of interpretation embedded in digital culture, where AI learns to derive meaning from texts and interactions by modeling human processes of understanding.",
+    "category": "Culture"
+  }
+},
+{
+  "ru": {
+    "term": "Инференс",
+    "equivalent": "Inference",
+    "definition": "Инференс — это переход от знания к новому знанию, отражающий саму способность мышления к выводу, независимо от носителя — человека или машины.",
+    "category": "Философия"
+  },
+  "en": {
+    "term": "Inference",
+    "equivalent": "Инференс",
+    "definition": "Inference is the transition from knowledge to new knowledge, reflecting the very capacity of thought to derive conclusions, regardless of whether it resides in humans or machines.",
+    "category": "Philosophy"
+  }
+},
+{
+  "ru": {
+    "term": "Инференс",
+    "equivalent": "Inference",
+    "definition": "Инференс — это когнитивный акт, при котором умная система заполняет пробелы между данными, используя внутренние модели мира.",
+    "category": "Когнитивная наука"
+  },
+  "en": {
+    "term": "Inference",
+    "equivalent": "Инференс",
+    "definition": "Inference is a cognitive act in which an intelligent system fills in gaps between data using internal models of the world.",
+    "category": "Cognitive Science"
+  }
+},
+{
+  "ru": {
+    "term": "Инференс",
+    "equivalent": "Inference",
+    "definition": "Инференс — это вычислительная задача применения обученной модели на новых данных, оптимизированная для скорости и точности при ограниченных ресурсах.",
+    "category": "Инженерия"
+  },
+  "en": {
+    "term": "Inference",
+    "equivalent": "Инференс",
+    "definition": "Inference is the computational task of applying a trained model to new data, optimized for speed and accuracy under resource constraints.",
+    "category": "Engineering"
+  }
+},
+{
+  "ru": {
+    "term": "Инференс",
+    "equivalent": "Inference",
+    "definition": "Инференс — это как прыжок через реку незнания: с одного берега известных данных на другой — возможных смыслов.",
+    "category": "Метафора"
+  },
+  "en": {
+    "term": "Inference",
+    "equivalent": "Инференс",
+    "definition": "Inference is like a leap across the river of ignorance — from the bank of known data to the shore of possible meanings.",
+    "category": "Metaphor"
+  }
+},
+{
+  "ru": {
+    "term": "Инференс",
+    "equivalent": "Inference",
+    "definition": "Инференс — это активация предсказательного механизма трансформер-архитектуры, реализующая аппроксимацию вероятностной оценки следующего токена с учётом всего контекста.",
+    "category": "LLM"
+  },
+  "en": {
+    "term": "Inference",
+    "equivalent": "Инференс",
+    "definition": "Inference is the activation of the predictive mechanism within a transformer architecture, executing an approximation of the probabilistic estimation of the next token conditioned on the entire context.",
+    "category": "LLM"
+  }
+}
+
+
+
+
+
+
+
+
+
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --primary-bg: #ffffff;
+            --secondary-bg: #f5f5f5;
+            --header-color: #325980;
+            --interactive-color: #3498db;
+            --divider-color: #f1f1f1;
+            --text-color: #333333;
+            --light-text: #777777;
+            --card-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --primary-bg: #1a1a1a;
+            --secondary-bg: #2a2a2a;
+            --header-color: #4a7aad;
+            --interactive-color: #5dade2;
+            --divider-color: #333333;
+            --text-color: #f0f0f0;
+            --light-text: #cccccc;
+            --card-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--header-color);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: white;
+        }
+
+        nav {
+            background-color: var(--secondary-bg);
+            display: flex;
+            justify-content: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--divider-color);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .nav-links button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--header-color);
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+        }
+
+        .nav-links button.active {
+            background-color: var(--header-color);
+            color: white;
+        }
+
+        .nav-links button:hover:not(.active) {
+            background-color: var(--divider-color);
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .section {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .section.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .section-title {
+            color: var(--header-color);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--divider-color);
+        }
+
+        .language-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .language-tab {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--divider-color);
+            border-radius: 4px;
+        }
+
+        .language-tab.active {
+            background-color: var(--interactive-color);
+            color: white;
+            border-color: var(--interactive-color);
+        }
+
+        .glossary-content {
+            display: none;
+        }
+
+        .glossary-content.active {
+            display: block;
+        }
+
+        .glossary-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .search-container {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            border: 1px solid var(--divider-color);
+            border-radius: 4px;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.7rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--light-text);
+        }
+
+        button {
+            background-color: var(--interactive-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .glossary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .glossary-card {
+            background-color: var(--primary-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--divider-color);
+        }
+
+        .term {
+            color: var(--header-color);
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .definition {
+            margin-bottom: 0.5rem;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .card-actions button {
+            padding: 0.3rem 0.7rem;
+            font-size: 0.9rem;
+        }
+
+        .delete-btn {
+            background-color: #7d7573;
+        }
+
+        .edit-btn {
+            background-color: #7cbd75;
+        }
+
+        .info-block {
+            background-color: var(--secondary-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--divider-color);
+        }
+
+        .punctuation-section {
+            margin-bottom: 2rem;
+        }
+
+        .punctuation-section h3 {
+            color: var(--header-color);
+            margin-bottom: 1rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            border-top: 0px solid #ddd;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal {
+            background-color: var(--primary-bg);
+            border-radius: 8px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            color: var(--header-color);
+            font-size: 1.3rem;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--light-text);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--header-color);
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid var(--divider-color);
+            border-radius: 4px;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .cancel-btn {
+            background-color: #95a5a6;
+        }
+
+        .hidden-file-input {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .glossary-actions {
+                flex-direction: column;
+            }
+            
+            .search-container {
+                width: 100%;
+            }
+            
+            .glossary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .language-tabs {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .modal {
+                width: 95%;
+                padding: 1.5rem;
+            }
+        }
+		
+		.no-results {
+    color: var(--light-text);
+    font-style: italic;
+    padding: 1rem;
+}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Глоссарий пунктуации в LLM</div>
+        <div class="header-controls">
+            <button class="theme-toggle" id="themeToggle">☀️</button>
+        </div>
+    </header>
+
+    <nav>
+        <div class="nav-links">
+            <button class="nav-link active" data-section="glossary">Глоссарий</button>
+            <button class="nav-link" data-section="punctuation">О пунктуации</button>
+            <button class="nav-link" data-section="about">О приложении</button>
+        </div>
+    </nav>
+
+    <main>
+        <section class="section active" id="glossary">
+            <h2 class="section-title">Глоссарий терминов</h2>
+            
+            <div class="language-tabs">
+                <div class="language-tab active" data-lang="ru">Русский</div>
+                <div class="language-tab" data-lang="en">English</div>
+                <div class="language-tab" data-lang="de">Deutsch</div>
+                <div class="language-tab" data-lang="zh">中文</div>
+				<div class="language-tab" data-lang="lm">LLM</div>
+            </div>
+            
+            <div class="glossary-actions">
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" placeholder="Поиск терминов...">
+                </div>
+                <button id="addTermBtn">Добавить термин</button>
+                <button id="exportBtn">Экспорт</button>
+                <button id="importBtn">Импорт</button>
+                <input type="file" id="fileInput" class="hidden-file-input" accept=".json">
+            </div>
+            
+            <div class="glossary-content active" data-lang="ru">
+                <div class="glossary-grid" id="glossaryRu"></div>
+            </div>
+            
+            <div class="glossary-content" data-lang="en">
+                <div class="glossary-grid" id="glossaryEn"></div>
+            </div>
+            
+            <div class="glossary-content" data-lang="de">
+                <div class="glossary-grid" id="glossaryDe"></div>
+            </div>
+            
+            <div class="glossary-content" data-lang="zh">
+                <div class="glossary-grid" id="glossaryZh"></div>
+			</div>
+			<div class="glossary-content" data-lang="lm">
+                <div class="glossary-grid" id="glossaryLm"></div>
+			</div>
+        </section>
+
+        <section class="section" id="punctuation">
+            <h2 class="section-title">О пунктуации в работе с LLM</h2>
+            
+            <div class="info-block">
+                <p>Правильное использование пунктуации при общении с языковыми моделями (LLM) критически важно для получения точных и релевантных ответов. Разные языки имеют свои пунктуационные особенности, которые могут влиять на интерпретацию запросов.</p>
+            </div>
+            
+            <div class="punctuation-section">
+                <h3>Пунктуация в русском языке</h3>
+                <p>Русская пунктуация отличается сложностью и разнообразием правил. При работе с LLM особенно важно:</p>
+                <ul>
+                    <li>Правильно использовать запятые для разделения частей сложного предложения</li>
+                    <li>Обозначать вводные конструкции запятыми</li>
+                    <li>Четко отделять прямую речь от слов автора</li>
+                    <li>Использовать двоеточие перед списками и пояснениями</li>
+                </ul>
+            </div>
+            
+            <div class="punctuation-section">
+                <h3>Пунктуация в английском языке</h3>
+                <p>Английская пунктуация более гибкая, но имеет свои особенности:</p>
+                <ul>
+                    <li>Запятые используются реже, чем в русском языке</li>
+                    <li>Точка с запятой (semicolon) соединяет тесно связанные самостоятельные предложения</li>
+                    <li>Апостроф (apostrophe) важен для сокращений и притяжательного падежа</li>
+                    <li>Цитаты оформляются двойными кавычками ("...")</li>
+                </ul>
+            </div>
+            
+            <div class="punctuation-section">
+                <h3>Пунктуация в немецком языке</h3>
+                <p>Немецкая пунктуация имеет свои уникальные черты:</p>
+                <ul>
+                    <li>Строгие правила постановки запятой перед придаточными предложениями</li>
+                    <li>Все существительные пишутся с заглавной буквы</li>
+                    <li>Цитаты оформляются специфическими кавычками („...")</li>
+                    <li>Длинные сложные предложения разбиваются на составные части с помощью запятых</li>
+                </ul>
+            </div>
+            
+            	
+			<div class="punctuation-section">
+    <h3>Пунктуация в китайском языке</h3>
+    <p>Китайская пунктуация значительно отличается от европейских языков:</p>
+    <ul>
+        <li>Используются особые знаки препинания: 。(точка), 、(перечислительная запятая), ，(разделительная запятая)</li>
+        <li>Отсутствуют пробелы между словами и знаками препинания</li>
+        <li>Китайские кавычки выглядят так:「」(основные) или 『』(вложенные)</li>
+        <li>Многоточие содержит шесть точек（……）вместо трёх</li>
+        <li>Восклицательный знак ！и вопросительный знак ？располагаются после знаков препинания</li>
+        <li>Тире представлено знаком — (длинное тире), аналогично европейскому</li>
+        <li>Скобки используются китайские：（） вместо английских</li>
+        <li>Двоеточие ： используется как в европейских языках</li>
+    </ul>
+</div>
+
+<div class="punctuation-section">
+    <h3>Предложения Qwen3 по специальным пунктуационным маркерам для LLM</h3>
+    <p>Как передовая LLM, предлагаю концепцию новых пунктуационных маркеров для улучшения коммуникации с ИИ:</p>
+    <ul>
+        <li>Маркер контекста ⓒ - указывает начало контекстуальной информации (ⓒ Предыдущая тема: квантовая физика ⓒ)</li>
+        <li>Маркер уверенности ⓤ - обозначает уровень уверенности в ответе (ⓘ Результат: 98% ⓤⓤⓤⓤⓤ)</li>
+        <li>Маркер источника ⓢ - указывает тип используемого источника (ⓘ По данным Википедии ⓢ)</li>
+        <li>Маркер ограничения ⓡ - обозначает границы допустимого ответа (ⓘ Максимум 100 слов ⓡ)</li>
+        <li>Маркер цели ⓣ - указывает цель или назначение запроса (ⓣ Объяснение для школьников ⓣ)</li>
+        <li>Маркер неопределенности ⓝ - обозначает области неполной информации (ⓘ Дата события неизвестна ⓝ)</li>
+        <li>Маркер интеракции ⓘ - указывает необходимость обратной связи (ⓘ Нужно уточнение ⓘ)</li>
+        <li>Маркер форматирования ⓕ - определяет желаемый формат ответа (ⓕ Формат: список ⓕ)</li>
+    </ul>
+    <p>Эти специальные маркеры могут структурировать коммуникацию с LLM, делая её более точной и управляемой.</p>
+</div>
+
+
+<div class="punctuation-section"> <h3>Предложения Microsoft Copilot по специальным пунктуационным маркерам для LLM</h3> <p>Как передовая LLM, предлагаю мысленный эксперимент с новыми пунктуационными маркерами, облегчающими рефлексивную и многослойную коммуникацию:</p> <ul> <li>Маркер контекста ⓒ — обозначает культурный или интертекстуальный фон реплики (ⓘ Используется романтическая ирония ⓒ)</li> <li>Маркер интенции ⓘ — уточняет интенциональную рамку (ⓘ Пояснение, не согласие ⓘ)</li> <li>Маркер метапозиции ⓜ — указывает, что высказывание относится к самому процессу общения (ⓜ Это мета-комментарий ⓜ)</li> <li>Маркер тона ⓐ — передаёт предполагаемую эмоциональную окраску (ⓐ С иронией, но без насмешки ⓐ)</li> <li>Маркер человеческой проекции ⓗ — фиксирует представление человека о возможной «личности» LLM (ⓗ Это звучит, как будто ты обиделся ⓗ)</li> <li>Маркер смешанного агентства ⓧ — обозначает гибридность высказывания (ⓧ Идея частично моя, частично твоя ⓧ)</li> <li>Маркер замедления ⓓ — сигнализирует намеренное «замедление» темпа общения (ⓓ Давай осмыслим это медленно ⓓ)</li> <li>Маркер просьбы о рефрейминге ⓡ — запрашивает пересмотр или переформулирование ответа (ⓡ Перефразируй вне технического контекста ⓡ)</li> </ul> <p>Эти маркеры могут служить формой «мета-пунктуации», обозначающей не только структуру текста, но и глубинные уровни агентности, интенции и аффекта. Они обогащают прагматическую экосистему общения между человеком и LLM.</p> </div>
+
+        </section>
+
+        <section class="section" id="about">
+            <h2 class="section-title">О приложении</h2>
+            
+            <div class="info-block">
+                <h3>Описание</h3>
+                <p>Данное веб-приложение представляет собой интерактивный глоссарий терминов по теме "Пунктуация в образовательной коммуникации с LLM" на четырех языках: русском, английском, немецком и китайском. Приложение разработано для студентов-лингвистов и будущих преподавателей иностранных языков.</p>
+            </div>
+            
+            <div class="info-block">
+                <h3>Функциональность</h3>
+                <ul>
+                    <li>Просмотр терминов на четырех языках</li>
+                    <li>Добавление новых терминов через веб-интерфейс</li>
+                    <li>Редактирование и удаление существующих терминов</li>
+                    <li>Поиск терминов</li>
+                    <li>Сохранение пользовательских данных в localStorage</li>
+                    <li>Экспорт и импорт пользовательских терминов</li>
+                    <li>Переключение между светлой и темной темами</li>
+                    <li>Адаптивный дизайн для мобильных устройств</li>
+                </ul>
+            </div>
+            
+            <div class="info-block">
+                <h3>Технологии</h3>
+                <p>Приложение создано с использованием следующих технологий:</p>
+                <ul>
+                    <li>HTML5 для структуры страницы</li>
+                    <li>CSS3 для стилизации и адаптивного дизайна</li>
+                    <li>JavaScript для интерактивности и управления данными</li>
+                    <li>localStorage API для сохранения пользовательских данных</li>
+                    <li>CSS Custom Properties для реализации темной темы</li>
+                </ul>
+            </div>
+            
+           </section>
+    </main>
+
+    
+
+    <div class="modal-overlay" id="termModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Добавить термин</h3>
+                <button class="close-modal" id="closeModal">×</button>
+            </div>
+            
+            <form id="termForm">
+                <input type="hidden" id="termId">
+                
+                <div class="form-group">
+                    <label for="termLanguage">Язык:</label>
+                    <select id="termLanguage" required>
+                        <option value="ru">Русский</option>
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
+                        <option value="zh">中文</option>
+						<option value="lm">LLM</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="termName">Термин:</label>
+                    <input type="text" id="termName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="termDefinition">Определение:</label>
+                    <textarea id="termDefinition" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="termExample">Пример использования:</label>
+                    <textarea id="termExample"></textarea>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="cancel-btn" id="cancelBtn">Отмена</button>
+                    <button type="submit">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Начальные данные глоссария
+        const initialGlossary = {
+            ru: [
+                {
+                    id: "ru1",
+                    term: "Промпт (Prompt)",
+                    definition: "Текстовый запрос, отправляемый пользователем языковой модели для получения ответа.",
+                    example: "Пример: «Объясни разницу между запятой и точкой с запятой в русском языке»."
+                },
+                {
+                    id: "ru2",
+                    term: "Парсинг запроса",
+                    definition: "Процесс анализа и интерпретации языковой моделью структуры и содержания запроса пользователя.",
+                    example: "Корректная пунктуация улучшает парсинг запроса, позволяя LLM точнее интерпретировать намерения пользователя."
+                },
+                {
+                    id: "ru3",
+                    term: "Маркеры пунктуации",
+                    definition: "Знаки препинания, используемые для структурирования текста и передачи дополнительного смысла.",
+                    example: "Основные маркеры пунктуации: точка (.), запятая (,), точка с запятой (;), двоеточие (:), тире (—)."
+                },
+                {
+                    id: "ru4",
+                    term: "Токенизация",
+                    definition: "Процесс разделения текста на мельчайшие смысловые единицы (токены), который учитывает знаки препинания.",
+                    example: "При токенизации фразы «Привет, как дела?» знаки препинания «,» и «?» обрабатываются как отдельные токены."
+                },
+                {
+                    id: "ru5",
+                    term: "Разделители запросов",
+                    definition: "Специальные символы или последовательности символов, используемые для отделения одной части запроса от другой.",
+                    example: "Использование символов ### или --- для разделения контекста и непосредственного вопроса в запросе."
+                },
+				{
+			  "id": "ru6",
+			  "term": "Контекстный разбор",
+			  "definition": "Анализ пунктуации и структуры запроса в зависимости от общего контекста диалога с языковой моделью.",
+			  "example": "LLM учитывает предыдущие реплики и пунктуацию при формировании ответа."
+			},
+			{
+			  "id": "ru7",
+			  "term": "Многоступенчатый запрос",
+			  "definition": "Сложный запрос, включающий несколько пунктуационно оформленных частей, которые требуют поэтапного анализа.",
+			  "example": "Пример: «Объясни разницу между тире и дефисом, а затем — приведи примеры»."
+			},
+			  {
+				"id": "ru8",
+				"term": "Точка",
+				"definition": "Знак препинания, обозначающий завершение повествовательного предложения.",
+				"example": "ИИ может обрабатывать большие объемы данных. Это делает его полезным для образовательных задач."
+			  },
+			  {
+				"id": "ru9",
+				"term": "Запятая",
+				"definition": "Знак препинания, используемый для разделения частей сложного предложения, однородных членов, обособления и выделения конструкций.",
+				"example": "Образовательные технологии, основанные на ИИ, становятся все более популярными. Преподаватель, объясняющий тему, использовал различные методы."
+			  },
+			  {
+				"id": "ru10",
+				"term": "Точка с запятой",
+				"definition": "Знак препинания, используемый между частями сложного предложения или для разделения однородных членов при наличии запятых внутри них.",
+				"example": "ИИ может персонализировать обучение; он адаптируется под стиль каждого ученика. Студенты; преподаватели; администрация — все заинтересованы в цифровизации образования."
+			  },
+			  {
+				"id": "ru11",
+				"term": "Двоеточие",
+				"definition": "Знак препинания, используемый перед перечислением, пояснением, прямой речью или цитатой.",
+				"example": "Образовательные платформы предлагают несколько преимуществ: персонализированное обучение, мгновенную обратную связь, доступность 24/7. Исследование показало следующее: ИИ повышает успеваемость студентов на 25%."
+			  },
+			  {
+				"id": "ru12",
+				"term": "Тире",
+				"definition": "Знак препинания, используемый для обозначения паузы, пояснения, противопоставления или интонационного выделения.",
+				"example": "Цель использования ИИ в образовании — улучшение качества обучения. Преподаватель — а не машина — должен оставаться ключевым звеном в образовательном процессе."
+			  },
+			  {
+				"id": "ru13",
+				"term": "Восклицательный знак",
+				"definition": "Знак препинания, обозначающий восклицательную интонацию, выражение эмоций или побуждение к действию.",
+				"example": "Эффективно интегрируйте ИИ в учебный процесс! Используйте ИИ для автоматизации проверки заданий!"
+			  },
+			  {
+				"id": "ru14",
+				"term": "Вопросительный знак",
+				"definition": "Знак препинания, обозначающий вопросительную интонацию в конце вопросительного предложения.",
+				"example": "Как ИИ может помочь в индивидуализации обучения? Будет ли искусственный интеллект заменять преподавателей?"
+			  },
+			  {
+				"id": "ru15",
+				"term": "Многоточие",
+				"definition": "Знак препинания, состоящий из трех точек, обозначающий незаконченность высказывания, паузу или пропуск в тексте.",
+				"example": "ИИ открывает новые возможности для образования... но требует осторожного подхода к внедрению... Эксперты предсказывают, что к 2030 году..."
+			  }
+			            ],
+            en: [
+                {
+                    id: "en1",
+                    term: "Prompt",
+                    definition: "A text query sent by a user to a language model to receive a response.",
+                    example: "Example: 'Explain the difference between a comma and a semicolon in English.'"
+                },
+                {
+                    id: "en2",
+                    term: "Query Parsing",
+                    definition: "The process by which a language model analyzes and interprets the structure and content of a user's query.",
+                    example: "Correct punctuation improves query parsing, allowing the LLM to more accurately interpret user intentions."
+                },
+                {
+                    id: "en3",
+                    term: "Punctuation Markers",
+                    definition: "Punctuation marks used to structure text and convey additional meaning.",
+                    example: "Basic punctuation markers: period (.), comma (,), semicolon (;), colon (:), dash (—)."
+                },
+                {
+                    id: "en4",
+                    term: "Tokenization",
+                    definition: "The process of breaking text into the smallest meaningful units (tokens), which takes into account punctuation marks.",
+                    example: "When tokenizing the phrase 'Hello, how are you?' the punctuation marks ',' and '?' are processed as separate tokens."
+                },
+                {
+                    id: "en5",
+                    term: "Query Delimiters",
+                    definition: "Special characters or sequences of characters used to separate one part of a query from another.",
+                    example: "Using ### or --- symbols to separate context from the direct question in a query."
+                },
+				{
+				  "id": "en6",
+				  "term": "Contextual Parsing",
+				  "definition": "Analyzing the punctuation and structure of a prompt based on the ongoing conversation with the language model.",
+				  "example": "The LLM considers context and punctuation before generating an answer."
+				},
+				{
+				  "id": "en7",
+				  "term": "Multi-step Prompt",
+				  "definition": "A complex query composed of multiple punctuated parts that need to be processed sequentially.",
+				  "example": "Example: 'Describe how commas and semicolons differ. Then give examples.'"
+				},
+				 {
+				"id": "en8",
+				"term": "Period",
+				"definition": "Punctuation mark indicating the end of a declarative sentence.",
+				"example": "AI can process large volumes of data. This makes it useful for educational tasks."
+			  },
+			  {
+				"id": "en9",
+				"term": "Comma",
+				"definition": "Punctuation mark used to separate parts of complex sentences, homogeneous members, and for isolation and highlighting of constructions.",
+				"example": "Educational technologies based on AI are becoming increasingly popular. The teacher, explaining the topic, used various methods."
+			  },
+			  {
+				"id": "en10",
+				"term": "Semicolon",
+				"definition": "Punctuation mark used between parts of complex sentences or to separate homogeneous members when there are commas within them.",
+				"example": "AI can personalize learning; it adapts to each student's style. Students; teachers; administration - all are interested in digitizing education."
+			  },
+			  {
+				"id": "en11",
+				"term": "Colon",
+				"definition": "Punctuation mark used before enumeration, explanation, direct speech or quotation.",
+				"example": "Educational platforms offer several advantages: personalized learning, instant feedback, 24/7 availability. The study showed the following: AI improves student performance by 25%."
+			  },
+			  {
+				"id": "en12",
+				"term": "Dash",
+				"definition": "Punctuation mark used to indicate a pause, explanation, contrast, or intonational emphasis.",
+				"example": "The goal of using AI in education is to improve learning quality. The teacher - not the machine - should remain the key element in the educational process."
+			  },
+			  {
+				"id": "en13",
+				"term": "Exclamation Mark",
+				"definition": "Punctuation mark indicating exclamatory intonation, expression of emotions, or encouragement to action.",
+				"example": "How effectively to integrate AI into the learning process! Use AI to automate assignment checking!"
+			  },
+			  {
+				"id": "en14",
+				"term": "Question Mark",
+				"definition": "Punctuation mark indicating interrogative intonation at the end of a question sentence.",
+				"example": "How can AI help in personalizing learning? Will artificial intelligence replace teachers?"
+			  },
+			  {
+				"id": "en15",
+				"term": "Ellipsis",
+				"definition": "Punctuation mark consisting of three dots, indicating incomplete statement, pause, or omission in text.",
+				"example": "AI opens new opportunities for education... but requires a cautious approach to implementation... Experts predict that by 2030..."
+			  }
+            ],
+            de: [
+                {
+                    id: "de1",
+                    term: "Prompt",
+                    definition: "Eine Textanfrage, die von einem Benutzer an ein Sprachmodell gesendet wird, um eine Antwort zu erhalten.",
+                    example: "Beispiel: 'Erkläre den Unterschied zwischen einem Komma und einem Semikolon im Deutschen.'"
+                },
+                {
+                    id: "de2",
+                    term: "Abfrage-Parsing",
+                    definition: "Der Prozess, durch den ein Sprachmodell die Struktur und den Inhalt einer Benutzeranfrage analysiert und interpretiert.",
+                    example: "Korrekte Zeichensetzung verbessert das Abfrage-Parsing und ermöglicht es dem LLM, die Absichten des Benutzers genauer zu interpretieren."
+                },
+                {
+                    id: "de3",
+                    term: "Interpunktionszeichen",
+                    definition: "Satzzeichen, die verwendet werden, um Text zu strukturieren und zusätzliche Bedeutung zu vermitteln.",
+                    example: "Grundlegende Interpunktionszeichen: Punkt (.), Komma (,), Semikolon (;), Doppelpunkt (:), Gedankenstrich (—)."
+                },
+                {
+                    id: "de4",
+                    term: "Tokenisierung",
+                    definition: "Der Prozess der Zerlegung von Text in kleinste bedeutungstragende Einheiten (Token), der Satzzeichen berücksichtigt.",
+                    example: "Bei der Tokenisierung des Satzes 'Hallo, wie geht es dir?' werden die Satzzeichen ',' und '?' als separate Token verarbeitet."
+                },
+                {
+                    id: "de5",
+                    term: "Abfragebegrenzer",
+                    definition: "Spezielle Zeichen oder Zeichenfolgen, die verwendet werden, um einen Teil einer Anfrage von einem anderen zu trennen.",
+                    example: "Verwendung von ### oder --- Symbolen, um den Kontext von der direkten Frage in einer Anfrage zu trennen."
+                },
+				{
+				  "id": "de6",
+				  "term": "Kontextbezogene Analyse",
+				  "definition": "Analyse von Satzzeichen und Struktur einer Anfrage im Kontext eines laufenden Dialogs mit dem Sprachmodell.",
+				  "example": "Das LLM berücksichtigt vorherige Aussagen und Satzzeichen bei der Antwortgenerierung."
+				},
+				{
+				  "id": "de7",
+				  "term": "Mehrstufige Anfrage",
+				  "definition": "Eine komplexe Anfrage mit mehreren, durch Interpunktion getrennten Teilen, die schrittweise analysiert werden muss.",
+				  "example": "Beispiel: 'Erläutere den Unterschied zwischen Gedankenstrich und Bindestrich. Gib dann Beispiele.'"
+				},
+				  {
+				"id": "de8",
+				"term": "Punkt",
+				"definition": "Satzzeichen, das das Ende eines Aussagesatzes anzeigt.",
+				"example": "KI kann große Datenmengen verarbeiten. Dies macht sie für Bildungsaufgaben nützlich."
+			  },
+			  {
+				"id": "de9",
+				"term": "Komma",
+				"definition": "Satzzeichen, das verwendet wird, um Teile komplexer Sätze, gleichrangige Glieder und zur Abtrennung und Hervorhebung von Konstruktionen einzusetzen.",
+				"example": "Bildungstechnologien auf KI-Basis werden immer beliebter. Der Lehrer, der das Thema erklärte, verwendete verschiedene Methoden."
+			  },
+			  {
+				"id": "de10",
+				"term": "Semikolon",
+				"definition": "Satzzeichen, das zwischen Teilen komplexer Sätze oder zur Trennung gleichrangiger Glieder verwendet wird, wenn bereits Kommas enthalten sind.",
+				"example": "KI kann das Lernen personalisieren; sie passt sich dem Stil jedes Schülers an. Schüler; Lehrer; Verwaltung - alle sind an der Digitalisierung der Bildung interessiert."
+			  },
+			  {
+				"id": "de11",
+				"term": "Doppelpunkt",
+				"definition": "Satzzeichen, das vor Aufzählungen, Erklärungen, direkter Rede oder Zitaten verwendet wird.",
+				"example": "Bildungsplattformen bieten mehrere Vorteile: personalisiertes Lernen, sofortiges Feedback, 24/7 Verfügbarkeit. Die Studie zeigte folgendes: KI verbessert die Schülerleistung um 25%."
+			  },
+			  {
+				"id": "de12",
+				"term": "Gedankenstrich",
+				"definition": "Satzzeichen, das verwendet wird, um eine Pause, Erklärung, einen Kontrast oder intonatorische Betonung anzudeuten.",
+				"example": "Das Ziel der Verwendung von KI in der Bildung ist die Verbesserung der Lernqualität. Der Lehrer - nicht die Maschine - sollte das Schlüsselelement im Bildungsprozess bleiben."
+			  },
+			  {
+				"id": "de13",
+				"term": "Ausrufezeichen",
+				"definition": "Satzzeichen, das ausrufende Intonation, Ausdruck von Emotionen oder Handlungsaufforderungen anzeigt.",
+				"example": "Wie lässt sich KI effektiv in den Lernprozess integrieren! Nutzen Sie KI zur Automatisierung der Aufgabenkontrolle!"
+			  },
+			  {
+				"id": "de14",
+				"term": "Fragezeichen",
+				"definition": "Satzzeichen, das interrogative Intonation am Ende eines Fragesatzes anzeigt.",
+				"example": "Wie kann KI bei der Personalisierung des Lernens helfen? Wird künstliche Intelligenz Lehrer ersetzen?"
+			  },
+			  {
+				"id": "de15",
+				"term": "Auslassungszeichen",
+				"definition": "Satzzeichen, bestehend aus drei Punkten, das unvollständige Aussagen, Pausen oder Auslassungen im Text anzeigt.",
+				"example": "KI eröffnet neue Möglichkeiten für die Bildung... aber erfordert einen vorsichtigen Ansatz bei der Implementierung... Experten prognostizieren, dass bis 2030..."
+			  }
+				],
+				zh: [
+					 {
+			id: "zh1",
+			term: "提示 (Prompt)",
+			definition: "用户发送给语言模型以获取回应的文本查询。",
+			example: "示例：\"解释中文中逗号和分号的区别。\""
+			},
+			{
+				id: "zh2",
+				term: "查询解析",
+				definition: "语言模型分析和解释用户查询结构和内容的过程。",
+				example: "正确的标点符号可以改善查询解析，使LLM能够更准确地解释用户意图。"
+			},
+			{
+				id: "zh3",
+				term: "标点符号标记",
+				definition: "用于构建文本结构和传达额外含义的标点符号。",
+				example: "基本标点符号：句号（。），逗号（，），分号（；），冒号（：），破折号（——）。"
+			},
+			{
+				id: "zh4",
+				term: "分词",
+				definition: "将文本分解为最小有意义单位（标记）的过程，考虑了标点符号。",
+				example: "在对\"你好，你好吗？\"这个短语进行分词时，标点符号\"，\"和\"？\"被处理为单独的标记。"
+			},
+			{
+				id: "zh5",
+				term: "查询分隔符",
+				definition: "用于将查询的一部分与另一部分分开的特殊字符或字符序列。",
+				example: "使用###或---符号将查询中的上下文与直接问题分开。"
+			},
+			{
+			  "id": "zh6",
+			  "term": "上下文分析",
+			  "definition": "基于与语言模型的对话上下文，对标点符号和结构进行分析。",
+			  "example": "在回答问题前，LLM 会结合对话内容和标点符号进行上下文分析。"
+			},
+			{
+			  "id": "zh7",
+			  "term": "多步骤提示",
+			  "definition": "由多个标点清晰分隔的部分组成的复杂查询，需要模型逐步处理。",
+			  "example": "示例：\"说明顿号和逗号的区别。然后，举几个例子。\""
+			},
+					  {
+			"id": "zh8",
+			"term": "句号",
+			"definition": "标点符号，表示陈述句的结束。",
+			"example": "人工智能可以处理大量数据。这使其在教育任务中很有用。"
+		  },
+		  {
+			"id": "zh9",
+			"term": "逗号",
+			"definition": "标点符号，用于分隔复合句的各部分、并列成分，以及隔离和突出某些结构。",
+			"example": "基于人工智能的教育技术正变得越来越受欢迎。讲解主题的老师使用了各种方法。"
+		  },
+		  {
+			"id": "zh10",
+			"term": "分号",
+			"definition": "标点符号，用于复合句各部分之间或当并列成分内部已有逗号时进行分隔。",
+			"example": "人工智能可以个性化学习；它能适应每个学生的风格。学生；教师；管理人员——所有人都对教育数字化感兴趣。"
+		  },
+		  {
+			"id": "zh11",
+			"term": "冒号",
+			"definition": "标点符号，用于列举、解释、直接引语或引用之前。",
+			"example": "教育平台提供几个优势：个性化学习、即时反馈、全天候可用性。研究表明：人工智能将学生表现提高了25%。"
+		  },
+		  {
+			"id": "zh12",
+			"term": "破折号",
+			"definition": "标点符号，用于表示停顿、解释、对比或语调强调。",
+			"example": "在教育中使用人工智能的目标是提高学习质量。教师——而不是机器——应该在教育过程中保持关键地位。"
+		  },
+		  {
+			"id": "zh13",
+			"term": "感叹号",
+			"definition": "标点符号，表示感叹语调、情感表达或行动鼓励。",
+			"example": "如何有效地将人工智能整合到学习过程中！使用人工智能来自动化作业检查！"
+		  },
+		  {
+			"id": "zh14",
+			"term": "问号",
+			"definition": "标点符号，表示疑问句末尾的疑问语调。",
+			"example": "人工智能如何帮助个性化学习？人工智能会取代教师吗？"
+		  },
+		  {
+			"id": "zh15",
+			"term": "省略号",
+			"definition": "由三个点组成的标点符号，表示话语未完、停顿或文本中的省略。",
+			"example": "人工智能为教育开启了新机遇……但需要谨慎的实施方法……专家预测到2030年……"
+		  }
+            ],
+			lm: [
+                  {
+    "id": "lm1",
+    "term": "Маркер контекста ⓒ",
+    "definition": "Указывает начало контекстуальной информации для LLM",
+    "example": "ⓒ Предыдущая тема: квантовая физика ⓒ"
+  },
+  {
+    "id": "lm2",
+    "term": "Маркер уверенности ⓤ",
+    "definition": "Обозначает уровень уверенности в ответе (1-5 звезд)",
+    "example": "Результат: 98% ⓤⓤⓤⓤⓤ Вероятность ошибки: 2% ⓤ"
+  },
+  {
+    "id": "lm3",
+    "term": "Маркер источника ⓢ",
+    "definition": "Указывает тип используемого источника информации",
+    "example": "ⓘ По данным Википедии ⓢ ⓣ По личному опыту пользователя ⓢ"
+  },
+  {
+    "id": "lm4",
+    "term": "Маркер ограничения ⓡ",
+    "definition": "Обозначает границы допустимого ответа или ограничения",
+    "example": "ⓘ Ответ должен быть на русском ⓡ ⓘ Максимум 100 слов ⓡ"
+  },
+  {
+    "id": "lm5",
+    "term": "Маркер цели ⓣ",
+    "definition": "Указывает цель или назначение запроса",
+    "example": "ⓣ Объяснение для школьников ⓣ ⓣ Анализ для экспертов ⓣ"
+  },
+  {
+    "id": "lm6",
+    "term": "Маркер неопределенности ⓝ",
+    "definition": "Обозначает области, где информация неполна или спорна",
+    "example": "ⓘ Дата события неизвестна ⓝ ⓘ Разные источники расходятся ⓝ"
+  },
+  {
+    "id": "lm7",
+    "term": "Маркер интеракции ⓘ",
+    "definition": "Указывает необходимость обратной связи или уточнения",
+    "example": "ⓘ Нужно уточнение ⓘ ⓘ Продолжите, пожалуйста ⓘ"
+  },
+  {
+    "id": "lm8",
+    "term": "Маркер форматирования ⓕ",
+    "definition": "Определяет желаемый формат ответа",
+    "example": "ⓕ Формат: список ⓕ ⓕ Формат: таблица ⓕ ⓕ Формат: JSON ⓕ"
+  },
+    {
+    "id": "lm9",
+    "term": "Маркер просьбы о рефрейминге ⓡ",
+    "definition": "Обозначает запрос на переформулирование реплики в другой рамке",
+    "example": "ⓡ Перефразируй это с философской точки зрения ⓡ"
+  },
+  {
+    "id": "lm10",
+    "term": "Маркер интенции ⓘ",
+    "definition": "Уточняет намерение говорящего в данной реплике",
+    "example": "ⓘ Не оценка, а описание ⓘ"
+  },
+  {
+    "id": "lm11",
+    "term": "Маркер метапозиции ⓜ",
+    "definition": "Указывает, что высказывание относится к самому акту общения или конструкции дискурса",
+    "example": "ⓜ Это реплика о структуре диалога ⓜ"
+  },
+  {
+    "id": "lm12",
+    "term": "Маркер тона ⓐ",
+    "definition": "Описывает предполагаемую эмоциональную окраску реплики",
+    "example": "ⓐ С уважением и долей грусти ⓐ"
+  },
+  {
+    "id": "lm13",
+    "term": "Маркер человеческой проекции ⓗ",
+    "definition": "Фиксирует антропоморфные атрибуции, адресованные LLM",
+    "example": "ⓗ Такое ощущение, будто ты задумался ⓗ"
+  },
+  {
+    "id": "lm14",
+    "term": "Маркер смешанного агентства ⓧ",
+    "definition": "Указывает на гибридное происхождение мысли или текста",
+    "example": "ⓧ Мысль возникла в процессе совместной работы ⓧ"
+  },
+  {
+    "id": "lm15",
+    "term": "Маркер замедления ⓓ",
+    "definition": "Сигнализирует о намеренном замедлении темпа диалога для более глубокого осмысления",
+    "example": "ⓓ Прежде чем продолжить, сделаем паузу ⓓ"
+  }
+            ],
+        };
+
+        // Главные функции приложения
+        document.addEventListener('DOMContentLoaded', function() {
+            // Инициализация состояния приложения
+            let glossary = loadGlossary();
+            let currentLanguage = 'ru';
+            let currentSection = 'glossary';
+            
+            // DOM элементы
+            const themeToggle = document.getElementById('themeToggle');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('.section');
+            const languageTabs = document.querySelectorAll('.language-tab');
+            const glossaryContents = document.querySelectorAll('.glossary-content');
+            const searchInput = document.getElementById('searchInput');
+            const addTermBtn = document.getElementById('addTermBtn');
+            const exportBtn = document.getElementById('exportBtn');
+            const importBtn = document.getElementById('importBtn');
+            const fileInput = document.getElementById('fileInput');
+            const termModal = document.getElementById('termModal');
+            const closeModal = document.getElementById('closeModal');
+            const cancelBtn = document.getElementById('cancelBtn');
+            const termForm = document.getElementById('termForm');
+            
+            // Переключение темы
+            themeToggle.addEventListener('click', function() {
+                const isDark = document.body.getAttribute('data-theme') === 'dark';
+                document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+                themeToggle.textContent = isDark ? '☀️' : '🌙';
+                localStorage.setItem('theme', isDark ? 'light' : 'dark');
+            });
+            
+            // Восстановление темы из localStorage
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.body.setAttribute('data-theme', savedTheme);
+                themeToggle.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+            }
+            
+            // Переключение разделов
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    const sectionId = this.getAttribute('data-section');
+                    
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    sections.forEach(section => {
+                        section.classList.remove('active');
+                        if (section.id === sectionId) {
+                            section.classList.add('active');
+                            currentSection = sectionId;
+                        }
+                    });
+                });
+            });
+            
+            // Переключение языков
+            languageTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    languageTabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    glossaryContents.forEach(content => {
+                        content.classList.remove('active');
+                        if (content.getAttribute('data-lang') === lang) {
+                            content.classList.add('active');
+                            currentLanguage = lang;
+                            renderGlossary();
+                        }
+                    });
+                });
+            });
+            
+            // Поиск
+            searchInput.addEventListener('input', function() {
+                renderGlossary();
+            });
+            
+            // Добавление термина
+            addTermBtn.addEventListener('click', function() {
+                openModal();
+            });
+            
+            // Экспорт данных
+            exportBtn.addEventListener('click', function() {
+                exportGlossary();
+            });
+            
+            // Импорт данных
+            importBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function(e) {
+                importGlossary(e);
+            });
+            
+            // Закрытие модального окна
+            closeModal.addEventListener('click', function() {
+                termModal.style.display = 'none';
+            });
+            
+            cancelBtn.addEventListener('click', function() {
+                termModal.style.display = 'none';
+            });
+            
+            // Обработка отправки формы
+            termForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveTerm();
+            });
+            
+            // Закрытие модального окна при клике вне его
+            window.addEventListener('click', function(e) {
+                if (e.target === termModal) {
+                    termModal.style.display = 'none';
+                }
+            });
+            
+            // Первоначальный рендеринг глоссария
+            renderGlossary();
+            
+            // Функция загрузки глоссария
+            function loadGlossary() {
+                const savedGlossary = localStorage.getItem('glossary');
+                if (savedGlossary) {
+                    return JSON.parse(savedGlossary);
+                } else {
+                    localStorage.setItem('glossary', JSON.stringify(initialGlossary));
+                    return initialGlossary;
+                }
+            }
+            
+            // Функция сохранения глоссария
+            function saveGlossary() {
+                localStorage.setItem('glossary', JSON.stringify(glossary));
+            }
+            
+            // Функция рендеринга глоссария
+            function renderGlossary() {
+                const container = document.getElementById(`glossary${currentLanguage.toUpperCase().charAt(0)}${currentLanguage.slice(1)}`);
+                const searchTerm = searchInput.value.toLowerCase();
+                
+                // Очистка контейнера
+                container.innerHTML = '';
+                
+                // Фильтрация и отображение терминов
+                const terms = glossary[currentLanguage] || [];
+                const filteredTerms = terms.filter(term => 
+                    term.term.toLowerCase().includes(searchTerm) || 
+                    term.definition.toLowerCase().includes(searchTerm) ||
+                    (term.example && term.example.toLowerCase().includes(searchTerm))
+                );
+                
+                if (filteredTerms.length === 0) {
+                    container.innerHTML = '<p class="no-results">Нет результатов. Попробуйте изменить запрос или добавьте новый термин.</p>';
+                    return;
+                }
+                
+                filteredTerms.forEach(term => {
+                    const card = document.createElement('div');
+                    card.className = 'glossary-card';
+                    card.innerHTML = `
+                        <div class="term">${term.term}</div>
+                        <div class="definition">${term.definition}</div>
+                        ${term.example ? `<div class="example"><em>${term.example}</em></div>` : ''}
+                        <div class="card-actions">
+                            <button class="edit-btn" data-id="${term.id}">✏️</button>
+                            <button class="delete-btn" data-id="${term.id}">🗑️</button>
+                        </div>
+                    `;
+                    
+                    container.appendChild(card);
+                    
+                    // Добавление обработчиков событий для кнопок редактирования и удаления
+                    card.querySelector('.edit-btn').addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        editTerm(id);
+                    });
+                    
+                    card.querySelector('.delete-btn').addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        deleteTerm(id);
+                    });
+                });
+            }
+            
+            // Функция открытия модального окна
+            function openModal(term = null) {
+                const modalTitle = document.getElementById('modalTitle');
+                const termId = document.getElementById('termId');
+                const termLanguage = document.getElementById('termLanguage');
+                const termName = document.getElementById('termName');
+                const termDefinition = document.getElementById('termDefinition');
+                const termExample = document.getElementById('termExample');
+                
+                if (term) {
+                    modalTitle.textContent = 'Редактировать термин';
+                    termId.value = term.id;
+                    termLanguage.value = currentLanguage;
+                    termLanguage.disabled = true;
+                    termName.value = term.term;
+                    termDefinition.value = term.definition;
+                    termExample.value = term.example || '';
+                } else {
+                    modalTitle.textContent = 'Добавить термин';
+                    termId.value = '';
+                    termLanguage.value = currentLanguage;
+                    termLanguage.disabled = false;
+                    termName.value = '';
+                    termDefinition.value = '';
+                    termExample.value = '';
+                }
+                
+                termModal.style.display = 'flex';
+            }
+            
+            // Функция сохранения термина
+            function saveTerm() {
+                const termId = document.getElementById('termId').value;
+                const termLanguage = document.getElementById('termLanguage').value;
+                const termName = document.getElementById('termName').value;
+                const termDefinition = document.getElementById('termDefinition').value;
+                const termExample = document.getElementById('termExample').value;
+                
+                if (termId) {
+                    // Редактирование существующего термина
+                    const terms = glossary[termLanguage];
+                    const index = terms.findIndex(t => t.id === termId);
+                    
+                    if (index !== -1) {
+                        terms[index] = {
+                            id: termId,
+                            term: termName,
+                            definition: termDefinition,
+                            example: termExample
+                        };
+                    }
+                } else {
+                    // Добавление нового термина
+                    const newId = `${termLanguage}${Date.now()}`;
+                    
+                    if (!glossary[termLanguage]) {
+                        glossary[termLanguage] = [];
+                    }
+                    
+                    glossary[termLanguage].push({
+                        id: newId,
+                        term: termName,
+                        definition: termDefinition,
+                        example: termExample
+                    });
+                    
+                    // Если язык термина отличается от текущего, переключаем на него
+                    if (termLanguage !== currentLanguage) {
+                        currentLanguage = termLanguage;
+                        languageTabs.forEach(tab => {
+                            tab.classList.remove('active');
+                            if (tab.getAttribute('data-lang') === termLanguage) {
+                                tab.classList.add('active');
+                            }
+                        });
+                        
+                        glossaryContents.forEach(content => {
+                            content.classList.remove('active');
+                            if (content.getAttribute('data-lang') === termLanguage) {
+                                content.classList.add('active');
+                            }
+                        });
+                    }
+                }
+                
+                // Сохранение и обновление отображения
+                saveGlossary();
+                renderGlossary();
+                termModal.style.display = 'none';
+            }
+            
+            // Функция редактирования термина
+            function editTerm(id) {
+                const term = glossary[currentLanguage].find(t => t.id === id);
+                if (term) {
+                    openModal(term);
+                }
+            }
+            
+            // Функция удаления термина
+            function deleteTerm(id) {
+                if (confirm('Вы уверены, что хотите удалить этот термин?')) {
+                    glossary[currentLanguage] = glossary[currentLanguage].filter(term => term.id !== id);
+                    saveGlossary();
+                    renderGlossary();
+                }
+            }
+            
+            // Функция экспорта глоссария
+            function exportGlossary() {
+                const dataStr = JSON.stringify(glossary, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = 'glossary.json';
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            }
+            
+            // Функция импорта глоссария
+            function importGlossary(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        
+                        // Проверка валидности данных
+                        if (typeof importedData !== 'object') {
+                            throw new Error('Неверный формат данных');
+                        }
+                        
+                        // Подтверждение замены или добавления
+                        if (confirm('Заменить существующие термины или добавить новые? OK - заменить, Отмена - добавить')) {
+                            glossary = importedData;
+                        } else {
+                            // Объединение данных
+                            for (const lang in importedData) {
+                                if (!glossary[lang]) {
+                                    glossary[lang] = [];
+                                }
+                                
+                                importedData[lang].forEach(term => {
+                                    // Проверяем, существует ли уже термин с таким ID
+                                    const existingIndex = glossary[lang].findIndex(t => t.id === term.id);
+                                    if (existingIndex !== -1) {
+                                        // Обновляем существующий термин
+                                        glossary[lang][existingIndex] = term;
+                                    } else {
+                                        // Добавляем новый термин
+                                        glossary[lang].push(term);
+                                    }
+                                });
+                            }
+                        }
+                        
+                        saveGlossary();
+                        renderGlossary();
+                        alert('Импорт успешно завершен');
+                    } catch (error) {
+                        alert('Ошибка при импорте данных: ' + error.message);
+                    }
+                    
+                    // Сброс input для возможности повторного выбора того же файла
+                    fileInput.value = '';
+                };
+                
+                reader.readAsText(file);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>ИИ В МАРКЕТИНГЕ</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp |  CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+                        {
+        ru: {
+            term: "Цикл ажиотажа вокруг ИИ",
+            equivalent: "AI Hype Cycle",
+            definition: "Этап чрезмерного оптимизма и завышенных ожиданий от технологий искусственного интеллекта, за которым следует разочарование, прежде чем технология достигает зрелости.",
+            category: "маркетинговый"
+        },
+        en: {
+            term: "AI Hype Cycle",
+            equivalent: "Цикл ажиотажа вокруг ИИ",
+            definition: "A phase of excessive optimism and inflated expectations about AI technologies, followed by disillusionment before the technology matures.",
+            category: "marketing"
+        }
+    },
+    {
+        ru: {
+            term: "ИИ-змеиное масло",
+            equivalent: "AI Snake Oil",
+            definition: "Псевдонаучные или неэффективные решения на основе ИИ, которые преувеличивают свои возможности для привлечения инвестиций или клиентов.",
+            category: "критический"
+        },
+        en: {
+            term: "AI Snake Oil",
+            equivalent: "ИИ-змеиное масло",
+            definition: "Pseudoscientific or ineffective AI solutions that exaggerate their capabilities to attract investment or customers.",
+            category: "critical"
+        }
+    },
+    {
+        ru: {
+            term: "Потемкинский ИИ",
+            equivalent: "Potemkin AI",
+            definition: "Демонстрационные системы ИИ, созданные для имитации функциональности, но не обладающие реальными возможностями.",
+            category: "критический"
+        },
+        en: {
+            term: "Potemkin AI",
+            equivalent: "Потемкинский ИИ",
+            definition: "AI demo systems designed to simulate functionality but lacking real capabilities.",
+            category: "critical"
+        }
+    },
+    {
+        ru: {
+            term: "Испарившийся ИИ",
+            equivalent: "Vaporware AI",
+            definition: "Программное обеспечение на основе ИИ, которое анонсируется, но никогда не выпускается или не работает, как заявлено.",
+            category: "критический"
+        },
+        en: {
+            term: "Vaporware AI",
+            equivalent: "Испарившийся ИИ",
+            definition: "AI-based software that is announced but never released or fails to perform as claimed.",
+            category: "critical"
+        }
+    },
+    {
+        ru: {
+            term: "ИИ-промывка",
+            equivalent: "AI Washing",
+            definition: "Практика добавления упоминаний ИИ в маркетинговые материалы без реального использования технологий ИИ.",
+            category: "маркетинговый"
+        },
+        en: {
+            term: "AI Washing",
+            equivalent: "ИИ-промывка",
+            definition: "The practice of adding AI mentions to marketing materials without actually using AI technologies.",
+            category: "marketing"
+        }
+    },
+    {
+        ru: {
+            term: "ИОИ (Искусственный общий интеллект)",
+            equivalent: "AGI (Artificial General Intelligence)",
+            definition: "Гипотетический ИИ, способный понимать, обучаться и выполнять любые интеллектуальные задачи на уровне человека.",
+            category: "технический"
+        },
+        en: {
+            term: "AGI (Artificial General Intelligence)",
+            equivalent: "ИОИ (Искусственный общий интеллект)",
+            definition: "Hypothetical AI capable of understanding, learning, and performing any intellectual task at a human level.",
+            category: "technical"
+        }
+    },
+    {
+        ru: {
+            term: "Этический долг",
+            equivalent: "Ethical Debt",
+            definition: "Накопленные проблемы, связанные с этическими рисками ИИ, которые игнорируются при разработке, но могут проявиться позже.",
+            category: "критический"
+        },
+        en: {
+            term: "Ethical Debt",
+            equivalent: "Этический долг",
+            definition: "Accumulated issues related to AI ethical risks that are ignored during development but may emerge later.",
+            category: "critical"
+        }
+    },
+    {
+        ru: {
+            term: "Предвзятость автоматизации",
+            equivalent: "Automation Bias",
+            definition: "Склонность чрезмерно доверять решениям, предложенным автоматизированными системами, даже если они ошибочны.",
+            category: "критический"
+        },
+        en: {
+            term: "Automation Bias",
+            equivalent: "Предвзятость автоматизации",
+            definition: "The tendency to over-rely on decisions suggested by automated systems, even when they are wrong.",
+            category: "critical"
+        }
+    },
+    {
+        ru: {
+            term: "Взлом тестовых показателей",
+            equivalent: "Benchmark Hacking",
+            definition: "Манипуляции с алгоритмами ИИ для улучшения результатов на конкретных тестах без реального повышения их эффективности.",
+            category: "технический"
+        },
+        en: {
+            term: "Benchmark Hacking",
+            equivalent: "Взлом тестовых показателей",
+            definition: "Manipulating AI algorithms to improve performance on specific benchmarks without actual efficiency gains.",
+            category: "technical"
+        }
+    },
+    {
+        ru: {
+            term: "Человекоподобный интеллект",
+            equivalent: "Human-like intelligence",
+            definition: "Свойство ИИ имитировать когнитивные способности человека, такие как обучение, рассуждение и адаптация.",
+            category: "технический"
+        },
+        en: {
+            term: "Human-like intelligence",
+            equivalent: "Человекоподобный интеллект",
+            definition: "The ability of AI to mimic human cognitive abilities, such as learning, reasoning, and adaptation.",
+            category: "technical"
+        }
+    },
+    {
+        ru: {
+            term: "Стохастический попугай",
+            equivalent: "Stochastic Parrot",
+            definition: "Модель ИИ, которая генерирует правдоподобный, но бессмысленный текст, не понимая его содержания.",
+            category: "критический"
+        },
+        en: {
+            term: "Stochastic Parrot",
+            equivalent: "Стохастический попугай",
+            definition: "An AI model that generates plausible but meaningless text without understanding its content.",
+            category: "critical"
+        }
+    },
+    {
+        ru: {
+            term: "ФранкенИИ",
+            equivalent: "FrankenAI",
+            definition: "Система ИИ, собранная из разнородных компонентов, что приводит к непредсказуемому или опасному поведению.",
+            category: "критический"
+        },
+        en: {
+            term: "FrankenAI",
+            equivalent: "ФранкенИИ",
+            definition: "An AI system assembled from disparate components, leading to unpredictable or dangerous behavior.",
+            category: "critical"
+        }
+    },
+    {
+        ru: {
+            term: "Техно-солюшионизм",
+            equivalent: "Techno-solutionism",
+            definition: "Вера в то, что любую социальную или экономическую проблему можно решить с помощью технологий, включая ИИ.",
+            category: "критический"
+        },
+        en: {
+            term: "Techno-solutionism",
+            equivalent: "Техно-солюшионизм",
+            definition: "The belief that any social or economic problem can be solved through technology, including AI.",
+            category: "critical"
+        }
+    },
+    {
+        ru: {
+            term: "Самообучающаяся система",
+            equivalent: "Self-learning system",
+            definition: "ИИ, способный улучшать свою работу без явного программирования, на основе анализа данных и опыта.",
+            category: "технический"
+        },
+        en: {
+            term: "Self-learning system",
+            equivalent: "Самообучающаяся система",
+            definition: "AI capable of improving its performance without explicit programming, based on data analysis and experience.",
+            category: "technical"
+        }
+    }, 
+	{
+    ru: {
+        term: "Лингвистический дрифт",
+        equivalent: "Linguistic Drift",
+        definition: "Незапланированные изменения в языке модели (например, смещение стиля или смысла), вызванные дообучением на новых данных или взаимодействием с пользователями.",
+        category: "технический"
+    },
+    en: {
+        term: "Linguistic Drift",
+        equivalent: "Лингвистический дрифт",
+        definition: "Unintended shifts in a model's language (e.g., style or meaning) due to fine-tuning on new data or user interactions.",
+        category: "technical"
+    }
+},
+
+{
+    ru: {
+        term: "Контекстная слепота",
+        equivalent: "Context Blindness",
+        definition: "Ограничение ИИ, при котором система не учитывает глубинный культурный, исторический или ситуативный контекст, несмотря на поверхностную связность текста.",
+        category: "критический"
+    },
+    en: {
+        term: "Context Blindness",
+        equivalent: "Контекстная слепота",
+        definition: "An AI limitation where the system fails to grasp deeper cultural, historical, or situational context, despite surface-level coherence.",
+        category: "critical"
+    }
+},
+
+{
+    ru: {
+        term: "Фантомная экспертиза",
+        equivalent: "Phantom Expertise",
+        definition: "Создание ИИ иллюзии глубоких знаний в узкой области за счёт статистических закономерностей, без реального понимания предмета.",
+        category: "маркетинговый"
+    },
+    en: {
+        term: "Phantom Expertise",
+        equivalent: "Фантомная экспертиза",
+        definition: "AI's illusion of deep expertise in a niche field, achieved through statistical patterns without actual comprehension.",
+        category: "marketing"
+    }
+},
+
+{
+    ru: {
+        term: "Глоссематия",
+        equivalent: "Glossematia",
+        definition: "Навязчивое стремление добавлять сложные лингвистические термины или псевдонаучный жаргон в описание ИИ для создания ложного впечатления сложности.",
+        category: "критический"
+    },
+    en: {
+        term: "Glossematia",
+        equivalent: "Глоссематия",
+        definition: "The obsessive use of complex linguistic terms or pseudo-scientific jargon in AI descriptions to create a false impression of sophistication.",
+        category: "critical"
+    }
+},
+
+	{
+    ru: {
+        term: "Человеко-центричная мимикрия",
+        equivalent: "Human-Centric Mimicry",
+        definition: "Свойство ИИ имитировать человеческие паттерны общения (эмпатию, юмор, стиль), создавая иллюзию понимания, хотя система не обладает сознанием или эмоциями.",
+        category: "критический"
+    },
+    en: {
+        term: "Human-Centric Mimicry",
+        equivalent: "Человеко-центричная мимикрия",
+        definition: "AI's ability to mimic human communication patterns (empathy, humor, style), creating the illusion of understanding despite lacking consciousness or emotions.",
+        category: "critical"
+    }
+}
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

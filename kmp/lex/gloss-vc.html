@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>kmp+</title>
+  <style>
+    :root {
+      --primary: #325980;
+      --secondary: #3498db;
+      --light-gray: #f5f5f5;
+      --lighter-gray: #f1f1f1;
+      --white: #ffffff;
+
+      --bg: var(--light-gray);
+      --text: var(--primary);
+      --card-bg: var(--white);
+    }
+
+    body.dark {
+      --bg: #1e1e1e;
+      --text: #f0f0f0;
+      --card-bg: #2c2c2c;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      background-color: var(--primary);
+      color: var(--white);
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    #theme-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--white);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+
+    .language-selector {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+      gap: 10px;
+    }
+
+    .language-btn {
+      padding: 10px 15px;
+      background-color: var(--card-bg);
+      border: 2px solid var(--secondary);
+      color: var(--text);
+      cursor: pointer;
+      border-radius: 5px;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+
+    .language-btn.active {
+      background-color: var(--secondary);
+      color: var(--white);
+    }
+
+    .glossary {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .term-card {
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      transition: transform 0.3s;
+    }
+
+    .term-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .term-card h3 {
+      color: var(--secondary);
+      margin-bottom: 10px;
+      border-bottom: 2px solid var(--lighter-gray);
+      padding-bottom: 5px;
+    }
+
+    .term-card p {
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .add-term-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: var(--secondary);
+      color: var(--white);
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+    }
+
+    .add-term-btn:hover {
+      background-color: var(--primary);
+      transform: scale(1.05);
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background-color: var(--card-bg);
+      color: var(--text);
+      padding: 30px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    
+	
+	.form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text);
+            font-weight: bold;
+        }
+
+    input, textarea, select {
+      background: var(--card-bg);
+      color: var(--text);
+      border: 1px solid #ccc;
+	  width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+    }
+	
+
+    .submit-btn {
+      background-color: var(--secondary);
+      color: var(--white);
+      border: none;
+      padding: 12px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+
+    .submit-btn:hover {
+      background-color: var(--primary);
+    }
+
+    .search-container {
+      margin-bottom: 20px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid var(--lighter-gray);
+      border-radius: 30px;
+      font-size: 16px;
+      transition: all 0.3s;
+      background-color: var(--card-bg);
+      color: var(--text);
+    }
+
+    .search-input:focus {
+      border-color: var(--secondary);
+      outline: none;
+    }
+
+    @media (max-width: 768px) {
+      .glossary {
+        grid-template-columns: 1fr;
+      }
+
+      .language-selector {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Vibe Coding Glossary</h1>
+    <p>Multilingual Dictionary for the New Programming Paradigm</p>
+    <button id="theme-toggle" title="Toggle theme">🌙</button>
+  </header>
+
+  <div class="container">
+    
+    <div class="container">
+        <div class="language-selector">
+            <button class="language-btn active" data-lang="en">English</button>
+            <button class="language-btn" data-lang="ru">Русский</button>
+            <button class="language-btn" data-lang="de">Deutsch</button>
+            <button class="language-btn" data-lang="zh">中文</button>
+        </div>
+        
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Search terms...">
+        </div>
+        
+        <div class="glossary" id="glossary-container">
+            <!-- Terms will be inserted here dynamically -->
+        </div>
+    </div>
+    
+    <button class="add-term-btn" id="add-term-btn">+</button>
+    
+    <div class="modal" id="add-term-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+			<h2>Add New Term</h2>
+            <button class="close-modal" id="close-modal">&times;</button>
+        </div>
+        
+        <form id="add-term-form">
+            <div class="form-group">
+                <label for="term-en">Term (English):</label>
+                <input type="text" id="term-en" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="definition-en">Definition (English):</label>
+                <textarea id="definition-en" required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="term-ru">Term (Russian):</label>
+                <input type="text" id="term-ru" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="definition-ru">Definition (Russian):</label>
+                <textarea id="definition-ru" required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="term-de">Term (German):</label>
+                <input type="text" id="term-de" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="definition-de">Definition (German):</label>
+                <textarea id="definition-de" required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="term-zh">Term (Chinese):</label>
+                <input type="text" id="term-zh" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="definition-zh">Definition (Chinese):</label>
+                <textarea id="definition-zh" required></textarea>
+            </div>
+            
+            <button type="submit" class="submit-btn">Add Term</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Initial glossary data
+    const glossaryData = [
+        {
+            id: 1,
+            en: {
+                term: "Vibe Coding",
+                definition: "An approach to programming based on intuitive interaction with language models instead of traditional code writing."
+            },
+            ru: {
+                term: "Vibe Coding",
+                definition: "Подход к программированию, основанный на интуитивном взаимодействии с языковыми моделями вместо традиционного написания кода."
+            },
+            de: {
+                term: "Vibe Coding",
+                definition: "Ein Programmieransatz, der auf der intuitiven Interaktion mit Sprachmodellen basiert, anstatt auf traditionellem Schreiben von Code."
+            },
+            zh: {
+                term: "氛围编程",
+                definition: "一种基于与语言模型直觉交互而非传统代码编写的编程方法。"
+            }
+        },
+        {
+            id: 2,
+            en: {
+                term: "Prompt Engineering",
+                definition: "The art of crafting requests to LLMs to obtain the desired code output."
+            },
+            ru: {
+                term: "Prompt Engineering",
+                definition: "Искусство составления запросов к LLM для получения желаемого кода."
+            },
+            de: {
+                term: "Prompt-Engineering",
+                definition: "Die Kunst, Anfragen an LLMs zu formulieren, um den gewünschten Code zu erhalten."
+            },
+            zh: {
+                term: "提示工程",
+                definition: "精心设计向大语言模型提出请求以获得所需代码的艺术。"
+            }
+        },
+        {
+            id: 3,
+            en: {
+                term: "Intention-to-Code",
+                definition: "The process of transforming an idea or intention into working code through LLM."
+            },
+            ru: {
+                term: "Intention-to-Code",
+                definition: "Процесс трансформации идеи или намерения в рабочий код через LLM."
+            },
+            de: {
+                term: "Intention-zu-Code",
+                definition: "Der Prozess der Umwandlung einer Idee oder Absicht in funktionierenden Code durch LLM."
+            },
+            zh: {
+                term: "意图转代码",
+                definition: "通过大语言模型将想法或意图转化为可工作代码的过程。"
+            }
+        },
+        {
+            id: 4,
+            en: {
+                term: "Vibes",
+                definition: "Intuitive understanding of what the code should do without the need to formalize the algorithm."
+            },
+            ru: {
+                term: "Vibes",
+                definition: "Интуитивное понимание того, что должен делать код, без необходимости формализации алгоритма."
+            },
+            de: {
+                term: "Vibes",
+                definition: "Intuitives Verständnis dessen, was der Code tun soll, ohne die Notwendigkeit, den Algorithmus zu formalisieren."
+            },
+            zh: {
+                term: "氛围感",
+                definition: "对代码应该做什么的直觉理解，无需形式化算法。"
+            }
+        },
+        {
+            id: 5,
+            en: {
+                term: "Flow State Programming",
+                definition: "A state where the programmer and LLM are in a productive dialogue."
+            },
+            ru: {
+                term: "Flow State Programming",
+                definition: "Состояние, когда программист и LLM находятся в продуктивном диалоге."
+            },
+            de: {
+                term: "Flow-Zustand-Programmierung",
+                definition: "Ein Zustand, in dem sich Programmierer und LLM in einem produktiven Dialog befinden."
+            },
+            zh: {
+                term: "心流编程状态",
+                definition: "程序员与大语言模型处于富有成效的对话状态。"
+            }
+        },
+        {
+            id: 6,
+            en: {
+                term: "Semantic Debugging",
+                definition: "Fixing errors by explaining the problem to LLM in natural language."
+            },
+            ru: {
+                term: "Semantic Debugging",
+                definition: "Исправление ошибок через объяснение проблемы LLM на естественном языке."
+            },
+            de: {
+                term: "Semantisches Debugging",
+                definition: "Beheben von Fehlern durch Erklären des Problems für LLM in natürlicher Sprache."
+            },
+            zh: {
+                term: "语义调试",
+                definition: "通过用自然语言向大语言模型解释问题来修复错误。"
+            }
+        },
+        {
+            id: 7,
+            en: {
+                term: "Code Whispering",
+                definition: "Fine-tuning requests to get exactly the code you need."
+            },
+            ru: {
+                term: "Code Whispering",
+                definition: "Тонкая настройка запросов для получения именно того кода, который нужен."
+            },
+            de: {
+                term: "Code-Flüstern",
+                definition: "Feinabstimmung von Anfragen, um genau den Code zu erhalten, den man benötigt."
+            },
+            zh: {
+                term: "代码低语",
+                definition: "微调请求以获得恰好需要的代码。"
+            }
+        },
+        {
+            id: 8,
+            en: {
+                term: "Context Sculpting",				
+				definition: "The art of shaping and maintaining conversation context with LLM for complex projects."
+                },
+                ru: {
+                    term: "Context Sculpting",
+                    definition: "Искусство формирования и поддержания контекста беседы с LLM для сложных проектов."
+                },
+                de: {
+                    term: "Kontext-Modellierung",
+                    definition: "Die Kunst, den Gesprächskontext mit LLM für komplexe Projekte zu gestalten und aufrechtzuerhalten."
+                },
+                zh: {
+                    term: "上下文塑造",
+                    definition: "为复杂项目塑造和维护与大语言模型对话上下文的艺术。"
+                }
+            },
+            {
+                id: 9,
+                en: {
+                    term: "Vibe Check",
+                    definition: "Verifying that the generated code matches the original intent."
+                },
+                ru: {
+                    term: "Vibe Check",
+                    definition: "Проверка соответствия сгенерированного кода изначальному замыслу."
+                },
+                de: {
+                    term: "Vibe-Prüfung",
+                    definition: "Überprüfung, ob der generierte Code der ursprünglichen Absicht entspricht."
+                },
+                zh: {
+                    term: "氛围检查",
+                    definition: "验证生成的代码是否符合原始意图。"
+                }
+            },
+            {
+                id: 10,
+                en: {
+                    term: "Intuitive Refactoring",
+                    definition: "Improving code through dialogue with LLM without deep diving into technical details."
+                },
+                ru: {
+                    term: "Intuitive Refactoring",
+                    definition: "Улучшение кода через диалог с LLM без глубокого погружения в технические детали."
+                },
+                de: {
+                    term: "Intuitives Refactoring",
+                    definition: "Verbesserung des Codes durch Dialog mit LLM ohne tiefes Eintauchen in technische Details."
+                },
+                zh: {
+                    term: "直觉重构",
+                    definition: "通过与大语言模型对话改进代码，无需深入技术细节。"
+                }
+            }
+        ];
+        
+        // Current selected language
+        let currentLanguage = 'en';
+        
+        // DOM elements
+        const glossaryContainer = document.getElementById('glossary-container');
+        const languageButtons = document.querySelectorAll('.language-btn');
+        const searchInput = document.querySelector('.search-input');
+        const addTermBtn = document.getElementById('add-term-btn');
+        const addTermModal = document.getElementById('add-term-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const addTermForm = document.getElementById('add-term-form');
+        
+        // Function to render the glossary
+        function renderGlossary(data = glossaryData, language = currentLanguage) {
+            glossaryContainer.innerHTML = '';
+            
+            data.forEach(item => {
+                const termCard = document.createElement('div');
+                termCard.className = 'term-card';
+                
+                const term = document.createElement('h3');
+                term.textContent = item[language].term;
+                
+                const definition = document.createElement('p');
+                definition.textContent = item[language].definition;
+                
+                termCard.appendChild(term);
+                termCard.appendChild(definition);
+                
+                glossaryContainer.appendChild(termCard);
+            });
+        }
+        
+        // Function to filter glossary by search term
+        function filterGlossary(searchTerm) {
+            const filtered = glossaryData.filter(item => {
+                const term = item[currentLanguage].term.toLowerCase();
+                const definition = item[currentLanguage].definition.toLowerCase();
+                return term.includes(searchTerm) || definition.includes(searchTerm);
+            });
+            
+            renderGlossary(filtered);
+        }
+        
+        // Function to add a new term
+        function addNewTerm(event) {
+            event.preventDefault();
+            
+            const newTerm = {
+                id: glossaryData.length + 1,
+                en: {
+                    term: document.getElementById('term-en').value,
+                    definition: document.getElementById('definition-en').value
+                },
+                ru: {
+                    term: document.getElementById('term-ru').value,
+                    definition: document.getElementById('definition-ru').value
+                },
+                de: {
+                    term: document.getElementById('term-de').value,
+                    definition: document.getElementById('definition-de').value
+                },
+                zh: {
+                    term: document.getElementById('term-zh').value,
+                    definition: document.getElementById('definition-zh').value
+                }
+            };
+            
+            glossaryData.push(newTerm);
+            renderGlossary();
+            addTermModal.style.display = 'none';
+            addTermForm.reset();
+        }
+        
+        // Event listeners
+        languageButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                languageButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                currentLanguage = button.getAttribute('data-lang');
+                renderGlossary();
+                
+                // Update search placeholder
+                const placeholders = {
+                    'en': 'Search terms...',
+                    'ru': 'Поиск терминов...',
+                    'de': 'Begriffe suchen...',
+                    'zh': '搜索术语...'
+                };
+                searchInput.placeholder = placeholders[currentLanguage];
+            });
+        });
+        
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            filterGlossary(searchTerm);
+        });
+        
+        addTermBtn.addEventListener('click', () => {
+            addTermModal.style.display = 'flex';
+        });
+        
+        closeModalBtn.addEventListener('click', () => {
+            addTermModal.style.display = 'none';
+            addTermForm.reset();
+        });
+        
+        addTermForm.addEventListener('submit', addNewTerm);
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target === addTermModal) {
+                addTermModal.style.display = 'none';
+                addTermForm.reset();
+            }
+        });
+        
+        // Initial render
+        renderGlossary();
+		
+		 const themeToggle = document.getElementById('theme-toggle');
+    const body = document.body;
+
+    // Apply saved theme on load
+    if (localStorage.getItem('theme') === 'dark') {
+      body.classList.add('dark');
+      themeToggle.textContent = '☀️';
+    }
+
+    themeToggle.addEventListener('click', () => {
+      body.classList.toggle('dark');
+      const isDark = body.classList.contains('dark');
+      themeToggle.textContent = isDark ? '☀️' : '🌙';
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+    </script>
+</body>
+</html>

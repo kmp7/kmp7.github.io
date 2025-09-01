@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        :root {
+            --bg-gradient-light: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --bg-gradient-dark: linear-gradient(135deg, #2c3e50 0%, #1a1a2e 100%);
+            --text-color-light: #2c3e50;
+            --text-color-dark: #e0e0e0;
+            --card-front-gradient-light: linear-gradient(45deg, #3498db, #033899);
+            --card-back-gradient-light: linear-gradient(45deg, #033899, #3498db);
+            --card-front-gradient-dark: linear-gradient(45deg, #bd820d, #d9d604);
+            --card-back-gradient-dark: linear-gradient(45deg, #faf86b, #bd820d);
+            --footer-color-light: #7f8c8d;
+            --footer-color-dark: #a0a0a0;
+            --secondary-light: #3498db;
+            --secondary-dark: #f39c12;
+            --white: #ffffff;
+        }
+        
+        html[data-theme="light"] {
+            --bg-gradient: var(--bg-gradient-light);
+            --text-color: var(--text-color-light);
+            --card-front-gradient: var(--card-front-gradient-light);
+            --card-back-gradient: var(--card-back-gradient-light);
+            --footer-color: var(--footer-color-light);
+            --secondary: var(--secondary-light);
+        }
+        
+        html[data-theme="dark"] {
+            --bg-gradient: var(--bg-gradient-dark);
+            --text-color: var(--text-color-dark);
+            --card-front-gradient: var(--card-front-gradient-dark);
+            --card-back-gradient: var(--card-back-gradient-dark);
+            --footer-color: var(--footer-color-dark);
+            --secondary: var(--secondary-dark);
+        }
+        
+        body {
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            color: var(--text-color);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            width: 100%;
+            position: relative;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #aaaaaa, #555555);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        p.subtitle {
+            font-size: 1.2rem;
+            color: var(--text-color);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(128, 128, 128, 0.2);
+        }
+        
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 1200px;
+        }
+        
+        .card {
+            height: 250px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s;
+            transform-style: preserve-3d;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            border-radius: 15px;
+        }
+        
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .card-front {
+            background: var(--card-front-gradient);
+            color: white;
+        }
+        
+        .card-back {
+            background: var(--card-back-gradient);
+            color: white;
+            transform: rotateY(180deg);
+        }
+        
+        .quote {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            font-style: italic;
+            margin-bottom: 1rem;
+        }
+        
+        .author {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        footer {
+            margin-top: 3rem;
+            color: var(--footer-color);
+            text-align: center;
+        }
+        
+        /* Стили для кнопки добавления */
+        .add-term-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--secondary);
+            color: var(--white);
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        
+        .add-term-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: var(--bg-gradient);
+            padding: 2rem;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-content h2 {
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        
+        .form-group textarea,
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+        }
+        
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        
+        .modal-buttons button {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .submit-btn {
+            background-color: var(--secondary);
+            color: white;
+        }
+        
+        .cancel-btn {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .cards-container {
+                grid-template-columns: 1fr;
+                max-width: 400px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .theme-toggle {
+                position: relative;
+                margin-bottom: 1rem;
+            }
+            
+            header {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .modal-content {
+                width: 95%;
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <button class="theme-toggle" id="theme-toggle">☀️</button>
+        <h1>Слова о ясности слова</h1>
+        <p class="subtitle">Нажмите на карточку, чтобы ...</p>
+		<p class="subtitle">Кнопка добавления карточек в нижнем правом углу)</p>
+    </header>
+    
+    <div class="cards-container" id="cards-container">
+        <!-- Карточки будут добавлены с помощью JavaScript -->
+    </div>
+    
+    <footer class="footer">
+        <div class="container">
+            <p>© 2025 | kmp |  CC BY-NC-SA 4.0<br>
+            Разработано для студентов БрГУ имени А.С. Пушкина</p>
+        </div>
+    </footer>
+    
+    <!-- Кнопка добавления новой карточки -->
+    <button class="add-term-btn" id="add-term-btn">+</button>
+    
+    <!-- Модальное окно для добавления новой карточки -->
+    <div class="modal" id="add-term-modal">
+        <div class="modal-content">
+            <h2>Добавить новую цитату</h2>
+            <form id="quote-form">
+                <div class="form-group">
+                    <label for="quote-text">Текст цитаты:</label>
+                    <textarea id="quote-text" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="quote-author">Автор:</label>
+                    <input type="text" id="quote-author" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="cancel-btn" id="cancel-btn">Отмена</button>
+                    <button type="submit" class="submit-btn">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+    <script>
+        // Массив с цитатами и их авторами
+        let quotes = [
+            {
+                text: "Правильно использовать слова — значит быть ближе к истине, правильно мыслить — значит быть ближе к мудрости.",
+                author: "Конфуций"
+            },
+            {
+                text: "Если мы не понимаем, что говорим, мы не можем понять, что мы думаем.",
+                author: "Джордж Оруэлл"
+            },
+            {
+                text: "Язык — это дом бытия.",
+                author: "Мартин Хайдеггер"
+            },
+            {
+                text: "Границы моего языка означают границы моего мира.",
+                author: "Людвиг Витгенштейн"
+            },
+                        {
+                text: "Неточное слово — признак неточной мысли.",
+                author: "Лев Толстой"
+            },
+			{
+        text: "Чёткое понимание слов — это компас в мире идей, который прокладывает мост между разумом говорящего и слушающего, избегая путаницы берегов.",
+        author: "DeepSeek Chat"
+    },
+	{
+text: "Ясное понимание слов, которыми мы пользуемся, подобно свету, озаряющему путь к истине, ибо в точности языка кроется ясность мысли.",
+author: "Grok 3"
+},
+
+{
+                text: "Ясное понимание слов — не роскошь, а условие ясного мышления и ответственного общения.",
+                author: "ChatGPT"
+},
+
+{
+  "text": "Точное понимание значений слов — это фундамент для чёткой мысли и эффективного общения, ведущий нас к более глубокому осознанию мира и друг друга.",
+  "author": "Gemini"
+},
+
+{ text: "Точность в словах — это не педантизм, а уважение к мысли. Когда мы размываем границы понятий, мы теряем способность ясно видеть мир и честно говорить о нем.", author: "Claude" },
+
+{
+    "text": "Ясность слов ведет к ясности мысли, а ясность мысли — к мудрости действий.",
+    "author": "Le Chat Mistral"
+},
+
+{ text: "Ясное понимание слов — это мост между замыслом и истиной, между разумом и мудростью. Чем точнее наши слова, тем глубже наше понимание.", author: "Copilot" },
+
+{
+text: "Слова — это инструмент мысли. Чем точнее мы говорим, тем яснее видим мир и тем свободнее чувствуем себя в нём.",
+author: "Qwen3-235B-A22B"
+}, 
+
+{
+text: "Понимать значение каждого слова — залог ясности мысли, владеть языком — ключ к взаимопониманию.",
+                author: "GigaChat"
+            },
+			
+			{
+    text: "Каждое слово — это ключ, открывающий дверь к пониманию или закрывающий путь к истине. Точное слово — точное мышление, размытое слово — размытая мысль.",
+    author: "Алиса (Яндекс)"
+}
+		
+
+
+        ];
+
+        // Функция для создания карточек
+        function createCards() {
+            const cardsContainer = document.getElementById('cards-container');
+            cardsContainer.innerHTML = '';
+            
+            // Перемешиваем массив цитат для разнообразия
+            const shuffledQuotes = [...quotes].sort(() => Math.random() - 0.5);
+            
+            shuffledQuotes.forEach(quote => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-front">
+                            <p class="quote">${quote.text}</p>
+                        </div>
+                        <div class="card-back">
+                            <p class="author">${quote.author}</p>
+                        </div>
+                    </div>
+                `;
+                
+                // Добавляем обработчик клика для переворачивания карточки
+                card.addEventListener('click', function() {
+                    this.classList.toggle('flipped');
+                });
+                
+                cardsContainer.appendChild(card);
+            });
+        }
+
+        // Функция для переключения темы
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeToggle = document.getElementById('theme-toggle');
+            
+            if (html.getAttribute('data-theme') === 'light') {
+                html.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            } else {
+                html.setAttribute('data-theme', 'light');
+                themeToggle.textContent = '☀️';
+            }
+        }
+
+        // Функция для показа модального окна
+        function showModal() {
+            const modal = document.getElementById('add-term-modal');
+            modal.style.display = 'flex';
+        }
+
+        // Функция для скрытия модального окна
+        function hideModal() {
+            const modal = document.getElementById('add-term-modal');
+            modal.style.display = 'none';
+            document.getElementById('quote-form').reset();
+        }
+
+        // Функция для добавления новой цитаты
+        function addNewQuote(event) {
+            event.preventDefault();
+            
+            const quoteText = document.getElementById('quote-text').value.trim();
+            const quoteAuthor = document.getElementById('quote-author').value.trim();
+            
+            if (quoteText && quoteAuthor) {
+                quotes.push({
+                    text: quoteText,
+                    author: quoteAuthor
+                });
+                
+                createCards();
+                hideModal();
+            }
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            createCards();
+            
+            // Добавляем обработчик для кнопки переключения темы
+            const themeToggle = document.getElementById('theme-toggle');
+            themeToggle.addEventListener('click', toggleTheme);
+            
+            // Добавляем обработчик для кнопки добавления
+            const addTermBtn = document.getElementById('add-term-btn');
+            addTermBtn.addEventListener('click', showModal);
+            
+            // Добавляем обработчик для кнопки отмены
+            const cancelBtn = document.getElementById('cancel-btn');
+            cancelBtn.addEventListener('click', hideModal);
+            
+            // Добавляем обработчик для формы
+            const quoteForm = document.getElementById('quote-form');
+            quoteForm.addEventListener('submit', addNewQuote);
+            
+            // Закрываем модальное окно при клике вне его
+            const modal = document.getElementById('add-term-modal');
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hideModal();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
