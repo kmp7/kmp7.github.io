@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        body {
+            background-color: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+            font-family: sans-serif;
+			font-color: #325980;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 1.6rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 48rem;
+			font-color: #325980;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            font-weight: bold;
+			color: #1e4070;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        
+        input {
+            width: 100%;
+            padding: 0.5rem;
+			border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        
+        button {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.2s;
+        }
+        
+        .start-btn {
+            background-color: #3b82f6;
+        }
+        
+        .start-btn:hover {
+            background-color: #2563eb;
+        }
+        
+        .check-btn {
+            background-color: #3b82f6;
+        }
+        
+        .check-btn:hover {
+            background-color: #2563eb;
+        }
+        
+        .finish-btn {
+            background-color: #10b981;
+            margin-top: 0.5rem;
+        }
+        
+        .finish-btn:hover {
+            background-color: #059669;
+        }
+        
+        .game-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        @media (min-width: 768px) {
+            .game-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        .game-column {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .game-item {
+            border: 1px solid #d1d5db;
+            padding: 0.75rem;
+            background-color: #f9fafb;
+            cursor: pointer;
+            border-radius: 0.25rem;
+            transition: all 0.2s;
+        }
+        
+        .game-item:hover {
+            background-color: #e5e7eb;
+        }
+        
+        .game-item.selected {
+            background-color: #bfdbfe;
+            border-color: #3b82f6;
+        }
+        
+        .game-item.matched {
+            background-color: #d1fae5;
+            border-color: #10b981;
+            cursor: default;
+        }
+        
+        .game-item.incorrect {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .info-text {
+            font-size: 0.875rem;
+            color: #4b5563;
+            margin-bottom: 0.5rem;
+        }
+        
+        .results {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f9fafb;
+            border-radius: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="input-section">
+            <h1>Инструкция</h1>
+			<ul>
+                    <li>Введите свои Фамилию Имя Отчество и нажмите "Начать".</li>
+                    <li>Выполните задание на сопоставление пар.</li>
+                    <li>Нажмите "Проверить" для проверки результатов.</li>
+					<li>Нажмите "Завершить" получения отчета.</li>
+                </ul><br><br>
+            <input type="text" id="surname" placeholder="Фамилия Имя Отчество">
+            <button onclick="startGame()" class="start-btn">Начать</button>
+        </div>
+        <div id="game-section" class="hidden">
+            <h1 id="title"></h1>
+            <p id="start-time" class="info-text"></p>
+            <p id="duration" class="info-text"></p>
+            <div class="game-grid">
+                <div id="left-column" class="game-column">
+                    <div class="game-item" onclick="selectItem(this, 'left')">Термин 1</div>
+                    <div class="game-item" onclick="selectItem(this, 'left')">Термин 2</div>
+                    <div class="game-item" onclick="selectItem(this, 'left')">Термин 3</div>
+                </div>
+                <div id="right-column" class="game-column">
+                    <div class="game-item" onclick="selectItem(this, 'right')">Определение B</div>
+                    <div class="game-item" onclick="selectItem(this, 'right')">Определение A</div>
+                    <div class="game-item" onclick="selectItem(this, 'right')">Определение C</div>
+                </div>
+            </div>
+            <button onclick="checkPairs()" class="check-btn">Проверить</button>
+            <button onclick="finishAndPrint()" class="finish-btn">Завершить</button>
+            <div id="results-container" class="results hidden"></div>
+        </div>
+    </div>
+<div style="position: fixed; bottom: 10px; center: 33px; opacity: 0.3; font-size: 14px;">© 2025 | kmp | CC BY-NC-SA 4.0</div>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Игровые данные
+        const gameData = {
+            terms: ["Термин 1", "Термин 2", "Термин 3"],
+            definitions: ["Определение A", "Определение B", "Определение C"],
+            correctPairs: {
+                "Термин 1": "Определение A",
+                "Термин 2": "Определение B",
+                "Термин 3": "Определение C"
+            }
+        };
+
+        // Состояние игры
+        const gameState = {
+            startTime: null,
+            selectedLeft: null,
+            selectedRight: null,
+            pairs: [],
+            matchedPairs: []
+        };
+
+        // Начать игру
+        function startGame() {
+            const surname = document.getElementById('surname').value.trim();
+            if (!surname) {
+                alert('Пожалуйста, введите фамилию');
+                return;
+            }
+            
+            document.getElementById('input-section').classList.add('hidden');
+            document.getElementById('game-section').classList.remove('hidden');
+            
+            gameState.startTime = new Date();
+            gameState.pairs = [];
+            gameState.matchedPairs = [];
+            
+            document.getElementById('title').textContent = `Играет ${surname}`;
+            document.getElementById('start-time').textContent = `Время начала: ${gameState.startTime.toLocaleString('ru-RU')}`;
+            
+            // Сброс всех элементов
+            document.querySelectorAll('.game-item').forEach(item => {
+                item.classList.remove('selected', 'matched', 'incorrect');
+            });
+        }
+
+        // Выбрать элемент
+        function selectItem(element, side) {
+            // Нельзя выбрать уже сопоставленные элементы
+            if (element.classList.contains('matched')) return;
+            
+            if (side === 'left') {
+                if (gameState.selectedLeft) {
+                    gameState.selectedLeft.classList.remove('selected');
+                }
+                gameState.selectedLeft = element;
+                element.classList.add('selected');
+            } else {
+                if (gameState.selectedRight) {
+                    gameState.selectedRight.classList.remove('selected');
+                }
+                gameState.selectedRight = element;
+                element.classList.add('selected');
+            }
+            
+            // Если выбраны оба элемента - создаем пару
+            if (gameState.selectedLeft && gameState.selectedRight) {
+                createPair(gameState.selectedLeft, gameState.selectedRight);
+            }
+        }
+
+        // Создать пару
+        function createPair(leftElement, rightElement) {
+            const term = leftElement.textContent;
+            const definition = rightElement.textContent;
+            
+            // Проверяем, правильная ли пара
+            const isCorrect = gameData.correctPairs[term] === definition;
+            
+            // Добавляем классы в зависимости от правильности
+            if (isCorrect) {
+                leftElement.classList.add('matched');
+                rightElement.classList.add('matched');
+                gameState.matchedPairs.push([term, definition]);
+            } else {
+                leftElement.classList.add('incorrect');
+                rightElement.classList.add('incorrect');
+                
+                // Через секунду убираем выделение
+                setTimeout(() => {
+                    leftElement.classList.remove('selected', 'incorrect');
+                    rightElement.classList.remove('selected', 'incorrect');
+                }, 1000);
+            }
+            
+            gameState.pairs.push([term, definition]);
+            gameState.selectedLeft = null;
+            gameState.selectedRight = null;
+        }
+
+        // Проверить пары
+        function checkPairs() {
+            const correctCount = gameState.matchedPairs.length;
+            const totalPairs = Object.keys(gameData.correctPairs).length;
+            alert(`Правильных пар: ${correctCount} из ${totalPairs}`);
+        }
+
+        // Завершить и распечатать
+        function finishAndPrint() {
+            const endTime = new Date();
+            const duration = Math.round((endTime - gameState.startTime) / 1000);
+            document.getElementById('duration').textContent = `Продолжительность: ${duration} секунд`;
+            
+            // Показываем результаты
+            const resultsContainer = document.getElementById('results-container');
+            resultsContainer.innerHTML = `
+                <h3>Результаты:</h3>
+                <ul>
+                    ${gameState.pairs.map(([term, definition]) => `
+                        <li>${term} → ${definition} 
+                            (${gameData.correctPairs[term] === definition ? '✅ Правильно' : '❌ Неправильно'})
+                        </li>
+                    `).join('')}
+                </ul>
+                <p>Итого: ${gameState.matchedPairs.length} из ${Object.keys(gameData.correctPairs).length} правильно</p>
+            `;
+            resultsContainer.classList.remove('hidden');
+            
+            window.print();
+        }
+
+        // Блокировка инструментов разработчика (по желанию)
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
