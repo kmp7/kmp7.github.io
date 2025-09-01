@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --primary-color: #4a6fa5;
+            --secondary-color: #e9ecef;
+            --accent-color: #28a745;
+            --error-color: #dc3545;
+            --card-bg: #ffffff;
+            --border-color: #dee2e6;
+            --primary-color: #3e76ad;
+            --header-text-color: #ffffff;
+            --border-radius: 8px;
+            --option-bg: #f8f9fa;
+            --option-selected-bg: #e2f0fd;
+            --option-selected-border: #3e76ad;
+            --option-hover-bg: #e9ecef;
+        }
+
+        .dark-theme {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --primary-color: #5d8bc3;
+            --secondary-color: #2d2d2d;
+            --accent-color: #2fb344;
+            --error-color: #e74c3c;
+            --card-bg: #1e1e1e;
+            --border-color: #444;
+            --option-bg: #2d2d2d;
+            --option-selected-bg: #1a3a5a;
+            --option-selected-border: #5d8bc3;
+            --option-hover-bg: #3d3d3d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s, color 0.3s, transform 0.2s, box-shadow 0.2s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--header-text-color);
+            padding: 20px 0;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            background-image: linear-gradient(135deg, var(--primary-color) 0%, #2c3e50 100%);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+            background-color: #2c3e50;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .intro {
+            margin-bottom: 30px;
+            
+        }
+
+        .name-input {
+            margin-bottom: 20px;
+        }
+
+        .name-input input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 16px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        .question {
+            margin-bottom: 25px;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            background-color: var(--secondary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .question p {
+            margin-bottom: 15px;
+            font-weight: 500;
+            font-size: 1.05rem;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+
+        .option {
+            position: relative;
+        }
+
+        .option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .option label {
+            display: block;
+            padding: 12px 8px;
+            background-color: var(--option-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .option label:hover {
+            background-color: var(--option-hover-bg);
+            transform: translateY(-2px);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .option input[type="radio"]:checked + label {
+            background-color: var(--option-selected-bg);
+            border-color: var(--option-selected-border);
+            color: var(--primary-color);
+            font-weight: 600;
+            box-shadow: 0 0 0 2px rgba(62, 118, 173, 0.3);
+        }
+
+        .option input[type="radio"]:focus + label {
+            box-shadow: 0 0 0 2px rgba(62, 118, 173, 0.5);
+        }
+
+        .option .value {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+
+        .option .text {
+            font-size: 0.85rem;
+        }
+
+        .submit-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 25px;
+            transition: background-color 0.3s, transform 0.2s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .submit-btn:hover {
+            background-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .error {
+            color: var(--error-color);
+            margin-top: 10px;
+            text-align: center;
+            font-weight: 500;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .results h2 {
+            margin-bottom: 15px;
+        }
+
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+            color: var(--accent-color);
+        }
+
+        .interpretation {
+            padding: 20px;
+            background-color: var(--secondary-color);
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            line-height: 1.7;
+        }
+
+        .recommendations {
+            padding: 20px;
+            background-color: var(--secondary-color);
+            border-radius: var(--border-radius);
+            line-height: 1.7;
+        }
+
+        .certificate {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            border: 2px solid var(--primary-color);
+            border-radius: 10px;
+            text-align: center;
+            background-color: var(--secondary-color);
+        }
+
+        .certificate h2 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .certificate-content {
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .certificate-footer {
+            font-style: italic;
+            font-size: 14px;
+            color: var(--text-color);
+            opacity: 0.8;
+        }
+
+        .restart-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 25px;
+            transition: background-color 0.3s, transform 0.2s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .restart-btn:hover {
+            background-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .info-block {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: var(--secondary-color);
+            border-radius: 10px;
+            display: none;
+        }
+
+        .info-block h3 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .info-content p {
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+
+        .info-content ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .info-content li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        .info-toggle {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 25px;
+            transition: background-color 0.3s, transform 0.2s;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-toggle:hover {
+            background-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            border-top: 0px solid #ddd;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .options {
+                grid-template-columns: 1fr;
+            }
+
+            .option label {
+                padding: 15px 10px;
+            }
+
+            .theme-toggle {
+                top: 15px;
+                right: 15px;
+            }
+
+            .question {
+                padding: 15px;
+            }
+
+            .question p {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .option .value {
+                font-size: 1rem;
+            }
+
+            .option .text {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Диагностика</h1>
+        <p>отношения стиля мышления (на основе шкалы Лайкерта)</p>
+        <button class="theme-toggle" id="themeToggle">☀️</button>    
+    </header>
+    
+    <div class="container">
+        <div id="survey">
+            <div class="name-input">
+                <label for="userName">Введите свои Фамилию Имя Отчество:</label>
+                <input type="text" id="userName" placeholder="Фамилия Имя Отчество" required>
+            </div>
+            
+            <div class="intro">
+                <p>Оцените каждое утверждение по шкале от 1 до 5, где:</p>
+                <p>1 - Полностью не согласен</p>
+                <p>2 - Скорее не согласен</p>
+                <p>3 - Нейтрально</p>
+                <p>4 - Скорее согласен</p>
+                <p>5 - Полностью согласен</p>
+            </div>
+
+            <form id="aiSurvey">
+                <!-- Аналитическое мышление -->
+                <div class="question" data-type="analytical">
+                    <p>1. Мне нравится анализировать логику работы ИИ-систем перевода, прежде чем довериться результату.</p>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="q1-1" name="q1" value="1">
+                            <label for="q1-1">1 - Полностью не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q1-2" name="q1" value="2">
+                            <label for="q1-2">2 - Скорее не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q1-3" name="q1" value="3">
+                            <label for="q1-3">3 - Нейтрально</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q1-4" name="q1" value="4">
+                            <label for="q1-4">4 - Скорее согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q1-5" name="q1" value="5">
+                            <label for="q1-5">5 - Полностью согласен</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Интуитивное мышление -->
+                <div class="question" data-type="intuitive">
+                    <p>2. Я часто полагаюсь на свое первое впечатление о качестве ИИ-перевода без детального анализа.</p>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="q2-1" name="q2" value="1">
+                            <label for="q2-1">1 - Полностью не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q2-2" name="q2" value="2">
+                            <label for="q2-2">2 - Скорее не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q2-3" name="q2" value="3">
+                            <label for="q2-3">3 - Нейтрально</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q2-4" name="q2" value="4">
+                            <label for="q2-4">4 - Скорее согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q2-5" name="q2" value="5">
+                            <label for="q2-5">5 - Полностью согласен</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Аналитическое мышление -->
+                <div class="question" data-type="analytical">
+                    <p>3. При использовании ИИ для лингвистического анализа я предпочитаю проверить каждый шаг его рассуждения.</p>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="q3-1" name="q3" value="1">
+                            <label for="q3-1">1 - Полностью не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q3-2" name="q3" value="2">
+                            <label for="q3-2">2 - Скорее не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q3-3" name="q3" value="3">
+                            <label for="q3-3">3 - Нейтрально</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q3-4" name="q3" value="4">
+                            <label for="q3-4">4 - Скорее согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q3-5" name="q3" value="5">
+                            <label for="q3-5">5 - Полностью согласен</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Интуитивное мышление -->
+                <div class="question" data-type="intuitive">
+                    <p>4. Я могу быстро распознать переведенный ИИ текст по его "ощущению", даже без выявления конкретных ошибок.</p>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="q4-1" name="q4" value="1">
+                            <label for="q4-1">1 - Полностью не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q4-2" name="q4" value="2">
+                            <label for="q4-2">2 - Скорее не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q4-3" name="q4" value="3">
+                            <label for="q4-3">3 - Нейтрально</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q4-4" name="q4" value="4">
+                            <label for="q4-4">4 - Скорее согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q4-5" name="q4" value="5">
+                            <label for="q4-5">5 - Полностью согласен</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Аналитическое мышление -->
+                <div class="question" data-type="analytical">
+                    <p>5. При оценке текста, созданного ИИ, я использую четкие лингвистические критерии и методики.</p>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="q5-1" name="q5" value="1">
+                            <label for="q5-1">1 - Полностью не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q5-2" name="q5" value="2">
+                            <label for="q5-2">2 - Скорее не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q5-3" name="q5" value="3">
+                            <label for="q5-3">3 - Нейтрально</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q5-4" name="q5" value="4">
+                            <label for="q5-4">4 - Скорее согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q5-5" name="q5" value="5">
+                            <label for="q5-5">5 - Полностью согласен</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Интуитивное мышление -->
+                <div class="question" data-type="intuitive">
+                    <p>6. Я часто доверяю ИИ-переводчику без проверки, если контекст кажется знакомым.</p>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="q6-1" name="q6" value="1">
+                            <label for="q6-1">1 - Полностью не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q6-2" name="q6" value="2">
+                            <label for="q6-2">2 - Скорее не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q6-3" name="q6" value="3">
+                            <label for="q6-3">3 - Нейтрально</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q6-4" name="q6" value="4">
+                            <label for="q6-4">4 - Скорее согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q6-5" name="q6" value="5">
+                            <label for="q6-5">5 - Полностью согласен</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Аналитическое мышление -->
+                <div class="question" data-type="analytical">
+                    <p>7. Мне важно понимать принципы работы ИИ-моделей для улучшения своей лингвистической практики.</p>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="q7-1" name="q7" value="1">
+                            <label for="q7-1">1 - Полностью не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q7-2" name="q7" value="2">
+                            <label for="q7-2">2 - Скорее не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q7-3" name="q7" value="3">
+                            <label for="q7-3">3 - Нейтрально</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q7-4" name="q7" value="4">
+                            <label for="q7-4">4 - Скорее согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q7-5" name="q7" value="5">
+                            <label for="q7-5">5 - Полностью согласен</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Интуитивное мышление -->
+                <div class="question" data-type="intuitive">
+                    <p>8. Я предпочитаю экспериментировать с ИИ-инструментами, чтобы найти неожиданные лингвистические решения.</p>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="q8-1" name="q8" value="1">
+                            <label for="q8-1">1 - Полностью не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q8-2" name="q8" value="2">
+                            <label for="q8-2">2 - Скорее не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q8-3" name="q8" value="3">
+                            <label for="q8-3">3 - Нейтрально</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q8-4" name="q8" value="4">
+                            <label for="q8-4">4 - Скорее согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q8-5" name="q8" value="5">
+                            <label for="q8-5">5 - Полностью согласен</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Аналитическое мышление -->
+                <div class="question" data-type="analytical">
+                    <p>9. Я предпочитаю систематически проверять ИИ-переводы на наличие грамматических и стилистических ошибок.</p>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="q9-1" name="q9" value="1">
+                            <label for="q9-1">1 - Полностью не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q9-2" name="q9" value="2">
+                            <label for="q9-2">2 - Скорее не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q9-3" name="q9" value="3">
+                            <label for="q9-3">3 - Нейтрально</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q9-4" name="q9" value="4">
+                            <label for="q9-4">4 - Скорее согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q9-5" name="q9" value="5">
+                            <label for="q9-5">5 - Полностью согласен</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Интуитивное мышление -->
+                <div class="question" data-type="intuitive">
+                    <p>10. Я часто чувствую, что могу улучшить результат работы ИИ, основываясь на своем языковом чутье.</p>
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="q10-1" name="q10" value="1">
+                            <label for="q10-1">1 - Полностью не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q10-2" name="q10" value="2">
+                            <label for="q10-2">2 - Скорее не согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q10-3" name="q10" value="3">
+                            <label for="q10-3">3 - Нейтрально</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q10-4" name="q10" value="4">
+                            <label for="q10-4">4 - Скорее согласен</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q10-5" name="q10" value="5">
+                            <label for="q10-5">5 - Полностью согласен</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="error" id="errorMessage"></div>
+                <button type="submit" class="submit-btn">Отправить</button>
+            </form>
+        </div>
+
+        <div class="results" id="results">
+            <h2>Результаты диагностики стиля мышления</h2>
+            
+            <div class="score-container">
+                <div class="score-box analytical-score">
+                    <div class="score-label">Аналитическое мышление</div>
+                    <div class="score-value" id="analyticalScore">0</div>
+                </div>
+                <div class="score-box intuitive-score">
+                    <div class="score-label">Интуитивное мышление</div>
+                    <div class="score-value" id="intuitiveScore">0</div>
+                </div>
+            </div>
+
+            <div class="chart-labels">
+                <span>Аналитическое</span>
+                <span>Интуитивное</span>
+            </div>
+            <div class="result-chart">
+                <div class="analytical-bar" id="analyticalBar"></div>
+                <div class="intuitive-bar" id="intuitiveBar"></div>
+            </div>
+
+            <div class="thinking-style" id="thinkingStyle"></div>
+            <div class="interpretation" id="interpretation"></div>
+            <div class="recommendations" id="recommendations"></div>
+            <button class="restart-btn" id="restartBtn">Пройти тест заново</button>
+        </div>
+
+        <div class="certificate" id="certificate">
+            <h2>Сертификат</h2>
+            <div class="certificate-content" id="certificateContent"></div>
+            <div class="certificate-footer">
+                Данный сертификат подтверждает прохождение диагностики стиля мышления при работе с искусственным интеллектом.
+            </div>
+        </div>
+        
+        <button class="info-toggle" id="infoToggle">Информация о приложении</button>
+        <div class="info-block">
+            <h3>О приложении</h3>
+            <div class="info-content">
+                <p><strong>Функциональность:</strong> Данное веб-приложение представляет собой интерактивную диагностику для определения преобладающего стиля мышления (аналитического или интуитивного) при работе с технологиями искусственного интеллекта в лингвистическом контексте. Приложение оценивает баланс между структурированным, методическим подходом к задачам и более гибким, основанным на опыте стилем работы.</p>
+                
+                <p><strong>Диагностическая значимость:</strong> Знание собственного когнитивного стиля важно для студентов-лингвистов, работающих с ИИ, по следующим причинам:</p>
+                <ul>
+                    <li>Позволяет осознанно выбирать методы работы с ИИ-инструментами для перевода и анализа текста</li>
+                    <li>Помогает определить индивидуальные сильные стороны при взаимодействии с системами ИИ</li>
+                    <li>Способствует формированию сбалансированного подхода к оценке и постредактированию результатов работы ИИ</li>
+                    <li>Поддерживает развитие метакогнитивных навыков при использовании ИИ в профессиональной деятельности</li>
+                </ul>
+                
+                 <p><strong>Использованные технологии:</strong></p>
+                <ul>
+                    <li><strong>HTML5</strong> — для структурирования содержимого</li>
+                    <li><strong>CSS3</strong> — для стилизации и адаптивного дизайна</li>
+                    <li><strong>JavaScript</strong> — для интерактивности, валидации формы и расчета результатов</li>
+					</ul>
+                    <p>Все вычисления происходят в браузере пользователя без отправки данных на сервер</p>
+                
+                             
+                <p>Приложение разработано специально для студентов-лингвистов, изучающих курс "ИИ в профессиональной деятельности", и учитывает специфику работы с лингвистическими задачами и ИИ-инструментами в данной области.</p>
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp |  CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Переменные для отслеживания времени
+        let startTime;
+        let endTime;
+        let testDuration;
+
+        // Переключение темы
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            themeToggle.textContent = document.body.classList.contains('dark-theme') ? '🌙' : '☀️';
+        });
+
+        // Запуск таймера при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            startTime = new Date();
+        });
+
+        // Обработка отправки формы
+        const form = document.getElementById('aiSurvey');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultsSection = document.getElementById('results');
+        const surveySection = document.getElementById('survey');
+        const certificateSection = document.getElementById('certificate');
+        const analyticalScoreElement = document.getElementById('analyticalScore');
+        const intuitiveScoreElement = document.getElementById('intuitiveScore');
+        const thinkingStyleElement = document.getElementById('thinkingStyle');
+        const interpretationElement = document.getElementById('interpretation');
+        const recommendationsElement = document.getElementById('recommendations');
+        const restartBtn = document.getElementById('restartBtn');
+        const certificateContent = document.getElementById('certificateContent');
+        const analyticalBar = document.getElementById('analyticalBar');
+        const intuitiveBar = document.getElementById('intuitiveBar');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // Проверка заполнения всех полей
+            const questions = form.querySelectorAll('.question');
+            let allAnswered = true;
+            
+            questions.forEach((question, index) => {
+                const questionNumber = index + 1;
+                const answered = form.querySelector(`input[name="q${questionNumber}"]:checked`);
+                
+                if (!answered) {
+                    allAnswered = false;
+                }
+            });
+            
+            // Проверка ввода фамилии
+            const userName = document.getElementById('userName').value.trim();
+            if (userName === '') {
+                errorMessage.textContent = 'Пожалуйста, введите свои Фамилию Имя Отчество.';
+                return;
+            }
+            
+            if (!allAnswered) {
+                errorMessage.textContent = 'Пожалуйста, ответьте на все вопросы.';
+                return;
+            }
+            
+            // Расчет результата
+            let analyticalScore = 0;
+            let intuitiveScore = 0;
+            
+            questions.forEach((question, index) => {
+                const questionNumber = index + 1;
+                const answer = parseInt(form.querySelector(`input[name="q${questionNumber}"]:checked`).value);
+                const questionType = question.getAttribute('data-type');
+                
+                if (questionType === 'analytical') {
+                    analyticalScore += answer;
+                } else if (questionType === 'intuitive') {
+                    intuitiveScore += answer;
+                }
+            });
+            
+            // Максимальное значение для каждой шкалы - 25 (5 вопросов * максимум 5 баллов)
+            const analyticalPercentage = (analyticalScore / 25) * 100;
+            const intuitivePercentage = (intuitiveScore / 25) * 100;
+            
+            // Фиксируем время окончания теста
+            endTime = new Date();
+            testDuration = Math.floor((endTime - startTime) / 1000); // в секундах
+            
+            // Отображение результата
+            analyticalScoreElement.textContent = analyticalScore;
+            intuitiveScoreElement.textContent = intuitiveScore;
+            
+            // Визуализация баланса
+            analyticalBar.style.width = `${analyticalPercentage}%`;
+            intuitiveBar.style.width = `${intuitivePercentage}%`;
+            
+            // Определение преобладающего стиля
+            let dominantStyle = '';
+            if (analyticalScore > intuitiveScore + 5) {
+                dominantStyle = 'Преобладающий аналитический стиль';
+                thinkingStyleElement.style.backgroundColor = 'var(--analytical-color)';
+                thinkingStyleElement.style.color = 'white';
+            } else if (intuitiveScore > analyticalScore + 5) {
+                dominantStyle = 'Преобладающий интуитивный стиль';
+                thinkingStyleElement.style.backgroundColor = 'var(--intuitive-color)';
+                thinkingStyleElement.style.color = 'white';
+            } else {
+                dominantStyle = 'Сбалансированный стиль мышления';
+                thinkingStyleElement.style.backgroundColor = 'var(--secondary-color)';
+                thinkingStyleElement.style.color = 'var(--text-color)';
+            }
+            
+            thinkingStyleElement.textContent = dominantStyle;
+            
+            // Интерпретация результата
+            let interpretation = '';
+            let recommendations = '';
+            
+            if (analyticalScore > intuitiveScore + 5) {
+                interpretation = 'Ваш аналитический стиль мышления проявляется в систематическом, методическом подходе к работе с ИИ-инструментами. Вы предпочитаете тщательно анализировать работу ИИ, проверять результаты и понимать принципы его функционирования. Этот подход обеспечивает высокую точность и надежность в лингвистической работе с ИИ.';
+                recommendations = 'Рекомендации: Используйте свои сильные аналитические навыки для детального постредактирования текстов ИИ и выявления системных ошибок. При этом старайтесь развивать интуитивный подход, позволяя себе иногда экспериментировать с ИИ-инструментами без предварительного планирования. Попробуйте использовать ИИ для творческих лингвистических задач, где нет единственно правильного решения.';
+            } else if (intuitiveScore > analyticalScore + 5) {
+                interpretation = 'Ваш интуитивный стиль мышления проявляется в гибком, основанном на опыте подходе к работе с ИИ. Вы часто полагаетесь на свое языковое чутье при оценке результатов и взаимодействии с ИИ-системами. Этот подход способствует творческому использованию ИИ-инструментов и эффективному решению нестандартных лингвистических задач.';
+                recommendations = 'Рекомендации: Используйте своё языковое чутьё при работе с ИИ-переводчиками для улучшения естественности и стилистической согласованности текстов. При этом уделите внимание развитию аналитических навыков для более систематической проверки результатов. Попробуйте использовать формализованные критерии оценки качества перевода и разработайте свою методику проверки текстов, созданных ИИ.';
+            } else {
+                interpretation = 'Ваш сбалансированный стиль мышления сочетает аналитический и интуитивный подходы к работе с ИИ. Вы способны как методически анализировать результаты работы ИИ, так и доверять своему языковому чутью при оценке текстов. Такой баланс обеспечивает гибкость и эффективность при решении разнообразных лингвистических задач с использованием ИИ.';
+                recommendations = 'Рекомендации: Используйте свой универсальный подход, гибко переключаясь между аналитическими и интуитивными стратегиями в зависимости от конкретной задачи. При работе с техническими текстами опирайтесь на аналитический подход, а при работе с художественными или маркетинговыми материалами — на интуитивный. Развивайте метакогнитивные навыки для осознанного выбора оптимальной стратегии в каждом конкретном случае.';
+            }
+            
+            interpretationElement.textContent = interpretation;
+            recommendationsElement.textContent = recommendations;
+            
+            // Создание сертификата
+            const formattedDate = endTime.toLocaleDateString('ru-RU');
+            const formattedTime = endTime.toLocaleTimeString('ru-RU');
+            const minutes = Math.floor(testDuration / 60);
+            const seconds = testDuration % 60;
+            const formattedDuration = `${minutes} мин. ${seconds} сек.`;
+            
+            certificateContent.innerHTML = `
+                <p><strong></strong> ${userName}</p>
+                <p><strong>Дата:</strong> ${formattedDate}</p>
+                <p><strong>Время:</strong> ${formattedTime}</p>
+                <p><strong>Продолжительность теста:</strong> ${formattedDuration}</p>
+                <p><strong>Аналитическое мышление:</strong> ${analyticalScore} из 25 баллов</p>
+                <p><strong>Интуитивное мышление:</strong> ${intuitiveScore} из 25 баллов</p>
+                <p><strong>Стиль мышления:</strong> ${dominantStyle}</p>
+            `;
+            
+            // Показываем результаты и сертификат, скрываем анкету
+            surveySection.style.display = 'none';
+            resultsSection.style.display = 'block';
+            certificateSection.style.display = 'block';
+        });
+
+        // Обработка кнопки "Пройти тест заново"
+        restartBtn.addEventListener('click', () => {
+            // Сбрасываем форму
+            form.reset();
+            document.getElementById('userName').value = '';
+            errorMessage.textContent = '';
+            
+            // Скрываем результаты и сертификат, показываем анкету
+            surveySection.style.display = 'block';
+            resultsSection.style.display = 'none';
+            certificateSection.style.display = 'none';
+            
+            // Сбрасываем таймер
+            startTime = new Date();
+        });
+        
+        // Управление информационным блоком
+        const infoToggle = document.getElementById('infoToggle');
+        const infoBlock = document.querySelector('.info-block');
+        
+        infoToggle.addEventListener('click', () => {
+            if (infoBlock.style.display === 'block') {
+                infoBlock.style.display = 'none';
+                infoToggle.textContent = 'Информация о приложении';
+            } else {
+                infoBlock.style.display = 'block';
+                infoToggle.textContent = 'Скрыть информацию';
+            }
+        });
+    </script>
+</body>
+</html>
