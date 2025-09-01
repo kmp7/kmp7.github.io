@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --primary-color: #3e76ad;
+            --secondary-color: #e9ecef;
+            --accent-color: #28a745;
+            --error-color: #dc3545;
+            --shadow: 0 2px 5px rgba(0,0,0,0.1);
+            --header-text-color: #ffffff;
+            --border-radius: 8px;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #222;
+            --text-color: #f8f9fa;
+            --primary-color: #5a7fb5;
+            --secondary-color: #444;
+            --accent-color: #38b755;
+            --error-color: #ec4555;
+            --shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--header-text-color);
+            padding: 20px;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            background-image: linear-gradient(135deg, var(--primary-color) 0%, #2c3e50 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+			padding-right: 60px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        .theme-toggle-btn {
+            background: none;
+            border: none;
+            color: var(--header-text-color);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s, background-color 0.3s;
+			 position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+        }
+
+        .theme-toggle-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .info-box {
+            background-color: var(--secondary-color);
+            padding: 15px 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .info-box h2 {
+            margin-top: 0;
+            font-size: 1.3rem;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                flex-direction: row;
+            }
+
+            .diagram-container {
+                flex: 2;
+            }
+
+            .controls {
+                flex: 1;
+            }
+        }
+
+        .diagram-container {
+            background-color: var(--secondary-color);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .clickable-area {
+            cursor: pointer;
+            transition: fill 0.3s;
+        }
+
+        .clickable-area:hover {
+            fill-opacity: 0.8;
+        }
+
+        .clickable-area.correct {
+            stroke: var(--accent-color);
+            stroke-width: 2px;
+        }
+
+        .clickable-area.incorrect {
+            stroke: var(--error-color);
+            stroke-width: 2px;
+        }
+
+        .popup {
+            position: absolute;
+            background-color: var(--bg-color);
+            border: 1px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: var(--shadow);
+            z-index: 10;
+            max-width: 250px;
+            display: none;
+        }
+
+        .popup input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid var(--secondary-color);
+            border-radius: 4px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .popup button {
+            padding: 8px 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .popup button:hover {
+            opacity: 0;
+        }
+
+        .popup button.cancel {
+            background-color: #6c757d;
+        }
+
+        .controls {
+            background-color: var(--secondary-color);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .controls h2 {
+            margin-top: 0;
+            font-size: 1.3rem;
+        }
+
+        .progress-container {
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            height: 20px;
+            background-color: var(--bg-color);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 10px 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .action-btn:hover {
+            opacity: 0.9;
+        }
+
+        .action-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .action-btn.check {
+            background-color: var(--accent-color);
+        }
+
+        .action-btn.reset {
+            background-color: var(--error-color);
+        }
+
+        .hints-list {
+            margin-top: 20px;
+        }
+
+        .hint-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: var(--bg-color);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .hint-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .feedback {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .feedback.success {
+            background-color: rgba(40, 167, 69, 0.2);
+            border: 1px solid var(--accent-color);
+        }
+
+        .feedback.error {
+            background-color: rgba(220, 53, 69, 0.2);
+            border: 1px solid var(--error-color);
+        }
+
+        @media print {
+            .theme-toggle-btn, .actions, .info-box button, .popup {
+                display: none !important;
+            }
+
+            body {
+                background-color: white;
+                color: black;
+            }
+
+            .container, .diagram-container, .controls, .info-box {
+                box-shadow: none;
+                background-color: white;
+                border: 1px solid #ddd;
+            }
+            
+            .feedback {
+                border: 1px solid #ddd;
+                background-color: white !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            h1 {
+                padding: 0;
+                order: 1;
+            }
+            
+            .theme-toggle-btn {
+                position: absolute;
+                right: 20px;
+                top: 20px;
+                order: 2;
+            }
+            
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .popup {
+                max-width: 80%;
+                left: 10% !important;
+            }
+        }
+		
+		.info-footer {
+    background-color: var(--secondary-color);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    margin-top: 30px;
+    box-shadow: var(--shadow);
+}
+
+.info-footer h3 {
+    margin-top: 0;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 10px;
+}
+
+.accuracy-info {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.accuracy-item {
+    display: flex;
+    gap: 15px;
+    padding: 15px;
+    border-radius: var(--border-radius);
+    background-color: var(--bg-color);
+}
+
+.accuracy-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+
+.correct .accuracy-icon {
+    color: var(--accent-color);
+}
+
+.consideration .accuracy-icon {
+    color: #ffc107;
+}
+
+.note .accuracy-icon {
+    color: var(--primary-color);
+}
+
+.accuracy-item strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.accuracy-item ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.accuracy-item p {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .accuracy-item {
+        flex-direction: column;
+    }
+}
+		
+    footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 20px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button class="theme-toggle-btn" id="theme-toggle-btn">🌙</button>
+            <h1>Интерактивная схема паплайна LLM</h1>
+        </header>
+
+        <div class="info-box">
+            <h3>Учебная визуализация общей последовательности работы LLM</h3>
+            <p>Ваша задача - правильно аннотировать все элементы схемы.</p>
+            <ul>
+                <li>Нажмите на элемент схемы, чтобы добавить его название</li>
+                <li>Заполните все элементы и нажмите "Проверить ответы"</li>
+                <li>Используйте подсказки, если вам нужна помощь</li>
+                <li>После успешного заполнения сохраните результат в PDF</li>
+            </ul>
+            <button class="action-btn" id="show-hints-btn">Показать подсказки</button>
+        </div>
+
+        <div class="main-content">
+            <div class="diagram-container">
+                <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Входные данные -->
+                    <rect id="input" x="50" y="200" width="100" height="100" rx="10" class="clickable-area" fill="#a1c9f4" fill-opacity="0.7"/>
+                    <text x="100" y="250" text-anchor="middle" font-size="12">?</text>
+                    
+                    <!-- Токенизация -->
+                    <rect id="tokenization" x="200" y="200" width="100" height="100" rx="10" class="clickable-area" fill="#a1c9f4" fill-opacity="0.7"/>
+                    <text x="250" y="250" text-anchor="middle" font-size="12">?</text>
+                    
+                    <!-- Эмбеддинги -->
+                    <rect id="embeddings" x="350" y="200" width="100" height="100" rx="10" class="clickable-area" fill="#a1c9f4" fill-opacity="0.7"/>
+                    <text x="400" y="250" text-anchor="middle" font-size="12">?</text>
+                    
+                    <!-- Attention слои -->
+                    <rect id="attention" x="500" y="200" width="100" height="100" rx="10" class="clickable-area" fill="#a1c9f4" fill-opacity="0.7"/>
+                    <text x="550" y="250" text-anchor="middle" font-size="12">?</text>
+                    
+                    <!-- Decoder блок -->
+                    <rect id="decoder" x="350" y="50" width="100" height="100" rx="10" class="clickable-area" fill="#a1c9f4" fill-opacity="0.7"/>
+                    <text x="400" y="100" text-anchor="middle" font-size="12">?</text>
+                    
+                    <!-- Выходной слой -->
+                    <rect id="output" x="650" y="200" width="100" height="100" rx="10" class="clickable-area" fill="#a1c9f4" fill-opacity="0.7"/>
+                    <text x="700" y="250" text-anchor="middle" font-size="12">?</text>
+                    
+                    <!-- Соединения -->
+                    <line x1="150" y1="250" x2="200" y2="250" stroke="#666" stroke-width="2"/>
+                    <line x1="300" y1="250" x2="350" y2="250" stroke="#666" stroke-width="2"/>
+                    <line x1="450" y1="250" x2="500" y2="250" stroke="#666" stroke-width="2"/>
+                    <line x1="600" y1="250" x2="650" y2="250" stroke="#666" stroke-width="2"/>
+                    <line x1="400" y1="150" x2="400" y2="200" stroke="#666" stroke-width="2"/>
+                    <path d="M 550 200 C 550 170, 450 170, 450 150" fill="none" stroke="#666" stroke-width="2"/>
+                </svg>
+                
+                <div id="popup" class="popup">
+                    <input type="text" id="answer-input" placeholder="Введите название элемента">
+                    <button id="submit-answer">Подтвердить</button>
+                    <button id="cancel-answer" class="cancel">Отмена</button>
+                </div>
+            </div>
+
+            <div class="controls">
+                <h2>Прогресс заполнения</h2>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress" id="progress-bar"></div>
+                    </div>
+                    <p id="progress-text">0/6 заполнено</p>
+                </div>
+                <div class="actions">
+                    <button class="action-btn check" id="check-btn" disabled>Проверить ответы</button>
+                    <button class="action-btn" id="print-btn" disabled>Сохранить в PDF</button>
+                    <button class="action-btn reset" id="reset-btn">Сбросить все</button>
+                </div>
+                <div class="hints-list" id="hints-list" style="display: none;">
+                    <h3>Подсказки:</h3>
+                    <div class="hint-item" data-target="input">Входные данные - текст, который подается на вход модели</div>
+                    <div class="hint-item" data-target="tokenization">Процесс разбиения текста на отдельные токены (слова или части слов)</div>
+                    <div class="hint-item" data-target="embeddings">Преобразование токенов в векторы фиксированной размерности</div>
+                    <div class="hint-item" data-target="attention">Механизм, позволяющий модели фокусироваться на различных частях входной последовательности</div>
+                    <div class="hint-item" data-target="decoder">Компонент, генерирующий выходные токены на основе внутренних представлений</div>
+                    <div class="hint-item" data-target="output">Результат работы модели - сгенерированный текст</div>
+                </div>
+                <div class="feedback" id="feedback"></div>
+            </div>
+        </div>
+		
+		<div class="info-footer">
+    <h3>Пояснение к схеме архитектуры LLM</h3>
+    <div class="accuracy-info">
+        
+        
+        <div class="accuracy-item note">
+            <div>
+                <strong>Примечание:</strong>
+                <p>Данная схема является <em>упрощенной дидактической версией</em>. </p><p>В реальных LLM архитектура сложнее и включает дополнительные компоненты. Для учебных целей схема корректна, но при глубоком изучении требуются уточнения.</p>
+            </div>
+        </div>
+		<div class="accuracy-item correct">
+                        <div>
+                <strong>Корректные элементы:</strong>
+                <ul>
+                    <li>Базовый пайплайн: Вход → Токенизация → Эмбеддинги → Attention → Выход</li>
+                    <li>Использование декодера (верно для GPT-подобных архитектур)</li>
+                    <li>Правильный порядок основных преобразований</li>
+                </ul>
+            </div>
+        </div>
+		<div class="accuracy-item consideration">
+            <div>
+                <strong>Упрощения в схеме:</strong>
+                <ul>
+                    <li>Отсутствуют LayerNorm и Feed Forward Network в каждом блоке</li>
+                    <li>Нет явного указания на множественность декодер-блоков (обычно 12-96 слоев)</li>
+                    <li>Обратные связи от декодера не являются стандартными</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Правильные ответы для каждого элемента
+        const correctAnswers = {
+            'input': ['входные данные', 'вход', 'input', 'ввод', 'текст'],
+            'tokenization': ['токенизация', 'tokenization', 'токенизатор', 'токены'],
+            'embeddings': ['эмбеддинги', 'embeddings', 'векторы', 'embedding', 'эмбеддинг'],
+            'attention': ['внимание', 'attention', 'механизм внимания', 'self-attention'],
+            'decoder': ['декодер', 'decoder', 'блок декодера', 'decoder block'],
+            'output': ['выход', 'output', 'результат', 'выходные данные', 'ответ модели']
+        };
+
+        // Текущее состояние приложения
+        const state = {
+            selectedElement: null,
+            answers: {},
+            checked: false,
+            darkMode: false
+        };
+
+        // DOM элементы
+        const elements = {
+            popup: document.getElementById('popup'),
+            answerInput: document.getElementById('answer-input'),
+            submitBtn: document.getElementById('submit-answer'),
+            cancelBtn: document.getElementById('cancel-answer'),
+            checkBtn: document.getElementById('check-btn'),
+            printBtn: document.getElementById('print-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            progressBar: document.getElementById('progress-bar'),
+            progressText: document.getElementById('progress-text'),
+            feedback: document.getElementById('feedback'),
+            showHintsBtn: document.getElementById('show-hints-btn'),
+            hintsList: document.getElementById('hints-list'),
+            themeToggleBtn: document.getElementById('theme-toggle-btn')
+        };
+
+        // Инициализация интерактивных элементов
+        function initClickableAreas() {
+            document.querySelectorAll('.clickable-area').forEach(element => {
+                element.addEventListener('click', () => {
+                    if (state.checked) return;
+                    
+                    state.selectedElement = element.id;
+                    
+                    // Позиционирование всплывающего окна
+                    const rect = element.getBoundingClientRect();
+                    const diagramContainer = document.querySelector('.diagram-container').getBoundingClientRect();
+                    
+                    elements.popup.style.left = (rect.left - diagramContainer.left + rect.width / 2 - 125) + 'px';
+                    elements.popup.style.top = (rect.top - diagramContainer.top + rect.height) + 'px';
+                    elements.popup.style.display = 'block';
+                    
+                    // Заполнение текущим ответом, если он есть
+                    elements.answerInput.value = state.answers[element.id] || '';
+                    elements.answerInput.focus();
+                });
+            });
+        }
+
+        // Обработка отправки ответа
+        function handleAnswerSubmit() {
+            const answer = elements.answerInput.value.trim();
+            if (answer) {
+                state.answers[state.selectedElement] = answer;
+                
+                // Обновляем отображение элемента
+                const textElement = document.querySelector(`#${state.selectedElement} + text`);
+                textElement.textContent = answer;
+                
+                updateProgress();
+            }
+            elements.popup.style.display = 'none';
+        }
+
+        // Проверка ответов
+        function checkAnswers() {
+            state.checked = true;
+            let correctCount = 0;
+            
+            Object.keys(correctAnswers).forEach(elementId => {
+                const userAnswer = state.answers[elementId]?.toLowerCase() || '';
+                const element = document.getElementById(elementId);
+                
+                const isCorrect = correctAnswers[elementId].some(answer => 
+                    userAnswer === answer.toLowerCase()
+                );
+                
+                if (isCorrect) {
+                    element.classList.add('correct');
+                    element.classList.remove('incorrect');
+                    correctCount++;
+                } else {
+                    element.classList.add('incorrect');
+                    element.classList.remove('correct');
+                }
+            });
+            
+            // Отображение результата
+            const percentage = Math.round((correctCount / 6) * 100);
+            elements.feedback.innerHTML = `<strong>Результат:</strong> ${correctCount} из 6 правильных ответов (${percentage}%)`;
+            
+            if (correctCount === 6) {
+                elements.feedback.classList.add('success');
+                elements.feedback.classList.remove('error');
+                elements.printBtn.disabled = false;
+            } else {
+                elements.feedback.classList.add('error');
+                elements.feedback.classList.remove('success');
+                elements.printBtn.disabled = true;
+            }
+            
+            elements.feedback.style.display = 'block';
+        }
+
+        // Сброс состояния
+        function resetState() {
+            state.answers = {};
+            state.checked = false;
+            
+            document.querySelectorAll('.clickable-area').forEach(element => {
+                element.classList.remove('correct', 'incorrect');
+                const textElement = document.querySelector(`#${element.id} + text`);
+                textElement.textContent = '?';
+            });
+            
+            elements.checkBtn.disabled = true;
+            elements.printBtn.disabled = true;
+            elements.feedback.style.display = 'none';
+            
+            updateProgress();
+        }
+
+        // Обновление прогресса
+        function updateProgress() {
+            const answeredCount = Object.keys(state.answers).length;
+            const percentage = Math.round((answeredCount / 6) * 100);
+            
+            elements.progressBar.style.width = `${percentage}%`;
+            elements.progressText.textContent = `${answeredCount}/6 заполнено`;
+            
+            elements.checkBtn.disabled = answeredCount < 6;
+        }
+
+        // Переключение темы
+        function toggleTheme() {
+            state.darkMode = !state.darkMode;
+            
+            if (state.darkMode) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                elements.themeToggleBtn.textContent = '☀️';
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                elements.themeToggleBtn.textContent = '🌙';
+            }
+        }
+
+        // Инициализация приложения
+        function initApp() {
+            initClickableAreas();
+            
+            // Обработчики событий
+            elements.submitBtn.addEventListener('click', handleAnswerSubmit);
+            elements.cancelBtn.addEventListener('click', () => {
+                elements.popup.style.display = 'none';
+            });
+            elements.checkBtn.addEventListener('click', checkAnswers);
+            elements.printBtn.addEventListener('click', () => window.print());
+            elements.resetBtn.addEventListener('click', resetState);
+            elements.themeToggleBtn.addEventListener('click', toggleTheme);
+            
+            // Показать/скрыть подсказки
+            elements.showHintsBtn.addEventListener('click', () => {
+                if (elements.hintsList.style.display === 'none') {
+                    elements.hintsList.style.display = 'block';
+                    elements.showHintsBtn.textContent = 'Скрыть подсказки';
+                } else {
+                    elements.hintsList.style.display = 'none';
+                    elements.showHintsBtn.textContent = 'Показать подсказки';
+                }
+            });
+            
+            // Подсветка элемента при наведении на подсказку
+            document.querySelectorAll('.hint-item').forEach(hint => {
+                hint.addEventListener('mouseover', () => {
+                    const targetId = hint.getAttribute('data-target');
+                    const element = document.getElementById(targetId);
+                    element.setAttribute('fill-opacity', '1');
+                });
+                
+                hint.addEventListener('mouseout', () => {
+                    const targetId = hint.getAttribute('data-target');
+                    const element = document.getElementById(targetId);
+                    element.setAttribute('fill-opacity', '0.7');
+                });
+                
+                hint.addEventListener('click', () => {
+                    if (state.checked) return;
+                    
+                    const targetId = hint.getAttribute('data-target');
+                    const element = document.getElementById(targetId);
+                    element.dispatchEvent(new Event('click'));
+                });
+            });
+            
+            // Закрытие popup при клике вне его
+            document.addEventListener('click', (event) => {
+                if (!elements.popup.contains(event.target) && 
+                    !event.target.classList.contains('clickable-area')) {
+                    elements.popup.style.display = 'none';
+                }
+            });
+            
+            // Обработка нажатия Enter в поле ввода
+            elements.answerInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    handleAnswerSubmit();
+                }
+            });
+        }
+
+        // Запуск приложения
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+	
+</body>
+</html>

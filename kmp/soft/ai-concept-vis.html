@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+	<script src="d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background-color: #325980;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .panel {
+            flex: 1;
+            min-width: 300px;
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .visualization {
+            flex: 2;
+            min-width: 500px;
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            height: 600px;
+            position: relative;
+        }
+        
+        h1, h2 {
+            margin-top: 0;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            height: 60px;
+        }
+        
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        button {
+            background-color: #325980;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background-color: #26466a;
+        }
+        
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+        }
+        
+        .color-box {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+            margin-right: 5px;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            pointer-events: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            max-width: 300px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+		
+		.info-panel {
+        margin-top: 30px;
+        background-color: #f8f9fa;
+        border-left: 5px solid #325980;
+        width: 100%; /* Занимает всю доступную ширину контейнера */
+        box-sizing: border-box; /* Учитывает padding в общей ширине */
+        max-width: none; /* Отменяет ограничение максимальной ширины */
+    }
+    
+    .info-section {
+        margin-bottom: 15px;
+    }
+    
+    .info-section h3 {
+        color: #325980;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 8px;
+        margin-bottom: 15px;
+    }
+    
+    .info-section ul, .info-section ol {
+        padding-left: 20px;
+    }
+    
+    .info-section li {
+        margin-bottom: 8px;
+    }
+    
+    .info-section p {
+        margin-bottom: 12px;
+        line-height: 1.5;
+    }
+	
+	body.dark {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+body.dark .header {
+    background-color: #1b3557;
+    color: white;
+}
+
+body.dark .panel,
+body.dark .visualization,
+body.dark .info-panel {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+body.dark textarea,
+body.dark select {
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+    border: 1px solid #555;
+}
+
+body.dark button {
+    background-color: #446791;
+    color: white;
+}
+
+body.dark button:hover {
+    background-color: #365072;
+}
+
+body.dark .tooltip {
+    background-color: rgba(50, 50, 50, 0.9);
+    border-color: #666;
+    color: #fff;
+}
+
+	
+	footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ИСКУССТВЕННЫЙ ИНТЕЛЛЕКТ</h1>
+        <p>интерактивная визуализация лингвистической структуры понятия</p>
+		<button id="theme-toggle" title="Переключить тему" style="position: absolute; top: 20px; right: 20px; font-size: 20px; background: none; border: none; color: white; cursor: pointer;">🌙</button>
+
+		</div>
+        
+        <div class="content">
+            <div class="panel">
+                <h2>Параметры анализа</h2>
+                
+                <div class="form-group">
+                    <label for="denotat">Денотат</label>
+                    <textarea id="denotat">Класс компьютерных систем, способных выполнять задачи, требующие человеческого интеллекта</textarea>
+                    <select id="denotat-type">
+                        <option value="logical">Логический</option>
+                        <option value="emotional">Эмоциональный</option>
+                        <option value="pragmatic">Прагматический</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="referent">Референт</label>
+                    <textarea id="referent">Конкретные системы ИИ: ChatGPT, Claude, Midjourney, Stable Diffusion</textarea>
+                    <select id="referent-type">
+                        <option value="logical">Логический</option>
+                        <option value="emotional">Эмоциональный</option>
+                        <option value="pragmatic">Прагматический</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="significat">Сигнификат</label>
+                    <textarea id="significat">Представление о "думающей машине", способной к обучению и принятию решений</textarea>
+                    <select id="significat-type">
+                        <option value="logical">Логический</option>
+                        <option value="emotional" selected>Эмоциональный</option>
+                        <option value="pragmatic">Прагматический</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="intensional">Интенсионал</label>
+                    <textarea id="intensional">Автономность, обучаемость, адаптивность, способность к обработке естественного языка</textarea>
+                    <select id="intensional-type">
+                        <option value="logical" selected>Логический</option>
+                        <option value="emotional">Эмоциональный</option>
+                        <option value="pragmatic">Прагматический</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="perspective">Перспективный (П-) интенсионал</label>
+                    <textarea id="perspective">Сознание, самосовершенствование, творческие способности, этические основы</textarea>
+                    <select id="perspective-type">
+                        <option value="logical">Логический</option>
+                        <option value="emotional">Эмоциональный</option>
+                        <option value="pragmatic" selected>Прагматический</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="connotation">Коннотация</label>
+                    <textarea id="connotation">Страх перед потерей контроля, восхищение технологическим прогрессом, надежда на решение сложных проблем</textarea>
+                    <select id="connotation-type">
+                        <option value="logical">Логический</option>
+                        <option value="emotional" selected>Эмоциональный</option>
+                        <option value="pragmatic">Прагматический</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="extensional">Экстенсионал</label>
+                    <textarea id="extensional">Нейросети, экспертные системы, алгоритмы машинного обучения, роботы с ИИ, чат-боты</textarea>
+                    <select id="extensional-type">
+                        <option value="logical" selected>Логический</option>
+                        <option value="emotional">Эмоциональный</option>
+                        <option value="pragmatic">Прагматический</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="designate">Десигнат</label>
+                    <textarea id="designate">Языковые модели в контексте научного исследования, цифровые ассистенты в бытовом контексте</textarea>
+                    <select id="designate-type">
+                        <option value="logical">Логический</option>
+                        <option value="emotional">Эмоциональный</option>
+                        <option value="pragmatic" selected>Прагматический</option>
+                    </select>
+                </div>
+                
+                <button id="update-btn">Обновить визуализацию</button>
+                <button id="export-btn">Экспорт в SVG</button>
+            </div>
+            
+            <div class="visualization">
+                <svg id="graph"></svg>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="color-box" style="background-color: #4285F4;"></div>
+                        <span>Логический</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background-color: #EA4335;"></div>
+                        <span>Эмоциональный</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background-color: #34A853;"></div>
+                        <span>Прагматический</span>
+                    </div>
+                </div>
+				<div class="container">
+		<br><br>
+    <div class="panel info-panel">
+        <h2>О приложении</h2>
+        
+        <div class="info-section">
+            <h3>Описание функциональности</h3>
+            <p>Данное веб-приложение представляет собой интерактивный инструмент для лингвистического анализа понятия «Искусственный интеллект». Приложение визуализирует связи между ключевыми лингвистическими параметрами (денотат, референт, сигнификат, интенсионал, перспективный интенсионал, коннотация, экстенсионал и десигнат) в виде интерактивного графа.</p>
+            <p>Основные возможности:</p>
+            <ul>
+                <li>Редактирование содержания каждого лингвистического параметра</li>
+                <li>Выбор типа параметра (логический, эмоциональный, прагматический)</li>
+                <li>Интерактивная визуализация связей между параметрами</li>
+                <li>Возможность перетаскивания узлов для лучшего представления</li>
+                <li>Всплывающие подсказки с полным содержанием параметра</li>
+                <li>Экспорт визуализации в формате SVG</li>
+            </ul>
+        </div>
+        
+        <div class="info-section">
+            <h3>Использованные технологии</h3>
+            <ul>
+                <li><strong>HTML5</strong> — структура документа и семантическая разметка</li>
+                <li><strong>CSS3</strong> — стилизация интерфейса, адаптивный дизайн</li>
+                <li><strong>JavaScript</strong> — интерактивность, обработка данных, DOM-манипуляции</li>
+                <li><strong>D3.js</strong> — создание интерактивной визуализации графа, силовая симуляция</li>
+                <li><strong>Flexbox</strong> — современная система компоновки элементов</li>
+            </ul>
+        </div>
+        
+               
+        </div>
+</div>
+            </div>
+			
+        </div>
+		
+    </div>
+
+
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC-BY-NC-SA <br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Инициализация данных
+        let graphData = {
+            nodes: [
+                { id: "denotat", label: "Денотат", type: "logical", value: "Класс компьютерных систем, способных выполнять задачи, требующие человеческого интеллекта" },
+                { id: "referent", label: "Референт", type: "logical", value: "Конкретные системы ИИ: ChatGPT, Claude, Midjourney, Stable Diffusion" },
+                { id: "significat", label: "Сигнификат", type: "emotional", value: "Представление о \"думающей машине\", способной к обучению и принятию решений" },
+                { id: "intensional", label: "Интенсионал", type: "logical", value: "Автономность, обучаемость, адаптивность, способность к обработке естественного языка" },
+                { id: "perspective", label: "П-интенсионал", type: "pragmatic", value: "Сознание, самосовершенствование, творческие способности, этические основы" },
+                { id: "connotation", label: "Коннотация", type: "emotional", value: "Страх перед потерей контроля, восхищение технологическим прогрессом, надежда на решение сложных проблем" },
+                { id: "extensional", label: "Экстенсионал", type: "logical", value: "Нейросети, экспертные системы, алгоритмы машинного обучения, роботы с ИИ, чат-боты" },
+                { id: "designate", label: "Десигнат", type: "pragmatic", value: "Языковые модели в контексте научного исследования, цифровые ассистенты в бытовом контексте" }
+            ],
+            links: [
+                { source: "denotat", target: "referent", value: 3 },
+                { source: "denotat", target: "significat", value: 2 },
+                { source: "denotat", target: "intensional", value: 3 },
+                { source: "significat", target: "intensional", value: 3 },
+                { source: "intensional", target: "perspective", value: 2 },
+                { source: "significat", target: "connotation", value: 3 },
+                { source: "referent", target: "extensional", value: 3 },
+                { source: "intensional", target: "extensional", value: 2 },
+                { source: "extensional", target: "designate", value: 2 },
+                { source: "significat", target: "designate", value: 1 }
+            ]
+        };
+
+        // Глобальные переменные для D3
+        let svg, width, height, simulation, nodeElements, linkElements, tooltip;
+        
+        // Цветовая схема для типов
+        const colors = {
+            logical: "#4285F4",
+            emotional: "#EA4335",
+            pragmatic: "#34A853"
+        };
+        
+        // Инициализация графа
+        function initGraph() {
+            // Получаем размеры контейнера
+            const container = document.querySelector('.visualization');
+            width = container.clientWidth - 40;
+            height = container.clientHeight - 80;
+            
+            // Очищаем предыдущий SVG если есть
+            d3.select("#graph").html("");
+            
+            // Создаем SVG
+            svg = d3.select("#graph")
+                .attr("width", width)
+                .attr("height", height);
+            
+            // Создаем tooltip
+            tooltip = d3.select(".visualization")
+                .append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+            
+            // Создаем силовую симуляцию
+            simulation = d3.forceSimulation()
+                .force("link", d3.forceLink().id(d => d.id).distance(d => 150 - d.value * 20))
+                .force("charge", d3.forceManyBody().strength(-500))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collide", d3.forceCollide().radius(60));
+            
+            updateGraph();
+        }
+        
+        // Обновление графа
+        function updateGraph() {
+            // Создаем элементы связей
+            linkElements = svg.selectAll(".link")
+                .data(graphData.links)
+                .enter()
+                .append("line")
+                .attr("class", "link")
+                .attr("stroke", "#999")
+                .attr("stroke-opacity", 0.6)
+                .attr("stroke-width", d => Math.sqrt(d.value) * 2);
+            
+            // Создаем группы для узлов
+            const nodeGroups = svg.selectAll(".node")
+                .data(graphData.nodes)
+                .enter()
+                .append("g")
+                .attr("class", "node")
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+					
+					// Создаем круги для узлов
+            nodeGroups.append("circle")
+                .attr("r", 50)
+                .attr("fill", d => colors[d.type])
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 2);
+            
+            // Добавляем текст к узлам
+            nodeGroups.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", ".3em")
+                .attr("fill", "white")
+                .attr("font-size", "12px")
+                .text(d => d.label)
+                .call(wrap, 70);
+            
+            // Обработчики событий для узлов
+            nodeGroups.on("mouseover", function(event, d) {
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", .9);
+                tooltip.html(`<strong>${d.label}</strong><br/>${d.value}`)
+                    .style("left", (event.pageX - document.querySelector('.visualization').offsetLeft + 10) + "px")
+                    .style("top", (event.pageY - document.querySelector('.visualization').offsetTop - 28) + "px");
+            })
+            .on("mouseout", function() {
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
+            
+            // Обновляем симуляцию
+            simulation
+                .nodes(graphData.nodes)
+                .on("tick", ticked);
+            
+            simulation.force("link")
+                .links(graphData.links);
+            
+            // Перезапускаем симуляцию
+            simulation.alpha(1).restart();
+        }
+        
+        // Функция для переноса текста на новую строку
+        function wrap(text, width) {
+            text.each(function() {
+                const text = d3.select(this);
+                const words = text.text().split(/\s+/).reverse();
+                let word;
+                let line = [];
+                let lineNumber = 0;
+                const lineHeight = 1.1; // em
+                const y = text.attr("y");
+                const dy = parseFloat(text.attr("dy"));
+                let tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+                
+                while (word = words.pop()) {
+                    line.push(word);
+                    tspan.text(line.join(" "));
+                    if (tspan.node().getComputedTextLength() > width) {
+                        line.pop();
+                        tspan.text(line.join(" "));
+                        line = [word];
+                        tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+                    }
+                }
+            });
+        }
+        
+        // Функция обновления положения элементов при "тике" симуляции
+        function ticked() {
+            linkElements
+                .attr("x1", d => Math.max(40, Math.min(width - 40, d.source.x)))
+                .attr("y1", d => Math.max(40, Math.min(height - 40, d.source.y)))
+                .attr("x2", d => Math.max(40, Math.min(width - 40, d.target.x)))
+                .attr("y2", d => Math.max(40, Math.min(height - 40, d.target.y)));
+            
+            svg.selectAll(".node")
+                .attr("transform", d => `translate(${Math.max(40, Math.min(width - 40, d.x))},${Math.max(40, Math.min(height - 40, d.y))})`);
+        }
+        
+        // Функции для перетаскивания узлов
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+        
+        // Обновление данных из формы
+        function updateDataFromForm() {
+            graphData.nodes.forEach(node => {
+                const value = document.getElementById(node.id).value;
+                const type = document.getElementById(node.id + "-type").value;
+                node.value = value;
+                node.type = type;
+            });
+            
+            // Удаляем старые элементы
+            svg.selectAll(".link").remove();
+            svg.selectAll(".node").remove();
+            
+            // Обновляем граф
+            updateGraph();
+        }
+        
+        // Экспорт в SVG
+        function exportSVG() {
+            // Получаем SVG как строку
+            const svgElement = document.getElementById("graph");
+            const serializer = new XMLSerializer();
+            let svgString = serializer.serializeToString(svgElement);
+            
+            // Добавляем CSS стили
+            svgString = svgString.replace('</svg>', `<style>
+                .link { stroke: #999; stroke-opacity: 0.6; }
+                text { font-family: sans-serif; }
+            </style></svg>`);
+            
+            // Создаем Blob и URL
+            const blob = new Blob([svgString], {type: "image/svg+xml"});
+            const url = URL.createObjectURL(blob);
+            
+            // Создаем временную ссылку для скачивания
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "ai_linguistic_analysis.svg";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Инициализация приложения
+        document.addEventListener("DOMContentLoaded", function() {
+            initGraph();
+            
+            // Обработчики событий для кнопок
+            document.getElementById("update-btn").addEventListener("click", updateDataFromForm);
+            document.getElementById("export-btn").addEventListener("click", exportSVG);
+            
+            // Обработчик изменения размера окна
+            window.addEventListener("resize", function() {
+                initGraph();
+            });
+		const toggleBtn = document.getElementById("theme-toggle");
+toggleBtn.addEventListener("click", () => {
+    document.body.classList.toggle("dark");
+    toggleBtn.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+});
+	
+        });
+    </script>
+</body>
+</html>

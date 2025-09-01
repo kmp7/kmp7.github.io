@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+	<script src="d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+	<link href="css2.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+	<link rel="stylesheet" href="all.min.css">
+    <style>
+        :root {
+            --primary-color: #3e76ad;
+		--header-text-color: #fefefe;
+		--border-radius: 8px;
+            --secondary-color: #2ecc71;
+            --accent-color: #3498db;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+            --text-color: #333;
+            --bg-color: #fafafa;
+            --card-bg: white;
+            --gradient-start: #3498db;
+            --gradient-end: #2ecc71;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --card-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            --control-border: #ddd;
+            --control-bg: white;
+			
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #3a7bd5;
+            --secondary-color: #39d694;
+            --accent-color: #fbfbfb;
+            --dark-color: #1e1e1e;
+            --light-color: #485460;
+            --text-color: #f1f1f1;
+            --bg-color: #000000;
+             --card-bg: #121212;
+            --gradient-start: #3a7bd5;
+            --gradient-end: #39d694;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --card-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            --header-text: #f1f1f1;
+            --control-border: #485460;
+            --control-bg: #2d3436;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            background-image: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        header {
+            background-color: var(--primary-color);
+            color: var(--header-text-color);
+            padding: 20px 0;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            background-image: linear-gradient(135deg, var(--primary-color) 0%, #2c3e50 100%);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-title {
+            color: var(--text-color);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--light-color);
+        }
+        
+        #text-container {
+            margin-bottom: 20px;
+            line-height: 1.8;
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            font-size: 1.1rem;
+        }
+        
+        .selectable {
+            cursor: pointer;
+            padding: 2px 5px;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .selectable:hover {
+            background-color: rgba(52, 152, 219, 0.2);
+            color: var(--primary-color);
+        }
+        
+        .selected {
+            background-color: rgba(46, 204, 113, 0.2);
+            color: var(--secondary-color);
+            font-weight: 500;
+        }
+        
+        .selected:after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to right, var(--gradient-start), var(--gradient-end));
+        }
+        
+        #visualization-container {
+            position: relative;
+        }
+        
+        #visualization {
+            height: 500px;
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            margin-bottom: 25px;
+            padding: 20px;
+            position: relative;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+        
+        .word-cloud text {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Roboto', sans-serif;
+        }
+        
+        .word-cloud text:hover {
+            font-weight: bold;
+            filter: brightness(1.2);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            background: var(--card-bg);
+            border-radius: 50px;
+            box-shadow: var(--shadow);
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        
+        .control-label {
+            margin-right: 15px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+        
+        .control-select {
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: 2px solid var(--control-border);
+            background-color: var(--control-bg);
+            font-size: 1rem;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+            min-width: 200px;
+        }
+        
+        .control-select:hover, .control-select:focus {
+            border-color: var(--primary-color);
+        }
+        
+        #info-panel {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            margin-top: 25px;
+        }
+        
+        .info-title {
+            font-weight: 500;
+            color: var(--text-color);
+            margin-bottom: 10px;
+        }
+        
+        #selected-context {
+            font-weight: 500;
+            color: var(--primary-color);
+            padding: 5px 10px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 5px;
+            display: inline-block;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2rem;
+            color: var(--text-color);
+            background: rgba(var(--card-bg), 0.8);
+            padding: 20px 30px;
+            border-radius: 50px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+            z-index: 5;
+        }
+        
+        .loading:before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+            border: 3px solid var(--light-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .probability-legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            z-index: 10;
+        }
+        
+        .legend-title {
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .legend-label {
+            font-size: 0.85rem;
+            color: var(--text-color);
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+            color: var(--text-color);
+            font-size: 0.9rem;
+        }
+        
+        /* Анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .card {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        /* Тема темной кнопки */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: none;
+            outline: none;
+            margin-left: 15px;
+        }
+        
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+        
+        .theme-toggle i {
+            font-size: 18px;
+            color: var(--text-color);
+            position: absolute;
+            transition: all 0.3s ease;
+        }
+        
+        .theme-toggle .fa-sun {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .theme-toggle .fa-moon {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        [data-theme="dark"] .theme-toggle .fa-sun {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        
+        [data-theme="dark"] .theme-toggle .fa-moon {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .theme-label {
+            margin-right: 8px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+        
+        .theme-group {
+            display: flex;
+            align-items: center;
+        }
+        
+        textarea, input, button {
+            background-color: var(--control-bg);
+            color: var(--text-color);
+            border: 1px solid var(--control-border);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        button {
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: bold;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        svg text {
+            fill: var(--text-color);
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                padding: 15px;
+                border-radius: 15px;
+            }
+            
+            .control-group, .theme-group {
+                width: 100%;
+                margin-bottom: 10px;
+                justify-content: center;
+            }
+            
+            .control-select {
+                width: 100%;
+            }
+            
+            #visualization {
+                height: 400px;
+            }
+            
+            .card {
+                padding: 15px;
+            }
+            
+            .loading {
+                padding: 15px 25px;
+                font-size: 1rem;
+            }
+            
+            .probability-legend {
+                bottom: 10px;
+                right: 10px;
+                padding: 10px;
+            }
+            
+            .theme-toggle {
+                width: 36px;
+                height: 36px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.7rem;
+            }
+            
+            .subtitle {
+                font-size: 0.9rem;
+            }
+            
+            #visualization {
+                height: 350px;
+            }
+            
+            .loading:before {
+                width: 16px;
+                height: 16px;
+                margin-right: 10px;
+            }
+            
+            .card-title {
+                font-size: 1.2rem;
+            }
+        }
+		
+		.info-block {
+    margin-top: 30px;
+	padding: 25px;
+}
+
+
+
+.info-section {
+    margin-bottom: 25px;
+    padding-bottom: 25px;
+    border-bottom: 1px solid var(--light-color);
+}
+
+.info-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.info-section h3 {
+    color: var(--primary-color);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.info-section h3:before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.info-section ul, .info-section ol {
+    padding-left: 25px;
+    margin: 15px 0;
+}
+
+.info-section li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.tech-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.badge {
+    background: rgba(52, 152, 219, 0.1);
+    color: var(--primary-color);
+    padding: 5px 15px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+@media (max-width: 768px) {
+    .info-block {
+        padding: 20px;
+    }
+    
+    .info-section h3 {
+        font-size: 1.1rem;
+    }
+    
+    .tech-badges {
+        gap: 8px;
+    }
+    
+    .badge {
+        padding: 4px 12px;
+        font-size: 0.8rem;
+    }
+}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>СТОХАСТИЧНОСТЬ</h1>
+            <p class="subtitle">интерактивная карта влияние контекста на вероятности слов</p>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="controls">
+            <div class="control-group">
+                <label class="control-label">Режим визуализации:</label>
+                <select id="visualization-mode" class="control-select">
+                    <option value="cloud">Облако слов</option>
+                    <option value="network">Сеть связей</option>
+                </select>
+            </div>
+            <div class="theme-group">
+                <span class="theme-label"></span>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Переключение темы">
+                    <i class="fas fa-sun"></i>
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title">Выберите текстовый фрагмент</h2>
+            <div id="text-container">
+                <!-- Текст будет загружен из JavaScript -->
+            </div>
+        </div>
+        
+        <div id="visualization-container">
+            <div class="card" id="visualization">
+                <div class="loading">Выберите контекст для визуализации</div>
+                <svg width="100%" height="100%"></svg>
+            </div>
+        </div>
+        
+        <div class="card" id="info-panel">
+            <h3 class="info-title">Выбранный контекст:</h3>
+            <p><span id="selected-context">не выбран</span></p>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title">Добавить свои данные</h2>
+            <div style="padding: 15px;">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: var(--text-color);">Текст для анализа:</label>
+                    <textarea id="user-text" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--control-border); min-height: 100px; background-color: var(--control-bg); color: var(--text-color);"></textarea>
+                </div>
+                <button id="analyze-btn">Анализировать текст</button>
+            </div>
+        </div>
+		<div class="card info-block">
+    <h2 class="card-title">О приложении</h2>
+    
+    <div class="info-section">
+        <h3>Функциональность</h3>
+        <p>Это интерактивное приложение позволяет исследовать вероятностную природу языка через визуализацию контекстных связей между словами. Основные возможности:</p>
+        <ul>
+            <li>Выбор контекста в тексте для анализа вероятностей последующих слов</li>
+            <li>Два режима визуализации: облако слов и сеть связей</li>
+            <li>Возможность загрузки собственного текста для анализа</li>
+            <li>Адаптивный интерфейс с поддержкой светлой и темной тем</li>
+        </ul>
+    </div>
+    
+    <div class="info-section">
+        <h3>Дидактическая значимость</h3>
+        <p>Для студентов-лингвистов, изучающих курс "Искусственный интеллект в профессиональной деятельности", приложение демонстрирует:</p>
+        <ul>
+            <li>Принципы работы языковых моделей на основе n-грамм</li>
+            <li>Роль контекста в определении вероятности появления слов</li>
+            <li>Стохастическую природу естественного языка</li>
+            <li>Визуализацию работы алгоритмов обработки естественного языка</li>
+        </ul>
+    </div>
+    
+    <div class="info-section">
+        <h3>Использованные технологии</h3>
+        <div class="tech-badges">
+            <span class="badge">HTML5</span>
+            <span class="badge">CSS3</span>
+            <span class="badge">JavaScript</span>
+            <span class="badge">D3.js</span>
+            <span class="badge">Адаптивный дизайн</span>
+        </div>
+    </div>
+    
+    <div class="info-section">
+        <h3>Учебное задание</h3>
+        <p><strong>Тема:</strong> Анализ контекстных вероятностей в естественном языке</p>
+        <p><strong>Задание:</strong></p>
+        <ol>
+            <li>Выберите фрагмент текста в примере или загрузите свой текст</li>
+            <li>Проанализируйте предложенные варианты продолжения для выбранного контекста</li>
+            <li>Сравните результаты в разных режимах визуализации</li>
+            <li>Определите, какие факторы влияют на вероятность появления слова в данном контексте</li>
+            <li>Напишите краткий отчет (200-300 слов) с выводами о наблюдаемых закономерностях</li>
+        </ol>
+    </div>
+    </div>
+    </div>
+    <footer class="footer">
+<div class="container">
+<p>© 2025 | kmp CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    
+    
+    <script>
+        // Пример текста
+        const sampleText = [
+            "Искусственный интеллект становится важной частью современной жизни.",
+            "Нейронные сети обрабатывают огромные объемы информации каждый день.",
+            "Языковые модели позволяют компьютерам понимать человеческий язык.",
+            "Орлова хорошая студентка отличница умница и красавица.",
+            "Контекст играет ключевую роль в понимании значения слов."
+        ];
+        
+        // Подготовленные данные о вероятностях слов
+        const wordProbabilities = {
+            "Искусственный интеллект становится": {
+                "важной": 0.25,
+                "ключевой": 0.18,
+                "неотъемлемой": 0.15,
+                "основной": 0.12,
+                "значимой": 0.10,
+                "центральной": 0.08,
+                "критической": 0.07,
+                "заметной": 0.05
+            },
+            "интеллект становится важной частью": {
+                "современной": 0.35,
+                "нашей": 0.20,
+                "повседневной": 0.15,
+                "технологической": 0.10,
+                "деловой": 0.08,
+                "научной": 0.07,
+                "образовательной": 0.05
+            },
+            "Нейронные сети обрабатывают": {
+                "огромные": 0.30,
+                "большие": 0.20,
+                "значительные": 0.15,
+                "колоссальные": 0.10,
+                "различные": 0.08,
+                "разнообразные": 0.07,
+                "сложные": 0.06,
+                "структурированные": 0.04
+            },
+            "сети обрабатывают огромные объемы": {
+                "информации": 0.40,
+                "данных": 0.30,
+                "контента": 0.10,
+                "текста": 0.08,
+                "изображений": 0.07,
+                "запросов": 0.05
+            },
+            "Языковые модели позволяют": {
+                "компьютерам": 0.35,
+                "машинам": 0.25,
+                "системам": 0.15,
+                "алгоритмам": 0.10,
+                "программам": 0.08,
+                "устройствам": 0.07
+            },
+            "Орлова хорошая студентка": {
+                "умница": 0.35,
+                "красавица": 0.25,
+                "студентка": 0.15,
+                "любимица": 0.10,
+                "ученый": 0.08,
+                "активистка": 0.07
+            },
+            "Контекст играет ключевую": {
+                "роль": 0.50,
+                "функцию": 0.20,
+                "задачу": 0.10,
+                "позицию": 0.08,
+                "часть": 0.07,
+                "особенность": 0.05
+            }
+        };
+        
+        // Переключатель темы
+        function setupThemeToggle() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+            
+            // Проверяем сохраненную тему в localStorage
+            const currentTheme = localStorage.getItem('theme');
+            if (currentTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else if (currentTheme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+            } else if (prefersDarkScheme.matches) {
+                // Если пользователь предпочитает темную тему в ОС
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+            
+            themeToggle.addEventListener('click', function() {
+                let theme = 'light';
+                
+                if (document.documentElement.getAttribute('data-theme') === 'light') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    theme = 'dark';
+                } else {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+                
+                localStorage.setItem('theme', theme);
+                
+                // Обновляем визуализацию, если она была создана
+                const context = document.getElementById('selected-context').textContent;
+                if (context !== 'не выбран') {
+                    const mode = document.getElementById('visualization-mode').value;
+                    updateVisualization(context, mode);
+                }
+            });
+        }
+        
+        // Функция для отображения текста с возможностью выбора фрагментов
+        function renderText() {
+            const container = document.getElementById('text-container');
+            container.innerHTML = ''; // Очищаем контейнер
+            
+            // Создаем абзацы из текста
+            sampleText.forEach(paragraph => {
+                const p = document.createElement('p');
+                
+                // Разбиваем абзац на слова
+                const words = paragraph.split(' ');
+                
+                // Создаем span для каждого слова и добавляем возможность выбора контекста
+                for (let i = 0; i < words.length; i++) {
+                    if (i > 0) {
+                        p.appendChild(document.createTextNode(' '));
+                    }
+                    
+                    const word = document.createElement('span');
+                    word.textContent = words[i];
+                    word.classList.add('selectable');
+                    
+                    // Добавляем обработчик события для выбора контекста
+                    word.addEventListener('click', function() {
+                        selectContext(i, words, p);
+                    });
+                    
+                    p.appendChild(word);
+                }
+                
+                container.appendChild(p);
+            });
+        }
+
+        // Функция для выбора контекста
+        function selectContext(index, words, paragraph) {
+            // Очищаем предыдущий выбор
+            document.querySelectorAll('.selected').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // Определяем контекст (до 3 слов)
+            const contextStart = Math.max(0, index - 3);
+            const contextWords = [];
+            
+            const spans = paragraph.querySelectorAll('span');
+            for (let i = contextStart; i <= index; i++) {
+                spans[i].classList.add('selected');
+                contextWords.push(words[i]);
+            }
+            
+            const context = contextWords.join(' ');
+            document.getElementById('selected-context').textContent = context;
+            
+            // Обновляем визуализацию
+            const mode = document.getElementById('visualization-mode').value;
+            updateVisualization(context, mode);
+        }
+
+        // Функция для обновления визуализации
+        function updateVisualization(context, mode = 'cloud') {
+            // Показываем индикатор загрузки
+            document.querySelector('.loading').style.display = 'flex';
+            
+            // Небольшая задержка для анимации загрузки
+            setTimeout(() => {
+                // Ищем ближайший доступный контекст
+                let matchingContext = null;
+                let bestMatchLength = 0;
+                
+                for (const availableContext in wordProbabilities) {
+                    if (context.includes(availableContext) || availableContext.includes(context)) {
+                        if (availableContext.length > bestMatchLength) {
+                            matchingContext = availableContext;
+                            bestMatchLength = availableContext.length;
+                        }
+                    }
+                }
+                
+                // Если контекст не найден, показываем сообщение
+                if (!matchingContext) {
+                    document.querySelector('.loading').textContent = 'Нет данных для этого контекста';
+                    document.querySelector('.loading').style.display = 'flex';
+                    d3.select('svg').selectAll('*').remove();
+                    return;
+                }
+                
+                // Скрываем сообщение о загрузке
+                document.querySelector('.loading').style.display = 'none';
+                
+                // Получаем данные для выбранного контекста
+                const data = wordProbabilities[matchingContext];
+                
+                // Преобразуем данные для D3.js
+                const wordData = Object.entries(data).map(([word, probability]) => ({
+                    text: word,
+                    size: probability * 100,
+                    probability
+                }));
+                
+                // Выбираем тип визуализации в зависимости от режима
+                if (mode === 'cloud') {
+                    createWordCloud(wordData);
+                } else if (mode === 'network') {
+                    createNetworkGraph(wordData);
+                }
+            }, 600); // Задержка для эффекта загрузки
+        }
+
+        // Функция для создания облака слов
+        function createWordCloud(data) {
+            // Очищаем предыдущую визуализацию
+            const svg = d3.select('svg');
+            svg.selectAll('*').remove();
+            
+            const width = svg.node().getBoundingClientRect().width;
+            const height = svg.node().getBoundingClientRect().height;
+            
+            // Создаем градиентные определения
+            const defs = svg.append("defs");
+            
+            // Создаем градиент для фона
+            const gradient = defs.append("linearGradient")
+                .attr("id", "word-gradient")
+                .attr("x1", "0%")
+                .attr("y1", "0%")
+                .attr("x2", "100%")
+                .attr("y2", "100%");
+                
+            gradient.append("stop")
+                .attr("offset", "0%")
+                .attr("stop-color", getComputedStyle(document.documentElement).getPropertyValue('--gradient-start'));
+                
+            gradient.append("stop")
+                .attr("offset", "100%")
+                .attr("stop-color", getComputedStyle(document.documentElement).getPropertyValue('--gradient-end'));
+            
+            // Создаем группу для облака слов
+            const wordCloud = svg.append('g')
+                .attr('class', 'word-cloud')
+                .attr('transform', `translate(${width/2}, ${height/2})`);
+            
+            // Определяем цветовую шкалу на основе вероятности
+            const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+            const colorRange = isDarkTheme ? ['#74b9ff', '#0984e3'] : ['#74b9ff', '#0984e3'];
+            
+            const colorScale = d3.scaleLinear()
+                .domain([d3.min(data, d => d.probability), d3.max(data, d => d.probability)])
+                .range(colorRange);
+            
+            // Создаем элементы для каждого слова
+            const words = wordCloud.selectAll('text')
+                .data(data)
+                .enter()
+                .append('text')
+                .style('font-size', d => `${Math.max(16, d.size * 1.5)}px`)
+                .style('fill', d => colorScale(d.probability))
+                .attr('text-anchor', 'middle')
+                .style('font-weight', d => d.probability > 0.25 ? 'bold' : 'normal')
+                .style('opacity', 0)
+                .text(d => d.text)
+                .on('mouseover', function(event, d) {
+                    d3.select(this)
+                        .transition()
+                        .duration(200)
+                        .style('font-size', `${Math.max(16, d.size * 1.8)}px`)
+                        .style('filter', 'drop-shadow(0 0 3px rgba(0,0,0,0.2))');
+                })
+                .on('mouseout', function(event, d) {
+                    d3.select(this)
+                        .transition()
+                        .duration(200)
+                        .style('font-size', `${Math.max(16, d.size * 1.5)}px`)
+                        .style('filter', 'none');
+                });
+            
+            // Добавляем всплывающие подсказки
+            words.append('title')
+                .text(d => `${d.text}: ${(d.probability * 100).toFixed(1)}%`);
+            
+            // Анимация появления слов
+            words.transition()
+                .delay((d, i) => i * 100)
+                .duration(500)
+                .style('opacity', 1)
+                .attr('transform', (d, i) => {
+                    // Располагаем слова по спирали
+                    const angle = i * 0.5;
+                    const radius = 30 + (i * 30);
+                    const x = radius * Math.cos(angle);
+                    const y = radius * Math.sin(angle);
+                    return `translate(${x}, ${y})`;
+                });
+            
+            // Добавляем легенду
+            const legend = svg.append('g')
+                .attr('class', 'probability-legend');
+            
+            // Фон для легенды
+            legend.append('rect')
+                .attr('x', width - 180)
+                .attr('y', height - 100)
+                .attr('width', 160)
+                .attr('height', 80)
+                .attr('rx', 10)
+                .attr('ry', 10)
+                .attr('fill', getComputedStyle(document.documentElement).getPropertyValue('--card-bg'))
+                .attr('stroke', getComputedStyle(document.documentElement).getPropertyValue('--light-color'))
+                .attr('stroke-width', 1)
+                .attr('opacity', 0.9);
+            
+            legend.append('text')
+                .attr('class', 'legend-title')
+                .attr('x', width - 170)
+                .attr('y', height - 75)
+                .text('Вероятность:')
+                .style('font-weight', 'bold')
+                .style('font-size', '14px')
+                .style('fill', getComputedStyle(document.documentElement).getPropertyValue('--text-color'));
+            
+            // Высокая вероятность
+            legend.append('rect')
+                .attr('class', 'legend-color')
+                .attr('x', width - 170)
+                .attr('y', height - 60)
+                .attr('width', 15)
+                .attr('height', 15)
+                .attr('rx', 3)
+                .attr('fill', colorScale(d3.max(data, d => d.probability)));
+            
+            legend.append('text')
+                .attr('x', width - 145)
+                .attr('y', height - 47)
+                .text('Высокая')
+                .style('font-size', '12px')
+                .style('fill', getComputedStyle(document.documentElement).getPropertyValue('--text-color'));
+            
+            // Низкая вероятность
+            legend.append('rect')
+                .attr('class', 'legend-color')
+                .attr('x', width - 170)
+                .attr('y', height - 35)
+                .attr('width', 15)
+                .attr('height', 15)
+                .attr('rx', 3)
+                .attr('fill', colorScale(d3.min(data, d => d.probability)));
+            
+            legend.append('text')
+                .attr('x', width - 145)
+                .attr('y', height - 22)
+                .text('Низкая')
+                .style('font-size', '12px')
+                .style('fill', getComputedStyle(document.documentElement).getPropertyValue('--text-color'));
+        }
+
+        // Функция для создания сети связей
+        function createNetworkGraph(data) {
+            // Очищаем предыдущую визуализацию
+            const svg = d3.select('svg');
+            svg.selectAll('*').remove();
+            
+            const width = svg.node().getBoundingClientRect().width;
+            const height = svg.node().getBoundingClientRect().height;
+            
+            // Создаем градиентные определения
+            const defs = svg.append("defs");
+            
+            // Создаем градиент для связей
+            const linkGradient = defs.append("linearGradient")
+                .attr("id", "link-gradient")
+                .attr("gradientUnits", "userSpaceOnUse");
+                
+            linkGradient.append("stop")
+                .attr("offset", "0%")
+                .attr("stop-color", getComputedStyle(document.documentElement).getPropertyValue('--gradient-start'));
+                
+            linkGradient.append("stop")
+                .attr("offset", "100%")
+                .attr("stop-color", getComputedStyle(document.documentElement).getPropertyValue('--gradient-end'));
+            
+            // Создаем данные для сети
+            const nodes = [
+                { id: "context", label: "Контекст", type: "context" },
+                ...data.map(d => ({ id: d.text, label: d.text, type: "word", probability: d.probability }))
+            ];
+            
+            const links = data.map(d => ({
+                source: "context",
+                target: d.text,
+                value: d.probability
+            }));
+            
+            // Создаем силовой макет для сети
+            const simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id).distance(d => 150 - d.value * 100))
+                .force("charge", d3.forceManyBody().strength(-500))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collision", d3.forceCollide().radius(d => d.type === "context" ? 50 : d.probability * 60 + 25));
+            
+            // Создаем группу для связей
+            const linkGroup = svg.append("g")
+                .attr("class", "links");
+            
+            // Создаем линии для связей
+            const link = linkGroup.selectAll("line")
+                .data(links)
+                .enter()
+                .append("line")
+                .attr("stroke-width", d => d.value * 10)
+                .attr("stroke", "url(#link-gradient)")
+                .attr("stroke-opacity", 0.7)
+                .attr("stroke-linecap", "round");
+            
+            // Создаем группу для узлов
+            const nodeGroup = svg.append("g")
+                .attr("class", "nodes");
+            
+            // Создаем узлы
+            const node = nodeGroup.selectAll("g")
+                .data(nodes)
+                .enter()
+                .append("g")
+                .attr("class", d => `node ${d.type}`)
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+            
+            // Добавляем круги для узлов
+            const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+            const nodeColorScale = d3.scaleSequential(
+                isDarkTheme ? d3.interpolateBlues : d3.interpolateBlues
+            ).domain([0, 1]);
+            
+            node.append("circle")
+                .attr("r", d => d.type === "context" ? 40 : d.probability * 60 + 15)
+                .attr("fill", d => {
+                    if (d.type === "context") {
+                        return "url(#link-gradient)";
+                    } else {
+                        return nodeColorScale(d.probability * 0.7 + 0.3);
+                    }
+                })
+                .attr("stroke", getComputedStyle(document.documentElement).getPropertyValue('--card-bg'))
+                .attr("stroke-width", 2)
+                .attr("opacity", 0)
+                .transition()
+                .duration(800)
+                .delay((d, i) => i * 50)
+                .attr("opacity", 1);
+            
+            // Добавляем тень для узлов
+            node.append("circle")
+                .attr("r", d => d.type === "context" ? 40 : d.probability * 60 + 15)
+                .attr("fill", "none")
+                .attr("stroke", isDarkTheme ? "#fff" : "#000")
+                .attr("stroke-width", 4)
+                .attr("stroke-opacity", 0.1)
+                .attr("filter", "blur(3px)")
+                .attr("opacity", 0)
+                .transition()
+                .duration(800)
+                .delay((d, i) => i * 50)
+                .attr("opacity", 0.5);
+            
+            // Добавляем текст для узлов
+            node.append("text")
+                .attr("dy", d => d.type === "context" ? 5 : 3)
+                .attr("text-anchor", "middle")
+                .text(d => d.type === "context" ? "Контекст" : d.label)
+                .style("font-size", d => d.type === "context" ? "16px" : `${Math.max(12, d.probability * 20 + 10)}px`)
+                .style("font-weight", d => d.type === "context" ? "bold" : (d.probability > 0.25 ? "bold" : "normal"))
+                .style("fill", d => d.type === "context" ? "white" : getComputedStyle(document.documentElement).getPropertyValue('--text-color'))
+                .style("pointer-events", "none")
+                .style("opacity", 0)
+                .transition()
+                .duration(800)
+                .delay((d, i) => i * 50 + 300)
+                .style("opacity", 1);
+            
+            // Добавляем подсказки
+            node.append("title")
+                .text(d => d.type === "word" ? `${d.label}: ${(d.probability * 100).toFixed(1)}%` : "Контекст");
+            
+            // Функции для обработки перетаскивания
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+            
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+            
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+            
+            // Обновляем положение элементов при каждом "тике" симуляции
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+                
+                node.attr("transform", d => `translate(${d.x}, ${d.y})`);
+                
+                // Обновляем градиент для каждой связи
+                links.forEach((d, i) => {
+                    const gradientId = `link-gradient-${i}`;
+                    
+                    // Создаем уникальный градиент для каждой связи
+                    const linkGradient = defs.append("linearGradient")
+                        .attr("id", gradientId)
+                        .attr("gradientUnits", "userSpaceOnUse")
+                        .attr("x1", d.source.x)
+                        .attr("y1", d.source.y)
+                        .attr("x2", d.target.x)
+                        .attr("y2", d.target.y);
+                    
+                    linkGradient.append("stop")
+                        .attr("offset", "0%")
+                        .attr("stop-color", getComputedStyle(document.documentElement).getPropertyValue('--gradient-start'));
+                    
+                    linkGradient.append("stop")
+                        .attr("offset", "100%")
+                        .attr("stop-color", nodeColorScale(d.value * 0.7 + 0.3));
+                    
+                    // Применяем градиент к связи
+                    d3.select(link.nodes()[i])
+                        .attr("stroke", `url(#${gradientId})`);
+                });
+            });
+            
+            // Добавляем легенду
+            const legend = svg.append('g')
+                .attr('class', 'probability-legend');
+            
+            // Фон для легенды
+            legend.append('rect')
+                .attr('x', width - 180)
+                .attr('y', height - 120)
+                .attr('width', 160)
+                .attr('height', 100)
+                .attr('rx', 10)
+                .attr('ry', 10)
+                .attr('fill', getComputedStyle(document.documentElement).getPropertyValue('--card-bg'))
+                .attr('stroke', getComputedStyle(document.documentElement).getPropertyValue('--light-color'))
+                .attr('stroke-width', 1)
+                .attr('opacity', 0.9);
+            
+            legend.append('text')
+                .attr('class', 'legend-title')
+                .attr('x', width - 170)
+                .attr('y', height - 95)
+                .text('Вероятность:')
+                .style('font-weight', 'bold')
+                .style('font-size', '14px')
+                .style('fill', getComputedStyle(document.documentElement).getPropertyValue('--text-color'));
+            
+            // Высокая вероятность - узел
+            legend.append('circle')
+                .attr('cx', width - 160)
+                .attr('cy', height - 75)
+                .attr('r', 10)
+                .attr('fill', nodeColorScale(0.9));
+            
+            legend.append('text')
+                .attr('x', width - 140)
+                .attr('y', height - 71)
+                .text('Высокая')
+                .style('font-size', '12px')
+                .style('fill', getComputedStyle(document.documentElement).getPropertyValue('--text-color'));
+            
+            // Низкая вероятность - узел
+            legend.append('circle')
+                .attr('cx', width - 160)
+                .attr('cy', height - 50)
+                .attr('r', 6)
+                .attr('fill', nodeColorScale(0.4));
+            
+            legend.append('text')
+                .attr('x', width - 140)
+                .attr('y', height - 46)
+                .text('Низкая')
+                .style('font-size', '12px')
+                .style('fill', getComputedStyle(document.documentElement).getPropertyValue('--text-color'));
+            
+            // Толщина связи
+            legend.append('line')
+                .attr('x1', width - 170)
+                .attr('y1', height - 25)
+                .attr('x2', width - 150)
+                .attr('y2', height - 25)
+                .attr('stroke', getComputedStyle(document.documentElement).getPropertyValue('--primary-color'))
+                .attr('stroke-width', 6)
+                .attr('stroke-linecap', 'round');
+            
+            legend.append('text')
+                .attr('x', width - 140)
+                .attr('y', height - 21)
+                .text('Сила связи')
+                .style('font-size', '12px')
+                .style('fill', getComputedStyle(document.documentElement).getPropertyValue('--text-color'));
+        }
+
+        // Добавляем обработчик события для переключения режима
+        document.getElementById('visualization-mode').addEventListener('change', function() {
+            const mode = this.value;
+            const context = document.getElementById('selected-context').textContent;
+            
+            if (context !== 'не выбран') {
+                updateVisualization(context, mode);
+            }
+        });
+
+        // Функция для создания простой n-граммной модели
+        function createNGramModel(text, n = 3) {
+            const words = text.split(/\s+/);
+            const model = {};
+            
+            for (let i = 0; i <= words.length - n; i++) {
+                const context = words.slice(i, i + n - 1).join(' ');
+                const nextWord = words[i + n - 1];
+                
+                if (!model[context]) {
+                    model[context] = {};
+                }
+                
+                if (!model[context][nextWord]) {
+                    model[context][nextWord] = 0;
+                }
+                
+                model[context][nextWord]++;
+            }
+            
+            // Преобразуем счетчики в вероятности
+            for (const context in model) {
+                const total = Object.values(model[context]).reduce((sum, count) => sum + count, 0);
+                for (const word in model[context]) {
+                    model[context][word] /= total;
+                }
+            }
+            
+            return model;
+        }
+
+        // Добавляем эффект при загрузке страницы
+        function addLoadingEffect() {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, 300 + index * 200);
+            });
+        }
+
+        // Обработчик кнопки анализа
+        document.getElementById('analyze-btn').addEventListener('click', function() {
+            const userText = document.getElementById('user-text').value;
+            if (userText.trim() === '') {
+                alert('Пожалуйста, введите текст для анализа');
+                return;
+            }
+            
+            // Показываем индикатор загрузки
+            const loadingEl = document.querySelector('.loading');
+            loadingEl.textContent = 'Анализируем текст...';
+            loadingEl.style.display = 'flex';
+            
+            // Используем setTimeout, чтобы дать браузеру время обновить DOM
+            setTimeout(() => {
+                // Разбиваем текст на абзацы и обновляем sampleText
+                const paragraphs = userText.split(/\n+/).filter(p => p.trim() !== '');
+                if (paragraphs.length > 0) {
+                    sampleText.length = 0; // Очищаем существующий текст
+                    paragraphs.forEach(p => sampleText.push(p));
+                    
+                    // Создаем модель
+                    const ngram = createNGramModel(userText, 3);
+                    
+                    // Обновляем вероятности
+                    Object.assign(wordProbabilities, ngram);
+                    
+                    // Перерисовываем текст
+                    renderText();
+                    
+                    // Очищаем визуализацию
+                    loadingEl.textContent = 'Выберите контекст для визуализации';
+                    d3.select('svg').selectAll('*').remove();
+                    
+                    // Сбрасываем выбранный контекст
+                    document.getElementById('selected-context').textContent = 'не выбран';
+                    
+                    // Очищаем поле ввода
+                    document.getElementById('user-text').value = '';
+                    
+                    // Эффект успешного анализа
+                    const analyzeBtn = document.getElementById('analyze-btn');
+                    analyzeBtn.textContent = 'Готово!';
+                    analyzeBtn.style.background = 'linear-gradient(135deg, #2ecc71, #27ae60)';
+                    
+                    setTimeout(() => {
+                        analyzeBtn.textContent = 'Анализировать текст';
+                        analyzeBtn.style.background = '';
+                    }, 2000);
+                }
+            }, 500);
+        });
+
+        // Инициализация приложения
+        function init() {
+            renderText();
+            setupThemeToggle();
+            addLoadingEffect();
+            
+            // Адаптируем размер шрифта для мобильных устройств
+            if (window.innerWidth < 768) {
+                document.querySelectorAll('.card-title').forEach(title => {
+                    title.style.fontSize = '1.2rem';
+                });
+            }
+            
+            // Добавляем приветственное сообщение
+            console.log("%cИнтерактивная карта контекста", "font-size: 16px; color: #3498db; font-weight: bold;");
+            console.log("%cВыберите фрагмент текста, чтобы увидеть вероятности слов", "color: #2ecc71;");
+        }
+        
+        // Запускаем приложение после загрузки страницы
+        window.addEventListener('DOMContentLoaded', init);
+        
+        // Адаптация к изменению размера окна
+        window.addEventListener('resize', function() {
+            const context = document.getElementById('selected-context').textContent;
+            if (context !== 'не выбран') {
+                const mode = document.getElementById('visualization-mode').value;
+                updateVisualization(context, mode);
+            }
+        });
+    </script>
+</body>
+</html>

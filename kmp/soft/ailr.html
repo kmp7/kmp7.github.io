@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        /* Основные стили и сброс */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary-bg: #f5f5f5;
+            --white: #ffffff;
+            --header: #325980;
+            --interactive: #3498db;
+            --divider: #f1f1f1;
+            --success: #2ecc71;
+            --error: #e74c3c;
+            --warning: #f39c12;
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            color: #333;
+            line-height: 1.6;
+            padding-bottom: 2rem;
+        }
+
+        /* Заголовок */
+        header {
+            background-color: var(--header);
+            color: var(--white);
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        /* Контейнеры */
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: var(--white);
+            border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Форма ввода */
+        .input-form {
+            text-align: center;
+        }
+
+        .input-form h2 {
+            color: var(--header);
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--header);
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid var(--divider);
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .input-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .input-group input:focus, .input-group textarea:focus {
+            border-color: var(--interactive);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        /* Кнопки */
+        .btn {
+            background-color: var(--interactive);
+            color: var(--white);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Результаты */
+        .results-container {
+            display: none;
+            text-align: center;
+        }
+
+        .results-header {
+            margin-bottom: 2rem;
+        }
+
+        .results-header h2 {
+            color: var(--header);
+            margin-bottom: 0.5rem;
+        }
+
+        .language-name {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 1rem 0;
+            color: var(--header);
+        }
+
+        .term-display {
+            font-size: 1.5rem;
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background-color: var(--divider);
+            border-radius: 4px;
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        .language-info {
+            margin: 2rem 0;
+            text-align: left;
+        }
+
+        .language-info p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .flag-icon {
+            width: 100px;
+            height: auto;
+            margin: 1rem auto;
+            border: 1px solid var(--divider);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Модальное окно информации */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background-color: var(--white);
+            width: 90%;
+            max-width: 800px;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+            transform: translateY(-20px);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--header);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        /* Список языков */
+        .languages-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+		
+		.languages-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+
+    /* Ограничение высоты и включение прокрутки */
+    max-height: 400px; /* Высота может быть изменена по вашему усмотрению */
+    overflow-y: auto; /* Добавляем вертикальную прокрутку */
+    scrollbar-width: thin; /* Утончение полосы прокрутки (для Firefox) */
+    scrollbar-color: var(--divider) transparent; /* Цвет полосы прокрутки */
+}
+
+/* Стилизация полосы прокрутки для WebKit-браузеров (Chrome, Safari) */
+.languages-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.languages-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.languages-list::-webkit-scrollbar-thumb {
+    background-color: var(--divider);
+    border-radius: 4px;
+}
+
+        .language-card {
+            padding: 1rem;
+            border: 1px solid var(--divider);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .language-card:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-color: var(--interactive);
+        }
+
+        .language-card h3 {
+            color: var(--header);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Медиа-запросы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+
+            .language-name {
+                font-size: 1.5rem;
+            }
+
+            .term-display {
+                font-size: 1.2rem;
+            }
+
+            .languages-list {
+                grid-template-columns: 1fr;
+            }
+        }
+		
+		.about-container {
+    display: none;
+    text-align: left;
+}
+
+.about-container h2 {
+    color: var(--header);
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.about-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.about-section {
+    background-color: var(--divider);
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.about-section h3 {
+    color: var(--header);
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--header);
+    padding-bottom: 0.5rem;
+}
+
+.about-section ul {
+    padding-left: 1.5rem;
+}
+
+.about-section li {
+    margin-bottom: 0.5rem;
+}
+
+.author-section {
+    grid-column: 1 / -1;
+    text-align: center;
+}
+
+.back-btn {
+    display: block;
+    margin: 0 auto;
+    background-color: var(--header);
+}
+
+/* Медиа-запрос для мобильных устройств */
+@media (max-width: 768px) {
+    .about-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+ .link-kmp1 {
+            color: #0056b3; 
+            background-color: #e7f1ff; 
+            padding: 0.1em 0.3em; 
+            margin: 0 -0.3em; 
+            border-radius: 3px; /* Убираем стандартное подчеркивание */
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        }
+        .link-kmp1:hover,
+        .link-kmp1:focus {
+            color: #ffffff; 
+            background-color: #007bff; 
+            text-decoration: none; 
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>РАСПОЗНАВАНИЕ ЯЗЫКА</h1>
+        <p>на примере написания термина "Искусственный интеллект"</p>
+    </header>
+
+    <div class="container input-form" id="inputForm">
+        <h2>Введите термин для распознавания</h2>
+        <div class="input-group">
+            <label for="termInput">Термин "Искусственный интеллект" на одном из поддерживаемых языков</label>
+            <input type="text" id="termInput" placeholder="Введите термин..." required>
+        </div>
+        <div class="input-group">
+            <label for="termInfo">Дополнительная информация (необязательно)</label>
+            <textarea id="termInfo" placeholder="Можете добавить контекст или дополнительную информацию о термине..."></textarea>
+        </div>
+        <button class="btn" id="analyzeBtn">Определить язык</button>
+        <button class="btn" id="showLanguagesBtn" style="margin-top: 1rem;">Список поддерживаемых языков</button>
+		
+		<button class="btn" id="showAboutBtn" style="margin-top: 1rem; background-color: var(--header);">
+    О приложении
+</button>
+    </div>
+
+    <div class="container results-container" id="resultsContainer">
+        <div class="results-header">
+            <h2>Результат распознавания</h2>
+            <div class="term-display" id="termDisplay">Artificial Intelligence</div>
+            <div class="language-name" id="languageName">Английский</div>
+            <img src="" alt="Флаг языка" class="flag-icon" id="flagIcon">
+        </div>
+        <div class="language-info" id="languageInfo">
+            <p>Термин "Artificial Intelligence" является английским вариантом перевода словосочетания "Искусственный интеллект".</p>
+            <p>В английском языке это устойчивое словосочетание, широко используемое в научной и технической литературе.</p>
+        </div>
+        <button class="btn" id="newAnalysisBtn">Новый анализ</button>
+    </div>
+
+    <div class="modal-overlay" id="languagesModal">
+        <div class="modal">
+            <div class="modal-close" id="closeModal">✕</div>
+            <h2>Поддерживаемые языки</h2>
+            <p>Приложение может распознавать термин "Искусственный интеллект" на следующих языках:</p>
+            
+            <div class="languages-list" id="languagesList">
+                <!-- Языки будут добавлены динамически -->
+            </div>
+        </div>
+    </div>
+	<div class="container about-container" id="aboutContainer">
+    <h2>О приложении</h2>
+    <div class="about-content">
+        <div class="about-section">
+            <h3>Функциональность</h3>
+            <ul>
+                <li>Распознавание термина "Искусственный интеллект" на избранных языках</li>
+                <li>Отображение названия языка, флага страны (при наличие доступа в Интернет) и самой краткой информации о термине</li>
+                <li>Список всех поддерживаемых языков с примерами</li>
+                <li>Возможность добавления пользовательских заметок</li>
+            </ul>
+        </div>
+        
+        <div class="about-section">
+            <h3>Технологии</h3>
+            <ul>
+                <li>HTML5, CSS3 для структуры и стилей</li>
+                <li>JavaScript для логики распознавания</li>
+                <li>API FlagCDN для отображения флагов <a href="https://flagcdn.com/" class="link-kmp1"> flagcdn.com </a></li>
+				<li>Никакого искусственного интеллекта</li>
+            </ul>
+			<h3>Вывод</h3>
+            <ul>
+                <li>Если в вашей деятельности не требуется ни человеческий, ни искусственный интеллект... не велика вероятность поумнеть))</li>
+            </ul>
+        </div>
+        
+        <div class="about-section author-section">
+            <h3></h3>
+            <p>© 2025 | Искусственный интеллект в профессиональной деятельности<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+        </div>
+    </div>
+    <button class="btn back-btn" id="backBtn">Вернуться к приложению</button>
+</div>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Основные переменные
+        const languages = [
+            {
+				name: "Беларуская мова",
+				term: "Штучны інтэлект",
+				code: "be",
+				flag: "https://flagcdn.com/w80/by.png ",
+				info: "Беларусскi тэрмiн 'Штучны інтэлект' выкарыстоўвае славянскую мову і структуру, характэрную для беларускай лексікі."
+			},
+			{
+                name: "Русский",
+                term: "Искусственный интеллект",
+                code: "ru",
+                flag: "https://flagcdn.com/w80/ru.png",
+                info: "Русский термин 'Искусственный интеллект' является калькой с английского 'Artificial Intelligence'. В русском языке это устойчивое словосочетание, состоящее из прилагательного и существительного."
+            },
+            {
+                name: "Английский",
+                term: "Artificial Intelligence",
+                code: "en",
+                flag: "https://flagcdn.com/w80/gb.png",
+                info: "Английский термин 'Artificial Intelligence' впервые был использован в 1956 году на Дартмутской конференции. Это устойчивое словосочетание, где 'artificial' означает 'искусственный', а 'intelligence' — 'интеллект'."
+            },
+            {
+                name: "Немецкий",
+                term: "Künstliche Intelligenz",
+                code: "de",
+                flag: "https://flagcdn.com/w80/de.png",
+                info: "Немецкий термин 'Künstliche Intelligenz' (часто сокращается как 'KI') является дословным переводом английского 'Artificial Intelligence'. В немецком языке это также устойчивое словосочетание."
+            },
+            {
+                name: "Китайский",
+                term: "人工智能",
+                code: "zh",
+                flag: "https://flagcdn.com/w80/cn.png",
+                info: "Китайский термин '人工智能' (rén gōng zhì néng) дословно означает 'человеческое создание интеллекта'. Это устойчивое сочетание иероглифов в китайском языке."
+            },
+			{
+                name: "Французский",
+                term: "Intelligence Artificielle",
+                code: "fr",
+                flag: "https://flagcdn.com/w80/fr.png",
+                info: "Французский термин 'Intelligence Artificielle' отличается порядком слов от английского оригинала. Это устойчивое словосочетание, широко используемое в научной литературе."
+            },
+            {
+                name: "Испанский",
+                term: "Inteligencia Artificial",
+                code: "es",
+                flag: "https://flagcdn.com/w80/es.png",
+                info: "Испанский термин 'Inteligencia Artificial' похож на французский вариант с точки зрения порядка слов. Это устойчивое словосочетание в испанском языке."
+            },
+            {
+                name: "Итальянский",
+                term: "Intelligenza Artificiale",
+                code: "it",
+                flag: "https://flagcdn.com/w80/it.png",
+                info: "Итальянский термин 'Intelligenza Artificiale' также следует модели французского и испанского вариантов с обратным порядком слов по сравнению с английским."
+            },
+            
+            {
+                name: "Японский",
+                term: "人工知能",
+                code: "ja",
+                flag: "https://flagcdn.com/w80/jp.png",
+                info: "Японский термин '人工知能' (jinkō chinō) использует те же иероглифы, что и китайский вариант, но пишется и читается немного по-другому. Это устойчивое сочетание в японском языке."
+            },
+            {
+                name: "Корейский",
+                term: "인공 지능",
+                code: "ko",
+                flag: "https://flagcdn.com/w80/kr.png",
+                info: "Корейский термин '인공 지능' (in-gong ji-neung) дословно переводится как 'искусственный интеллект'. Это устойчивое словосочетание в корейском языке."
+            },
+            {
+                name: "Арабский",
+                term: "الذكاء الاصطناعي",
+                code: "ar",
+                flag: "https://flagcdn.com/w80/sa.png",
+                info: "Арабский термин 'الذكاء الاصطناعي' (al-thakaa' al-isstinaa'iy) является переводом английского 'Artificial Intelligence'. Это устойчивое сочетание в арабском языке."
+            },
+						{
+				"name": "Турецкий",
+				"term": "Yapay Zeka",
+				"code": "tr",
+				"flag": "https://flagcdn.com/w80/tr.png",
+				"info": "Турецкий термин 'Yapay Zeka' является переводом английского 'Artificial Intelligence'. Это устойчивое сочетание в турецком языке."
+			},
+			{
+				"name": "Фарси",
+				"term": "هوش مصنوعی",
+				"code": "fa",
+				"flag": "https://flagcdn.com/w80/ir.png",
+				"info": "Персидский (фарси) термин 'هوش مصنوعی' (Housh Masnouei) является переводом английского 'Artificial Intelligence'. Это устойчивое сочетание в языке фарси."
+			},
+			{
+				"name": "Грузинский",
+				"term": "ხელოვნური ინტელექტი",
+				"code": "ka",
+    "flag": "https://flagcdn.com/w80/ge.png",
+    "info": "Грузинский термин 'ხელოვნური ინტელექტი' (Khelovnurui Int'eleqti) является переводом английского 'Artificial Intelligence'. Это устойчивое сочетание в грузинском языке."
+}, 
+			{
+				name: "Польский",
+				term: "Inteligencja Sztuczna",
+				code: "pl",
+				flag: "https://flagcdn.com/w80/pl.png ",
+				info: "Польский термин 'Inteligencja Sztuczna' следует классической структуре с прилагательным после существительного. Переводится как 'искусственный интеллект'."
+			},
+			{
+				name: "Сербский",
+				term: "Вештачка интелигенција",
+				code: "sr",
+				flag: "https://flagcdn.com/w80/rs.png ",
+				info: "На сербском языке 'Вештачка интелигенција' означает 'искусственный интеллект'. Термин использует кириллическую или латинскую письменность в зависимости от контекста."
+			},
+			{
+				name: "Хинди",
+				term: "कृत्रिम बुद्धि",
+				code: "hi",
+				flag: "https://flagcdn.com/w80/in.png ",
+				info: "На хинди 'कृत्रिम बुद्धि' (krttrim buddhi) дословно означает 'искусственный интеллект'. Это устойчивое выражение, основанное на санскритских корнях."
+				},	
+							{
+					"name": "Урду",
+					"term": "مصنوعی ذہانت",
+					"code": "ur",
+					"flag": "https://flagcdn.com/w80/pk.png",
+					"info": "Урду термин 'مصنوعی ذہانت' (Masnooi Zahanat) является переводом английского 'Artificial Intelligence'. Это устойчивое сочетание в урду."
+				},
+				{
+					"name": "Иврит",
+					"term": "בינה מלאכותית",
+					"code": "he",
+					"flag": "https://flagcdn.com/w80/il.png",
+					"info": "Иврит термин 'בינה מלאכותית' (Bina Melakhotit) является переводом английского 'Artificial Intelligence'. Это устойчивое сочетание в иврите."
+				},
+				{
+				name: "Португальский",
+				term: "Inteligência Artificial",
+				code: "pt",
+				flag: "https://flagcdn.com/w80/pt.png ",
+				info: "Португальский термин 'Inteligência Artificial' следует модели французского и испанского языков — прилагательное стоит после существительного, в отличие от английского порядка слов."
+			},
+			{
+				"name": "Бенгальский",
+				"term": "কৃত্রিম বুদ্ধিমত্তা",
+				"code": "bn",
+				"flag": "https://flagcdn.com/w80/bd.png",
+				"info": "Бенгальский термин 'কৃত্রিম বুদ্ধিমত্তা' (Kritrim Buddhimotta) является переводом английского 'Artificial Intelligence'. Это устойчивое сочетание в бенгальском языке."
+			},
+			{
+				"name": "Вьетнамский",
+				"term": "Trí tuệ nhân tạo",
+				"code": "vi",
+				"flag": "https://flagcdn.com/w80/vn.png",
+				"info": "Вьетнамский термин 'Trí tuệ nhân tạo' является переводом английского 'Artificial Intelligence'. Это устойчивое сочетание во вьетнамском языке."
+			},
+			{
+				"name": "Тамильский",
+				"term": "கிரக நுண்ணறிவு",
+				"code": "ta",
+				"flag": "https://flagcdn.com/w80/in.png",
+				"info": "Тамильский термин 'கிரக நுண்ணறிவு' (Kiraka Nunnarrivu) является переводом английского 'Artificial Intelligence'. Это устойчивое сочетание в тамильском языке."
+			},
+			{
+				"name": "Яванский",
+    "term": "Kecerdasan Buatan",
+    "code": "jv",
+    "flag": "https://flagcdn.com/w80/id.png",
+    "info": "Яванский термин 'Kecerdasan Buatan' является переводом английского 'Artificial Intelligence'. Это устойчивое сочетание в яванском языке."
+}
+        ];
+
+        // Функция для определения языка термина
+        function detectLanguage(term) {
+            const normalizedTerm = term.trim().toLowerCase();
+            
+            for (const lang of languages) {
+                if (normalizedTerm === lang.term.toLowerCase()) {
+                    return lang;
+                }
+            }
+            
+            // Если точного совпадения нет, попробуем найти частичное
+            for (const lang of languages) {
+                if (normalizedTerm.includes(lang.term.toLowerCase())) {
+                    return lang;
+                }
+            }
+            
+            return null;
+        }
+
+        // Функция для отображения результатов
+        function showResults(language) {
+            document.getElementById('inputForm').style.display = 'none';
+            document.getElementById('resultsContainer').style.display = 'block';
+            
+            document.getElementById('termDisplay').textContent = language.term;
+            document.getElementById('languageName').textContent = language.name;
+            document.getElementById('flagIcon').src = language.flag;
+            document.getElementById('flagIcon').alt = `Флаг ${language.name}`;
+            
+            const languageInfo = document.getElementById('languageInfo');
+            languageInfo.innerHTML = `<p>${language.info}</p>`;
+            
+            // Добавляем дополнительную информацию, если она была введена
+            const additionalInfo = document.getElementById('termInfo').value.trim();
+            if (additionalInfo) {
+                languageInfo.innerHTML += `<p><strong>Ваше примечание:</strong> ${additionalInfo}</p>`;
+            }
+        }
+
+        // Функция для отображения списка языков
+        function showLanguagesList() {
+            const listContainer = document.getElementById('languagesList');
+            listContainer.innerHTML = '';
+            
+            languages.forEach(lang => {
+                const card = document.createElement('div');
+                card.className = 'language-card';
+                card.innerHTML = `
+                    <h3>${lang.name}</h3>
+                    <p>${lang.term}</p>
+                `;
+                card.addEventListener('click', () => {
+                    document.getElementById('termInput').value = lang.term;
+                    document.getElementById('languagesModal').classList.remove('active');
+                });
+                listContainer.appendChild(card);
+            });
+            
+            document.getElementById('languagesModal').classList.add('active');
+        }
+
+        // Обработчики событий
+        document.addEventListener('DOMContentLoaded', function() {
+            // Кнопка анализа
+            document.getElementById('analyzeBtn').addEventListener('click', function() {
+                const term = document.getElementById('termInput').value.trim();
+                
+                if (!term) {
+                    alert('Пожалуйста, введите термин для анализа');
+                    return;
+                }
+                
+                const detectedLanguage = detectLanguage(term);
+                
+                if (detectedLanguage) {
+                    showResults(detectedLanguage);
+                } else {
+                    alert('Не удалось определить язык. Пожалуйста, проверьте правильность написания термина или воспользуйтесь списком поддерживаемых языков.');
+                }
+				
+			            });
+            
+            // Кнопка нового анализа
+            document.getElementById('newAnalysisBtn').addEventListener('click', function() {
+                document.getElementById('resultsContainer').style.display = 'none';
+                document.getElementById('inputForm').style.display = 'block';
+                document.getElementById('termInput').value = '';
+                document.getElementById('termInfo').value = '';
+                document.getElementById('termInput').focus();
+            });
+            
+            // Кнопка показа языков
+            document.getElementById('showLanguagesBtn').addEventListener('click', showLanguagesList);
+            
+            // Закрытие модального окна
+            document.getElementById('closeModal').addEventListener('click', function() {
+                document.getElementById('languagesModal').classList.remove('active');
+            });
+            
+            // Обработка нажатия Enter в поле ввода
+            document.getElementById('termInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('analyzeBtn').click();
+                }
+            });
+        });
+		document.addEventListener('DOMContentLoaded', function() {	
+		    // Показать секцию "О приложении"
+    document.getElementById('showAboutBtn').addEventListener('click', function() {
+        hideAllSections();
+        document.getElementById('aboutContainer').style.display = 'block';
+        setCurrentDate();
+    });
+    
+    // Вернуться из секции "О приложении"
+    document.getElementById('backBtn').addEventListener('click', function() {
+        hideAllSections();
+        document.getElementById('inputForm').style.display = 'block';
+    });
+    
+    // Вспомогательная функция для скрытия всех секций
+    function hideAllSections() {
+        document.getElementById('inputForm').style.display = 'none';
+        document.getElementById('resultsContainer').style.display = 'none';
+        document.getElementById('aboutContainer').style.display = 'none';
+    }
+    
+    // Установка текущей даты
+    function setCurrentDate() {
+        const now = new Date();
+        const options = { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            timeZone: 'Europe/Moscow'
+        };
+        document.getElementById('currentDate').textContent = 
+            now.toLocaleDateString('ru-RU', options);
+    }
+});
+</script>
+</body>
+</html>

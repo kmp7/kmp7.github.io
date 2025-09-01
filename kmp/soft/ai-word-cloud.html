@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+	<script src="d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1.2.5/build/d3.layout.cloud.min.js"></script>
+	<script src="d3.layout.cloud.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --panel-bg: #f5f5f5;
+            --header-bg: #325980;
+            --header-text: #ffffff;
+            --slider-color: #325980;
+            --button-bg: #4a90e2;
+            --button-text: white;
+			--primary-color: #3e76ad;
+		--header-text-color: #ffffff;
+		--border-radius: 8px;
+        }
+
+        .dark-theme {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --panel-bg: #2a2a2a;
+            --header-bg: #213a56;
+            --header-text: #ffffff;
+            --slider-color: #4a90e2;
+            --button-bg: #2c5282;
+            --button-text: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+         header {
+            background-color: var(--primary-color);
+            color: var(--header-text-color);
+            padding: 20px 0;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            background-image: linear-gradient(135deg, var(--primary-color) 0%, #2c3e50 100%);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+ h2, h3 {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+			color: #2061c9;
+			
+        }
+           .theme-toggle {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: var(--text-light);
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 1000;
+    }
+        .content {
+            display: flex;
+            flex: 1;
+        }
+
+        .control-panel {
+            width: 300px;
+            padding: 1rem;
+            background-color: var(--panel-bg);
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+        }
+
+        .visualization {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .cloud-container {
+            width: 100%;
+            height: 500px;
+            position: relative;
+        }
+
+        .footer {
+            background-color: var(--panel-bg);
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        select, button, input {
+            width: 100%;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        button {
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .word-input {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .word-input input {
+            flex: 2;
+            margin-right: 0.5rem;
+        }
+
+        .word-input input[type="range"] {
+            flex: 1;
+        }
+
+        .word-weight {
+            width: 30px;
+            text-align: right;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .slider-container input {
+            flex: 1;
+            margin: 0 0.5rem;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            height: 8px;
+            background: var(--slider-color);
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--button-bg);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .info-block {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: var(--panel-bg);
+            border-radius: 4px;
+        }
+
+        h2, h3 {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+			color: #2061c9;
+			
+        }
+
+        .context-header {
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            color: #1d52a8;
+            font-weight: bold;
+        }
+		
+		@media (max-width: 768px) {
+    .container {
+        min-height: auto;
+    }
+    
+    .content {
+        flex-direction: column;
+    }
+    
+    .control-panel {
+        width: 100%;
+        padding: 1rem;
+        box-shadow: none;
+        border-bottom: 1px solid var(--text-color);
+    }
+    
+    .visualization {
+        padding: 1rem;
+    }
+    
+    .cloud-container {
+        height: 300px;
+    }
+    
+    .theme-toggle {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+    
+    .header h1 {
+        font-size: 1.5rem;
+        padding-right: 50px;
+    }
+    
+    .word-input {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .word-input input {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+    
+    .slider-container {
+        width: 100%;
+    }
+    
+    .info-block ul {
+        padding-left: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    button, select {
+        padding: 0.8rem;
+        font-size: 1rem;
+    }
+    
+    .info-block {
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .context-header {
+        font-size: 1.2rem;
+    }
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>ИСКУССТВЕННЫЙ ИНТЕЛЛЕКТ</h1>
+			<p>интерактивная визуализация семантически близких и весомых слов</p>
+            <button class="theme-toggle" id="themeToggle">☀️</button>
+        </header>
+        
+        <div class="content">
+            <div class="control-panel">
+            <h3>Выбор респондента:</h3>
+                <select id="userType">
+                    <option value="student">Второклассник</option>
+                    <option value="philology">Профессор филологии</option>
+                    <option value="cs">Профессор компьютерных наук</option>
+                    <option value="llmmistral">LLM Mistral</option>
+					<option value="llm">Передовая LLM</option>
+                    <option value="custom">Ваш (настраиваемый!)</option>
+                </select>
+                
+                <div id="customWordsContainer" style="display: none;">
+                    <h3>Введите свои слова и веса:</h3>
+                    <div id="wordInputs"></div>
+                </div>
+                
+                <button id="updateCloud">Обновить облако</button>
+            </div>
+            
+            <div class="visualization">
+                <div class="context-header" id="contextHeader">ИИ для второклассника</div>
+                <div class="cloud-container" id="cloud"></div>
+                
+                <div class="info-block">
+                    <h3>О приложении</h3>
+                    <p>Это интерактивное веб-приложение для визуализации облака слов, семантически связанных с понятием "Искусственный интеллект". Приложение позволяет выбирать тип облака слов для разных категорий пользователей, вводить собственные слова и настраивать их веса.</p>
+                   <h3>Технологии</h3> <p>HTML5, CSS3, JavaScript, D3.js</p>
+                <h3>Функциональность</h3>
+                <ul>
+                    <li>Отображение облака из значисых и связанных с ИИ понятий</li>
+                    <li>Выбор режима отображения для разных категорий пользователей</li>
+                    <li>Возможность ввода собственных слов и настройки их весов</li>
+                    <li>Цветовое выделение и размер слов в зависимости от значимости</li>
+                    <li>Переключение между светлой и темной темой</li>
+                </ul>
+                </div>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+    </footer>
+</div>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+<script>
+    // Предопределенные наборы слов
+    const wordSets = {
+        student: [
+            { text: "Робот", weight: 90 },
+            { text: "Компьютер", weight: 85 },
+            { text: "Вау!", weight: 80 },
+            { text: "Домашка", weight: 75 },
+            { text: "Чат-бот", weight: 70 },
+            { text: "Помощник", weight: 65 },
+            { text: "Технологии", weight: 60 },
+            { text: "Магия", weight: 55 },
+            { text: "Игры", weight: 50 },
+            { text: "Умный", weight: 45 },
+            { text: "Интересно", weight: 40 },
+            { text: "Интернет", weight: 35 }
+        ],
+        philology: [
+            { text: "Лингвистика", weight: 90 },
+            { text: "Семантика", weight: 85 },
+            { text: "Коммуникация", weight: 80 },
+            { text: "Дискурс", weight: 75 },
+            { text: "Текст", weight: 70 },
+            { text: "Нарратив", weight: 65 },
+            { text: "Когнитивность", weight: 60 },
+            { text: "Метафора", weight: 55 },
+            { text: "Интерпретация", weight: 50 },
+            { text: "Символизм", weight: 45 },
+            { text: "Контекст", weight: 40 },
+            { text: "Диалог", weight: 35 }
+        ],
+        cs: [
+            { text: "Алгоритм", weight: 90 },
+            { text: "Нейросеть", weight: 85 },
+            { text: "Машинное обучение", weight: 80 },
+            { text: "Данные", weight: 75 },
+            { text: "Распознавание", weight: 70 },
+            { text: "Трансформер", weight: 65 },
+            { text: "Оптимизация", weight: 60 },
+            { text: "Вычисления", weight: 55 },
+            { text: "Модель", weight: 50 },
+            { text: "Классификация", weight: 45 },
+            { text: "Кластеризация", weight: 40 },
+            { text: "Регрессия", weight: 35 }
+        ],
+		llmmistral: [
+			{ text: "Обработка естественного языка", weight: 95 },
+			{ text: "Машинное обучение", weight: 90 },
+			{ text: "Нейронные сети", weight: 85 },
+			{ text: "Трансформеры", weight: 80 },
+			{ text: "Обучение без учителя", weight: 75 },
+			{ text: "Обучение с учителем", weight: 70 },
+			{ text: "Векторные представления", weight: 65 },
+			{ text: "Токенизация", weight: 60 },
+			{ text: "Внимание", weight: 55 },
+			{ text: "Генерация текста", weight: 50 },
+			{ text: "Классификация текста", weight: 45 },
+			{ text: "Анализ тональности", weight: 40 },
+			{ text: "Извлечение информации", weight: 35 },
+			{ text: "Моделирование языка", weight: 30 },
+			{ text: "Обобщение текста", weight: 25 },
+			{ text: "Перевод текста", weight: 20 },
+			{ text: "Обнаружение аномалий", weight: 15 },
+			{ text: "Обработка речи", weight: 10 },
+			{ text: "Чат-боты", weight: 5 },
+			{ text: "Обучение с подкреплением", weight: 5 },
+			{ text: "Этика ИИ", weight: 5 },
+			{ text: "Объяснимый ИИ", weight: 5 },
+			{ text: "Большие данные", weight: 5 },
+			{ text: "Облачные вычисления", weight: 5 },
+			{ text: "Оптимизация", weight: 5 }
+		],
+    custom: Array(12).fill().map((_, i) => ({ text: `Слово ${i+1}`, weight: 90 - i * 5 }))
+    };
+
+    // Заголовки для каждого типа пользователя
+    const contextHeaders = {
+        student: "ИИ для второклассника",
+        philology: "ИИ глазами профессора филологии",
+        cs: "ИИ в компьютерных науках",
+		llmmistral: "ИИ с точки зрения LLM Mistral",
+        custom: "Персональное облако слов"
+    };
+
+    // Текущий набор слов
+    let currentWords = [...wordSets.student];
+    let currentUserType = "student";
+
+    // Инициализация приложения
+    document.addEventListener('DOMContentLoaded', function() {
+        // Обработчик изменения типа пользователя
+        document.getElementById('userType').addEventListener('change', function() {
+            currentUserType = this.value;
+            
+            if (currentUserType === 'custom') {
+                document.getElementById('customWordsContainer').style.display = 'block';
+                populateCustomWordInputs();
+            } else {
+                document.getElementById('customWordsContainer').style.display = 'none';
+                currentWords = [...wordSets[currentUserType]];
+                updateContextHeader();
+                generateWordCloud();
+            }
+        });
+        
+        // Обработчик кнопки обновления облака
+        document.getElementById('updateCloud').addEventListener('click', function() {
+            if (currentUserType === 'custom') {
+                updateCustomWords();
+            }
+            generateWordCloud();
+        });
+        
+        // Обработчик переключения темы
+        document.getElementById('themeToggle').addEventListener('click', function() {
+            document.body.classList.toggle('dark-theme');
+            this.textContent = document.body.classList.contains('dark-theme') ? '🌙' : '☀️';
+        });
+        
+        // Инициализация интерфейса
+        populateCustomWordInputs();
+        generateWordCloud();
+    });
+
+    // Функция для обновления заголовка контекста
+    function updateContextHeader() {
+        document.getElementById('contextHeader').textContent = contextHeaders[currentUserType];
+    }
+
+    // Функция для заполнения полей ввода пользовательских слов
+    function populateCustomWordInputs() {
+        const container = document.getElementById('wordInputs');
+        container.innerHTML = '';
+        
+        for (let i = 0; i < 12; i++) {
+            const wordInput = document.createElement('div');
+            wordInput.className = 'word-input';
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentWords[i].text;
+            input.id = `word-${i}`;
+            input.placeholder = `Слово ${i+1}`;
+            
+            const sliderContainer = document.createElement('div');
+            sliderContainer.className = 'slider-container';
+            
+            const slider = document.createElement('input');
+            slider.type = 'range';
+            slider.min = '10';
+            slider.max = '100';
+            slider.value = currentWords[i].weight;
+            slider.id = `weight-${i}`;
+                
+                const weightDisplay = document.createElement('span');
+                weightDisplay.className = 'word-weight';
+                weightDisplay.textContent = currentWords[i].weight;
+                
+                slider.addEventListener('input', function() {
+                    weightDisplay.textContent = this.value;
+                });
+                
+                wordInput.appendChild(input);
+                sliderContainer.appendChild(slider);
+                sliderContainer.appendChild(weightDisplay);
+                wordInput.appendChild(sliderContainer);
+                
+                container.appendChild(wordInput);
+            }
+        }
+
+        // Функция для обновления пользовательских слов
+        function updateCustomWords() {
+            for (let i = 0; i < 12; i++) {
+                const text = document.getElementById(`word-${i}`).value || `Слово ${i+1}`;
+                const weight = parseInt(document.getElementById(`weight-${i}`).value);
+                
+                currentWords[i] = { text, weight };
+            }
+            updateContextHeader();
+        }
+
+        // Функция для генерации облака слов с использованием D3.js
+        function generateWordCloud() {
+            // Очистка предыдущего облака
+            d3.select("#cloud").html("");
+            
+            // Размеры контейнера
+            const width = document.getElementById('cloud').clientWidth;
+            const height = document.getElementById('cloud').clientHeight;
+            
+            // Разноцветная палитра для слов
+            const colorPalette = [
+                "#FF5733", "#33FF57", "#3357FF", "#FF33F5", 
+                "#F5FF33", "#33FFF5", "#FF3333", "#33FF33", 
+                "#3333FF", "#FFAA33", "#33FFAA", "#AA33FF"
+            ];
+            
+            // Шкала для размера шрифта
+            const fontSize = d3.scaleLinear()
+                .domain([d3.min(currentWords, d => d.weight), d3.max(currentWords, d => d.weight)])
+                .range([14, 60]);
+            
+            // Создание макета облака
+            const layout = d3.layout.cloud()
+                .size([width, height])
+                .words(currentWords.map((d, i) => ({
+                    text: d.text,
+                    size: fontSize(d.weight),
+                    weight: d.weight,
+                    color: colorPalette[i % colorPalette.length]
+                })))
+                .padding(5)
+                .rotate(() => ~~(Math.random() * 2) * 20) // Случайный поворот 0 или 90 градусов
+                .font("Impact")
+                .fontSize(d => d.size)
+                .on("end", draw);
+            
+            layout.start();
+            
+            // Функция для отрисовки облака
+            function draw(words) {
+                d3.select("#cloud").append("svg")
+                    .attr("width", layout.size()[0])
+                    .attr("height", layout.size()[1])
+                    .append("g")
+                    .attr("transform", `translate(${layout.size()[0] / 2},${layout.size()[1] / 2})`)
+                    .selectAll("text")
+                    .data(words)
+                    .enter().append("text")
+                    .style("font-size", d => `${d.size}px`)
+                    .style("font-family", "Impact")
+                    .style("fill", d => d.color)
+                    .attr("text-anchor", "middle")
+                    .attr("transform", d => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
+                    .text(d => d.text)
+                    .style("cursor", "pointer")
+                    .on("mouseover", function(event, d) {
+                        d3.select(this)
+                            .transition()
+                            .duration(200)
+                            .style("font-size", `${d.size * 1.2}px`)
+                            .style("fill", "#ff4500");
+                    })
+                    .on("mouseout", function(event, d) {
+                        d3.select(this)
+                            .transition()
+                            .duration(200)
+                            .style("font-size", `${d.size}px`)
+                            .style("fill", d.color);
+                    });
+            }
+            
+            // Обновление заголовка контекста
+            updateContextHeader();
+        }
+
+        // Обработка изменения размера окна
+        window.addEventListener('resize', function() {
+            generateWordCloud();
+        });
+    </script>
+</body>
+</html>

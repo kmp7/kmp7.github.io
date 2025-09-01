@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+	<script src="d3.v7.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f5f7fa;
+            --text-color: #333;
+            --primary-color: #3498db;
+            --primary-hover: #2980b9;
+            --container-bg: white;
+            --layer-bg: #ecf0f1;
+            --layer-active: #d5dbdb;
+            --component-bg: #f9f9f9;
+            --attention-bg: #d6eaf8;
+            --ffn-bg: #d5f5e3;
+            --token-bg: #e8f6fd;
+            --header-bg: #2c3e50;
+            --header-text: white;
+            --border-color: #ddd;
+            --shadow-color: rgba(0,0,0,0.1);
+			--primary-color: #3e76ad;
+		--header-text-color: #ffffff;
+		--border-radius: 8px;
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #4a9fe0;
+            --primary-hover: #3a8fd0;
+            --container-bg: #2d2d2d;
+            --layer-bg: #3a3a3a;
+            --layer-active: #4a4a4a;
+            --component-bg: #333;
+            --attention-bg: #2a4a6a;
+            --ffn-bg: #2a5a4a;
+            --token-bg: #2a3a4a;
+            --header-bg: #121212;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --shadow-color: rgba(0,0,0,0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            var(--primary-color);
+            color: var(--header-text);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px var(--shadow-color);
+			background-image: linear-gradient(135deg, var(--primary-color) 0%, #2c3e50 100%);
+        }
+
+
+background-color: var(--primary-color);
+            color: var(--header-text-color);
+            padding: 20px 0;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            background-image: linear-gradient(135deg, var(--primary-color) 0%, #2c3e50 100%);
+			
+			
+
+        .header-title {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+
+		h1 {
+            color: #ffffff;
+        }
+        h2, h3 {
+            color: var(--primary-color);
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        input[type="text"] {
+            padding: 10px 15px;
+            width: 100%;
+            max-width: 300px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 5px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+        }
+
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .visualization {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 30px;
+        }
+
+        @media (min-width: 768px) {
+            .visualization {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+        }
+
+        .encoder, .decoder {
+            width: 100%;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .encoder, .decoder {
+                width: 45%;
+                margin-bottom: 0;
+            }
+        }
+
+        .layer {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            background-color: var(--layer-bg);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        .layer.active {
+            background-color: var(--layer-active);
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.5);
+        }
+
+        .component {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: var(--component-bg);
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            cursor: help;
+            transition: background-color 0.3s;
+        }
+
+        .component.attention {
+            background-color: var(--attention-bg);
+        }
+
+        .component.ffn {
+            background-color: var(--ffn-bg);
+        }
+
+        .data-flow {
+            margin: 20px 0;
+            height: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .output-section {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+        }
+
+        .token {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 0 5px;
+            background-color: var(--token-bg);
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: var(--container-bg);
+            margin: 10% auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 700px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px var(--shadow-color);
+            color: var(--text-color);
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 20px;
+            top: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .connector {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .connector {
+                display: block;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                height: 2px;
+                background-color: var(--primary-color);
+                width: 10%;
+                z-index: 1;
+            }
+        }
+
+        .progress-indicator {
+            text-align: center;
+            margin: 20px 0;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .info-block {
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            padding: 25px;
+            margin: 30px 0;
+            box-shadow: 0 2px 10px var(--shadow-color);
+        }
+
+        .info-block h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            border-bottom: 2px solid var(--token-bg);
+            padding-bottom: 10px;
+        }
+
+        .info-block h3 {
+            color: var(--primary-color);
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .info-block ul, .info-block ol {
+            padding-left: 20px;
+        }
+
+        .info-block li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .info-block .tip {
+            background-color: var(--token-bg);
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .info-block strong {
+            color: var(--primary-color);
+        }
+		footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+    
+    </style>
+</head>
+<body>
+    <header>
+        <h1 class="header-title">Визуализация архитектуры Transformer</h1>
+        <button class="theme-toggle" id="theme-toggle">🌙</button>
+    </header>
+
+    <div class="container">
+        <div class="info-block">
+            <h2>Инструкция по использованию</h2>
+            <ol>
+                <li><strong>Введите текст</strong> в поле ввода (например, "Орлова Ева" или любой другой текст)</li>
+                <li>Нажмите кнопку <strong>"Запустить визуализацию"</strong> для начала процесса</li>
+                <li>Используйте кнопки <strong>"Следующий шаг"</strong> и <strong>"Предыдущий шаг"</strong> для навигации по этапам обработки</li>
+                <li>Нажимайте на компоненты (Multi-Head Attention, Feed-Forward Network и т.д.) для получения информации о них</li>
+                <li>Наблюдайте за движением токенов через слои энкодера и декодера</li>
+                <li>В конце процесса изучите результат работы модели в разделе "Результат"</li>
+                <li>Используйте кнопку <strong>"Сбросить"</strong> для начала нового процесса визуализации</li>
+            </ol>
+            
+            <p class="tip"><strong>Совет:</strong> Рекомендуется предварительно ознакомиться с теоретическим материалом.</p>
+        </div>
+
+        <div class="input-section">
+            <input type="text" id="input-text" placeholder="Введите текст (например: Орлова Ева)" value="Орлова Ева">
+            <button id="start-btn">Запустить визуализацию</button>
+        </div>
+        
+        <div class="controls">
+            <button id="prev-btn" disabled>Предыдущий шаг</button>
+            <button id="next-btn" disabled>Следующий шаг</button>
+            <button id="reset-btn" disabled>Сбросить</button>
+        </div>
+        
+        <div class="progress-indicator" id="progress-indicator">
+            Готов к визуализации
+        </div>
+        
+        <div class="visualization">
+            <div class="encoder">
+                <h2>Энкодер (Encoder)</h2>
+                <div id="encoder-layers"></div>
+            </div>
+            
+            <div class="connector"></div>
+            
+            <div class="decoder">
+                <h2>Декодер (Decoder)</h2>
+                <div id="decoder-layers"></div>
+            </div>
+        </div>
+        
+        <div class="output-section">
+            <h2>Результат</h2>
+            <div id="output-text">Здесь будет отображен результат</div>
+        </div>
+
+        <div class="info-block">
+            <h2>О приложении</h2>
+            <p>Данное интерактивное приложение демонстрирует архитектуру и принцип работы модели Transformer — основы современных языковых моделей, включая BERT, GPT и T5.</p>
+            
+            <h3>Функциональность приложения</h3>
+            <ul>
+                <li><strong>Визуализация архитектуры Transformer</strong> — наглядное представление энкодера и декодера с их компонентами</li>
+                <li><strong>Пошаговый процесс</strong> — возможность изучить каждый этап обработки данных</li>
+                <li><strong>Интерактивные подсказки</strong> — информация о каждом компоненте доступна по клику</li>
+                <li><strong>Анимация потока данных</strong> — визуализация движения токенов через слои модели</li>
+            </ul>
+            
+            <h3>Что нужно изучить</h3>
+            <ul>
+                <li><strong>Архитектура Transformer</strong> — структура энкодера и декодера, их взаимодействие</li>
+                <li><strong>Механизмы внимания</strong> — Multi-Head Attention, Masked Multi-Head Attention и Encoder-Decoder Attention</li>
+                <li><strong>Feed-Forward Networks</strong> — их роль в обработке данных</li>
+                <li><strong>Поток данных</strong> — как информация преобразуется при прохождении через модель</li>
+                <li><strong>Процесс генерации</strong> — как входные данные трансформируются в выходные</li>
+            </ul>
+            
+            <p class="tip"><strong>Совет:</strong> Для лучшего понимания рекомендуется последовательно изучить все этапы обработки и обратить внимание на информацию о каждом компоненте.</p>
+        </div>
+    </div>
+    
+    <div class="modal" id="info-modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="modal-title"></h2>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Конфигурация
+        const config = {
+            encoderLayers: 3,
+            decoderLayers: 3,
+            animationSpeed: 1000,
+            currentStep: 0,
+            totalSteps: 0,
+            isRunning: false,
+            darkMode: false
+        };
+        
+        // Информация о компонентах
+        const componentInfo = {
+            'multi-head-attention': {
+                title: 'Multi-Head Attention',
+                content: `<p>Multi-Head Attention позволяет модели фокусироваться на разных частях входной последовательности.</p>
+                          <p>Multi-Head Attention работает параллельно в нескольких "головах", анализируя разные аспекты последовательности.</p>
+                          <p>Каждая голова вычисляет внимание между всеми парами слов в последовательности, создавая матрицу внимания.</p>
+                          <p>Это позволяет модели улавливать различные лингвистические паттерны и зависимости между словами.</p>`
+            },
+            'masked-multi-head-attention': {
+                title: 'Masked Multi-Head Attention',
+                content: `<p>Masked Multi-Head Attention работает аналогично обычному механизму внимания, но с важным отличием.</p>
+                          <p>Маскирование предотвращает "подглядывание" в будущие токены при генерации последовательности.</p>
+                          <p>Каждое слово может обращать внимание только на предыдущие слова и на себя, но не на последующие.</p>
+                          <p>Это необходимо для обучения модели предсказывать следующее слово на основе только предыдущего контекста.</p>`
+            },
+            'encoder-decoder-attention': {
+                title: 'Encoder-Decoder Attention',
+                content: `<p>Encoder-Decoder Attention связывает энкодер и декодер, позволяя декодеру использовать информацию из входной последовательности.</p>
+                          <p>В этом механизме внимания:</p>
+                          <ul>
+                              <li>Ключи (K) и значения (V) поступают из выхода энкодера</li>
+                              <li>Запросы (Q) поступают из предыдущего слоя декодера</li>
+                          </ul>
+                          <p>Это позволяет каждой позиции в декодере фокусироваться на всех позициях во входной последовательности.</p>`
+            },
+            'feed-forward-network': {
+                title: 'Feed-Forward Network',
+                content: `<p>Feed-Forward Network (FFN) обрабатывает каждую позицию последовательности независимо.</p>
+                          <p>Состоит из двух линейных преобразований с активацией ReLU между ними:</p>
+                          <p><code>FFN(x) = max(0, xW₁ + b₁)W₂ + b₂</code></p>
+                          <p>FFN добавляет нелинейность в модель и увеличивает ее способность обрабатывать сложные паттерны.</p>
+                          <p>Каждая позиция обрабатывается одинаковой функцией, но независимо от других позиций.</p>`
+            }
+        };
+        
+        // DOM элементы
+        const elements = {
+            inputText: document.getElementById('input-text'),
+            startBtn: document.getElementById('start-btn'),
+            prevBtn: document.getElementById('prev-btn'),
+            nextBtn: document.getElementById('next-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            encoderLayers: document.getElementById('encoder-layers'),
+            decoderLayers: document.getElementById('decoder-layers'),
+            outputText: document.getElementById('output-text'),
+            modal: document.getElementById('info-modal'),
+            modalTitle: document.getElementById('modal-title'),
+            modalContent: document.getElementById('modal-content'),
+            closeModal: document.querySelector('.close-modal'),
+            progressIndicator: document.getElementById('progress-indicator'),
+            themeToggle: document.getElementById('theme-toggle')
+        };
+        
+        // Инициализация
+        function init() {
+            // Проверяем предпочтения пользователя по теме
+            checkThemePreference();
+            
+            // Создаем слои энкодера
+            for (let i = 0; i < config.encoderLayers; i++) {
+                const layer = document.createElement('div');
+                layer.className = 'layer encoder-layer';
+                layer.id = `encoder-layer-${i}`;
+                
+                const attention = document.createElement('div');
+                attention.className = 'component attention';
+                attention.textContent = 'Multi-Head Attention';
+                attention.dataset.type = 'multi-head-attention';
+                attention.addEventListener('click', showComponentInfo);
+                
+                const ffn = document.createElement('div');
+                ffn.className = 'component ffn';
+                ffn.textContent = 'Feed-Forward Network';
+                ffn.dataset.type = 'feed-forward-network';
+                ffn.addEventListener('click', showComponentInfo);
+                
+                const dataFlow = document.createElement('div');
+                dataFlow.className = 'data-flow';
+                dataFlow.id = `encoder-flow-${i}`;
+                
+                layer.appendChild(attention);
+                layer.appendChild(ffn);
+                layer.appendChild(dataFlow);
+                
+                elements.encoderLayers.appendChild(layer);
+            }
+            
+            // Создаем слои декодера
+            for (let i = 0; i < config.decoderLayers; i++) {
+                const layer = document.createElement('div');
+                layer.className = 'layer decoder-layer';
+                layer.id = `decoder-layer-${i}`;
+                
+                const maskedAttention = document.createElement('div');
+                maskedAttention.className = 'component attention';
+                maskedAttention.textContent = 'Masked Multi-Head Attention';
+                maskedAttention.dataset.type = 'masked-multi-head-attention';
+                maskedAttention.addEventListener('click', showComponentInfo);
+                
+                const encoderDecoderAttention = document.createElement('div');
+                encoderDecoderAttention.className = 'component attention';
+                encoderDecoderAttention.textContent = 'Encoder-Decoder Attention';
+                encoderDecoderAttention.dataset.type = 'encoder-decoder-attention';
+                encoderDecoderAttention.addEventListener('click', showComponentInfo);
+                
+                const ffn = document.createElement('div');
+                ffn.className = 'component ffn';
+                ffn.textContent = 'Feed-Forward Network';
+                ffn.dataset.type = 'feed-forward-network';
+                ffn.addEventListener('click', showComponentInfo);
+                
+                const dataFlow = document.createElement('div');
+                dataFlow.className = 'data-flow';
+                dataFlow.id = `decoder-flow-${i}`;
+                
+                layer.appendChild(maskedAttention);
+                layer.appendChild(encoderDecoderAttention);
+                layer.appendChild(ffn);
+                layer.appendChild(dataFlow);
+                
+                elements.decoderLayers.appendChild(layer);
+            }
+            
+            // Обработчики событий
+            elements.startBtn.addEventListener('click', startVisualization);
+            elements.prevBtn.addEventListener('click', prevStep);
+            elements.nextBtn.addEventListener('click', nextStep);
+            elements.resetBtn.addEventListener('click', resetVisualization);
+            elements.closeModal.addEventListener('click', closeModal);
+            elements.themeToggle.addEventListener('click', toggleTheme);
+            
+            // Закрыть модальное окно при клике вне его
+            window.addEventListener('click', (event) => {
+                if (event.target === elements.modal) {
+                    closeModal();
+                }
+            });
+        }
+        
+        // Проверка предпочтений темы
+        function checkThemePreference() {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (prefersDark) {
+                toggleTheme();
+            }
+        }
+        
+        // Переключение темы
+        function toggleTheme() {
+            config.darkMode = !config.darkMode;
+            document.body.classList.toggle('dark-mode');
+            elements.themeToggle.textContent = config.darkMode ? '☀️' : '🌙';
+        }
+        
+        // Показать информацию о компоненте
+        function showComponentInfo(event) {
+            const componentType = event.currentTarget.dataset.type;
+            const info = componentInfo[componentType];
+            
+            elements.modalTitle.textContent = info.title;
+            elements.modalContent.innerHTML = info.content;
+            elements.modal.style.display = 'block';
+        }
+        
+        // Закрыть модальное окно
+        function closeModal() {
+            elements.modal.style.display = 'none';
+        }
+        
+        // Запуск визуализации
+        function startVisualization() {
+            if (config.isRunning) return;
+            
+            const input = elements.inputText.value.trim();
+            if (!input) {
+                alert('Пожалуйста, введите текст для визуализации');
+                return;
+            }
+            
+            config.isRunning = true;
+            config.currentStep = 0;
+            
+            // Вычисляем общее количество шагов
+            config.totalSteps = (config.encoderLayers * 2) + (config.decoderLayers * 3) + 1;
+            
+            // Подготовка токенов
+            const tokens = input.split(/\s+/);
+            config.tokens = tokens;
+            
+            // Активируем кнопки управления
+            elements.startBtn.disabled = true;
+            elements.prevBtn.disabled = true;
+            elements.nextBtn.disabled = false;
+            elements.resetBtn.disabled = false;
+            
+            // Сбросить все слои и потоки данных
+            resetLayers();
+            
+            // Обновить индикатор прогресса
+            updateProgressIndicator();
+            
+            // Запустить первый шаг
+            processStep();
+        }
+        
+        // Обработка текущего шага
+        function processStep() {
+            const step = config.currentStep;
+            const encoderSteps = config.encoderLayers * 2;
+            const decoderSteps = config.decoderLayers * 3;
+            
+            // Обновить индикатор прогресса
+            updateProgressIndicator();
+            
+            // Сбросить активные классы
+            resetActiveClasses();
+            
+            if (step < encoderSteps) {
+                // Шаги энкодера
+                const layerIndex = Math.floor(step / 2);
+                const isAttention = step % 2 === 0;
+                
+                const layer = document.getElementById(`encoder-layer-${layerIndex}`);
+                layer.classList.add('active');
+                
+                const components = layer.querySelectorAll('.component');
+                if (isAttention) {
+                    // Multi-Head Attention
+                    components[0].classList.add('active');
+                    animateDataFlow(`encoder-flow-${layerIndex}`, config.tokens);
+                } else {
+                    // Feed-Forward Network
+                    components[1].classList.add('active');
+                    animateDataFlow(`encoder-flow-${layerIndex}`, config.tokens);
+                }
+            } else if (step < encoderSteps + decoderSteps) {
+                // Шаги декодера
+                const decoderStep = step - encoderSteps;
+                const layerIndex = Math.floor(decoderStep / 3);
+                const componentIndex = decoderStep % 3;
+                
+                const layer = document.getElementById(`decoder-layer-${layerIndex}`);
+                layer.classList.add('active');
+                
+                const components = layer.querySelectorAll('.component');
+                components[componentIndex].classList.add('active');
+                
+                animateDataFlow(`decoder-flow-${layerIndex}`, config.tokens);
+            } else {
+                // Финальный шаг - вывод результата
+                generateOutput();
+            }
+            
+            // Обновляем состояние кнопок
+            elements.prevBtn.disabled = step === 0;
+            elements.nextBtn.disabled = step === config.totalSteps - 1;
+        }
+        
+        // Анимация потока данных
+        function animateDataFlow(flowId, tokens) {
+            const dataFlow = document.getElementById(flowId);
+            if (!dataFlow) {
+                console.error(`Элемент с id "${flowId}" не найден`);
+                return;
+            }
+            
+            dataFlow.innerHTML = '';
+            
+            // Создаем SVG для анимации
+            const width = dataFlow.offsetWidth;
+            const height = dataFlow.offsetHeight;
+            
+            const svg = d3.select(`#${flowId}`)
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height);
+            
+            // Создаем токены как кружки
+            const tokenCircles = svg.selectAll("circle")
+                .data(tokens)
+                .enter()
+                .append("circle")
+                .attr("r", 8)
+                .attr("fill", (d, i) => d3.schemeCategory10[i % 10])
+                .attr("cx", -10)
+                .attr("cy", (d, i) => 20 + i * (height - 40) / Math.max(tokens.length - 1, 1));
+            
+            // Анимируем движение токенов
+            tokenCircles.transition()
+                .duration(config.animationSpeed)
+                .attr("cx", width + 10);
+        }
+        
+        // Генерация выходных данных
+        function generateOutput() {
+            const tokens = config.tokens;
+            elements.outputText.innerHTML = '';
+            
+            // Простая трансформация для демонстрации
+            const outputTokens = tokens.map(token => {
+                return `<span class="token">★${token}★</span>`;
+            });
+            
+            elements.outputText.innerHTML = outputTokens.join(' ');
+        }
+        
+        // Переход к следующему шагу
+        function nextStep() {
+            if (config.currentStep < config.totalSteps - 1) {
+                config.currentStep++;
+                processStep();
+            }
+        }
+        
+        // Переход к предыдущему шагу
+        function prevStep() {
+            if (config.currentStep > 0) {
+                config.currentStep--;
+                processStep();
+            }
+        }
+        
+        // Сброс визуализации
+        function resetVisualization() {
+            config.isRunning = false;
+            config.currentStep = 0;
+            config.tokens = [];
+            
+            elements.startBtn.disabled = false;
+            elements.prevBtn.disabled = true;
+            elements.nextBtn.disabled = true;
+            elements.resetBtn.disabled = true;
+            
+            resetLayers();
+            elements.outputText.innerHTML = 'Здесь будет отображен результат';
+            elements.progressIndicator.textContent = 'Готов к визуализации';
+        }
+        
+        // Сброс всех слоев
+        function resetLayers() {
+            const layers = document.querySelectorAll('.layer');
+            layers.forEach(layer => {
+                layer.classList.remove('active');
+            });
+            
+            const components = document.querySelectorAll('.component');
+            components.forEach(component => {
+                component.classList.remove('active');
+            });
+            
+            const dataFlows = document.querySelectorAll('.data-flow');
+            dataFlows.forEach(flow => {
+                flow.innerHTML = '';
+            });
+        }
+        
+        // Сброс активных классов
+        function resetActiveClasses() {
+            const activeElements = document.querySelectorAll('.active');
+            activeElements.forEach(el => {
+                el.classList.remove('active');
+            });
+        }
+        
+        // Обновление индикатора прогресса
+        function updateProgressIndicator() {
+            const step = config.currentStep;
+            const total = config.totalSteps;
+            
+            const encoderSteps = config.encoderLayers * 2;
+            const decoderSteps = config.decoderLayers * 3;
+            
+            let message = '';
+            
+            if (step < encoderSteps) {
+                const layerIndex = Math.floor(step / 2) + 1;
+                const isAttention = step % 2 === 0;
+                message = `Энкодер: Слой ${layerIndex}, ${isAttention ? 'Multi-Head Attention' : 'Feed-Forward Network'}`;
+            } else if (step < encoderSteps + decoderSteps) {
+                const decoderStep = step - encoderSteps;
+                const layerIndex = Math.floor(decoderStep / 3) + 1;
+                const componentIndex = decoderStep % 3;
+                
+                let componentName = '';
+                switch (componentIndex) {
+                    case 0: componentName = 'Masked Multi-Head Attention'; break;
+                    case 1: componentName = 'Encoder-Decoder Attention'; break;
+                    case 2: componentName = 'Feed-Forward Network'; break;
+                }
+                
+                message = `Декодер: Слой ${layerIndex}, ${componentName}`;
+            } else {
+                message = 'Генерация выходных данных';
+            }
+            
+            elements.progressIndicator.textContent = `Шаг ${step + 1} из ${total}: ${message}`;
+        }
+        
+        // Проверка загрузки D3.js
+        function checkD3Loaded() {
+            if (typeof d3 === 'undefined') {
+                console.error('Библиотека D3.js не загружена!');
+                alert('Не удалось загрузить библиотеку D3.js. Пожалуйста, проверьте подключение к интернету и перезагрузите страницу.');
+                return false;
+            }
+            return true;
+        }
+        
+        // Запуск после загрузки страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            if (checkD3Loaded()) {
+                init();
+                console.log('Приложение инициализировано');
+            }
+        });
+    </script>
+</body>
+</html>

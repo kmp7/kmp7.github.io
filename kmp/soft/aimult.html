@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f7fa;
+            --text-color: #333;
+            --card-bg: #428cd6;
+            --card-text: white;
+            --section-bg: #fff;
+            --section-border: rgba(0, 0, 0, 0.1);
+            --li-bg: #f9f9f9;
+            --li-border: #3498db;
+            --heading-color: #325980;
+            --subheading-color: #2c3e50;
+            --code-bg: #f1f1f1;
+            --footer-border: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --modal-overlay: rgba(0, 0, 0, 0.5);
+            --secondary: #428cd6;
+            --white: white;
+            --form-border: #ddd;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a2e;
+            --text-color: #e6e6e6;
+            --card-bg: #2b5797;
+            --card-text: white;
+            --section-bg: #222639;
+            --section-border: rgba(255, 255, 255, 0.1);
+            --li-bg: #2c3144;
+            --li-border: #4287f5;
+            --heading-color: #6a8ec8;
+            --subheading-color: #a1c4fd;
+            --code-bg: #2a2a3a;
+            --footer-border: #333;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --modal-overlay: rgba(0, 0, 0, 0.7);
+            --secondary: #4287f5;
+            --white: white;
+            --form-border: #444;
+        }
+		
+		
+		
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        h1 {
+            text-align: center;
+            color: var(--heading-color);
+            margin-bottom: 40px;
+        }
+        
+        .cards-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            width: 300px;
+            height: 200px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            box-shadow: 0 4px 8px var(--shadow-color);
+            border-radius: 10px;
+        }
+        
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            background-color: var(--card-bg);
+            color: var(--card-text);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        
+        .original-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .translated-name {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        
+        .ai-translation {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .instructions {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: var(--section-bg);
+            border-radius: 10px;
+            box-shadow: 0 2px 4px var(--shadow-color);
+        }
+        
+        code {
+            background-color: var(--code-bg);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+		
+		.ai-multilingualism {
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: var(--section-bg);
+            border-radius: 8px;
+            box-shadow: 0 0 10px var(--shadow-color);
+        }
+
+        .ai-multilingualism h1 {
+            text-align: center;
+            color: var(--heading-color);
+        }
+
+        .ai-multilingualism p {
+            margin-bottom: 15px;
+        }
+
+        .ai-multilingualism ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .ai-multilingualism li {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--li-bg);
+            border-left: 4px solid var(--li-border);
+        }
+
+        .ai-multilingualism h2 {
+            margin-top: 0;
+            color: var(--subheading-color);
+        }
+
+        .ai-multilingualism p {
+            margin: 10px 0 0;
+        }
+
+		footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid var(--footer-border);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 100;
+            background-color: var(--card-bg);
+            color: var(--card-text);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px var(--shadow-color);
+        }
+
+        .add-term-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--secondary);
+            color: var(--white);
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px var(--shadow-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+
+        .add-term-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-overlay);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--section-bg);
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 5px 15px var(--shadow-color);
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+            background: none;
+            border: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--form-border);
+            border-radius: 5px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 16px;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: var(--secondary);
+            color: var(--white);
+            margin-left: 10px;
+        }
+
+        .btn-secondary {
+            background-color: var(--li-bg);
+            color: var(--text-color);
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                width: 280px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" id="themeToggle">☀️</button>
+    
+    <h1>Штучны інтэлект на розных мовах</h1>
+    
+    <div class="cards-container" id="cardsContainer">
+        <!-- Карточки будут добавлены через JavaScript -->
+    </div>
+    
+    <section class="ai-multilingualism">
+        <h1>Многоязычность термина "Искусственный интеллект"</h1>
+        <p>
+            Многоязычность термина "Искусственный интеллект" отражает его глобальное значение и влияние на различные культуры и языки. Вот несколько ключевых аспектов, которые можно выделить:
+        </p>
+        <ul>
+            <li>
+                <h2>Универсальность концепции</h2>
+                <p>
+                    Термин "Искусственный интеллект" существует в большинстве языков мира, что подчеркивает его универсальность и важность в современном мире. Это свидетельствует о том, что концепция ИИ признана и изучается во всем мире.
+                </p>
+            </li>
+            <li>
+                <h2>Лингвистическое разнообразие</h2>
+                <p>
+                    Перевод термина на разные языки демонстрирует лингвистическое разнообразие и особенности каждого языка. Например, в некоторых языках термин может быть заимствован из английского, а в других - переведен с использованием местных корней и аффиксов.
+                </p>
+            </li>
+            <li>
+                <h2>Культурные особенности</h2>
+                <p>
+                    Изучение термина на разных языках может раскрыть культурные особенности и различия в восприятии искусственного интеллекта. Например, в некоторых культурах термин может ассоциироваться с положительными или отрицательными коннотациями.
+                </p>
+            </li>
+            <li>
+                <h2>Терминологическое развитие</h2>
+                <p>
+                    Многоязычность термина "Искусственный интеллект" также отражает развитие терминологии в различных языках. В некоторых языках могут существовать синонимы или альтернативные термины, которые используются для обозначения ИИ.
+                </p>
+            </li>
+            <li>
+                <h2>Междисциплинарные исследования</h2>
+                <p>
+                    Изучение термина на разных языках может быть частью междисциплинарных исследований, объединяющих лингвистику, компьютерные науки, философию и другие дисциплины. Это помогает глубже понять концепцию ИИ и его влияние на общество.
+                </p>
+            </li>
+            <li>
+                <h2>Образовательные возможности</h2>
+                <p>
+                    Многоязычность термина предоставляет образовательные возможности для студентов и исследователей. Изучение термина на разных языках может помочь улучшить языковые навыки, расширить культурные горизонты и углубить понимание концепции ИИ.
+                </p>
+            </li>
+            <li>
+                <h2>Глобальное сотрудничество</h2>
+                <p>
+                    Многоязычность термина способствует глобальному сотрудничеству в области искусственного интеллекта. Ученые и специалисты из разных стран могут обмениваться знаниями и опытом, используя общий термин на своих языках.
+                </p>
+            </li>
+        </ul>
+        <p>
+            В целом, многоязычность термина "Искусственный интеллект" подчеркивает его глобальное значение и влияние на различные культуры и языки. Это также открывает возможности для междисциплинарных исследований, образовательных проектов и глобального сотрудничества.
+        </p>
+    </section>
+
+    <button class="add-term-btn" id="addTermBtn">+</button>
+
+    <div class="modal" id="addTermModal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeModal">&times;</button>
+            <h2>Добавить новый термин</h2>
+            <form id="addTermForm">
+                <div class="form-group">
+                    <label for="originalName">Название языка (оригинал)</label>
+                    <input type="text" id="originalName" required>
+                </div>
+                <div class="form-group">
+                    <label for="russianName">Название языка (по-русски)</label>
+                    <input type="text" id="russianName" required>
+                </div>
+                <div class="form-group">
+                    <label for="englishName">Название языка (по-английски)</label>
+                    <input type="text" id="englishName" required>
+                </div>
+                <div class="form-group">
+                    <label for="aiTranslation">"Искусственный интеллект" на этом языке</label>
+                    <input type="text" id="aiTranslation" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelBtn">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>© 2025 | Искусственный интеллект в профессиональной деятельности<br>
+            Разработано для студентов БрГУ имени А.С. Пушкина</p>
+        </div>
+    </footer>
+    <div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    
+    <script>
+        // Массив с данными для карточек
+        const languageCards = [
+            {
+                "originalName": "Беларуская",
+                "russianName": "Белорусский язык",
+                "englishName": "Belarusian",
+                "aiTranslation": "Штучны інтэлект"
+            },
+            {
+                originalName: "Русский язык",
+                russianName: "Русский язык",
+                englishName: "Russian",
+                aiTranslation: "Искусственный интеллект"
+            },
+            {
+                originalName: "English",
+                russianName: "Английский язык",
+                englishName: "English",
+                aiTranslation: "Artificial Intelligence"
+            },
+            {
+                originalName: "Deutsch",
+                russianName: "Немецкий язык",
+                englishName: "German",
+                aiTranslation: "Künstliche Intelligenz"
+            },
+            {
+                originalName: "中文",
+                russianName: "Китайский язык",
+                englishName: "Chinese",
+                aiTranslation: "人工智能"
+            },
+            {
+                originalName: "العربية",
+                russianName: "Арабский язык",
+                englishName: "Arabic",
+                aiTranslation: "الذكاء الاصطناعي"
+            },
+            {
+                "originalName": "Español",
+                "russianName": "Испанский язык",
+                "englishName": "Spanish",
+                "aiTranslation": "Inteligencia Artificial"
+            },
+            {
+                "originalName": "Português",
+                "russianName": "Португальский язык",
+                "englishName": "Portuguese",
+                "aiTranslation": "Inteligência Artificial"
+            },
+            {
+                "originalName": "Français",
+                "russianName": "Французский язык",
+                "englishName": "French",
+                "aiTranslation": "Intelligence Artificielle"
+            },
+            {
+                "originalName": "Italiano",
+                "russianName": "Итальянский язык",
+                "englishName": "Italian",
+                "aiTranslation": "Intelligenza Artificiale"
+            },
+            {
+                "originalName": "日本語",
+                "russianName": "Японский язык",
+                "englishName": "Japanese",
+                "aiTranslation": "人工知能"
+            },
+            {
+                "originalName": "한국어",
+                "russianName": "Корейский язык",
+                "englishName": "Korean",
+                "aiTranslation": "인공지능"
+            },
+            {
+                "originalName": "हिन्दी",
+                "russianName": "Хинди",
+                "englishName": "Hindi",
+                "aiTranslation": "कृत्रिम बुद्धिमत्ता"
+            },
+            {
+                "originalName": "Polski",
+                "russianName": "Польский язык",
+                "englishName": "Polish",
+                "aiTranslation": "Sztuczna Inteligencja"
+            },
+            {
+                "originalName": "فارسی",
+                "russianName": "Фарси (Персидский)",
+                "englishName": "Persian (Farsi)",
+                "aiTranslation": "هوش مصنوعی"
+            },
+            {
+                "originalName": "Српски",
+                "russianName": "Сербский язык",
+                "englishName": "Serbian",
+                "aiTranslation": "Вештачка интелигенција"
+            },
+            {
+                "originalName": "Български",
+                "russianName": "Болгарский язык",
+                "englishName": "Bulgarian",
+                "aiTranslation": "Изкуствен интелект"
+            },
+            {
+                "originalName": "Türkçe",
+                "russianName": "Турецкий язык",
+                "englishName": "Turkish",
+                "aiTranslation": "Yapay Zeka"
+            },
+            {
+                "originalName": "עברית",
+                "russianName": "Иврит",
+                "englishName": "Hebrew",
+                "aiTranslation": "אינטליגנציה מלאכותית"
+            },
+            {
+                "originalName": "Afrikaans",
+                "russianName": "Африкаанс",
+                "englishName": "Afrikaans",
+                "aiTranslation": "Kunsmatige Intelligensie"
+            },
+            {
+                "originalName": "Kiswahili",
+                "russianName": "Суахили",
+                "englishName": "Swahili",
+                "aiTranslation": "Ujakaji Umekanisi"
+            },
+            {
+                "originalName": "Ελληνικά",
+                "russianName": "Греческий язык",
+                "englishName": "Greek",
+                "aiTranslation": "Τεχνητή Νοημοσύνη"
+            },
+            {
+                "originalName": "ქართული",
+                "russianName": "Грузинский язык",
+                "englishName": "Georgian",
+                "aiTranslation": "ხელოვნური ინტელექტი"
+            },
+            {
+                "originalName": "Հայերեն",
+                "russianName": "Армянский язык",
+                "englishName": "Armenian",
+                "aiTranslation": "Արհեստական ինտելեկտ"
+            },
+            {
+                "originalName": "Татарча",
+                "russianName": "Татарский язык",
+                "englishName": "Tatar",
+                "aiTranslation": "Ясалма интеллект"
+            },
+            {
+                "originalName": "Македонски",
+                "russianName": "Македонский язык",
+                "englishName": "Macedonian",
+                "aiTranslation": "Вештачка интелигенција"
+            },
+            {
+                "originalName": "Magyar",
+                "russianName": "Венгерский язык",
+                "englishName": "Hungarian",
+                "aiTranslation": "Mesterséges intelligencia"
+            }
+        ];
+
+        // Функция для создания карточки
+        function createCard(cardData) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            card.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-front">
+                        <div class="original-name">${cardData.originalName}</div>
+                        <div class="translated-name">${cardData.russianName}</div>
+                        <div class="translated-name">${cardData.englishName}</div>
+                    </div>
+                    <div class="card-back">
+                        <div class="ai-translation">${cardData.aiTranslation}</div>
+                    </div>
+                </div>
+            `;
+            
+            card.addEventListener('click', function() {
+                this.classList.toggle('flipped');
+            });
+            
+            return card;
+        }
+
+        // Функция для отображения всех карточек
+        function renderCards() {
+            const container = document.getElementById('cardsContainer');
+            container.innerHTML = '';
+            
+            languageCards.forEach(cardData => {
+                const card = createCard(cardData);
+                container.appendChild(card);
+            });
+        }
+
+        // Переключение темы
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+        
+        // Проверка сохраненной темы
+        if (localStorage.getItem('theme') === 'dark') {
+            body.setAttribute('data-theme', 'dark');
+            themeToggle.textContent = '🌙';
+        }
+        
+        themeToggle.addEventListener('click', function() {
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+
+        // Модальное окно для добавления новых терминов
+        const modal = document.getElementById('addTermModal');
+        const addTermBtn = document.getElementById('addTermBtn');
+        const closeModal = document.getElementById('closeModal');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const addTermForm = document.getElementById('addTermForm');
+        
+        // Открыть модальное окно
+        addTermBtn.addEventListener('click', function() {
+            modal.style.display = 'flex';
+        });
+        
+        // Закрыть модальное окно
+        function closeModalWindow() {
+            modal.style.display = 'none';
+            addTermForm.reset();
+        }
+        
+        closeModal.addEventListener('click', closeModalWindow);
+        cancelBtn.addEventListener('click', closeModalWindow);
+        
+        // Закрыть модальное окно при клике вне его
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeModalWindow();
+            }
+        });
+        
+        // Обработка формы добавления
+        addTermForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const newCard = {
+                originalName: document.getElementById('originalName').value,
+                russianName: document.getElementById('russianName').value,
+                englishName: document.getElementById('englishName').value,
+                aiTranslation: document.getElementById('aiTranslation').value
+            };
+            
+            // Добавляем новую карточку в массив
+            languageCards.push(newCard);
+            
+            // Обновляем отображение
+            renderCards();
+            
+            // Закрываем модальное окно
+            closeModalWindow();
+            
+            // Прокрутка к новой карточке (в конец списка)
+            setTimeout(() => {
+                window.scrollTo({
+                    top: document.body.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 100);
+        });
+
+        // Отобразить карточки при загрузке страницы
+        renderCards();
+    </script>
+</body>
+</html>
