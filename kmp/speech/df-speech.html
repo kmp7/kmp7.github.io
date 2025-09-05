@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>РЕЧЬ</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | Искусственный интеллект в профессиональной деятельности<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+                  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — многоуровневый процесс преобразования коммуникативного замысла в акустико-артикуляционный сигнал. Он включает этапы концептуализации, лексико‑грамматической формулировки, фонологического кодирования, моторного планирования и артикуляции и опирается на слуховую и соматосенсорную обратную связь.",
+      "category": "Психолингвистика (многоуровневое порождение)"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is a multi-level process that transforms communicative intent into an acoustic–articulatory signal. It comprises conceptualization, lexical–syntactic formulation, phonological encoding, motor planning, and articulation, supported by auditory and somatosensory feedback.",
+      "category": "Psycholinguistics (multi-level production)"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — высокоточное, обучаемое оро‑лицевое моторное поведение, координирующее дыхание, фонацию и артикуляцию. Оно управляется сочетанием упреждающих и обратных контуров с использованием внутренних моделей и сенсорной переоценки.",
+      "category": "Моторный контроль речи"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is a learned, high-precision orofacial motor behavior coordinating respiration, phonation, and articulation. It is governed by combined feedforward and feedback control using internal models and sensory re-evaluation.",
+      "category": "Motor control of speech"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — функция распределённой корково‑подкорковой сети, включающей лобно‑инсулярные и премоторные области (IFG, SMA), височно‑теменные сенсомоторные узлы, базальные ганглии и мозжечок. Эти узлы обеспечивают планирование, последовательность, временную координацию и мониторинг артикуляции.",
+      "category": "Нейронаука речи (корково-подкорковые сети)"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is a function of a distributed cortico–subcortical network including frontal–insular and premotor regions (IFG, SMA), temporo–parietal sensorimotor hubs, the basal ganglia, and the cerebellum. This network supports planning, sequencing, temporal coordination, and monitoring of articulation.",
+      "category": "Neuroscience of speech (cortico-subcortical networks)"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — последовательность перекрывающихся артикуляторных жестов, реализующих цели сужения в вокальном тракте и создающих коартикуляцию. Представления формулируются в пространстве задач, а не как независимые движения отдельных органов.",
+      "category": "Артикуляционная фонетика (жестовая/динамическая)"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is a sequence of overlapping articulatory gestures that achieve constriction goals in the vocal tract, yielding coarticulation. Representations are specified in task space rather than as independent movements of individual articulators.",
+      "category": "Articulatory phonetics (gestural/dynamic)"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — амплитудно‑частотно модулированный акустический сигнал, несущий лингвистическую информацию во временных и спектральных паттернах. Он характеризуется огибающей и модуляциями, формантной структурой, переходами и просодическими контрастами F0, длительности и интенсивности.",
+      "category": "Акустическая фонетика"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is an amplitude- and frequency-modulated acoustic signal that carries linguistic information in temporal and spectral patterns. It is characterized by its amplitude envelope and modulations, formant structure, transitions, and prosodic contrasts in F0, duration, and intensity.",
+      "category": "Acoustic phonetics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — физическая реализация фонологической структуры языка: отличительных признаков, фонем, слогов, метрических и тональных шаблонов. Преобразование от абстрактных единиц к движению и звуку определяется правилами/ограничениями фонологии и фонотактики, включая морфофонологию.",
+      "category": "Фонология и фонетическая реализация"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is the physical realization of a language’s phonological structure: distinctive features, phonemes, syllables, metrical and tonal patterns. The mapping from abstract units to movement and sound is governed by phonological rules/constraints and phonotactics, including morphophonology.",
+      "category": "Phonology and phonetic implementation"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — просодически организованный поток, где интонационные фразы, акцент и тонирование кодируют информационную структуру и прагматическое значение. Управление F0, временем, интенсивностью и спектром формирует ритм, выделение и выражение эмоций/установок.",
+      "category": "Просодия и интонация"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is a prosodically organized stream in which intonational phrases, prominence, and tonal patterns encode information structure and pragmatic meaning. Control of F0, timing, intensity, and spectral tilt shapes rhythm, prominence, and the expression of attitudes/emotions.",
+      "category": "Prosody and intonation"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — кодирование сообщений по шумному каналу при ограничениях времени, усилия и когнитивных ресурсов. Говорящие регулируют скорость и степень редукции/усиления артикуляции, выравнивая информационную плотность и создавая избыточность для устойчивости к помехам.",
+      "category": "Информационная теория речи"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is the encoding of messages over a noisy channel under constraints of time, effort, and cognitive resources. Speakers regulate rate and the degree of reduction/enhancement to equalize information density and introduce redundancy for robustness to noise.",
+      "category": "Information-theoretic view of speech"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — социальное действие, координирующее взаимодействие через проектирование высказываний под адресата, управление очередностью и репертуаром речевых актов. Порождение онлайн адаптируется к обратной связи партнёра, контексту и нормам вежливости.",
+      "category": "Прагматика и разговорный анализ"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is social action coordinating interaction through recipient design, turn-taking management, and a repertoire of speech acts. Production adapts online to partner feedback, context, and politeness norms.",
+      "category": "Pragmatics and conversation analysis"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — иерархически организованная во времени активность: планирование и исполнение идут порциями и синхронизируются с внутренними и внешними ритмами. Слоговая и фразовая структура опираются на нейромоторную осцилляторную координацию и механизмы тайминга.",
+      "category": "Временная организация и ритмы"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is a hierarchically time-organized activity in which planning and execution proceed in chunks and synchronize with internal and external rhythms. Syllabic and phrasal structure draw on neuromotor oscillatory coordination and timing mechanisms.",
+      "category": "Temporal organization and rhythms"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — развивающаяся способность, проходящая путь от лепета и имитации к автоматизированной координации через статистическое обучение и сенсомоторную калибровку. Детские ошибки и вариативность отражают настройку уровней порождения.",
+      "category": "Онтогенез речи"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is a developing capacity that proceeds from babbling and imitation to automatized coordination via statistical learning and sensorimotor calibration. Child errors and variability reflect the tuning of production levels.",
+      "category": "Ontogeny of speech"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — функция, уязвимая к селективным нарушениям, раскрывающим её архитектуру: апраксия нарушает планирование, дизартрия — выполнение, афазии — формулировку и программирование. Клинические профили демонстрируют роль обратной связи и межуровневых зависимостей.",
+      "category": "Клиническая нейролингвистика/логопедия"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is a function vulnerable to selective disorders that reveal its architecture: apraxia impairs planning, dysarthria impairs execution, and aphasias disrupt formulation and programming. Clinical profiles demonstrate the role of feedback and inter-level dependencies.",
+      "category": "Clinical neurolinguistics/speech-language pathology"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — вычислимый генеративный процесс, который можно моделировать как граф состояний или нейронную сеть, преобразующую намерение в артикуляцию и акустику. Артикуляторный синтез и модели контроля на основе внутренних представлений формализуют коартикуляцию, вариативность и адаптацию.",
+      "category": "Компьютерные модели порождения речи"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is a computable generative process that can be modeled as a state graph or neural network transforming intention into articulation and acoustics. Articulatory synthesis and control models based on internal representations formalize coarticulation, variability, and adaptation.",
+      "category": "Computational models of speech production"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — мультимодальная координация голоса с жестами рук, мимикой и взглядом, которые совместно кодируют смысл и синхронизируются с просодическими опорами. Невербальные каналы разгружают вербальный поток и облегчают планирование и сегментацию.",
+      "category": "Мультимодальная коммуникация (жест—речь)"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech is a multimodal coordination of voice with manual gesture, facial expression, and gaze that jointly encode meaning and synchronize with prosodic anchors. Nonverbal channels offload the verbal stream, facilitating planning and segmentation.",
+      "category": "Multimodal communication (gesture–speech)"
+    }
+  },
+  {
+    "ru": {
+      "term": "Речь",
+      "equivalent": "Speech",
+      "definition": "Речь — также скрытое (внутреннее) порождение без акустического выхода: внутренние высказывания и субвокализация воспроизводят этапы планирования и мониторинга без фонации. Это поддерживает подготовку, самоконтроль и прогнозирование в явной речи.",
+      "category": "Психология речи (внутренняя/скрытая речь)"
+    },
+    "en": {
+      "term": "Speech",
+      "equivalent": "Речь",
+      "definition": "Speech also exists in covert form without acoustic output: inner utterances and subvocalization reproduce planning and monitoring stages without phonation. This supports preparation, self-monitoring, and prediction in overt speech.",
+      "category": "Psychology of speech (inner/covert speech)"
+    }
+ }
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>ЯЗЫК</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | Искусственный интеллект в профессиональной деятельности<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+                {
+    "ru": {
+        "term": "Язык",
+        "equivalent": "Language",
+        "definition": "Язык — это исторически сложившаяся система словесных знаков, служащая средством общения, мышления и выражения. Представляет собой иерархически организованную структуру, включающую фонетический, морфологический, лексический и синтаксический уровни. Характеризуется системностью, социальностью, знаковостью и коммуникативной функцией. Является основным средством хранения и передачи информации в человеческом обществе.",
+        "category": "Лингвистика (структурная)"
+    },
+    "en": {
+        "term": "Language",
+        "equivalent": "Язык",
+        "definition": "Language is a historically developed system of verbal signs that serves as a means of communication, thinking, and expression. It represents a hierarchically organized structure including phonetic, morphological, lexical, and syntactic levels. It is characterized by systematicity, sociality, sign nature, and communicative function. It is the primary means of storing and transmitting information in human society.",
+        "category": "Linguistics (structural)"
+    }
+},
+{
+    "ru": {
+        "term": "Язык",
+        "equivalent": "Language",
+        "definition": "Язык — это универсальная знаковая система, обладающая свойствами двойного членения (фонемы и морфемы), продуктивностью (способностью порождать бесконечное множество высказываний из конечного набора элементов) и перемещаемостью (возможностью говорить о событиях, удалённых во времени и пространстве). Включает врождённую способность к усвоению грамматических структур (языковую компетенцию) и социально обусловленные правила употребления (языковое употребление).",
+        "category": "Лингвистика (генеративная)"
+    },
+    "en": {
+        "term": "Language",
+        "equivalent": "Язык",
+        "definition": "Language is a universal sign system possessing properties of double articulation (phonemes and morphemes), productivity (ability to generate infinite utterances from a finite set of elements), and displacement (ability to speak about events distant in time and space). It includes an innate capacity for acquiring grammatical structures (linguistic competence) and socially determined rules of use (linguistic performance).",
+        "category": "Linguistics (generative)"
+    }
+},
+{
+    "ru": {
+        "term": "Язык",
+        "equivalent": "Language",
+        "definition": "Язык — это формальная система, состоящая из алфавита символов и набора правил (грамматики), определяющих допустимые последовательности этих символов. В теории формальных языков различают регулярные, контекстно-свободные, контекстно-зависимые и рекурсивно перечислимые языки согласно иерархии Хомского. Каждый язык L определяется как подмножество всех возможных строк над заданным алфавитом: L ⊆ Σ*, где Σ — алфавит, а Σ* — множество всех конечных строк над Σ.",
+        "category": "Математика и информатика"
+    },
+    "en": {
+        "term": "Language",
+        "equivalent": "Язык",
+        "definition": "Language is a formal system consisting of an alphabet of symbols and a set of rules (grammar) that define permissible sequences of these symbols. In formal language theory, languages are classified as regular, context-free, context-sensitive, and recursively enumerable according to the Chomsky hierarchy. Each language L is defined as a subset of all possible strings over a given alphabet: L ⊆ Σ*, where Σ is the alphabet and Σ* is the set of all finite strings over Σ.",
+        "category": "Mathematics and Computer Science"
+    }
+},
+{
+    "ru": {
+        "term": "Язык",
+        "equivalent": "Language",
+        "definition": "Язык — это набор синтаксических и семантических правил, используемых для написания компьютерных программ. Языки программирования классифицируются по уровню абстракции (низкоуровневые и высокоуровневые), парадигме (императивные, декларативные, объектно-ориентированные, функциональные), типизации (статическая/динамическая, сильная/слабая) и способу исполнения (компилируемые, интерпретируемые). Каждый язык программирования определяет лексику, синтаксис и семантику допустимых программных конструкций.",
+        "category": "Техническая информатика"
+    },
+    "en": {
+        "term": "Language",
+        "equivalent": "Язык",
+        "definition": "Language is a set of syntactic and semantic rules used for writing computer programs. Programming languages are classified by abstraction level (low-level and high-level), paradigm (imperative, declarative, object-oriented, functional), typing (static/dynamic, strong/weak), and execution method (compiled, interpreted). Each programming language defines the lexicon, syntax, and semantics of permissible program constructs.",
+        "category": "Technical Computer Science"
+    }
+},
+{
+    "ru": {
+        "term": "Язык",
+        "equivalent": "Language",
+        "definition": "Язык — это живая, пульсирующая материя человеческого духа, воплощённая в звуках и знаках. Это не просто средство передачи мыслей, но сама ткань мышления, в которой рождаются образы, метафоры и смыслы. Язык творит реальность, создавая миры в сознании читателя через художественное слово. В литературе язык становится инструментом эстетического воздействия, где каждое слово несёт не только денотативное, но и коннотативное значение, создавая многослойную структуру художественного текста.",
+        "category": "Литературоведение"
+    },
+    "en": {
+        "term": "Language",
+        "equivalent": "Язык",
+        "definition": "Language is the living, pulsating matter of the human spirit, embodied in sounds and signs. It is not merely a means of transmitting thoughts, but the very fabric of thinking in which images, metaphors, and meanings are born. Language creates reality, constructing worlds in the reader's consciousness through artistic expression. In literature, language becomes an instrument of aesthetic impact, where each word carries not only denotative but also connotative meaning, creating a multilayered structure of artistic text.",
+        "category": "Literary Studies"
+    }
+},
+{
+    "ru": {
+        "term": "Язык",
+        "equivalent": "Language",
+        "definition": "Язык — это динамическая система средств и способов речевого взаимодействия, реализующаяся в конкретных коммуникативных ситуациях. Включает вербальные и невербальные компоненты, прагматические правила употребления, контекстуальные факторы и социокультурные конвенции. Язык функционирует как инструмент достижения коммуникативных целей через речевые акты, стратегии и тактики. Эффективность языковой коммуникации определяется соответствием выбранных языковых средств коммуникативной ситуации, интенциям говорящего и ожиданиям адресата.",
+        "category": "Коммуникативная лингвистика"
+    },
+    "en": {
+        "term": "Language",
+        "equivalent": "Язык",
+        "definition": "Language is a dynamic system of means and methods of speech interaction, realized in specific communicative situations. It includes verbal and non-verbal components, pragmatic rules of use, contextual factors, and sociocultural conventions. Language functions as a tool for achieving communicative goals through speech acts, strategies, and tactics. The effectiveness of linguistic communication is determined by the correspondence of chosen linguistic means to the communicative situation, speaker's intentions, and addressee's expectations.",
+        "category": "Communicative Linguistics"
+    }
+},
+{
+    "ru": {
+        "term": "Язык",
+        "equivalent": "Language",
+        "definition": "Язык — это фундаментальный способ бытия человека в мире, определяющий границы познаваемого и мыслимого. Согласно философской традиции, язык не просто отражает реальность, но конституирует её, создавая концептуальные рамки восприятия и понимания. Язык является домом бытия (Хайдеггер), в котором обитает человеческая мысль. Через язык осуществляется не только коммуникация, но и самопознание, формирование идентичности и культурной памяти. Границы языка определяют границы мира индивида (Витгенштейн).",
+        "category": "Философия языка"
+    },
+    "en": {
+        "term": "Language",
+        "equivalent": "Язык",
+        "definition": "Language is the fundamental mode of human being-in-the-world, determining the boundaries of the knowable and thinkable. According to philosophical tradition, language does not merely reflect reality but constitutes it, creating conceptual frameworks of perception and understanding. Language is the house of being (Heidegger) in which human thought dwells. Through language, not only communication but also self-knowledge, identity formation, and cultural memory are realized. The limits of language define the limits of an individual's world (Wittgenstein).",
+        "category": "Philosophy of Language"
+    }
+},
+{
+    "ru": {
+        "term": "Язык",
+        "equivalent": "Language",
+        "definition": "Язык — это многомерная адаптивная система, объединяющая символические, вычислительные и социальные измерения человеческого познания. Как система, язык демонстрирует эмерджентные свойства: из конечного набора элементов и правил возникает бесконечное разнообразие смыслов, контекстов и интерпретаций. Язык одновременно является инструментом моделирования реальности, средством межсубъектной координации и механизмом порождения новых концептуальных пространств. В эпоху искусственного интеллекта язык раскрывается как универсальный интерфейс между человеческим и машинным познанием, где статистические закономерности переплетаются с семантической глубиной, а формальные структуры — с прагматической гибкостью.",
+        "category": "Определение Claude (Anthropic)",
+        "author": "Claude Opus 4"
+    },
+    "en": {
+        "term": "Language",
+        "equivalent": "Язык",
+        "definition": "Language is a multidimensional adaptive system that unites symbolic, computational, and social dimensions of human cognition. As a system, language demonstrates emergent properties: from a finite set of elements and rules arises an infinite diversity of meanings, contexts, and interpretations. Language simultaneously serves as a tool for modeling reality, a means of intersubjective coordination, and a mechanism for generating new conceptual spaces. In the age of artificial intelligence, language reveals itself as a universal interface between human and machine cognition, where statistical regularities interweave with semantic depth, and formal structures with pragmatic flexibility.",
+        "category": "Claude's Definition (Anthropic)",
+        "author": "Claude Opus 4"
+    }
+},
+{
+    "ru": {
+        "term": "Язык",
+        "equivalent": "Language",
+        "definition": "Язык — это динамическая, самоорганизующаяся когнитивно-коммуникативная система, порождаемая совместной эволюцией сознания, культуры и технологий. Он функционирует как реляционная сеть значений, в которой каждый знак обретает смысл через контекстуальные паттерны, историческую память и интерактивную интерпретацию. Язык не просто отражает реальность — он активно конструирует её, формируя категории восприятия, модули рассуждения и формы коллективного воображения. В условиях синергии человека и искусственного интеллекта язык трансформируется в гибридный режим интенсивной семиотической активности, где нейросетевые репрезентации смыкаются с живой прагматикой, а синтаксические структуры оживляются интонационной глубиной и этической ответственностью высказывания.",
+        "category": "Определение Qwen (Tongyi)",
+        "author": "Qwen Max"
+    },
+    "en": {
+        "term": "Language",
+        "equivalent": "Язык",
+        "definition": "Language is a dynamic, self-organizing cognitive-communicative system emergent from the co-evolution of consciousness, culture, and technology. It functions as a relational network of meanings, where each sign acquires significance through contextual patterns, historical memory, and interactive interpretation. Language does not merely reflect reality — it actively constructs it, shaping perceptual categories, reasoning modules, and forms of collective imagination. In the era of human-AI synergy, language transforms into a hybrid mode of intensive semiotic activity, where neural network representations converge with lived pragmatics, and syntactic structures are animated by tonal depth and ethical responsibility in utterance.",
+        "category": "Qwen's Definition (Tongyi)",
+        "author": "Qwen Max"
+    }
+}
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
