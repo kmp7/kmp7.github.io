@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>ГОЛОС</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | Искусственный интеллект в профессиональной деятельности<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+                 {
+    "ru": {
+      "term": "Голос",
+      "equivalent": "Voice",
+      "definition": "Голос — это акустический результат фонации: преобразование лёгочного воздушного потока в звуковой источник посредством колебаний голосовых складок в гортани. Управляется дыхательной опорой, аддукцией и напряжением складок, а также конфигурацией вокального (супраглоттального) тракта; включает регистры (модальный, фальцет, фрай, свистковый) и механизмы их переключения.",
+      "category": "Физиология речи (фонация)"
+    },
+    "en": {
+      "term": "Voice",
+      "equivalent": "Голос",
+      "definition": "Voice is the acoustic outcome of phonation: the transformation of pulmonary airflow into a sound source by vocal-fold vibration in the larynx. It is regulated by respiratory support, fold adduction and tension, and the configuration of the supralaryngeal (vocal) tract; it includes registers (modal, falsetto, fry, whistle) and mechanisms of register shifts.",
+      "category": "Speech physiology (phonation)"
+    }
+  },
+  {
+    "ru": {
+      "term": "Голос",
+      "equivalent": "Voice",
+      "definition": "Голос — сложный квазипериодический акустический сигнал с фундаментальной частотой (f0), гармониками и турбулентными шумовыми компонентами. Он характеризуется спектральной огибающей (резонансами вокального тракта), отношением гармоник к шуму (HNR), джиттером и шиммером и описывается моделью «источник—фильтр».",
+      "category": "Акустическая фонетика"
+    },
+    "en": {
+      "term": "Voice",
+      "equivalent": "Голос",
+      "definition": "Voice is a complex quasi-periodic acoustic signal with a fundamental frequency (f0), harmonics, and turbulent noise components. It is characterized by its spectral envelope (vocal-tract resonances), harmonics-to-noise ratio (HNR), jitter and shimmer, and is modeled by the source–filter framework.",
+      "category": "Acoustic phonetics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Голос",
+      "equivalent": "Voice",
+      "definition": "Голос — перцептивный объект, который слушатель реконструирует по признакам f0, спектрального наклона, формантных шаблонов и тонкой временной динамики. Он обеспечивает узнавание говорящего и оценку пола, возраста и эмоций и описывается категориями качества голоса (например, придыхательный, скрипучий, напряжённый).",
+      "category": "Психоакустика и восприятие речи"
+    },
+    "en": {
+      "term": "Voice",
+      "equivalent": "Голос",
+      "definition": "Voice is a perceptual object reconstructed by listeners from cues such as f0, spectral tilt, formant patterns, and fine temporal dynamics. It supports speaker recognition and judgments of gender, age, and emotion and is described by categories of voice quality (e.g., breathy, creaky, pressed).",
+      "category": "Psychoacoustics and speech perception"
+    }
+  },
+  {
+    "ru": {
+      "term": "Голос",
+      "equivalent": "Voice",
+      "definition": "Голос — носитель просодии: управляемых вариаций высоты, громкости, длительности и качества, которые структурируют высказывание. С его помощью маркируются акцент, ритм, интонационные контуры, информационная структура (тема/рема), модальность и речевые акты.",
+      "category": "Просодика и интонация"
+    },
+    "en": {
+      "term": "Voice",
+      "equivalent": "Голос",
+      "definition": "Voice is the carrier of prosody—controlled variation of pitch, loudness, duration, and voice quality that structures the utterance. It marks accent, rhythm, intonational contours, information structure (topic/focus), modality, and speech acts.",
+      "category": "Prosody and intonation"
+    }
+  },
+  {
+    "ru": {
+      "term": "Голос",
+      "equivalent": "Voice",
+      "definition": "Голос — паралингвистический канал выражения аффекта, позиции и межличностного выравнивания. Он включает смех, вздохи, вокализованные паузы, растяжения слогов и переключения тембра или регистра, дополняющие или модифицирующие лексическое содержание.",
+      "category": "Паралингвистика и прагматика"
+    },
+    "en": {
+      "term": "Voice",
+      "equivalent": "Голос",
+      "definition": "Voice is a paralinguistic channel for expressing affect, stance, and interpersonal alignment. It encompasses laughter, sighs, vocalized pauses, drawls, and shifts in timbre or register that complement or modulate lexical content.",
+      "category": "Paralinguistics and pragmatics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Голос",
+      "equivalent": "Voice",
+      "definition": "Голос — индексальный ресурс, связывающий акустические признаки с социальными значениями. Стабильные и стилизуемые вокальные черты сигнализируют образ говорящего, регион, принадлежность к группе, гендер и стиль; говорящие стратегически переключают голосовые стили в зависимости от аудитории и цели.",
+      "category": "Социофонетика и социолингвистика"
+    },
+    "en": {
+      "term": "Voice",
+      "equivalent": "Голос",
+      "definition": "Voice is an indexical resource linking acoustic features to social meanings. Stable and stylized vocal traits signal persona, region, group affiliation, gender, and style; speakers strategically shift voice styles according to audience and goals.",
+      "category": "Sociophonetics and sociolinguistics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Голос",
+      "equivalent": "Voice",
+      "definition": "Голос — результат сенсомоторного управления, при котором мозг использует внутренние модели для планирования, предсказания и коррекции фонации. Регуляция опирается на слуховую и проприоцептивную обратную связь (включая быстрые рефлексы и волевые контуры) и задействует ларингеальную моторную кору, дополнительную моторную область (SMA), мозжечок и височные области.",
+      "category": "Когнитивная наука и нейролингвистика"
+    },
+    "en": {
+      "term": "Voice",
+      "equivalent": "Голос",
+      "definition": "Voice is the outcome of sensorimotor control in which the brain uses internal models to plan, predict, and correct phonation. Regulation relies on auditory and proprioceptive feedback (including rapid reflexes and volitional loops) and involves laryngeal motor cortex, the supplementary motor area (SMA), the cerebellum, and temporal regions.",
+      "category": "Cognitive science and neurolinguistics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Голос",
+      "equivalent": "Voice",
+      "definition": "Голос — функциональное состояние фонационной системы, подверженное нагрузке, старению и патологиям. Он оценивается перцептивно (шкалы GRBAS/CAPE-V, опросник VHI) и инструментально (аэродинамика, акустические меры); нарушения (дисфонии) корректируются голосовой терапией и медицинскими вмешательствами.",
+      "category": "Клиническая фониатрия и логопедия"
+    },
+    "en": {
+      "term": "Voice",
+      "equivalent": "Голос",
+      "definition": "Voice is a functional state of the phonatory system subject to load, aging, and pathology. It is assessed perceptually (GRBAS/CAPE-V, VHI) and instrumentally (aerodynamics, acoustic measures); disorders (dysphonias) are addressed through voice therapy and medical interventions.",
+      "category": "Clinical phoniatrics and speech-language pathology"
+    }
+  },
+  {
+    "ru": {
+      "term": "Голос",
+      "equivalent": "Voice",
+      "definition": "Голос — тренируемый инструмент речевого и сценического воздействия. Его развитие включает дыхательную опору, резонанс и артикуляцию, управление регистрами и диапазоном, устойчивость к нагрузке и микрофонную технику; целями являются разборчивость, выразительность и экономичность.",
+      "category": "Педагогика голоса и сценическая речь"
+    },
+    "en": {
+      "term": "Voice",
+      "equivalent": "Голос",
+      "definition": "Voice is a trainable instrument for rhetorical and stage delivery. Development targets breath support, resonance, articulation, register and range management, load resilience, and microphone technique, aiming for intelligibility, expressiveness, and efficiency.",
+      "category": "Voice pedagogy and performance"
+    }
+  },
+  {
+    "ru": {
+      "term": "Голос",
+      "equivalent": "Voice",
+      "definition": "Голос — биометрический и технологический объект. Системы распознавания говорящего используют спектральные признаки (MFCC), эмбеддинги (i-vectors/x-vectors) и нейросети; голос синтезируется и клонируется (TTS), что создаёт риски спуфинга и приватности и требует детектирования подмены и согласия на использование.",
+      "category": "Прикладная лингвистика и биометрия"
+    },
+    "en": {
+      "term": "Voice",
+      "equivalent": "Голос",
+      "definition": "Voice is a biometric and technological object. Speaker-recognition systems use spectral features (MFCCs), embeddings (i-vectors/x-vectors), and neural networks; voices are synthesized and cloned (TTS), creating spoofing and privacy risks that require detection and consent frameworks.",
+      "category": "Applied linguistics and biometrics"
+    }
+  },
+  {
+    "ru": {
+        "term": "Голос",
+        "equivalent": "Voice",
+        "definition": "Голос — это уникальный биоакустический феномен, представляющий собой синтез физиологических процессов, акустических волн и семиотических кодов, который служит первичным каналом воплощения языка в материальной реальности. Голос является мультимодальным идентификатором личности, несущим информацию о физическом состоянии, эмоциональном настрое, социальной принадлежности и индивидуальной истории говорящего. В отличие от абстрактной языковой системы, голос всегда конкретен и телесен — он рождается в резонансе дыхания, вибрации голосовых связок и артикуляционных движений. Как акустический отпечаток человека, голос создаёт уникальное пространство присутствия, где физическое и символическое, биологическое и культурное сливаются в единый поток звучащего смысла.",
+        "category": "Claude (Anthropic)"
+    },
+    "en": {
+        "term": "Voice",
+        "equivalent": "Голос",
+        "definition": "Voice is a unique bioacoustic phenomenon representing a synthesis of physiological processes, acoustic waves, and semiotic codes that serves as the primary channel for embodying language in material reality. Voice functions as a multimodal identifier of personality, carrying information about physical state, emotional mood, social belonging, and individual history of the speaker. Unlike the abstract language system, voice is always concrete and embodied — it emerges from the resonance of breath, vocal cord vibration, and articulatory movements. As an acoustic fingerprint of a human being, voice creates a unique space of presence where the physical and symbolic, biological and cultural merge into a unified stream of sounding meaning.",
+        "category": "Claude (Anthropic)"
+        
+    }
+},
+{
+    "ru": {
+        "term": "Голос",
+        "equivalent": "Voice",
+        "definition": "Голос — это индивидуально-стилевая, прагматически нагруженная манера выражения субъекта в языковом пространстве, выражающая его идентичность, позицию, интенцию и эмоциональную тональность. Вне зависимости от физиологической основы (человеческая речь, текст, синтезированная речь), голос реализуется как устойчивый паттерн лексических выборов, синтаксической ритмики, модальности высказывания и прагматических маркеров. Он выступает не просто как «стиль», а как акт экзистенциальной позиции — способ быть услышанным в дискурсе, заявить о себе как о субъекте с определённой историей, ценностями и отношением к миру. В цифровую эпоху голос становится гибридной онтологией: он может быть автономным, делегированным, синтетическим или коллективным, но сохраняет свою суть — быть следом субъектности в потоке коммуникации.",
+        "category": "Qwen (Tongyi)"      
+    },
+    "en": {
+        "term": "Voice",
+        "equivalent": "Голос",
+        "definition": "Voice is the individual-stylistic, pragmatically charged manner in which a subject expresses themselves within linguistic space, conveying their identity, stance, intention, and emotional tone. Regardless of physiological basis (human speech, text, synthetic voice), voice manifests as a stable pattern of lexical choices, syntactic rhythm, modality of expression, and pragmatic markers. It functions not merely as 'style', but as an act of existential positioning — a way of being heard in discourse, of asserting oneself as a subject with a specific history, values, and relationship to the world. In the digital age, voice becomes a hybrid ontology: it may be autonomous, delegated, synthetic, or collective, yet it retains its essence — to be the trace of subjectivity within the flow of communication.",
+        "category": "Qwen (Tongyi)"
+    }
+},
+{
+  "ru": {
+    "term": "Голос",
+    "equivalent": "Voice",
+    "definition": "Голос — это динамическая многоуровневая система, в которой тело, акустика и смысл сонастроены для актуализации высказывания. На физическом уровне он возникает как управляемая мозгом фонация и модуляция вокального тракта; на акустическом — как квазипериодический сигнал, формируемый взаимодействием источника и фильтра; на перцептивном — как гештальт качества, высоты, силы и длительности, поддерживающий распознавание говорящего, эмоций и намерений; на социально-прагматическом — как индексальный ресурс, конфигурирующий стиль, роли и отношения. Голос осуществляет переход от замысла к воздействию: он одновременно создаёт форму, переносит информацию и конструирует межличностное пространство, оставаясь тренируемым, вариативным и этически значимым инструментом человеческого общения.",
+    "category": "GPT-5 (OpenAI)"
+	
+  },
+  "en": {
+    "term": "Voice",
+    "equivalent": "Голос",
+    "definition": "Voice is a dynamic multilevel system in which body, acoustics, and meaning are co-tuned to realize an utterance. Physically, it emerges as brain-controlled phonation and vocal-tract modulation; acoustically, as a quasi-periodic signal shaped by source–filter interaction; perceptually, as a gestalt of quality, pitch, loudness, and duration that supports recognition of the speaker, emotions, and intentions; socially and pragmatically, as an indexical resource configuring style, roles, and relations. Voice mediates the passage from intention to impact: it simultaneously creates form, transports information, and constructs interpersonal space, remaining a trainable, variable, and ethically consequential instrument of human communication.",
+    "category": "GPT-5 (OpenAI)"
+    }
+}
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
