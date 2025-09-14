@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>kmp+</title>
+    <style>
+    :root {
+        --bg: #f5f5f5;
+        --card: #ffffff;
+        --text: #222;
+        --primary: #325980;
+        --primary-light: rgba(50, 89, 128, 0.15);
+        --accent: #3498db;
+        --muted: #f1f1f1;
+        --muted-text: #444;
+        --success: #28a745;
+        --danger: #e74c3c;
+        --radius: 10px;
+        --transition: all 0.2s ease;
+    }
+    
+    .dark-theme {
+        --bg: #121217; 
+        --card: #17171a; 
+        --text: #e6eef8; 
+        --primary: #5d8bc3; 
+        --primary-light: rgba(93, 139, 195, 0.2);
+        --accent: #4aa3ff; 
+        --muted: #1f1f25; 
+        --muted-text: #ccc; 
+    }
+    
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+    
+    body {
+        font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+        background: var(--bg); 
+        color: var(--text);
+        line-height: 1.5;
+        padding: 18px;
+        transition: var(--transition);
+    }
+    
+    .wrap {
+        max-width: 900px; 
+        margin: 0 auto; 
+        background: var(--card); 
+        padding: 22px; 
+        border-radius: var(--radius); 
+        box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+        transition: var(--transition);
+    }
+    
+    header {
+        display: flex; 
+        align-items: flex-start;
+        justify-content: space-between; 
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+    
+    header h1 {
+        font-size: 2rem; 
+        color: var(--primary); 
+        margin: 0 0 4px 0;
+    }
+    
+    header h3 {
+        font-size: 1rem; 
+        color: var(--primary); 
+        margin: 0 0 4px 0;
+    }
+    
+    .theme-toggle {
+        background: var(--primary); 
+        color: #fff; 
+        border: none; 
+        padding: 8px 12px; 
+        border-radius: 8px; 
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: var(--transition);
+        white-space: nowrap;
+    }
+    
+    .theme-toggle:hover {
+        opacity: 0.9;
+    }
+    
+    .meta {
+        margin-top: 18px; 
+        display: flex; 
+        gap: 12px; 
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .meta input[type=text] {
+        flex: 1;
+        min-width: 200px;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ddd; 
+        background: var(--card); 
+        color: var(--text);
+        font-family: inherit;
+        transition: var(--transition);
+    }
+    
+    .meta input[type=text]:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px var(--primary-light);
+    }
+    
+    .time-display {
+        min-width: 160px;
+        text-align: right;
+        color: var(--muted-text);
+        font-size: 0.9rem;
+    }
+    
+    .intro {
+        margin: 18px 0;
+        padding: 16px;
+        border-radius: var(--radius);
+        background: var(--muted); 
+        color: var(--muted-text);
+        transition: var(--transition);
+    }
+    
+    .intro-title {
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+    
+    .legend {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+    }
+    
+    .legend div {
+        padding: 6px 10px;
+        background: var(--card);
+        border-radius: 6px;
+        border: 1px solid #eee;
+        font-size: 0.85rem; 
+        color: var(--text);
+        transition: var(--transition);
+    }
+    
+    form {
+        margin-top: 20px;
+    }
+    
+    .question {
+        padding: 16px;
+        border-radius: var(--radius);
+        background: var(--card);
+        border: 1px solid #f0f0f0;
+        margin-bottom: 16px;
+        transition: var(--transition);
+    }
+    
+    .question p {
+        margin: 0 0 12px 0; 
+        font-weight: 600;
+        line-height: 1.4;
+    }
+    
+    .options {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+    }
+    
+    .option {
+        cursor: pointer;
+    }
+    
+    .option input {
+        display: none;
+    }
+    
+    .option label {
+        display: block;
+        padding: 10px 6px;
+        border-radius: 6px;
+        border: 1px solid #e6e6e6;
+        text-align: center;
+        font-size: 0.87rem;
+        background: var(--muted);
+        color: var(--muted-text);
+        transition: var(--transition);
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .option label:hover {
+        background: var(--primary-light);
+        border-color: var(--primary);
+    }
+    
+    .option input:checked + label {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+        font-weight: 600;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    
+    .controls {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+    
+    button {
+        font-family: inherit;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    
+    button.primary {
+        background: var(--primary);
+        color: #fff;
+        padding: 12px 18px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 500;
+    }
+    
+    button.primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+    }
+    
+    button.ghost {
+        background: transparent;
+        border: 1px solid #ddd;
+        padding: 10px 16px;
+        border-radius: 8px;
+        color: var(--text);
+    }
+    
+    button.ghost:hover {
+        background: var(--muted);
+    }
+    
+    .error {
+        margin-top: 12px;
+        padding: 10px;
+        border-radius: 6px;
+        background: rgba(231, 76, 60, 0.1);
+        color: var(--danger);
+        font-weight: 600;
+        display: none;
+    }
+    
+    .error.show {
+        display: block;
+    }
+    
+    .results {
+        display: none;
+        margin-top: 24px;
+        animation: fadeIn 0.5s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .score {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 16px;
+    }
+    
+    .interpret {
+        margin-top: 12px;
+        padding: 16px;
+        background: var(--muted);
+        border-radius: var(--radius);
+        color: var(--muted-text);
+    }
+    
+    .recommend {
+        margin-top: 16px;
+        padding: 16px;
+        border-radius: var(--radius);
+        background: var(--card);
+        border: 1px dashed #e0e0e0;
+        color: var(--text);
+    }
+    
+    .certificate {
+        margin-top: 20px;
+        padding: 18px;
+        border-radius: var(--radius);
+        background: linear-gradient(180deg, var(--card), var(--bg));
+        border: 1px solid rgba(50, 89, 128, 0.06);
+        color: var(--text);
+    }
+    
+    .info-panel {
+        display: none;
+        margin-top: 16px;
+        padding: 16px;
+        border-radius: var(--radius);
+        background: var(--muted);
+        color: var(--muted-text);
+        animation: fadeIn 0.3s ease;
+    }
+    
+    .info-panel strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text);
+    }
+    
+    .info-panel ul {
+        padding-left: 20px;
+        margin: 10px 0;
+    }
+    
+    .info-panel li {
+        margin-bottom: 6px;
+    }
+    
+    footer {
+        margin-top: 24px;
+        text-align: center;
+        color: #777;
+        font-size: 0.85rem;
+        padding-top: 16px;
+        border-top: 1px solid #eee;
+    }
+    
+    /* Адаптивность */
+    @media (max-width: 768px) {
+        body {
+            padding: 12px;
+        }
+        
+        .wrap {
+            padding: 18px;
+        }
+        
+        header {
+            flex-direction: column;
+        }
+        
+        .options {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .controls {
+            flex-direction: column;
+        }
+        
+        button.primary, button.ghost {
+            width: 100%;
+        }
+    }
+    
+    @media (max-width: 520px) {
+        .options {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .meta {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .time-display {
+            text-align: left;
+        }
+        
+        .legend div {
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+    }
+    
+    @media (max-width: 380px) {
+        .options {
+            grid-template-columns: 1fr;
+        }
+        
+        .legend div {
+            min-width: 100%;
+        }
+    }
+    </style>
+</head>
+<body>
+<div class="wrap" id="app">
+    <header>
+        <div>
+            <h1>Диагностика</h1>
+			<h3>готовности к компьютерной лингвистике по шкале Лайкерта</h3>
+        </div>
+        <div>
+            <button id="themeToggle" class="theme-toggle">☀️</button>
+        </div>
+    </header>
+
+    <div class="meta">
+        <input type="text" id="userName" placeholder="Фамилия Имя Отчество" />
+        <div class="time-display">Время старт — <span id="startTime">—</span></div>
+    </div>
+
+    <div class="intro">
+        <div class="intro-title">Инструкция</div>
+        <div class="legend">
+            <div>1 — Полностью не согласен</div>
+            <div>2 — Скорее не согласен</div>
+            <div>3 — Нейтрально</div>
+            <div>4 — Скорее согласен</div>
+            <div>5 — Полностью согласен</div>
+        </div>
+        <p style="margin-top:10px">Цель: выяснить готовность переосмыслить язык как статистическую и стохастическую систему (корпусная работа, вероятность, неопределённость, промптинг, оценка ситуационного качества моделей). </p>
+    </div>
+
+    <form id="survey">
+        <!-- Questions: mark data-reverse="true" for items favoring rule-based thinking (to invert) -->
+
+        <div class="question" data-reverse="true">
+            <p>1. Я предпочитаю чёткие, детерминированные правила при работе с языком — вероятностные и стохастические методы кажутся мне ненадёжными.</p>
+            <div class="options">
+                <div class="option"><input type="radio" id="q1-1" name="q1" value="1"><label for="q1-1">1</label></div>
+                <div class="option"><input type="radio" id="q1-2" name="q1" value="2"><label for="q1-2">2</label></div>
+                <div class="option"><input type="radio" id="q1-3" name="q1" value="3"><label for="q1-3">3</label></div>
+                <div class="option"><input type="radio" id="q1-4" name="q1" value="4"><label for="q1-4">4</label></div>
+                <div class="option"><input type="radio" id="q1-5" name="q1" value="5"><label for="q1-5">5</label></div>
+            </div>
+        </div>
+
+        <div class="question" data-reverse="false">
+            <p>2. Мне интересно изучать статистические методы и теорию вероятностей, чтобы описывать свойства языка.</p>
+            <div class="options">
+                <div class="option"><input type="radio" id="q2-1" name="q2" value="1"><label for="q2-1">1</label></div>
+                <div class="option"><input type="radio" id="q2-2" name="q2" value="2"><label for="q2-2">2</label></div>
+                <div class="option"><input type="radio" id="q2-3" name="q2" value="3"><label for="q2-3">3</label></div>
+                <div class="option"><input type="radio" id="q2-4" name="q2" value="4"><label for="q2-4">4</label></div>
+                <div class="option"><input type="radio" id="q2-5" name="q2" value="5"><label for="q2-5">5</label></div>
+            </div>
+        </div>
+
+        <div class="question" data-reverse="false">
+            <p>3. Меня не пугает неопределённость в языковых данных (многозначность, вариативность) и необходимость работать с неидеальными примерами.</p>
+            <div class="options">
+                <div class="option"><input type="radio" id="q3-1" name="q3" value="1"><label for="q3-1">1</label></div>
+                <div class="option"><input type="radio" id="q3-2" name="q3" value="2"><label for="q3-2">2</label></div>
+                <div class="option"><input type="radio" id="q3-3" name="q3" value="3"><label for="q3-3">3</label></div>
+                <div class="option"><input type="radio" id="q3-4" name="q3" value="4"><label for="q3-4">4</label></div>
+                <div class="option"><input type="radio" id="q3-5" name="q3" value="5"><label for="q3-5">5</label></div>
+            </div>
+        </div>
+
+        <div class="question" data-reverse="true">
+            <p>4. Мне удобнее думать о языке как о наборе правил грамматики и лексических списков, а не как о вероятностной стохастической модели.</p>
+            <div class="options">
+                <div class="option"><input type="radio" id="q4-1" name="q4" value="1"><label for="q4-1">1</label></div>
+                <div class="option"><input type="radio" id="q4-2" name="q4" value="2"><label for="q4-2">2</label></div>
+                <div class="option"><input type="radio" id="q4-3" name="q4" value="3"><label for="q4-3">3</label></div>
+                                <div class="option"><input type="radio" id="q4-4" name="q4" value="4"><label for="q4-4">4</label></div>
+                <div class="option"><input type="radio" id="q4-5" name="q4" value="5"><label for="q4-5">5</label></div>
+            </div>
+        </div>
+
+        <div class="question" data-reverse="false">
+            <p>5. Мне нравится идея, что корпуса текстов и статистика могут объяснять языковые явления много лучше, чем интуитивные правила.</p>
+            <div class="options">
+                <div class="option"><input type="radio" id="q5-1" name="q5" value="1"><label for="q5-1">1</label></div>
+                <div class="option"><input type="radio" id="q5-2" name="q5" value="2"><label for="q5-2">2</label></div>
+                <div class="option"><input type="radio" id="q5-3" name="q5" value="3"><label for="q5-3">3</label></div>
+                <div class="option"><input type="radio" id="q5-4" name="q5" value="4"><label for="q5-4">4</label></div>
+                <div class="option"><input type="radio" id="q5-5" name="q5" value="5"><label for="q5-5">5</label></div>
+            </div>
+        </div>
+
+        <div class="question" data-reverse="true">
+            <p>6. Меня напрягает, что модель может выдавать правдоподобное, но неправильное объяснение ("галлюцинации" и "конфабуляции").</p>
+            <div class="options">
+                <div class="option"><input type="radio" id="q6-1" name="q6" value="1"><label for="q6-1">1</label></div>
+                <div class="option"><input type="radio" id="q6-2" name="q6" value="2"><label for="q6-2">2</label></div>
+                <div class="option"><input type="radio" id="q6-3" name="q6" value="3"><label for="q6-3">3</label></div>
+                <div class="option"><input type="radio" id="q6-4" name="q6" value="4"><label for="q6-4">4</label></div>
+                <div class="option"><input type="radio" id="q6-5" name="q6" value="5"><label for="q6-5">5</label></div>
+            </div>
+        </div>
+
+        <div class="question" data-reverse="false">
+            <p>7. Мне хотелось бы практиковаться в программировании (хотя бы на базовом уровне) для работы с корпусами и моделями.</p>
+            <div class="options">
+                <div class="option"><input type="radio" id="q7-1" name="q7" value="1"><label for="q7-1">1</label></div>
+                <div class="option"><input type="radio" id="q7-2" name="q7" value="2"><label for="q7-2">2</label></div>
+                <div class="option"><input type="radio" id="q7-3" name="q7" value="3"><label for="q7-3">3</label></div>
+                <div class="option"><input type="radio" id="q7-4" name="q7" value="4"><label for="q7-4">4</label></div>
+                <div class="option"><input type="radio" id="q7-5" name="q7" value="5"><label for="q7-5">5</label></div>
+            </div>
+        </div>
+
+        <div class="question" data-reverse="false">
+            <p>8. Я понимаю, что оценка качества моделей требует экспериментов, метрик и репликации — и желаю этому учиться.</p>
+            <div class="options">
+                <div class="option"><input type="radio" id="q8-1" name="q8" value="1"><label for="q8-1">1</label></div>
+                <div class="option"><input type="radio" id="q8-2" name="q8" value="2"><label for="q8-2">2</label></div>
+                <div class="option"><input type="radio" id="q8-3" name="q8" value="3"><label for="q8-3">3</label></div>
+                <div class="option"><input type="radio" id="q8-4" name="q8" value="4"><label for="q8-4">4</label></div>
+                <div class="option"><input type="radio" id="q8-5" name="q8" value="5"><label for="q8-5">5</label></div>
+            </div>
+        </div>
+
+        <div class="question" data-reverse="true">
+            <p>9. Меня раздражают ограничения модели, даже если она в среднем даёт полезные предсказания.</p>
+            <div class="options">
+                <div class="option"><input type="radio" id="q9-1" name="q9" value="1"><label for="q9-1">1</label></div>
+                <div class="option"><input type="radio" id="q9-2" name="q9" value="2"><label for="q9-2">2</label></div>
+                <div class="option"><input type="radio" id="q9-3" name="q9" value="3"><label for="q9-3">3</label></div>
+                <div class="option"><input type="radio" id="q9-4" name="q9" value="4"><label for="q9-4">4</label></div>
+                <div class="option"><input type="radio" id="q9-5" name="q9" value="5"><label for="q9-5">5</label></div>
+            </div>
+        </div>
+
+        <div class="question" data-reverse="false">
+            <p>10. Мне интересно работать с большими текстовыми коллекциями (корпусами) и размечать данные, если это необходимо для исследований.</p>
+            <div class="options">
+                <div class="option"><input type="radio" id="q10-1" name="q10" value="1"><label for="q10-1">1</label></div>
+                <div class="option"><input type="radio" id="q10-2" name="q10" value="2"><label for="q10-2">2</label></div>
+                <div class="option"><input type="radio" id="q10-3" name="q10" value="3"><label for="q10-3">3</label></div>
+                <div class="option"><input type="radio" id="q10-4" name="q10" value="4"><label for="q10-4">4</label></div>
+                <div class="option"><input type="radio" id="q10-5" name="q10" value="5"><label for="q10-5">5</label></div>
+            </div>
+        </div>
+
+        <div class="question" data-reverse="false">
+            <p>11. Мне хотелось бы обсуждать этические аспекты использования стохастический моделей и LLM.</p>
+            <div class="options">
+                <div class="option"><input type="radio" id="q11-1" name="q11" value="1"><label for="q11-1">1</label></div>
+                <div class="option"><input type="radio" id="q11-2" name="q11" value="2"><label for="q11-2">2</label></div>
+                <div class="option"><input type="radio" id="q11-3" name="q11" value="3"><label for="q11-3">3</label></div>
+                <div class="option"><input type="radio" id="q11-4" name="q11" value="4"><label for="q11-4">4</label></div>
+                <div class="option"><input type="radio" id="q11-5" name="q11" value="5"><label for="q11-5">5</label></div>
+            </div>
+        </div>
+
+        <div class="question" data-reverse="false">
+            <p>12. Меня интересуют возможности современного лингвистического инструментария (BERT, tokenizers, POS taggers, простые LLM) и его ограничения.</p>
+            <div class="options">
+                <div class="option"><input type="radio" id="q12-1" name="q12" value="1"><label for="q12-1">1</label></div>
+                <div class="option"><input type="radio" id="q12-2" name="q12" value="2"><label for="q12-2">2</label></div>
+                <div class="option"><input type="radio" id="q12-3" name="q12" value="3"><label for="q12-3">3</label></div>
+                <div class="option"><input type="radio" id="q12-4" name="q12" value="4"><label for="q12-4">4</label></div>
+                <div class="option"><input type="radio" id="q12-5" name="q12" value="5"><label for="q12-5">5</label></div>
+            </div>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="controls">
+            <button type="submit" class="primary">Отправить и получить результат</button>
+            <button type="button" id="resetBtn" class="ghost">Очистить ответы</button>
+            <button type="button" id="infoBtn" class="ghost">Что измеряется?</button>
+        </div>
+    </form>
+
+    <div class="results" id="results">
+        <div class="score" id="scoreLine"></div>
+        <div class="interpret" id="interpretation"></div>
+        <div class="recommend" id="recommendations"></div>
+        <div class="certificate" id="certificate"></div>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+        <strong>Что измеряется</strong>
+        <p>Анкета оценивает сочетание нескольких компонентов:
+        <ul>
+            <li>Предпочтение правилового (детерминистического) мышления vs. открытость к вероятностным моделям.</li>
+            <li>Готовность к практическим навыкам: программирование, работа с корпусами, аннотация данных.</li>
+            <li>Толерантность к неопределённости и ошибкам моделей (важно при работе со статистикой и LLM).</li>
+            <li>Интерес к этике и осознанной работе с современными инструментами.</li>
+        </ul></p>
+        <p>Результат поможет преподавателю спланировать вводные занятия: больше математики и статистики, практические корпуса и программирование, или фокус на лингвистических мотивациях и постепенный переход.</p>
+    </div>
+
+    <footer class="footer">
+<div class="container">
+<p>© 2025 | kmp |  CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Константы и переменные
+        const Q = 12; // количество вопросов
+        const start = new Date();
+        const startTimeEl = document.getElementById('startTime');
+        const themeToggle = document.getElementById('themeToggle');
+        const form = document.getElementById('survey');
+        const errorEl = document.getElementById('error');
+        const resultsEl = document.getElementById('results');
+        const scoreLineEl = document.getElementById('scoreLine');
+        const interpEl = document.getElementById('interpretation');
+        const recsEl = document.getElementById('recommendations');
+        const certEl = document.getElementById('certificate');
+        const infoBtn = document.getElementById('infoBtn');
+        const infoPanel = document.getElementById('infoPanel');
+        const resetBtn = document.getElementById('resetBtn');
+        const userNameEl = document.getElementById('userName');
+        
+        // Установка времени начала
+        startTimeEl.textContent = start.toLocaleString('ru-RU');
+        
+        // Переключение темы
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            themeToggle.textContent = document.body.classList.contains('dark-theme') 
+                ? '🌙' 
+                : '☀️';
+            // Сохраняем предпочтение темы
+            localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+        });
+        
+        // Восстановление темы из localStorage
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-theme');
+            themeToggle.textContent = '🌙';
+        }
+        
+        // Обработка отправки формы
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            errorEl.classList.remove('show');
+            
+            const name = userNameEl.value.trim();
+            if (!name) {
+                showError('Пожалуйста, введите свои ФИО.');
+                return;
+            }
+            
+            // Сбор ответов
+            const answers = [];
+            for (let i = 1; i <= Q; i++) {
+                const el = document.querySelector(`input[name=q${i}]:checked`);
+                if (!el) {
+                    showError('Пожалуйста, ответьте на все вопросы.');
+                    return;
+                }
+                answers.push(parseInt(el.value, 10));
+            }
+            
+            // Подсчет баллов с учетом обратных вопросов
+            const questions = Array.from(document.querySelectorAll('.question'));
+            let total = 0;
+            
+            for (let i = 0; i < Q; i++) {
+                const reverse = questions[i].getAttribute('data-reverse') === 'true';
+                const value = answers[i];
+                total += reverse ? (6 - value) : value; // инвертируем 1<->5 для обратных вопросов
+            }
+            
+            const maxScore = Q * 5; // 60
+            showResults(name, total, maxScore);
+        });
+        
+        // Сброс формы
+        resetBtn.addEventListener('click', () => {
+            form.reset();
+            errorEl.classList.remove('show');
+            resultsEl.style.display = 'none';
+            infoPanel.style.display = 'none';
+        });
+        
+        // Переключение информационной панели
+        infoBtn.addEventListener('click', () => {
+            infoPanel.style.display = infoPanel.style.display === 'block' ? 'none' : 'block';
+        });
+        
+        // Функция показа ошибки
+        function showError(message) {
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+            // Прокрутка к ошибке
+            setTimeout(() => {
+                errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+        
+        // Функция показа результатов
+        function showResults(name, total, max) {
+            scoreLineEl.textContent = `${name} — итоговый балл: ${total} из ${max}`;
+            
+            // Интерпретация результатов
+            let interpretation = '';
+            let recommendations = '';
+            
+            if (total <= 28) {
+                interpretation = '<strong>Интерпретация:</strong> Низкая готовность к переходу к статистическому/стохастическому подходу. Преобладает правиловое мышление и устойчивое ожидание детерминизма.';
+                recommendations = '<strong>Рекомендации:</strong> начать с мотивирующих примеров: корпусные наблюдения, простые частотные анализы, визуализации распределений и интерактивные задания по ошибкам правил. Постепенно вводить базовую статистику (вероятности, частоты, меры качества). Практика: разметка небольших корпусов, запуск простого POS-tagger (готовые инструменты).';
+            } else if (total <= 42) {
+                interpretation = '<strong>Интерпретация:</strong> Умеренная готовность. Есть интерес к статистике и практикам, но сохраняется некоторая осторожность и потребность в опоре на лингвистическую интуицию.';
+                recommendations = '<strong>Рекомендации:</strong> сочетать лингвистические объяснения с практическими примерами (корпуса + модели). Показать отличия правил и статистики на одном и том же материале, предложить мини-проекты: простая модель n-gram vs набор правил. Включить блоки по оценке качества и интерпретации ошибок.';
+            } else {
+                interpretation = '<strong>Интерпретация:</strong> Высокая готовность к освоению компьютерной лингвистики в её современном виде. Вы позитивно относитесь к вероятностным моделям и готовы к практической работе.';
+                recommendations = '<strong>Рекомендации:</strong> ускоренная учебная траектория: ввод в Python, работа с библиотеками.'; 
+				            }
+            
+            interpEl.innerHTML = interpretation;
+            recsEl.innerHTML = recommendations;
+            
+            // Генерация сертификата
+            const now = new Date();
+            const durationSec = Math.floor((now - start) / 1000);
+            const mins = Math.floor(durationSec / 60);
+            const secs = durationSec % 60;
+            
+            certEl.innerHTML = `
+                <div style="font-weight:700;margin-bottom:8px">Сертификат прохождения диагностики</div>
+                <div><strong>Участник:</strong> ${name}</div>
+                <div><strong>Дата:</strong> ${now.toLocaleDateString('ru-RU')} ${now.toLocaleTimeString('ru-RU')}</div>
+                <div><strong>Время на выполнение:</strong> ${mins} мин ${secs} сек</div>
+                <div style="margin-top:10px"><strong>Баллы:</strong> ${total} / ${max}</div>
+            `;
+            
+            // Показываем результаты
+            resultsEl.style.display = 'block';
+            infoPanel.style.display = 'none';
+            
+            // Прокрутка к результатам
+            setTimeout(() => {
+                resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+        
+        // Улучшение UX: автоматическое переключение между вопросами
+        const radioInputs = document.querySelectorAll('input[type="radio"]');
+        radioInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                // Находим родительский вопрос
+                const question = this.closest('.question');
+                // Добавляем визуальную обратную связь
+                question.style.boxShadow = '0 0 0 2px var(--primary-light)';
+                setTimeout(() => {
+                    question.style.boxShadow = '';
+                }, 300);
+            });
+        });
+        
+        // Улучшение UX: клавиатурная навигация
+        document.addEventListener('keydown', function(e) {
+            const focused = document.activeElement;
+            if (focused.type === 'radio') {
+                const radios = document.querySelectorAll(`input[name="${focused.name}"]`);
+                const currentIndex = Array.from(radios).indexOf(focused);
+                
+                if (e.key === 'ArrowRight' && currentIndex < radios.length - 1) {
+                    radios[currentIndex + 1].focus();
+                } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                    radios[currentIndex - 1].focus();
+                }
+            }
+        });
+    });
+</script>
+</body>
+</html>
