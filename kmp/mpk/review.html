@@ -1,0 +1,295 @@
+
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>kmp+</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --panel:#f5f5f5;
+      --accent:#3498db;
+      --nav:#325980;
+      --muted:#f1f1f1;
+      --text:#1a1a1a;
+      --glass: rgba(255,255,255,0.6);
+    }
+    [data-theme="dark"]{
+      --bg:#0f1720;
+      --panel:#0b1116;
+      --accent:#3498db;
+      --nav:#94b6d6;
+      --muted:#11161a;
+      --text:#e6eef8;
+      --glass: rgba(255,255,255,0.03);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter, Roboto, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial; background:linear-gradient(180deg,var(--bg), var(--panel));color:var(--text)}
+
+    header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--muted);background:var(--panel)}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,var(--nav),var(--accent));display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
+    h1{font-size:18px;margin:0;color:var(--nav)}
+
+    .theme-toggle{background:none;border:0;font-size:20px;cursor:pointer;padding:8px;border-radius:8px}
+
+    main{max-width:980px;margin:28px auto;padding:20px;background:linear-gradient(180deg,var(--panel),transparent);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.06)}
+
+    form{display:grid;gap:14px}
+    label{font-weight:600;color:var(--nav);font-size:13px}
+    input[type="text"], textarea{width:100%;padding:12px;border-radius:8px;border:1px solid var(--muted);background:transparent;color:var(--text);font-size:14px}
+    input[type="text"]:disabled, textarea:disabled{opacity:0.6}
+
+    .row{display:flex;gap:12px;align-items:center}
+    .btn{background:var(--accent);color:white;border:0;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+    .btn[disabled]{opacity:0.5;cursor:not-allowed}
+
+    .meta{display:flex;gap:12px;flex-wrap:wrap;color:#6b7280;font-size:13px}
+
+    textarea{min-height:200px;resize:vertical}
+    .note{font-size:13px;color:#6b7280}
+
+    footer{max-width:980px;margin:12px auto;text-align:center;color:#6b7280;font-size:13px}
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(5,10,15,0.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:60}
+    .modal-backdrop.show{display:flex}
+    .modal{background:var(--panel);border-radius:10px;max-width:900px;width:100%;max-height:90vh;box-shadow:0 18px 60px rgba(0,0,0,0.4);overflow:hidden;border:1px solid var(--muted)}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--muted);gap:10px}
+    .modal-meta{font-size:13px;line-height:1;color:var(--text);display:flex;gap:12px;align-items:center}
+
+    .modal-content{padding:12px;overflow:auto;min-height:240px;resize:both}
+    /* make the modal-content resizable while keeping overall modal within viewport */
+    .modal-body-wrapper{max-height:calc(90vh - 60px);overflow:auto}
+
+    .compact-info{display:flex;gap:8px;flex-direction:column;white-space:nowrap}
+    .compact-info span{font-size:12px;color:#6b7280}
+    .text-block{white-space:pre-wrap;font-size:15px;line-height:1.45}
+
+    @media (max-width:720px){
+      .logo{width:36px;height:36px}
+      .modal{max-width:100%;border-radius:8px}
+      textarea{min-height:180px}
+    }
+	
+	footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+        }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">ST</div>
+      <div>
+        <h1></h1>
+        <div style="font-size:14px;color:#6b7280">Ваше мнение важно! Поделитесь )</div>
+      </div>
+    </div>
+    <div>
+      <button id="themeBtn" class="theme-toggle" title="Переключить тему">☀️/🌙</button>
+    </div>
+  </header>
+
+  <main>
+    <form id="mainForm" onsubmit="return false;">
+      <div>
+        <label for="surname">Фамилия Имя Отчество</label>
+        <div class="row">
+          <input id="surname" type="text" placeholder="Введите свои ФИО" autocomplete="off" />
+          <button id="saveSurname" class="btn" type="button" disabled>Сохранить</button>
+          <div id="savedLabel" style="padding:8px 10px;border-radius:8px;background:var(--muted);display:none;color:#6b7280">Saved</div>
+        </div>
+      </div>
+
+      <div>
+        <label for="studentText">Ваш текст</label>
+        <textarea id="studentText" placeholder="Поле будет доступно после сохранения ваших ФИО" disabled></textarea>
+        <div class="note">Вставка и перетаскивание запрещены. Используйте клавиатуру для ввода.</div>
+      </div>
+
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div class="meta">
+          <div>Статус: <strong id="status">Ожидание ФИО</strong></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button id="submitBtn" class="btn" type="button" disabled>Отправить</button>
+        </div>
+      </div>
+    </form>
+  </main>
+
+  <div class="modal-backdrop" id="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <div class="modal-meta">
+          <div class="compact-info">
+            <strong id="modalSurname">Фамилия</strong>
+            <span id="modalDate">Дата</span>
+            <span id="modalTime">Время</span>
+            <span id="modalDuration">Продолжительность</span>
+          </div>
+        </div>
+        <div>
+          <button id="closeModal" class="btn" type="button">Закрыть</button>
+        </div>
+      </div>
+      <div class="modal-body-wrapper">
+        <div class="modal-content">
+          <div id="modalText" class="text-block"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    
+
+  <script>
+    (function(){
+      const surnameInput = document.getElementById('surname');
+      const saveBtn = document.getElementById('saveSurname');
+      const savedLabel = document.getElementById('savedLabel');
+      const textArea = document.getElementById('studentText');
+      const status = document.getElementById('status');
+      const submitBtn = document.getElementById('submitBtn');
+      const modal = document.getElementById('modal');
+      const closeModal = document.getElementById('closeModal');
+      const modalSurname = document.getElementById('modalSurname');
+      const modalDate = document.getElementById('modalDate');
+      const modalTime = document.getElementById('modalTime');
+      const modalDuration = document.getElementById('modalDuration');
+      const modalText = document.getElementById('modalText');
+      const themeBtn = document.getElementById('themeBtn');
+
+      let startTime = null;
+      let savedSurname = '';
+
+      // enable save when surname not empty
+      surnameInput.addEventListener('input', ()=>{
+        saveBtn.disabled = !surnameInput.value.trim();
+      });
+
+      saveBtn.addEventListener('click', ()=>{
+        const v = surnameInput.value.trim();
+        if(!v) return;
+        savedSurname = v;
+        surnameInput.disabled = true;
+        saveBtn.disabled = true;
+        savedLabel.style.display = 'inline-flex';
+        textArea.disabled = false;
+        textArea.placeholder = '';
+        textArea.focus();
+        status.textContent = 'Готов к вводу текста';
+        submitBtn.disabled = false;
+        startTime = new Date();
+      });
+
+      // Restrict input to keyboard-originated insertions only
+      // Allow inputTypes: insertText, insertCompositionText (IME), deleteContentBackward
+      textArea.addEventListener('beforeinput', (e)=>{
+        const t = e.inputType || '';
+        if (t === 'insertFromPaste' || t === 'insertFromDrop' || t === 'insertReplacementText' || t === 'insertFromYank'){
+          e.preventDefault();
+        }
+        // other inputTypes like insertText and insertCompositionText are allowed
+      });
+
+      // block paste events explicitly
+      textArea.addEventListener('paste', (e)=>{ e.preventDefault(); });
+      // block drop
+      textArea.addEventListener('drop', (e)=>{ e.preventDefault(); });
+      textArea.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+
+      // block Ctrl/Cmd+V and Shift+Insert
+      textArea.addEventListener('keydown', (e)=>{
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v'){
+          e.preventDefault();
+        }
+        if (e.key === 'Insert' && e.shiftKey){ e.preventDefault(); }
+      });
+
+      // prevent context menu paste via keyboard? keep menu but paste intercepted already
+      // prevent drop from other sources
+
+      submitBtn.addEventListener('click', ()=>{
+        if (!startTime) return;
+        const endTime = new Date();
+        const text = textArea.value;
+        const durationMs = endTime - startTime;
+
+        modalSurname.textContent = savedSurname;
+        modalDate.textContent = formatDate(endTime);
+        modalTime.textContent = formatTime(endTime);
+        modalDuration.textContent = formatDuration(durationMs);
+        modalText.textContent = text || '\u00A0'; // show nbsp if empty so box keeps size
+
+        // compact layout: show modal and focus
+        modal.classList.add('show');
+        // focus close for accessibility
+        closeModal.focus();
+      });
+
+      closeModal.addEventListener('click', ()=>{ modal.classList.remove('show'); });
+      modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.classList.remove('show'); });
+
+      // theme toggle
+      const root = document.documentElement;
+      const currentTheme = localStorage.getItem('theme') || 'light';
+      setTheme(currentTheme);
+      themeBtn.addEventListener('click', ()=>{
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        setTheme(next);
+      });
+
+      function setTheme(name){
+        if(name === 'dark') document.documentElement.setAttribute('data-theme','dark');
+        else document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('theme', name);
+        themeBtn.textContent = name === 'dark' ? '🌙' : '☀️';
+      }
+
+      function pad(n){return n<10?('0'+n):n}
+      function formatDate(d){
+        return d.getFullYear()+'.'+pad(d.getMonth()+1)+'.'+pad(d.getDate());
+      }
+      function formatTime(d){
+        return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+      }
+      function formatDuration(ms){
+        const s = Math.floor(ms/1000);
+        const h = Math.floor(s/3600);
+        const m = Math.floor((s%3600)/60);
+        const sec = s%60;
+        if(h>0) return h+'ч '+m+'м '+sec+'с';
+        if(m>0) return m+'м '+sec+'с';
+        return sec+'с';
+      }
+
+      // Accessibility enhancement: pressing Enter in surname saves
+      surnameInput.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter' && !saveBtn.disabled){ e.preventDefault(); saveBtn.click(); }
+      });
+
+      // Prevent accidental form submit via Enter in textarea
+      textArea.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { /* allow ctrl+enter? we keep default no-op */ } });
+
+      // Prevent file drops to whole window
+      window.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+      window.addEventListener('drop', (e)=>{ e.preventDefault(); });
+
+    })();
+  </script>
+</body>
+</html>
