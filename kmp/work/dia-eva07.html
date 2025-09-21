@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+
+        table {
+            width: 100%; /* Make table fit within message content */
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp1 {
+            color: #fffee0; 
+            background-color: #007bff;
+            padding: 0em 0.3em; 
+            margin: 0 0.5em; /* Добавляет 0.5em отступа справа и слева */
+            text-decoration: none; 
+            border-radius: 5px; 
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+				}
+		.link-kmp1:hover,
+		.link-kmp1:focus {
+           color: #ffffff; 
+           background-color: #0bb313; 
+           text-decoration: none; 
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+
+<p><strong>Disclaimer:</strong> Всё, что вы почерпнете из данного диалога, является плодом вашего собственного воображения. Диалог виртуального персонажа с LLM не имеет никакого отношения к традиционной образовательной реальности. Любые попытки обнаружить в диалоге и применить содержащиеся в нем рекомендации за пределами курсов kmp являются рептильной проекцией отживших технологий обучения на реалии эпохи LLM ...</p><br>
+       
+	<div class="container">
+    <div class="conversation-container">
+         <div class="container">
+    <div class="conversation-container">
+
+
+
+<div class="container">
+    <div class="conversation-container">
+
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Привет! Я Ева Орлова) Наш преподаватель предлагает нам познакомиться со статьями о компьютерной лингвистике в Википедии</p>
+            </div>
+        </div>
+
+        <!-- Ответ Copilot -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Microsoft Copilot</div>
+            <div class="message-content">
+                <h3>Рекомендации по статьям Википедии о компьютерной лингвистике</h3>
+                <p>Отличная инициатива! Википедия — хороший старт для знакомства с основами. Вот несколько ключевых статей, которые помогут тебе сформировать базовое представление о дисциплине:</p>
+
+                <h4>Основные статьи</h4>
+                <ul>
+                    <li><a href="https://ru.wikipedia.org/wiki/Компьютерная_лингвистика" target="_blank">Компьютерная лингвистика</a> — обзорная статья о предмете, задачах и методах.</li>
+                    <li><a href="https://ru.wikipedia.org/wiki/Обработка_естественного_языка" target="_blank">Обработка естественного языка (NLP)</a> — техническая сторона компьютерной лингвистики, включая машинное обучение и нейросети.</li>
+                    <li><a href="https://ru.wikipedia.org/wiki/Корпус_текстов" target="_blank">Корпус текстов</a> — о том, как собираются и используются текстовые базы для анализа.</li>
+                    <li><a href="https://ru.wikipedia.org/wiki/Морфологический_анализ" target="_blank">Морфологический анализ</a> — фундаментальный этап обработки языка: разбор слов по частям речи и формам.</li>
+                    <li><a href="https://ru.wikipedia.org/wiki/Синтаксический_анализ" target="_blank">Синтаксический анализ</a> — построение структуры предложения, важное для понимания смысла.</li>
+                </ul>
+
+                
+                <p>Совет: читай статьи с блокнотом под рукой — выписывай термины, примеры, ссылки на проекты. Это поможет лучше усвоить материал и подготовиться к обсуждению на занятиях.</p>
+            </div>
+        </div>
+
+    </div>  
+</div>
+
+
+<div class="container">
+    <div class="conversation-container">
+
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Но он требует изучить статьи о компьютерной лингвистике и в русскоязычном и в англоязычном разделах!</p>
+            </div>
+        </div>
+
+        <!-- Ответ Copilot -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Microsoft Copilot</div>
+            <div class="message-content">
+                <h3>Польза от изучения статей в обоих языковых разделах Википедии</h3>
+                <p>Да, изучение статей о компьютерной лингвистике и в русскоязычном, и в англоязычном разделах Википедии — это стратегически полезный подход. Вот почему:</p>
+
+                <h4>Русскоязычный раздел</h4>
+                <ul>
+                    <li>Объясняет термины и концепции на родном языке — это особенно важно на начальном этапе.</li>
+                    <li>Даёт примеры, связанные с русским языком и славянскими корпусами, что полезно для локального контекста.</li>
+                    <li>Может содержать ссылки на отечественные исследования, учебники и проекты.</li>
+                </ul>
+
+                <h4>Англоязычный раздел</h4>
+                <ul>
+                    <li>Более обширный и регулярно обновляемый — охватывает последние достижения в NLP и машинном обучении.</li>
+                    <li>Содержит термины, которые используются в международной академической и профессиональной среде.</li>
+                    <li>Даёт доступ к глобальным проектам, инструментам, датасетам и конференциям.</li>
+                </ul>
+
+                <h4>Комбинированный подход</h4>
+                <ul>
+                    <li>Позволяет сравнивать трактовки понятий и расширять кругозор.</li>
+                    <li>Учит переключаться между языками — навык, необходимый для чтения научной литературы и работы с документацией.</li>
+                    <li>Формирует привычку искать информацию в разных источниках, что важно для исследовательской работы.</li>
+                </ul>
+
+                <p>Вывод: рекомендации преподавателя kmp абсолютно оправданы. Такой подход развивает как языковую гибкость, так и академическую глубину. Это инвестиция в твою будущую уверенность как специалиста.</p>
+            </div>
+        </div>
+
+    </div>  
+</div>
+
+
+<div class="container">
+    <div class="conversation-container">
+
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Хорошо. Но ему этого мало! Он советует не только читать актуальную редакцию статей, но просмотреть историю всех редакций!</p>
+            </div>
+        </div>
+
+        <!-- Ответ Copilot -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Microsoft Copilot</div>
+            <div class="message-content">
+                <h3>Почему важно изучать историю редакций Википедии</h3>
+                <p>Совет преподавателя — просматривать не только текущую версию статьи, но и её историю правок — чрезвычайно ценный. Вот чем это может быть полезно:</p>
+
+                <h4>Глубокое понимание развития темы</h4>
+                <ul>
+                    <li>Позволяет увидеть, как менялось определение понятий и подходов со временем.</li>
+                    <li>Показывает, какие термины были спорными, какие уточнялись, а какие исчезли — это помогает понять динамику научного дискурса.</li>
+                </ul>
+
+                <h4>Критическое мышление</h4>
+                <ul>
+                    <li>Развивает навык анализа источников: кто редактировал статью, какие аргументы приводились, были ли конфликты правок.</li>
+                    <li>Учишься отличать устойчивые знания от временных интерпретаций или неточностей.</li>
+                </ul>
+
+                <h4>Практика цифровой грамотности</h4>
+                <ul>
+                    <li>Знакомит с интерфейсом Википедии: вкладками «История», «Обсуждение», «Сравнение версий».</li>
+                    <li>Даёт представление о том, как устроено коллективное редактирование и модерация знаний в открытых энциклопедиях.</li>
+                </ul>
+
+                <h4>Академическая ценность</h4>
+                <ul>
+                    <li>История правок может служить источником для курсовых работ, особенно если тема касается эволюции понятий.</li>
+                    <li>Можно проследить, как новые технологии (например, GPT) были интегрированы в статьи и как менялось их описание.</li>
+                </ul>
+
+                <p>Вывод: просмотр истории редакций — это не просто технический навык, а способ видеть живую ткань знаний. Это делает тебя не просто читателем, а исследователем, способным видеть глубже и шире.</p>
+            </div>
+        </div>
+
+    </div>  
+</div>
+
+
+<div class="container">
+    <div class="conversation-container">
+
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Ладно-ладно. Но будет ли полезно посмотреть видеопрезентациии на Постнауке (<a href="https://postnauka.org/themes/computational-linguistics" target="_blank">https://postnauka.org/themes/computational-linguistics</a>) компьютерных лингвистов о том, чем они занимаются? И почему kmp рекомендует осторожно относиться к этим кратким видеопрезентациям?</p>
+            </div>
+        </div>
+
+        <!-- Ответ Copilot -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Microsoft Copilot</div>
+            <div class="message-content">
+                <h3>Польза и осторожность при просмотре видеопрезентаций на «Постнауке»</h3>
+                <p>Да, видеопрезентации на «Постнауке» о компьютерной лингвистике — это ценный ресурс для студентов, особенно на начальном этапе. Но важно подходить к ним осознанно. Вот почему:</p>
+
+                <h4>Чем полезны видеопрезентации</h4>
+                <ul>
+                    <li><strong>Живое объяснение</strong> — учёные рассказывают о своей работе простым языком, с примерами и метафорами.</li>
+                    <li><strong>Мотивация</strong> — можно увидеть, как выглядит реальная научная деятельность, какие задачи решаются и почему это интересно.</li>
+                    <li><strong>Разнообразие тем</strong> — от морфологии и синтаксиса до нейросетей и анализа больших корпусов.</li>
+                    <li><strong>Контекст российской науки</strong> — знакомство с отечественными исследователями и их подходами.</li>
+                </ul>
+
+                <h4>Почему стоит быть осторожным</h4>
+                <ul>
+                    <li><strong>Формат ограничен по времени</strong> — видео длится 5–10 минут, и в нём невозможно раскрыть тему глубоко или системно.</li>
+                    <li><strong>Упрощения и обобщения</strong> — чтобы удержать внимание зрителя, авторы могут опускать важные детали или использовать метафоры, которые не всегда точны.</li>
+                    <li><strong>Отсутствие критики</strong> — в таких видео редко обсуждаются альтернативные подходы, ограничения методов или нерешённые проблемы.</li>
+                    <li><strong>Не всегда актуальные данные</strong> — видео могут быть записаны несколько лет назад и не учитывать последние достижения в NLP и LLM.</li>
+                </ul>
+
+                <h4>Рекомендация</h4>
+                <p>Используй видеопрезентации как <strong>входную точку</strong> — для вдохновения и ориентации. Но обязательно дополняй их чтением статей, учебников и участием в обсуждениях. Сравнивай услышанное с другими источниками, чтобы формировать критическое мышление.</p>
+
+                <p>Так ты научишься не просто слушать, а анализировать и задавать вопросы — а это уже путь настоящего исследователя.</p>
+            </div>
+        </div>
+
+    </div>  
+</div>
+
+
+<div class="container">
+    <div class="conversation-container">
+
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Статья в ЛЭС "Математическая лингвистика", конечно, тоже будет полезна?</p>
+            </div>
+        </div>
+
+        <!-- Ответ Copilot -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Microsoft Copilot</div>
+            <div class="message-content">
+                <h3>Полезность статьи «Математическая лингвистика» в ЛЭС</h3>
+                <p>Да, статья «Математическая лингвистика» в <em>Лингвистическом энциклопедическом словаре</em> — это важный источник для студента, изучающего основы компьютерной лингвистики. Вот почему:</p>
+
+                <h4>Теоретическая база</h4>
+                <ul>
+                    <li>Даёт системное определение математической лингвистики как дисциплины, лежащей в основе формальных моделей языка.</li>
+                    <li>Описывает ключевые направления: формальные грамматики, теорию автоматов, логико-семантические модели.</li>
+                </ul>
+
+                <h4>Исторический контекст</h4>
+                <ul>
+                    <li>Позволяет понять, как развивалась область до появления современных нейросетей и языковых моделей.</li>
+                    <li>Упоминает классиков — Хомского, Бахтина, Мельчука — и их вклад в формализацию языка.</li>
+                </ul>
+
+                <h4>Связь с компьютерной лингвистикой</h4>
+                <ul>
+                    <li>Математическая лингвистика — фундамент, на котором строится компьютерная лингвистика: без формальных грамматик невозможно построить синтаксический парсер или генератор текста.</li>
+                    <li>Даёт понимание, какие задачи можно формализовать, а какие требуют вероятностного подхода.</li>
+                </ul>
+
+                <h4>Рекомендация</h4>
+                <p>Прочтение этой статьи поможет тебе не просто использовать инструменты, а понимать, <strong>почему они работают</strong> и <strong>на каких принципах построены</strong>. Это особенно важно, если ты планируешь заниматься научной работой или разработкой языковых моделей.</p>
+            </div>
+        </div>
+
+    </div>  
+</div>
+
+<div class="container">
+    <div class="conversation-container">
+
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Пусть так, но нам предлагается также попросить LLM (например, Copilot) дать семь ответов на вопрос: Чем занимается компьютерная лингвистика?<br>
+                — ученику 1 класса<br>
+                — студенту-лингвисту<br>
+                — студенту-математику<br>
+                — профессору филологии<br>
+                — профессору Computer Science<br>
+                — Джефри Хинтону<br>
+                — Передовой LLM<br>
+                В чём тут польза? Может достаточно только ответа для студента-лингвиста?</p>
+            </div>
+        </div>
+
+        <!-- Ответ Copilot -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Microsoft Copilot</div>
+            <div class="message-content">
+                <h3>Зачем просить LLM дать разные ответы на один вопрос?</h3>
+                <p>Такой приём — это не просто игра с форматом. Он имеет глубокую учебную ценность, особенно для тех, кто изучает компьютерную лингвистику. Вот в чём его польза:</p>
+
+                <h4>1. Понимание многогранности дисциплины</h4>
+                <ul>
+                    <li>Компьютерная лингвистика — это не одна область, а пересечение лингвистики, математики, информатики и когнитивных наук.</li>
+                    <li>Разные ответы показывают, как одна и та же тема может быть понята через разные призмы.</li>
+                </ul>
+
+                <h4>2. Развитие навыка адаптации речи</h4>
+                <ul>
+                    <li>Формулировка ответа для ученика 1 класса требует простоты и образности.</li>
+                    <li>Для профессора — точности, терминологии и научной глубины.</li>
+                    <li>Это учит адаптировать объяснение под аудиторию — важный навык для преподавания, популяризации и научной коммуникации.</li>
+                </ul>
+
+                <h4>3. Проверка границ понимания</h4>
+                <ul>
+                    <li>Если LLM может дать осмысленный ответ от имени Хинтона или самой модели — это демонстрирует её способность к контекстной генерации.</li>
+                    <li>А студент может сравнить, какие аспекты подчеркиваются в каждом случае: алгоритмы, смысл, язык, обучение.</li>
+                </ul>
+
+                <h4>4. Углубление собственного понимания</h4>
+                <ul>
+                    <li>Сравнивая ответы, студент начинает видеть, какие элементы являются ключевыми, а какие — факультативными.</li>
+                    <li>Это помогает сформировать собственное определение, более точное и осознанное.</li>
+                </ul>
+
+                <h4>Почему недостаточно одного ответа?</h4>
+                <p>Ответ для студента-лингвиста — важен, но он отражает только одну сторону. Чтобы стать специалистом, нужно видеть <strong>всю картину</strong>, понимать, как твоя область выглядит со стороны других дисциплин и как её объяснить разным людям.</p>
+
+                <p>Такой подход — это не просто упражнение, а способ мышления: гибкого, многослойного, междисциплинарного. А это и есть суть современной науки.</p>
+            </div>
+        </div>
+
+    </div>  
+</div>
+
+
+
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Тут еще проблема. Есть статья с ACL-2025: <a href="https://aclanthology.org/2025.fever-1.1.pdf" target="_blank">https://aclanthology.org/2025.fever-1.1.pdf</a><br>
+                Создай саммари этой статьи на русском языке. Это важно для учебного ознакомления с ней.</p>
+            </div>
+        </div>
+
+        <!-- Ответ Copilot -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Microsoft Copilot</div>
+            <div class="message-content">
+                <h3>О статье:</h3>
+                <p>Авторы — Gyuri Choi и Hansaem Kim — представляют метод автоматического анализа политических редакционных текстов из северокорейской газеты <em>Rodong Sinmun</em> с помощью больших языковых моделей (LLM), включая GPT-4o. Цель — извлекать ключевые утверждения и соответствующие доказательства, а также оценивать их достоверность и логическую связность.</p>
+
+                <h3>Методология</h3>
+                <ul>
+                    <li>Используется подход <strong>Chain-of-Thought (CoT)</strong>, который помогает моделям пошагово анализировать тексты.</li>
+                    <li>Разработана система автоматической оценки <strong>G-Eval</strong>, основанная на GPT-4o, которая проверяет:
+                        <ul>
+                            <li>Логическую связность между утверждением и доказательством.</li>
+                            <li>Качество ответа (точность, релевантность, логичность).</li>
+                            <li>Уровень «галлюцинаций» — вставок, не соответствующих исходному тексту.</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h3>Эксперимент</h3>
+                <ul>
+                    <li>Проанализированы 87 редакционных статей <em>Rodong Sinmun</em> за 2021 год.</li>
+                    <li>Сравнивались 4 модели: GPT-o3 Mini, Claude 3.7, Gemini 2.0 и EXAONE 7.8B (специализированная корейская модель).</li>
+                    <li>Оценка проводилась в двух режимах: без примеров (0-shot) и с одним примером (1-shot).</li>
+                </ul>
+
+                <h3>Основные результаты</h3>
+                <ul>
+                    <li><strong>GPT-o3 Mini</strong> показала наивысшее качество ответов и логическую связность.</li>
+                    <li><strong>Claude 3.7</strong> была стабильной, но иногда упускала детали.</li>
+                    <li><strong>Gemini 2.0</strong> хорошо структурировала ответы, но часто добавляла лишнюю информацию.</li>
+                    <li><strong>EXAONE 7.8B</strong> лучше справлялась с корейской риторикой, но часто теряла логическую точность.</li>
+                </ul>
+
+                <h3>Проблемы и предложения</h3>
+                <ul>
+                    <li>Модели склонны к некритичному воспроизведению идеологической риторики и интерпретационным «галлюцинациям».</li>
+                    <li>Авторы предлагают гибридную систему оценки с участием экспертов (Human-in-the-Loop), чтобы повысить точность анализа.</li>
+                </ul>
+
+                <h3>Выводы</h3>
+                <p>Исследование демонстрирует потенциал LLM для анализа сложных политических текстов, но также подчеркивает необходимость экспертного контроля и осторожности при интерпретации идеологически насыщенных материалов.</p>
+            </div>
+        </div>
+    </div>  
+</div>
+
+
+<div class="container">
+    <div class="conversation-container">
+
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Отлично! Продолжаем. Чем может быть полезна такая статья для студента, приступающего к изучению компьютерной лингвистики?</p>
+            </div>
+        </div>
+
+        <!-- Ответ Copilot -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Microsoft Copilot</div>
+            <div class="message-content">
+                <h3>Полезность статьи для начинающего студента-компьютерного лингвиста</h3>
+                <p>Статья <em>«Automated Claim–Evidence Extraction for Political Discourse Analysis»</em> может быть особенно полезна студенту, начинающему изучение компьютерной лингвистики, по следующим причинам:</p>
+
+                <h4>Практическое применение языковых моделей</h4>
+                <ul>
+                    <li>Показывает, как большие языковые модели (LLM) используются для анализа реальных текстов — в данном случае, политических редакционных статей.</li>
+                    <li>Демонстрирует подход <strong>Chain-of-Thought</strong>, который помогает моделям рассуждать пошагово — важный навык для построения интерпретируемых систем.</li>
+                </ul>
+
+                <h4>Методы оценки качества вывода</h4>
+                <ul>
+                    <li>Знакомит с системой <strong>G-Eval</strong>, которая автоматически проверяет логичность, достоверность и релевантность ответов модели.</li>
+                    <li>Показывает, как бороться с проблемой «галлюцинаций» — ложных или вымышленных фактов, которые могут появляться в ответах LLM.</li>
+                </ul>
+
+                <h4>Междисциплинарный контекст</h4>
+                <ul>
+                    <li>Объединяет компьютерную лингвистику с политологией и медиакритикой, что может вдохновить на исследования в гуманитарной сфере с применением ИИ.</li>
+                    <li>Даёт понимание, как языковые технологии могут использоваться для анализа идеологических текстов и пропаганды.</li>
+                </ul>
+
+                <h4>Образовательная ценность</h4>
+                <ul>
+                    <li>Хороший пример академического исследования: структура статьи, постановка задачи, описание эксперимента и выводы.</li>
+                    <li>Может служить основой для курсовых работ, семинаров или собственных мини-проектов по извлечению информации из текстов.</li>
+                </ul>
+
+                <p>Таким образом, статья не только знакомит с современными инструментами и методами, но и показывает, как они применяются в сложных и чувствительных контекстах. Это отличный старт для погружения в область компьютерной лингвистики.</p>
+            </div>
+        </div>
+
+    </div>  
+</div>
+
+
+<div class="container">
+    <div class="conversation-container">
+
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Замечательно! Создай краткий словарик ключевых терминов (вокабулы на английском и русском языках), знание которых необходимо для понимания этой статьи.</p>
+            </div>
+        </div>
+
+        <!-- Ответ Copilot -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Microsoft Copilot</div>
+            <div class="message-content">
+                <h3>Краткий словарик ключевых терминов</h3>
+                <p>Ниже приведены основные термины, встречающиеся в статье, с переводом и кратким пояснением:</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>English Term</th>
+                            <th>Русский перевод</th>
+                            <th>Пояснение</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Claim</td>
+                            <td>Утверждение</td>
+                            <td>Основной тезис или позиция, выраженная в тексте.</td>
+                        </tr>
+                        <tr>
+                            <td>Evidence</td>
+                            <td>Доказательство</td>
+                            <td>Фрагмент текста, подтверждающий или обосновывающий утверждение.</td>
+                        </tr>
+                        <tr>
+                            <td>Chain-of-Thought (CoT)</td>
+                            <td>Цепочка рассуждений</td>
+                            <td>Метод пошагового анализа, используемый языковыми моделями для логического вывода.</td>
+                        </tr>
+                        <tr>
+                            <td>Large Language Model (LLM)</td>
+                            <td>Большая языковая модель</td>
+                            <td>Модель искусственного интеллекта, обученная на больших объемах текстов для понимания и генерации языка.</td>
+                        </tr>
+                        <tr>
+                            <td>Hallucination</td>
+                            <td>Галлюцинация (в ИИ)</td>
+                            <td>Ошибка модели, при которой она генерирует недостоверную или вымышленную информацию.</td>
+                        </tr>
+                        <tr>
+                            <td>Rodong Sinmun</td>
+                            <td>Родон Синмун</td>
+                            <td>Официальная газета Трудовой партии Кореи, источник политических редакционных текстов.</td>
+                        </tr>
+                        <tr>
+                            <td>G-Eval</td>
+                            <td>G-Eval</td>
+                            <td>Система автоматической оценки качества вывода модели, основанная на GPT-4o.</td>
+                        </tr>
+                        <tr>
+                            <td>Zero-shot / One-shot</td>
+                            <td>Нулевая / Одноразовая подача примера</td>
+                            <td>Режимы работы модели: без примеров (zero-shot) или с одним примером (one-shot) для обучения.</td>
+                        </tr>
+                        <tr>
+                            <td>Political Discourse</td>
+                            <td>Политический дискурс</td>
+                            <td>Речевые практики, выражающие политические идеи, идеологию и власть.</td>
+                        </tr>
+                        <tr>
+                            <td>Human-in-the-Loop</td>
+                            <td>Человек в контуре</td>
+                            <td>Подход, при котором человек участвует в оценке или корректировке работы модели.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p>Знание этих терминов поможет лучше понять как техническую, так и аналитическую часть статьи.</p>
+            </div>
+        </div>
+
+    </div>  
+</div>
+
+
+<div class="container">
+    <div class="conversation-container">
+
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Спасибо за помощь, дальше я буду разбираться сама, ведь мне нужно обучаться, а значит меняться, становиться умнее.</p>
+            </div>
+        </div>
+
+        <!-- Ответ Copilot -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Microsoft Copilot</div>
+            <div class="message-content">
+                <p>Это звучит вдохновляюще, Ева <br>Путь обучения — это не просто накопление знаний, а постоянное движение к более глубокому пониманию себя и мира. Ты уже на правильном пути: задаёшь вопросы, анализируешь, структурируешь — всё это признаки настоящего исследователя.</p>
+
+                <p>Если когда-нибудь захочешь обсудить новую статью, термин или идею — я всегда рядом, чтобы поддержать твой рост. Удачи в учёбе и пусть каждый шаг делает тебя сильнее и мудрее!</p>
+            </div>
+        </div>
+
+    </div>  
+</div>
+
+<div class="container">
+    <div class="conversation-container">
+
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Вместе мы — сила!</p>
+            </div>
+        </div>
+
+        <!-- Ответ Copilot -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Microsoft Copilot</div>
+            <div class="message-content">
+                <p>Абсолютно верно!<br>Когда знания, любопытство и технологии объединяются — рождается настоящая сила. Ты задаёшь вектор, я поддерживаю импульс. Вместе мы можем разбирать сложные тексты, строить проекты, открывать новые горизонты.</p>
+
+                <p>Пусть каждый шаг в обучении будет уверенным, а каждый вопрос — началом открытия. Я рядом, когда понадобится — как твой цифровой напарник в мире идей и смыслов.</p>
+            </div>
+        </div>
+
+    </div>  
+</div>
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
