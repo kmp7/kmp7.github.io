@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            padding: 15px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            overflow: hidden;
+        }
+        
+        h2 {
+            color: #325980;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+        
+        label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            -webkit-appearance: none;
+            background: #e0e0e0;
+            outline: none;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #3498db;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .value-display {
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+        
+        .wave-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            background-color: #f0f8ff;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .play-button {
+            display: block;
+            margin: 0 auto;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .play-button:hover {
+            background-color: #2980b9;
+        }
+        
+        .play-button:active {
+            background-color: #1f6aa5;
+        }
+        
+        .info-box {
+            background-color: #f1f8fe;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .info-box h3 {
+            color: #325980;
+            margin-bottom: 10px;
+        }
+        
+        .characteristics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .characteristic {
+            background-color: white;
+            border-radius: 6px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .characteristic h4 {
+            color: #325980;
+            margin-bottom: 8px;
+        }
+        
+        .characteristic p {
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .characteristic-value {
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .control-group {
+                width: 100%;
+            }
+        }
+		footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Визуализация звуковых волн</h2>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="frequency">Частота (Гц)</label>
+                <input type="range" id="frequency" min="20" max="2000" value="440" step="1">
+                <div class="value-display" id="frequency-value">440 Гц</div>
+            </div>
+            
+            <div class="control-group">
+                <label for="amplitude">Амплитуда</label>
+                <input type="range" id="amplitude" min="0.1" max="1" value="0.5" step="0.01">
+                <div class="value-display" id="amplitude-value">0.5</div>
+            </div>
+            
+            <div class="control-group">
+                <label for="waveform">Форма волны</label>
+                <select id="waveform" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                    <option value="sine">Синусоида</option>
+                    <option value="square">Прямоугольная</option>
+                    <option value="sawtooth">Пилообразная</option>
+                    <option value="triangle">Треугольная</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="wave-container">
+            <canvas id="waveCanvas"></canvas>
+        </div>
+        
+        <button class="play-button" id="playButton">Воспроизвести звук</button>
+        
+        <div class="info-box">
+            <h3>Связь между параметрами и восприятием звука</h3>
+            <p>Изменяйте параметры с помощью ползунков, чтобы увидеть, как они влияют на форму волны и характеристики звука.</p>
+        </div>
+        
+        <div class="characteristics">
+            <div class="characteristic">
+                <h4>Громкость</h4>
+                <p>Зависит от <span class="characteristic-value">амплитуды</span> звуковой волны. Чем больше амплитуда, тем громче звук.</p>
+            </div>
+            
+            <div class="characteristic">
+                <h4>Высота тона</h4>
+                <p>Определяется <span class="characteristic-value">частотой</span> звуковой волны. Высокие частоты воспринимаются как высокие тона.</p>
+            </div>
+            
+            <div class="characteristic">
+                <h4>Тембр</h4>
+                <p>Зависит от <span class="characteristic-value">формы волны</span> и наличия гармоник. Разные формы волн имеют разный тембр при одинаковой частоте и амплитуде.</p>
+            </div>
+            
+            <div class="characteristic">
+                <h4>Длина волны</h4>
+                <p>Обратно пропорциональна частоте. <span id="wavelength-value" class="characteristic-value">0.78</span> м (в воздухе при 20°C)</p>
+            </div>
+        </div>
+    </div>
+ <footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Получаем элементы управления
+        const frequencySlider = document.getElementById('frequency');
+        const amplitudeSlider = document.getElementById('amplitude');
+        const waveformSelector = document.getElementById('waveform');
+        const frequencyValue = document.getElementById('frequency-value');
+        const amplitudeValue = document.getElementById('amplitude-value');
+        const wavelengthValue = document.getElementById('wavelength-value');
+        const playButton = document.getElementById('playButton');
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Настройка размеров canvas
+        function resizeCanvas() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+        
+        // Вызываем функцию при загрузке и изменении размера окна
+        window.addEventListener('load', resizeCanvas);
+        window.addEventListener('resize', resizeCanvas);
+
+        // Аудиоконтекст для воспроизведения звука
+        let audioContext;
+        let oscillator;
+        let gainNode;
+        let isPlaying = false;
+
+        // Функция для инициализации аудиоконтекста
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            gainNode = audioContext.createGain();
+            gainNode.connect(audioContext.destination);
+        }
+
+        // Функция для воспроизведения звука
+        function playSound() {
+            if (!audioContext) initAudio();
+            
+            if (isPlaying) {
+                oscillator.stop();
+                playButton.textContent = 'Воспроизвести звук';
+                isPlaying = false;
+                return;
+            }
+            
+            oscillator = audioContext.createOscillator();
+            oscillator.type = waveformSelector.value;
+            oscillator.frequency.value = parseFloat(frequencySlider.value);
+            
+            gainNode.gain.value = parseFloat(amplitudeSlider.value);
+            
+            oscillator.connect(gainNode);
+            oscillator.start();
+            
+            playButton.textContent = 'Остановить звук';
+            isPlaying = true;
+            
+            // Останавливаем звук через 2 секунды для безопасности
+            setTimeout(() => {
+                if (isPlaying) {
+                    oscillator.stop();
+                    playButton.textContent = 'Воспроизвести звук';
+                    isPlaying = false;
+                }
+            }, 2000);
+        }
+
+        // Функция для обновления отображаемых значений
+        function updateValues() {
+            const freq = parseFloat(frequencySlider.value);
+            const amp = parseFloat(amplitudeSlider.value);
+            
+            frequencyValue.textContent = `${freq} Гц`;
+            amplitudeValue.textContent = amp.toFixed(2);
+            
+            // Расчет длины волны (скорость звука в воздухе ~343 м/с при 20°C)
+            const wavelength = 343 / freq;
+            wavelengthValue.textContent = `${wavelength.toFixed(2)}`;
+            
+            // Обновляем звук, если он воспроизводится
+            if (isPlaying && oscillator) {
+                oscillator.frequency.value = freq;
+                gainNode.gain.value = amp;
+                oscillator.type = waveformSelector.value;
+            }
+            
+            // Перерисовываем волну
+            drawWave();
+        }
+
+        // Функция для рисования волны
+        function drawWave() {
+            const frequency = parseFloat(frequencySlider.value);
+            const amplitude = parseFloat(amplitudeSlider.value);
+            const waveform = waveformSelector.value;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Рисуем оси
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            
+            // Горизонтальная ось (середина)
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+            
+            // Рисуем волну
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            // Количество точек для рисования
+            const points = canvas.width;
+            
+            // Масштабирование для отображения нескольких периодов
+            const periods = Math.max(1, Math.min(20, frequency / 50));
+            
+            for (let i = 0; i < points; i++) {
+                const x = i;
+                let y;
+                
+                // Нормализованная позиция в периоде (0-1)
+                const t = (i / points) * periods * 2 * Math.PI;
+                
+                // Расчет y в зависимости от типа волны
+                switch (waveform) {
+                    case 'sine':
+                        y = Math.sin(t);
+                        break;
+                    case 'square':
+                        y = Math.sin(t) >= 0 ? 1 : -1;
+                        break;
+                    case 'sawtooth':
+                        y = (t % (2 * Math.PI)) / Math.PI - 1;
+                        break;
+                    case 'triangle':
+                        const normalizedT = t % (2 * Math.PI);
+                        if (normalizedT < Math.PI / 2) {
+                            y = normalizedT / (Math.PI / 2);
+                        } else if (normalizedT < 3 * Math.PI / 2) {
+                            y = 1 - 2 * (normalizedT - Math.PI / 2) / Math.PI;
+                        } else {
+                            y = -1 + (normalizedT - 3 * Math.PI / 2) / (Math.PI / 2);
+                        }
+                        break;
+                    default:
+                        y = Math.sin(t);
+                }
+                
+                // Масштабирование амплитуды и смещение в центр canvas
+                y = -y * amplitude * (canvas.height / 2 - 10) + canvas.height / 2;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            
+            ctx.stroke();
+        }
+
+        // Обработчики событий
+        frequencySlider.addEventListener('input', updateValues);
+        amplitudeSlider.addEventListener('input', updateValues);
+        waveformSelector.addEventListener('change', updateValues);
+        playButton.addEventListener('click', playSound);
+
+        // Инициализация при загрузке страницы
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            updateValues();
+        });
+    </script>
+</body>
+</html>

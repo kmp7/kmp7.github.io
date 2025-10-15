@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            padding: 15px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            overflow: hidden;
+        }
+        
+        h2 {
+            color: #325980;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        
+        .sound-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .sound-button {
+            padding: 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            text-align: center;
+        }
+        
+        .sound-button:hover {
+            background-color: #2980b9;
+        }
+        
+        .sound-button:active {
+            background-color: #1f6aa5;
+            transform: scale(0.98);
+        }
+        
+        .vowel {
+            background-color: #3498db;
+        }
+        
+        .consonant {
+            background-color: #e74c3c;
+        }
+        
+        .visualization-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background-color: #111;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .spectrogram-container {
+            margin-top: 10px;
+            position: relative;
+            width: 100%;
+            height: 200px;
+            background-color: #111;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .info-box {
+            background-color: #f1f8fe;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .info-box h3 {
+            color: #325980;
+            margin-bottom: 10px;
+        }
+        
+        .formant-info {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .formant-card {
+            background-color: white;
+            border-radius: 6px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .formant-card h4 {
+            color: #325980;
+            margin-bottom: 8px;
+        }
+        
+        .formant-card p {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .formant-value {
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        .frequency-axis {
+            position: absolute;
+            left: 0;
+            height: 100%;
+            width: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 5px 0;
+            color: white;
+            font-size: 10px;
+            z-index: 10;
+        }
+        
+        .frequency-label {
+            text-align: right;
+            padding-right: 5px;
+        }
+        
+        .record-button {
+            display: block;
+            margin: 0 auto 15px;
+            padding: 10px 20px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .record-button:hover {
+            background-color: #219653;
+        }
+        
+        .record-button:active {
+            background-color: #1e874b;
+        }
+        
+        .record-button.recording {
+            background-color: #e74c3c;
+        }
+        
+        .status {
+            text-align: center;
+            margin-bottom: 15px;
+            font-style: italic;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .sound-buttons {
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            }
+            
+            .visualization-container {
+                height: 200px;
+            }
+            
+            .spectrogram-container {
+                height: 150px;
+            }
+        }
+			footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Спектрограмма речи</h2>
+        
+        <p class="status" id="status">Выберите звук для анализа или запишите свой голос</p>
+        
+        <button class="record-button" id="recordButton">Записать свой голос</button>
+        
+        <h3 style="text-align: center; margin-bottom: 10px; color: #325980;">Гласные звуки</h3>
+        <div class="sound-buttons" id="vowelButtons">
+            <button class="sound-button vowel" data-sound="a">А</button>
+            <button class="sound-button vowel" data-sound="o">О</button>
+            <button class="sound-button vowel" data-sound="u">У</button>
+            <button class="sound-button vowel" data-sound="e">Э</button>
+            <button class="sound-button vowel" data-sound="i">И</button>
+            <button class="sound-button vowel" data-sound="y">Ы</button>
+        </div>
+        
+        <h3 style="text-align: center; margin-bottom: 10px; color: #325980;">Согласные звуки</h3>
+        <div class="sound-buttons" id="consonantButtons">
+            <button class="sound-button consonant" data-sound="b">Б</button>
+            <button class="sound-button consonant" data-sound="v">В</button>
+            <button class="sound-button consonant" data-sound="g">Г</button>
+            <button class="sound-button consonant" data-sound="d">Д</button>
+            <button class="sound-button consonant" data-sound="zh">Ж</button>
+            <button class="sound-button consonant" data-sound="z">З</button>
+            <button class="sound-button consonant" data-sound="k">К</button>
+            <button class="sound-button consonant" data-sound="l">Л</button>
+            <button class="sound-button consonant" data-sound="m">М</button>
+            <button class="sound-button consonant" data-sound="n">Н</button>
+            <button class="sound-button consonant" data-sound="p">П</button>
+            <button class="sound-button consonant" data-sound="r">Р</button>
+            <button class="sound-button consonant" data-sound="s">С</button>
+            <button class="sound-button consonant" data-sound="t">Т</button>
+            <button class="sound-button consonant" data-sound="f">Ф</button>
+            <button class="sound-button consonant" data-sound="h">Х</button>
+            <button class="sound-button consonant" data-sound="ts">Ц</button>
+            <button class="sound-button consonant" data-sound="ch">Ч</button>
+            <button class="sound-button consonant" data-sound="sh">Ш</button>
+            <button class="sound-button consonant" data-sound="sch">Щ</button>
+        </div>
+        
+        <div class="visualization-container">
+            <canvas id="waveformCanvas"></canvas>
+        </div>
+        
+        <div class="spectrogram-container">
+            <div class="frequency-axis">
+                <div class="frequency-label">5000 Гц</div>
+                <div class="frequency-label">4000 Гц</div>
+                <div class="frequency-label">3000 Гц</div>
+                <div class="frequency-label">2000 Гц</div>
+                <div class="frequency-label">1000 Гц</div>
+                <div class="frequency-label">0 Гц</div>
+            </div>
+            <canvas id="spectrogramCanvas"></canvas>
+        </div>
+        
+        <div class="info-box">
+            <h3>Форманты речевого сигнала</h3>
+            <p>Форманты — это усиленные резонаторами гармоники основного тона, определяющие тембр голоса и различия между звуками речи. Особенно важны для различения гласных звуков.</p>
+        </div>
+        
+        <div class="formant-info">
+            <div class="formant-card">
+                <h4>Форманта F1</h4>
+                <p>Частота: <span id="f1-value" class="formant-value">—</span></p>
+                <p>Связана с положением языка по высоте. Низкие значения F1 соответствуют высокому положению языка (звуки И, У), высокие значения — низкому положению (звук А).</p>
+            </div>
+            
+            <div class="formant-card">
+                <h4>Форманта F2</h4>
+                <p>Частота: <span id="f2-value" class="formant-value">—</span></p>
+                <p>Связана с положением языка по ряду. Высокие значения F2 соответствуют переднему ряду (звуки И, Э), низкие значения — заднему ряду (звуки У, О).</p>
+            </div>
+            
+            <div class="formant-card">
+                <h4>Особенности согласных</h4>
+                <p>Согласные характеризуются шумовыми компонентами в высокочастотной области спектра и быстрыми переходами формант.</p>
+            </div>
+        </div>
+    </div>
+ <footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Словарь с предварительно заданными формантными частотами для гласных
+        const vowelFormants = {
+            'a': { f1: 700, f2: 1100 },
+            'o': { f1: 500, f2: 900 },
+            'u': { f1: 300, f2: 800 },
+            'e': { f1: 500, f2: 1800 },
+            'i': { f1: 300, f2: 2300 },
+            'y': { f1: 300, f2: 1600 }
+        };
+        
+        // Получаем элементы DOM
+        const waveformCanvas = document.getElementById('waveformCanvas');
+        const spectrogramCanvas = document.getElementById('spectrogramCanvas');
+        const vowelButtons = document.getElementById('vowelButtons').querySelectorAll('.sound-button');
+        const consonantButtons = document.getElementById('consonantButtons').querySelectorAll('.sound-button');
+        const recordButton = document.getElementById('recordButton');
+        const statusElement = document.getElementById('status');
+        const f1ValueElement = document.getElementById('f1-value');
+        const f2ValueElement = document.getElementById('f2-value');
+        
+        // Настройка контекстов canvas
+        const waveCtx = waveformCanvas.getContext('2d');
+        const specCtx = spectrogramCanvas.getContext('2d');
+        
+        // Настройка размеров canvas
+        function resizeCanvas() {
+            waveformCanvas.width = waveformCanvas.clientWidth;
+            waveformCanvas.height = waveformCanvas.clientHeight;
+            
+            spectrogramCanvas.width = spectrogramCanvas.clientWidth;
+            spectrogramCanvas.height = spectrogramCanvas.clientHeight;
+        }
+        
+        // Вызываем функцию при загрузке и изменении размера окна
+        window.addEventListener('load', resizeCanvas);
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Аудиоконтекст и анализатор
+        let audioContext = null;
+        let analyser = null;
+        let isPlaying = false;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let oscillator = null;
+        let gainNode = null;
+        
+        // Буферы для данных анализатора
+        let dataArray;
+        let bufferLength;
+        
+        // Буфер для спектрограммы
+        let spectrogramData = [];
+        const maxSpectrogramTime = 300; // максимальное количество столбцов в спектрограмме
+        
+        // Инициализация аудиоконтекста
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+                bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+                analyser.connect(audioContext.destination);
+                
+                gainNode = audioContext.createGain();
+                gainNode.connect(audioContext.destination);
+            }
+        }
+        
+        // Функция для создания и воспроизведения звука
+        function playSound(soundType) {
+            initAudio();
+            
+            // Остановить предыдущий звук, если он воспроизводится
+            if (isPlaying && oscillator) {
+                try {
+                    oscillator.stop();
+                } catch (e) {
+                    console.log("Oscillator already stopped");
+                }
+            }
+            
+            // Сбросить спектрограмму
+            spectrogramData = [];
+            isPlaying = true;
+            
+            // Создаем осциллятор для базовой частоты
+            oscillator = audioContext.createOscillator();
+            oscillator.type = 'sawtooth'; // Пилообразная волна богата гармониками
+            
+            // Базовая частота (имитация основного тона голоса)
+            const baseFrequency = 120; // Примерно соответствует мужскому голосу
+            oscillator.frequency.value = baseFrequency;
+            
+            // Создаем фильтры для формант
+            const filter1 = audioContext.createBiquadFilter();
+            filter1.type = 'bandpass';
+            filter1.Q.value = 10;
+            
+            const filter2 = audioContext.createBiquadFilter();
+            filter2.type = 'bandpass';
+            filter2.Q.value = 10;
+            
+            // Создаем огибающую амплитуды для естественного звучания
+            gainNode = audioContext.createGain();
+            
+            // Установка частот формант в зависимости от выбранного звука
+            let duration = 0.5; // Длительность звука
+            
+            if (soundType in vowelFormants) {
+                // Гласный звук
+                filter1.frequency.value = vowelFormants[soundType].f1;
+                filter2.frequency.value = vowelFormants[soundType].f2;
+                
+                // Обновляем отображение формант
+                f1ValueElement.textContent = `${vowelFormants[soundType].f1} Гц`;
+                f2ValueElement.textContent = `${vowelFormants[soundType].f2} Гц`;
+                
+                statusElement.textContent = `Воспроизведение гласного звука "${soundType.toUpperCase()}"`;
+                duration = 1.0; // Гласные дольше
+                
+                // Подключаем цепочку обработки для гласных
+                oscillator.connect(filter1);
+                filter1.connect(filter2);
+                filter2.connect(gainNode);
+                filter2.connect(analyser);
+            } else {
+                // Согласный звук - имитируем с помощью шума и разных фильтров
+                const noiseLength = audioContext.sampleRate * 2; // 2 секунды шума
+                const noiseBuffer = audioContext.createBuffer(1, noiseLength, audioContext.sampleRate);
+                const noiseData = noiseBuffer.getChannelData(0);
+                
+                // Заполняем буфер белым шумом
+                for (let i = 0; i < noiseLength; i++) {
+                    noiseData[i] = Math.random() * 2 - 1;
+                }
+                
+                // Создаем источник шума
+                const noiseSource = audioContext.createBufferSource();
+                noiseSource.buffer = noiseBuffer;
+                
+                // Настройки для разных типов согласных
+                let filterFreq = 1000;
+                let filterQ = 1;
+                
+                switch (soundType) {
+                    case 'sh': case 'zh': case 'ch': case 'sch':
+                        // Шипящие
+                        filterFreq = 2500;
+                        filterQ = 5;
+                        break;
+                    case 's': case 'z': case 'ts':
+                        // Свистящие
+                        filterFreq = 5000;
+                        filterQ = 8;
+                        break;
+                    case 'p': case 't': case 'k':
+                        // Взрывные глухие
+                        filterFreq = 800;
+                        filterQ = 2;
+                        break;
+                    case 'b': case 'd': case 'g':
+                        // Взрывные звонкие
+                        filterFreq = 600;
+                        filterQ = 2;
+                        break;
+                    case 'm': case 'n':
+                        // Носовые
+                        filterFreq = 300;
+                        filterQ = 15;
+                        break;
+                    default:
+                        filterFreq = 1500;
+                        filterQ = 3;
+                }
+                
+                filter1.frequency.value = filterFreq;
+                filter1.Q.value = filterQ;
+                
+                // Обновляем отображение формант
+                f1ValueElement.textContent = `${filterFreq} Гц`;
+                f2ValueElement.textContent = "Различные";
+                
+                // Подключаем шум вместо осциллятора для согласных
+                noiseSource.connect(filter1);
+                filter1.connect(gainNode);
+                filter1.connect(analyser);
+                
+                // Запускаем источник шума
+                noiseSource.start();
+                setTimeout(() => {
+                    noiseSource.stop();
+                }, duration * 1000);
+                
+                statusElement.textContent = `Воспроизведение согласного звука "${soundType.toUpperCase()}"`;
+                duration = 0.3; // Согласные короче
+                
+                // Заменяем осциллятор на источник шума
+                oscillator = noiseSource;
+            }
+            
+            // Настраиваем огибающую амплитуды
+            const now = audioContext.currentTime;
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.5, now + 0.05);
+            gainNode.gain.linearRampToValueAtTime(0.3, now + duration * 0.3);
+            gainNode.gain.linearRampToValueAtTime(0, now + duration);
+            
+            // Подключаем к выходу
+            gainNode.connect(audioContext.destination);
+            
+            // Запускаем осциллятор (если это не шумовой источник)
+            if (soundType in vowelFormants) {
+                oscillator.start();
+                setTimeout(() => {
+                    oscillator.stop();
+                }, duration * 1000);
+            }
+            
+            // Запускаем визуализацию
+            requestAnimationFrame(draw);
+            
+            // Останавливаем через указанное время
+            setTimeout(() => {
+                isPlaying = false;
+                statusElement.textContent = "Выберите звук для анализа или запишите свой голос";
+            }, duration * 1000 + 100);
+        }
+        
+        // Функция для записи голоса
+        function toggleRecording() {
+            if (isRecording) {
+                // Остановить запись
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                }
+                recordButton.textContent = "Записать свой голос";
+                recordButton.classList.remove('recording');
+                statusElement.textContent = "Обработка записи...";
+                isRecording = false;
+            } else {
+                // Начать запись, если браузер поддерживает MediaRecorder
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    navigator.mediaDevices.getUserMedia({ audio: true })
+                        .then(stream => {
+                            initAudio();
+                            
+                            audioChunks = [];
+                            mediaRecorder = new MediaRecorder(stream);
+                            
+                            mediaRecorder.addEventListener("dataavailable", event => {
+                                audioChunks.push(event.data);
+                            });
+                            
+                            mediaRecorder.addEventListener("stop", () => {
+                                // Создаем аудиофайл из записанных данных
+                                const audioBlob = new Blob(audioChunks);
+                                const audioUrl = URL.createObjectURL(audioBlob);
+                                
+                                // Воспроизводим записанный звук
+                                const audioElement = new Audio(audioUrl);
+                                
+                                // Сбросить спектрограмму
+                                spectrogramData = [];
+                                
+                                // Создаем источник из аудиоэлемента
+                                audioElement.addEventListener('canplaythrough', () => {
+                                    try {
+                                        const source = audioContext.createMediaElementSource(audioElement);
+                                        source.connect(analyser);
+                                        source.connect(audioContext.destination);
+                                        
+                                        audioElement.play();
+                                        isPlaying = true;
+                                        
+                                        // Запускаем визуализацию
+                                        requestAnimationFrame(draw);
+                                        
+                                        statusElement.textContent = "Воспроизведение вашей записи";
+                                        
+                                        audioElement.onended = () => {
+                                            isPlaying = false;
+                                            statusElement.textContent = "Выберите звук для анализа или запишите свой голос";
+                                        };
+                                    } catch (e) {
+                                        console.error("Ошибка воспроизведения:", e);
+                                        statusElement.textContent = "Ошибка воспроизведения записи";
+                                    }
+                                });
+                            });
+                            
+                            // Начинаем запись
+                            mediaRecorder.start();
+                            isRecording = true;
+                            recordButton.textContent = "Остановить запись";
+                            recordButton.classList.add('recording');
+                            statusElement.textContent = "Идет запись... Говорите в микрофон";
+                            
+                            // Остановка записи через 5 секунд для демонстрации
+                            setTimeout(() => {
+                                if (isRecording) {
+                                    toggleRecording();
+                                }
+                            }, 5000);
+                        })
+                        .catch(err => {
+                            console.error("Ошибка доступа к микрофону:", err);
+                            statusElement.textContent = "Не удалось получить доступ к микрофону";
+                        });
+                } else {
+                    statusElement.textContent = "Ваш браузер не поддерживает запись аудио";
+                }
+            }
+        }
+        
+        // Функция для рисования волновой формы и спектрограммы
+        function draw() {
+            if (!isPlaying || !analyser) return;
+            
+            // Получаем данные для волновой формы
+            analyser.getByteTimeDomainData(dataArray);
+            
+            // Очищаем canvas для волновой формы
+            waveCtx.fillStyle = 'rgb(20, 20, 30)';
+            waveCtx.fillRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+            
+            // Рисуем волновую форму
+            waveCtx.lineWidth = 2;
+            waveCtx.strokeStyle = 'rgb(52, 152, 219)';
+            waveCtx.beginPath();
+            
+            const sliceWidth = waveformCanvas.width / bufferLength;
+            let x = 0;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0;
+                const y = v * waveformCanvas.height / 2;
+                
+                if (i === 0) {
+                    waveCtx.moveTo(x, y);
+                } else {
+                    waveCtx.lineTo(x, y);
+                }
+                
+                x += sliceWidth;
+            }
+            
+            waveCtx.lineTo(waveformCanvas.width, waveformCanvas.height / 2);
+            waveCtx.stroke();
+            
+            // Получаем данные для спектрограммы
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Добавляем новый столбец в спектрограмму
+            const spectrogramColumn = new Uint8Array(spectrogramCanvas.height);
+            
+            // Преобразуем частотные данные в столбец спектрограммы
+            // Используем только нижнюю половину данных (до 5000 Гц)
+            const freqBinCount = Math.min(bufferLength / 4, spectrogramCanvas.height);
+            
+            for (let i = 0; i < spectrogramCanvas.height; i++) {
+                // Отображаем частоты до 5000 Гц (примерно первая четверть данных анализатора)
+                const freqIndex = Math.floor(i * freqBinCount / spectrogramCanvas.height);
+                spectrogramColumn[spectrogramCanvas.height - i - 1] = dataArray[freqIndex];
+            }
+            
+            // Добавляем столбец в данные спектрограммы
+            spectrogramData.push(spectrogramColumn);
+            
+            // Ограничиваем размер данных спектрограммы
+            if (spectrogramData.length > maxSpectrogramTime) {
+                spectrogramData.shift();
+            }
+            
+            // Очищаем canvas для спектрограммы
+            specCtx.fillStyle = 'rgb(20, 20, 30)';
+            specCtx.fillRect(0, 0, spectrogramCanvas.width, spectrogramCanvas.height);
+            
+            // Рисуем спектрограмму
+            const columnWidth = Math.max(1, spectrogramCanvas.width / maxSpectrogramTime);
+            
+            for (let i = 0; i < spectrogramData.length; i++) {
+                const column = spectrogramData[i];
+                const x = i * columnWidth;
+                
+                for (let j = 0; j < column.length; j++) {
+                    // Используем цветовую схему для отображения интенсивности
+                    const intensity = column[j];
+                    let color;
+                    
+                    if (intensity < 10) {
+                        color = 'rgb(20, 20, 30)'; // Почти черный для низкой интенсивности
+                    } else if (intensity < 50) {
+                        color = `rgb(0, 0, ${intensity * 5})`; // Синий для низкой-средней интенсивности
+                    } else if (intensity < 100) {
+                        color = `rgb(0, ${intensity * 2}, ${255 - intensity})`; // Сине-зеленый для средней интенсивности
+                    } else if (intensity < 200) {
+                        color = `rgb(${intensity}, ${255}, 0)`; // Желто-зеленый для высокой интенсивности
+                    } else {
+                        color = `rgb(255, ${255 - (intensity - 200) * 2}, 0)`; // Красно-желтый для очень высокой интенсивности
+                    }
+                    
+                    specCtx.fillStyle = color;
+                    specCtx.fillRect(x, j, columnWidth, 1);
+                }
+            }
+            
+            // Рисуем вертикальные линии для отметки формант
+            if (isPlaying && f1ValueElement.textContent !== "—") {
+                const f1 = parseFloat(f1ValueElement.textContent);
+                
+                if (!isNaN(f1)) {
+                    const f1Position = spectrogramCanvas.height * (1 - f1 / 5000);
+                    
+                    specCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                    specCtx.lineWidth = 1;
+                    specCtx.setLineDash([5, 3]);
+                    specCtx.beginPath();
+                    specCtx.moveTo(40, f1Position); // Начинаем после шкалы частот
+                    specCtx.lineTo(spectrogramCanvas.width, f1Position);
+                    specCtx.stroke();
+                    specCtx.setLineDash([]);
+                    
+                    // Подпись форманты
+                    specCtx.fillStyle = 'white';
+                    specCtx.font = '10px Arial';
+                    specCtx.fillText('F1', spectrogramCanvas.width - 20, f1Position - 3);
+                }
+                
+                if (f2ValueElement.textContent !== "—" && f2ValueElement.textContent !== "Различные") {
+                    const f2 = parseFloat(f2ValueElement.textContent);
+                    
+                    if (!isNaN(f2)) {
+                        const f2Position = spectrogramCanvas.height * (1 - f2 / 5000);
+                        
+                        specCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                        specCtx.lineWidth = 1;
+                        specCtx.setLineDash([5, 3]);
+                        specCtx.beginPath();
+                        specCtx.moveTo(40, f2Position); // Начинаем после шкалы частот
+                        specCtx.lineTo(spectrogramCanvas.width, f2Position);
+                        specCtx.stroke();
+                        specCtx.setLineDash([]);
+                        
+                        // Подпись форманты
+                        specCtx.fillStyle = 'white';
+                        specCtx.font = '10px Arial';
+                        specCtx.fillText('F2', spectrogramCanvas.width - 20, f2Position - 3);
+                    }
+                }
+            }
+            
+            // Продолжаем анимацию
+            if (isPlaying) {
+                requestAnimationFrame(draw);
+            }
+        }
+        
+        // Функция для демонстрационной спектрограммы
+        function showDemoSpectrogram() {
+            if (!spectrogramCanvas) return;
+            
+            // Создаем демонстрационные данные для спектрограммы
+            spectrogramData = [];
+            
+            for (let i = 0; i < maxSpectrogramTime; i++) {
+                const column = new Uint8Array(spectrogramCanvas.height);
+                
+                // Имитация формантной структуры гласного "А"
+                const f1Height = Math.floor(spectrogramCanvas.height * (1 - 700 / 5000));
+                const f2Height = Math.floor(spectrogramCanvas.height * (1 - 1100 / 5000));
+                
+                // Базовый шум
+                for (let j = 0; j < column.length; j++) {
+                    column[j] = Math.random() * 20; // Низкоуровневый фоновый шум
+                }
+                
+                // Добавляем форманты (ярко выраженные частоты)
+                // Размытие формант
+                for (let k = -10; k <= 10; k++) {
+                    if (f1Height + k >= 0 && f1Height + k < column.length) {
+                        column[f1Height + k] = 150 - Math.abs(k) * 10;
+                    }
+                    if (f2Height + k >= 0 && f2Height + k < column.length) {
+                        column[f2Height + k] = 120 - Math.abs(k) * 10;
+                    }
+                }
+                
+                spectrogramData.push(column);
+            }
+            
+            // Рисуем демонстрационную спектрограмму
+            const columnWidth = Math.max(1, spectrogramCanvas.width / maxSpectrogramTime);
+            
+            // Очищаем canvas для спектрограммы
+            specCtx.fillStyle = 'rgb(20, 20, 30)';
+            specCtx.fillRect(0, 0, spectrogramCanvas.width, spectrogramCanvas.height);
+            
+            for (let i = 0; i < spectrogramData.length; i++) {
+                const column = spectrogramData[i];
+                const x = i * columnWidth;
+                
+                for (let j = 0; j < column.length; j++) {
+                    const intensity = column[j];
+                    let color;
+                    
+                    if (intensity < 10) {
+                        color = 'rgb(20, 20, 30)';
+                    } else if (intensity < 50) {
+                        color = `rgb(0, 0, ${intensity * 5})`;
+                    } else if (intensity < 100) {
+                        color = `rgb(0, ${intensity * 2}, ${255 - intensity})`;
+                    } else if (intensity < 200) {
+                        color = `rgb(${intensity}, ${255}, 0)`;
+                    } else {
+                        color = `rgb(255, ${255 - (intensity - 200) * 2}, 0)`;
+                    }
+                    
+                    specCtx.fillStyle = color;
+                    specCtx.fillRect(x, j, columnWidth, 1);
+                }
+            }
+            
+            // Отображаем значения формант для демонстрации
+            f1ValueElement.textContent = "700 Гц";
+            f2ValueElement.textContent = "1100 Гц";
+            
+            // Рисуем линии формант
+            const f1Position = spectrogramCanvas.height * (1 - 700 / 5000);
+            const f2Position = spectrogramCanvas.height * (1 - 1100 / 5000);
+            
+            specCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            specCtx.lineWidth = 1;
+            specCtx.setLineDash([5, 3]);
+            
+            // F1
+            specCtx.beginPath();
+            specCtx.moveTo(40, f1Position);
+            specCtx.lineTo(spectrogramCanvas.width, f1Position);
+            specCtx.stroke();
+            
+            // F2
+            specCtx.beginPath();
+            specCtx.moveTo(40, f2Position);
+            specCtx.lineTo(spectrogramCanvas.width, f2Position);
+            specCtx.stroke();
+            
+            specCtx.setLineDash([]);
+            
+            // Подписи формант
+            specCtx.fillStyle = 'white';
+            specCtx.font = '10px Arial';
+            specCtx.fillText('F1', spectrogramCanvas.width - 20, f1Position - 3);
+            specCtx.fillText('F2', spectrogramCanvas.width - 20, f2Position - 3);
+        }
+        
+        // Обработчики событий
+        vowelButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const sound = button.getAttribute('data-sound');
+                playSound(sound);
+            });
+        });
+        
+        consonantButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const sound = button.getAttribute('data-sound');
+                playSound(sound);
+            });
+        });
+        
+        recordButton.addEventListener('click', toggleRecording);
+        
+        // Инициализация при загрузке страницы
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            
+            // Проверяем поддержку Web Audio API
+            if (!(window.AudioContext || window.webkitAudioContext)) {
+                statusElement.textContent = "Ваш браузер не поддерживает Web Audio API";
+                recordButton.disabled = true;
+                vowelButtons.forEach(btn => btn.disabled = true);
+                consonantButtons.forEach(btn => btn.disabled = true);
+            }
+            
+            // Добавляем информационные подсказки при наведении на гласные
+            vowelButtons.forEach(button => {
+                const sound = button.getAttribute('data-sound');
+                if (sound in vowelFormants) {
+                    button.title = `F1: ${vowelFormants[sound].f1} Гц, F2: ${vowelFormants[sound].f2} Гц`;
+                }
+            });
+            
+            // Показываем демонстрационную спектрограмму
+            showDemoSpectrogram();
+            
+            // По умолчанию показываем пример звука через небольшую задержку
+            setTimeout(() => {
+                try {
+                    playSound('a');
+                } catch (e) {
+                    console.error("Ошибка при воспроизведении звука:", e);
+                    statusElement.textContent = "Для работы визуализации нажмите на любой звук";
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Нормализация речевого аудиосигнала</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/wavesurfer.js@6.6.4/dist/wavesurfer.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #ff9a76;
+            --background-color: #f4f9ff;
+            --dark-color: #2c3e50;
+            --light-color: #ffffff;
+            --success-color: #28a745;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--background-color);
+            color: var(--dark-color);
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        @media (min-width: 768px) {
+            .container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        .card {
+            background-color: var(--light-color);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        h2 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 5px;
+        }
+        
+        h3 {
+            color: var(--primary-color);
+            margin: 15px 0 10px 0;
+            font-size: 1.2rem;
+        }
+        
+        p {
+            margin-bottom: 15px;
+        }
+        
+        .button-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #395d8f;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .record-button {
+            background-color: var(--secondary-color);
+        }
+        
+        .record-button:hover {
+            background-color: #ff8761;
+        }
+        
+        .normalize-button {
+            background-color: var(--success-color);
+        }
+        
+        .normalize-button:hover {
+            background-color: #218838;
+        }
+        
+        #recordButton.recording {
+            background-color: #dc3545;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+        
+        .waveform-container {
+            height: 150px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .slider-container {
+            margin: 20px 0;
+        }
+        
+        .slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .info-box {
+            background-color: #e8f4ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .tips {
+            list-style-type: none;
+        }
+        
+        .tips li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 25px;
+        }
+        
+        .tips li::before {
+            content: "✓";
+            color: var(--success-color);
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+        
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .step-number {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex-grow: 1;
+        }
+        
+        .visual-indicator {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+        }
+        
+        .volume-level {
+            flex-grow: 1;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .volume-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--primary-color);
+            transition: width 0.2s;
+        }
+        
+        .volume-indicator {
+            width: 40px;
+            text-align: center;
+            margin-left: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 250px;
+            margin: 20px 0;
+        }
+        
+        .parameter-display {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        
+        
+        .highlight {
+            background-color: #fff4e5;
+            border-left: 4px solid var(--secondary-color);
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .normalizing-animation {
+            animation: normalize 2s ease-in-out;
+        }
+        
+        @keyframes normalize {
+            0% { background-color: var(--light-color); }
+            50% { background-color: #e8f6e8; }
+            100% { background-color: var(--light-color); }
+        }
+
+        #amplitude-chart, #histogram-chart {
+            width: 100%;
+            height: 100%;
+        }
+			footer {
+      width: 100%;
+	  text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+	
+	
+	
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Нормализация речевого аудиосигнала</h1>
+        <p>Интерактивная визуализация для студентов</p>
+    </header>
+    
+    <div class="container">
+        <div class="card full-width">
+            <h2>Что такое нормализация аудиосигнала?</h2>
+            <p>Нормализация аудиосигнала — это процесс изменения общей громкости аудиозаписи для достижения стандартного уровня, обычно путем усиления или ослабления всего сигнала. Основная цель нормализации — обеспечить оптимальный уровень громкости, избегая перегрузки (клиппинга) и максимально эффективно используя доступный динамический диапазон.</p>
+            
+            <div class="info-box">
+                <h3>Основные преимущества нормализации:</h3>
+                <ul class="tips">
+                    <li>Повышение разборчивости речи</li>
+                    <li>Предотвращение искажений и потери информации</li>
+                    <li>Обеспечение стабильного уровня громкости для разных записей</li>
+                    <li>Улучшение качества обработки в последующих алгоритмах</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Запись и воспроизведение</h2>
+            <p>Запишите свой голос или используйте пример, чтобы увидеть сигнал до нормализации.</p>
+            
+            <div class="button-container">
+                <button id="recordButton" class="record-button">Записать речь</button>
+                <button id="loadDemoButton">Загрузить пример</button>
+            </div>
+            
+            <h3>Исходный сигнал</h3>
+            <div id="originalWaveform" class="waveform-container"></div>
+            
+            <div class="visual-indicator">
+                <span>Уровень сигнала:</span>
+                <div class="volume-level">
+                    <div id="originalVolumeBar" class="volume-bar"></div>
+                </div>
+                <span id="originalVolumeValue" class="volume-indicator">0 дБ</span>
+            </div>
+            
+            <div class="button-container">
+                <button id="playOriginalButton" disabled>Воспроизвести</button>
+                <button id="stopOriginalButton" disabled>Остановить</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Нормализация сигнала</h2>
+            <p>Примените нормализацию к записанному сигналу и сравните результаты.</p>
+            
+            <div class="slider-container">
+                <label for="normalizationLevel">Уровень нормализации: <span id="normalizationLevelValue" class="parameter-display">-3 дБ</span></label>
+                <input type="range" id="normalizationLevel" class="slider" min="-12" max="0" value="-3" step="0.5">
+            </div>
+            
+            <button id="normalizeButton" class="normalize-button" disabled>Нормализовать</button>
+            
+            <h3>Нормализованный сигнал</h3>
+            <div id="normalizedWaveform" class="waveform-container"></div>
+            
+            <div class="visual-indicator">
+                <span>Уровень сигнала:</span>
+                <div class="volume-level">
+                    <div id="normalizedVolumeBar" class="volume-bar"></div>
+                </div>
+                <span id="normalizedVolumeValue" class="volume-indicator">0 дБ</span>
+            </div>
+            
+            <div class="button-container">
+                <button id="playNormalizedButton" disabled>Воспроизвести</button>
+                <button id="stopNormalizedButton" disabled>Остановить</button>
+            </div>
+        </div>
+        
+        <div class="card full-width">
+            <h2>Визуализация и анализ</h2>
+            <div class="chart-container">
+                <canvas id="amplitude-chart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="histogram-chart"></canvas>
+            </div>
+            
+            <div class="highlight">
+                <h3>Ключевые параметры:</h3>
+                <p>
+                    Пиковая амплитуда (до): <span id="peakBefore" class="parameter-display">N/A</span> |
+                    Пиковая амплитуда (после): <span id="peakAfter" class="parameter-display">N/A</span>
+                </p>
+                <p>
+                    Средняя амплитуда (RMS) (до): <span id="rmsBefore" class="parameter-display">N/A</span> |
+                    Средняя амплитуда (RMS) (после): <span id="rmsAfter" class="parameter-display">N/A</span>
+                </p>
+                <p>
+                    Коэффициент усиления: <span id="gainFactor" class="parameter-display">N/A</span>
+                </p>
+            </div>
+        </div>
+        
+        <div class="card full-width">
+            <h2>Инструкция для студентов</h2>
+            
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Запись или загрузка аудио</h3>
+                    <p>Нажмите кнопку "Записать речь", чтобы записать свой голос, или выберите "Загрузить пример", чтобы использовать предварительно записанный аудиофайл. Говорите в микрофон с разной громкостью, чтобы увидеть различия в уровнях сигнала.</p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Анализ исходного сигнала</h3>
+                    <p>Изучите форму волны и параметры исходного сигнала. Обратите внимание на неравномерность амплитуды и возможные проблемы (слишком тихие участки или перегрузка).</p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Применение нормализации</h3>
+                    <p>С помощью ползунка установите желаемый уровень нормализации и нажмите кнопку "Нормализовать". Стандартное значение -3 дБ оставляет небольшой запас по уровню, чтобы избежать клиппинга.</p>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Сравнение сигналов</h3>
+                    <p>Сравните исходный и нормализованный сигналы. Обратите внимание на изменения в форме волны, распределении амплитуд и ключевых параметрах. Послушайте оба сигнала, чтобы оценить разницу на слух.</p>
+                </div>
+            </div>
+            
+            <div class="info-box">
+                <h3>Важно знать:</h3>
+                <p>Нормализация изменяет амплитуду всего сигнала пропорционально, сохраняя относительные различия между громкими и тихими частями. Это отличает ее от компрессии, которая уменьшает динамический диапазон, делая тихие фрагменты громче, а громкие — тише.</p>
+                <p>В цифровой обработке речи нормализация часто является предварительным этапом перед применением более сложных алгоритмов, таких как распознавание речи, анализ эмоциональной окраски или выделение признаков.</p>
+            </div>
+        </div>
+    </div>
+    
+   
+	
+	<footer class="footer">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    
+    <script>
+        let originalAudioData = null;
+        let normalizedAudioData = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let originalWavesurfer = null;
+        let normalizedWavesurfer = null;
+        let isRecording = false;
+        let amplitudeChart = null;
+        let histogramChart = null;
+        
+        // Инициализация приложения
+        document.addEventListener('DOMContentLoaded', () => {
+            initWavesurfer();
+            initCharts();
+            setupEventListeners();
+        });
+        
+        // Инициализация визуализаторов формы волны
+        function initWavesurfer() {
+            originalWavesurfer = WaveSurfer.create({
+                container: '#originalWaveform',
+                waveColor: '#4a6fa5',
+                progressColor: '#ff9a76',
+                cursorColor: '#2c3e50',
+                barWidth: 2,
+                barGap: 1,
+                responsive: true,
+                height: 150,
+            });
+            
+            normalizedWavesurfer = WaveSurfer.create({
+                container: '#normalizedWaveform',
+                waveColor: '#28a745',
+                progressColor: '#ff9a76',
+                cursorColor: '#2c3e50',
+                barWidth: 2,
+                barGap: 1,
+                responsive: true,
+                height: 150,
+            });
+            
+            originalWavesurfer.on('ready', updateOriginalVolumeIndicator);
+            normalizedWavesurfer.on('ready', updateNormalizedVolumeIndicator);
+        }
+        
+        // Инициализация графиков для визуализации
+        function initCharts() {
+            const amplitudeCtx = document.getElementById('amplitude-chart').getContext('2d');
+            amplitudeChart = new Chart(amplitudeCtx, {
+                type: 'line',
+                data: {
+                    labels: Array(100).fill(''),
+                    datasets: [
+                        {
+                            label: 'Исходный сигнал',
+                            data: Array(100).fill(0),
+                            borderColor: '#4a6fa5',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Нормализованный сигнал',
+                            data: Array(100).fill(0),
+                            borderColor: '#28a745',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Амплитуда'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Время'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Сравнение амплитуды сигналов во времени'
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+            
+            const histogramCtx = document.getElementById('histogram-chart').getContext('2d');
+            histogramChart = new Chart(histogramCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['- 60 dB', '- 50 dB', '- 40 dB', '- 30 dB', '- 20 dB', '- 10 dB', '0 dB'],
+                    datasets: [
+                        {
+                            label: 'Исходный сигнал',
+                            data: [0, 0, 0, 0, 0, 0, 0],
+                            backgroundColor: 'rgba(74, 111, 165, 0.6)',
+                            borderColor: 'rgba(74, 111, 165, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Нормализованный сигнал',
+                            data: [0, 0, 0, 0, 0, 0, 0],
+                            backgroundColor: 'rgba(40, 167, 69, 0.6)',
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Частота появления'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Амплитуда'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Распределение амплитуд в сигнале'
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            const recordButton = document.getElementById('recordButton');
+            const loadDemoButton = document.getElementById('loadDemoButton');
+            const playOriginalButton = document.getElementById('playOriginalButton');
+            const stopOriginalButton = document.getElementById('stopOriginalButton');
+            const playNormalizedButton = document.getElementById('playNormalizedButton');
+            const stopNormalizedButton = document.getElementById('stopNormalizedButton');
+            const normalizeButton = document.getElementById('normalizeButton');
+            const normalizationLevel = document.getElementById('normalizationLevel');
+            const normalizationLevelValue = document.getElementById('normalizationLevelValue');
+            
+            recordButton.addEventListener('click', toggleRecording);
+            loadDemoButton.addEventListener('click', loadDemoAudio);
+            
+            playOriginalButton.addEventListener('click', () => {
+                originalWavesurfer.play();
+            });
+            
+            stopOriginalButton.addEventListener('click', () => {
+                originalWavesurfer.pause();
+            });
+            
+            playNormalizedButton.addEventListener('click', () => {
+                normalizedWavesurfer.play();
+            });
+            
+            stopNormalizedButton.addEventListener('click', () => {
+                normalizedWavesurfer.pause();
+            });
+            
+            normalizeButton.addEventListener('click', normalizeAudio);
+            
+            normalizationLevel.addEventListener('input', () => {
+                normalizationLevelValue.textContent = `${normalizationLevel.value} дБ`;
+            });
+            
+            originalWavesurfer.on('play', () => {
+                playOriginalButton.disabled = true;
+                stopOriginalButton.disabled = false;
+            });
+            
+            originalWavesurfer.on('pause', () => {
+                playOriginalButton.disabled = false;
+                stopOriginalButton.disabled = true;
+            });
+            
+            normalizedWavesurfer.on('play', () => {
+                playNormalizedButton.disabled = true;
+                stopNormalizedButton.disabled = false;
+            });
+            
+            normalizedWavesurfer.on('pause', () => {
+                playNormalizedButton.disabled = false;
+                stopNormalizedButton.disabled = true;
+            });
+        }
+        
+        // Функция записи аудио
+        function toggleRecording() {
+            const recordButton = document.getElementById('recordButton');
+            
+            if (!isRecording) {
+                startRecording();
+                recordButton.textContent = 'Остановить запись';
+                recordButton.classList.add('recording');
+                isRecording = true;
+            } else {
+                stopRecording();
+                recordButton.textContent = 'Записать речь';
+                recordButton.classList.remove('recording');
+                isRecording = false;
+            }
+        }
+        
+        // Начало записи
+        function startRecording() {
+            recordedChunks = [];
+            
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    
+                    mediaRecorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) {
+                            recordedChunks.push(e.data);
+                        }
+                    };
+                    
+                    mediaRecorder.onstop = processRecording;
+                    
+                    mediaRecorder.start();
+                })
+                .catch(error => {
+                    console.error('Ошибка получения доступа к микрофону:', error);
+                    alert('Не удалось получить доступ к микрофону. Пожалуйста, проверьте разрешения.');
+                    
+                    const recordButton = document.getElementById('recordButton');
+                    recordButton.textContent = 'Записать речь';
+                    recordButton.classList.remove('recording');
+                    isRecording = false;
+                });
+        }
+        
+        // Остановка записи
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+        }
+        
+        // Обработка записанного аудио
+        function processRecording() {
+            const audioBlob = new Blob(recordedChunks, { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            
+            originalWavesurfer.load(audioUrl);
+            
+            // Конвертация Blob в AudioBuffer для анализа
+            const fileReader = new FileReader();
+            
+            fileReader.onload = function(event) {
+                const arrayBuffer = event.target.result;
+                
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                audioContext.decodeAudioData(arrayBuffer)
+                    .then(audioBuffer => {
+                        originalAudioData = audioBuffer;
+                        analyzeAudio(originalAudioData, true);
+                        enableButtons();
+                    })
+                    .catch(error => {
+                        console.error('Ошибка декодирования аудио:', error);
+                    });
+            };
+            
+            fileReader.readAsArrayBuffer(audioBlob);
+        }
+        
+        // Загрузка демонстрационного аудио
+        function loadDemoAudio() {
+            // В реальном приложении вы бы использовали настоящий аудиофайл
+            // Здесь мы генерируем синтетический сигнал для демонстрации
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const sampleRate = audioContext.sampleRate;
+            const duration = 3;  // 3 секунды
+            const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+            
+            const channelData = buffer.getChannelData(0);
+            
+            // Создаем "речеподобный" сигнал с разной амплитудой
+            for (let i = 0; i < channelData.length; i++) {
+                // Основной тон (как бы голосовые связки)
+                const frequency = 120 + Math.sin(i / 10000) * 30;
+                const basicTone = Math.sin(2 * Math.PI * frequency * i / sampleRate);
+                
+                // Имитация формант (резонансных частот речевого тракта)
+                const formant1 = 0.5 * Math.sin(2 * Math.PI * 500 * i / sampleRate);
+                const formant2 = 0.3 * Math.sin(2 * Math.PI * 1500 * i / sampleRate);
+                const formant3 = 0.2 * Math.sin(2 * Math.PI * 2500 * i / sampleRate);
+                
+                // Модуляция амплитуды для имитации слов
+                const wordEnvelope = Math.pow(Math.sin(2 * Math.PI * 0.5 * i / sampleRate), 2);
+                
+                // Имитация изменения громкости в разных частях фразы
+                let volumeEnvelope = 1.0;
+                if (i < sampleRate * 0.5) {
+                    volumeEnvelope = 0.3;  // Тихое начало
+                } else if (i > sampleRate * 2) {
+                    volumeEnvelope = 0.7;  // Среднее окончание
+                }
+                
+                // Комбинируем все компоненты
+                channelData[i] = volumeEnvelope * wordEnvelope * (basicTone + formant1 + formant2 + formant3) * 0.15;
+                
+                // Добавляем небольшой шум
+                channelData[i] += (Math.random() * 2 - 1) * 0.02;
+            }
+            
+            originalAudioData = buffer;
+            
+            // Конвертация AudioBuffer в Blob для WaveSurfer
+            const offlineContext = new OfflineAudioContext(1, buffer.length, buffer.sampleRate);
+            const bufferSource = offlineContext.createBufferSource();
+            bufferSource.buffer = buffer;
+            bufferSource.connect(offlineContext.destination);
+            bufferSource.start(0);
+            
+            offlineContext.startRendering().then(renderedBuffer => {
+                const wavBlob = audioBufferToWav(renderedBuffer);
+                const blobUrl = URL.createObjectURL(wavBlob);
+                
+                originalWavesurfer.load(blobUrl);
+                analyzeAudio(originalAudioData, true);
+                enableButtons();
+            });
+        }
+        
+        // Вспомогательная функция для преобразования AudioBuffer в WAV
+        function audioBufferToWav(buffer, opt) {
+            opt = opt || {};
+
+            const numChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const format = opt.float32 ? 3 : 1;
+            const bitDepth = format === 3 ? 32 : 16;
+
+            let result;
+            if (numChannels === 2) {
+                result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
+            } else {
+                result = buffer.getChannelData(0);
+            }
+
+            return encodeWAV(result, format, sampleRate, numChannels, bitDepth);
+
+            function encodeWAV(samples, format, sampleRate, numChannels, bitDepth) {
+                const bytesPerSample = bitDepth / 8;
+                const blockAlign = numChannels * bytesPerSample;
+
+                const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+                const view = new DataView(buffer);
+
+                // RIFF identifier
+                writeString(view, 0, 'RIFF');
+                // RIFF chunk length
+                view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+                // RIFF type
+                writeString(view, 8, 'WAVE');
+                // format chunk identifier
+                writeString(view, 12, 'fmt ');
+                // format chunk length
+                view.setUint32(16, 16, true);
+                // sample format (raw)
+                view.setUint16(20, format, true);
+                // channel count
+                view.setUint16(22, numChannels, true);
+                // sample rate
+                view.setUint32(24, sampleRate, true);
+                // byte rate (sample rate * block align)
+                view.setUint32(28, sampleRate * blockAlign, true);
+                // block align (channel count * bytes per sample)
+                view.setUint16(32, blockAlign, true);
+                // bits per sample
+                view.setUint16(34, bitDepth, true);
+                // data chunk identifier
+                writeString(view, 36, 'data');
+                // data chunk length
+                view.setUint32(40, samples.length * bytesPerSample, true);
+
+                if (format === 1) { // Raw PCM
+                    floatTo16BitPCM(view, 44, samples);
+                } else {
+                    writeFloat32(view, 44, samples);
+                }
+
+                return new Blob([buffer], { type: 'audio/wav' });
+            }
+
+            function interleave(inputL, inputR) {
+                const length = inputL.length + inputR.length;
+                const result = new Float32Array(length);
+
+                let index = 0;
+                let inputIndex = 0;
+
+                while (index < length) {
+                    result[index++] = inputL[inputIndex];
+                    result[index++] = inputR[inputIndex];
+                    inputIndex++;
+                }
+                return result;
+            }
+
+            function writeFloat32(output, offset, input) {
+                for (let i = 0; i < input.length; i++, offset += 4) {
+                    output.setFloat32(offset, input[i], true);
+                }
+            }
+
+            function floatTo16BitPCM(output, offset, input) {
+                for (let i = 0; i < input.length; i++, offset += 2) {
+                    const s = Math.max(-1, Math.min(1, input[i]));
+                    output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                }
+            }
+
+            function writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+        }
+        
+        // Нормализация аудио
+        function normalizeAudio() {
+            if (!originalAudioData) return;
+            
+            const normalizationLevelDB = parseFloat(document.getElementById('normalizationLevel').value);
+            const normalizationLevel = Math.pow(10, normalizationLevelDB / 20);  // Преобразование дБ в линейный коэффициент
+            
+            // Находим пиковое значение в исходном сигнале
+            const originalChannelData = originalAudioData.getChannelData(0);
+            let peakAmplitude = 0;
+            
+            for (let i = 0; i < originalChannelData.length; i++) {
+                const absValue = Math.abs(originalChannelData[i]);
+                if (absValue > peakAmplitude) {
+                    peakAmplitude = absValue;
+                }
+            }
+            
+            // Рассчитываем коэффициент усиления
+            const gainFactor = normalizationLevel / peakAmplitude;
+            
+            document.getElementById('gainFactor').textContent = gainFactor.toFixed(2) + 'x';
+            
+            // Создаем новый буфер для нормализованного сигнала
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            normalizedAudioData = audioContext.createBuffer(
+                originalAudioData.numberOfChannels,
+                originalAudioData.length,
+                originalAudioData.sampleRate
+            );
+            
+            // Нормализуем сигнал, применяя коэффициент усиления
+            const normalizedChannelData = normalizedAudioData.getChannelData(0);
+            
+            for (let i = 0; i < originalChannelData.length; i++) {
+                normalizedChannelData[i] = originalChannelData[i] * gainFactor;
+            }
+            
+            // Конвертация AudioBuffer в Blob для WaveSurfer
+            const offlineContext = new OfflineAudioContext(
+                normalizedAudioData.numberOfChannels,
+                normalizedAudioData.length,
+                normalizedAudioData.sampleRate
+            );
+            
+            const bufferSource = offlineContext.createBufferSource();
+            bufferSource.buffer = normalizedAudioData;
+            bufferSource.connect(offlineContext.destination);
+            bufferSource.start(0);
+            
+            offlineContext.startRendering().then(renderedBuffer => {
+                const wavBlob = audioBufferToWav(renderedBuffer);
+                const blobUrl = URL.createObjectURL(wavBlob);
+                
+                normalizedWavesurfer.load(blobUrl);
+                
+                // Добавляем анимацию для визуального эффекта
+                const card = document.querySelector('.card:nth-child(3)');
+                card.classList.add('normalizing-animation');
+                setTimeout(() => {
+                    card.classList.remove('normalizing-animation');
+                }, 2000);
+                
+                analyzeAudio(normalizedAudioData, false);
+                updateComparisonCharts();
+                
+                document.getElementById('playNormalizedButton').disabled = false;
+            });
+        }
+        
+        // Анализ аудиоданных
+        function analyzeAudio(audioData, isOriginal) {
+            if (!audioData) return;
+            
+            const channelData = audioData.getChannelData(0);
+            
+            // Вычисление пикового уровня
+            let peakAmplitude = 0;
+            for (let i = 0; i < channelData.length; i++) {
+                const absValue = Math.abs(channelData[i]);
+                if (absValue > peakAmplitude) {
+                    peakAmplitude = absValue;
+                }
+            }
+            
+            // Вычисление среднеквадратического значения (RMS)
+            let sumSquares = 0;
+            for (let i = 0; i < channelData.length; i++) {
+                sumSquares += channelData[i] * channelData[i];
+            }
+            const rmsAmplitude = Math.sqrt(sumSquares / channelData.length);
+            
+            // Обновление отображаемых значений
+            if (isOriginal) {
+                document.getElementById('peakBefore').textContent = `${(20 * Math.log10(peakAmplitude)).toFixed(2)} дБ`;
+                document.getElementById('rmsBefore').textContent = `${(20 * Math.log10(rmsAmplitude)).toFixed(2)} дБ`;
+            } else {
+                document.getElementById('peakAfter').textContent = `${(20 * Math.log10(peakAmplitude)).toFixed(2)} дБ`;
+                document.getElementById('rmsAfter').textContent = `${(20 * Math.log10(rmsAmplitude)).toFixed(2)} дБ`;
+            }
+            
+            // Обновление соответствующего индикатора громкости
+            if (isOriginal) {
+                updateOriginalVolumeIndicator();
+            } else {
+                updateNormalizedVolumeIndicator();
+            }
+        }
+        
+        // Обновление индикатора громкости для исходного сигнала
+        function updateOriginalVolumeIndicator() {
+            if (!originalAudioData) return;
+            
+            const channelData = originalAudioData.getChannelData(0);
+            let peakAmplitude = 0;
+            
+            for (let i = 0; i < channelData.length; i++) {
+                const absValue = Math.abs(channelData[i]);
+                if (absValue > peakAmplitude) {
+                    peakAmplitude = absValue;
+                }
+            }
+            
+            const peakDB = 20 * Math.log10(peakAmplitude);
+            const normalizedPeakDB = Math.max(-60, peakDB); // Ограничиваем минимум в -60 дБ
+            const volumePercent = ((normalizedPeakDB + 60) / 60) * 100; // Масштабирование от -60 дБ до 0 дБ
+            
+            document.getElementById('originalVolumeBar').style.width = `${volumePercent}%`;
+            document.getElementById('originalVolumeValue').textContent = `${peakDB.toFixed(1)} дБ`;
+            
+            document.getElementById('playOriginalButton').disabled = false;
+        }
+        
+        // Обновление индикатора громкости для нормализованного сигнала
+        function updateNormalizedVolumeIndicator() {
+            if (!normalizedAudioData) return;
+            
+            const channelData = normalizedAudioData.getChannelData(0);
+            let peakAmplitude = 0;
+            
+            for (let i = 0; i < channelData.length; i++) {
+                const absValue = Math.abs(channelData[i]);
+                if (absValue > peakAmplitude) {
+                    peakAmplitude = absValue;
+                }
+            }
+            
+            const peakDB = 20 * Math.log10(peakAmplitude);
+            const normalizedPeakDB = Math.max(-60, peakDB);
+            const volumePercent = ((normalizedPeakDB + 60) / 60) * 100;
+            
+            document.getElementById('normalizedVolumeBar').style.width = `${volumePercent}%`;
+            document.getElementById('normalizedVolumeValue').textContent = `${peakDB.toFixed(1)} дБ`;
+        }
+        
+        // Обновление графиков для сравнения сигналов
+        function updateComparisonCharts() {
+            if (!originalAudioData || !normalizedAudioData) return;
+            
+            const originalChannel = originalAudioData.getChannelData(0);
+            const normalizedChannel = normalizedAudioData.getChannelData(0);
+            
+            // Выбираем 100 равномерно распределенных точек для отображения на графике амплитуды
+            const step = Math.floor(originalChannel.length / 100);
+            const amplitudeOriginal = [];
+            const amplitudeNormalized = [];
+            
+            for (let i = 0; i < 100; i++) {
+                const index = i * step;
+                amplitudeOriginal.push(originalChannel[index]);
+                amplitudeNormalized.push(normalizedChannel[index]);
+            }
+            
+            // Обновляем график амплитуды
+            amplitudeChart.data.datasets[0].data = amplitudeOriginal;
+            amplitudeChart.data.datasets[1].data = amplitudeNormalized;
+            amplitudeChart.update();
+            
+            // Подготовка данных для гистограммы
+            const histogramBins = 7; // Соответствует меткам на графике
+            const histogramOriginal = new Array(histogramBins).fill(0);
+            const histogramNormalized = new Array(histogramBins).fill(0);
+            
+            // Функция для определения индекса бина на основе значения амплитуды в дБ
+            function getBinIndex(amplitudeDb) {
+                if (amplitudeDb <= -60) return 0;
+                if (amplitudeDb <= -50) return 1;
+                if (amplitudeDb <= -40) return 2;
+                if (amplitudeDb <= -30) return 3;
+                if (amplitudeDb <= -20) return 4;
+                if (amplitudeDb <= -10) return 5;
+                return 6; // От -10 до 0 дБ
+            }
+            
+            // Заполнение гистограмм
+            const samplesPerBin = 1000; // Используем подвыборку для повышения производительности
+            const sampleStep = Math.floor(originalChannel.length / samplesPerBin);
+            
+            for (let i = 0; i < samplesPerBin; i++) {
+                const index = i * sampleStep;
+                
+                if (index < originalChannel.length) {
+                    const originalDb = 20 * Math.log10(Math.abs(originalChannel[index] + 1e-10));
+                    const normalizedDb = 20 * Math.log10(Math.abs(normalizedChannel[index] + 1e-10));
+                    
+                    histogramOriginal[getBinIndex(originalDb)]++;
+                    histogramNormalized[getBinIndex(normalizedDb)]++;
+                }
+            }
+            
+            // Обновляем график гистограммы
+            histogramChart.data.datasets[0].data = histogramOriginal;
+            histogramChart.data.datasets[1].data = histogramNormalized;
+            histogramChart.update();
+        }
+        
+        // Включение кнопок после загрузки аудио
+        function enableButtons() {
+            document.getElementById('normalizeButton').disabled = false;
+            document.getElementById('stopOriginalButton').disabled = true;
+            document.getElementById('playNormalizedButton').disabled = true;
+            document.getElementById('stopNormalizedButton').disabled = true;
+        }
+    </script>
+</body>
+</html>

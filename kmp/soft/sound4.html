@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Визуализация квантования голосового сигнала</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f7f9fc;
+            color: #333;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+        
+        label {
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+        }
+        
+        .value-display {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 250px;
+            margin-bottom: 20px;
+        }
+        
+        .description {
+            background-color: #edf2f7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .description h2 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1.2em;
+        }
+        
+        .description p {
+            line-height: 1.6;
+        }
+        
+        .highlight {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            gap: 15px;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 15px;
+			margin-right: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .tab.active {
+            background-color: white;
+            border-bottom: 2px solid #3498db;
+            color: #2c3e50;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+            background-color: #edf2f7;
+            padding: 10px 15px;
+            border-radius: 5px;
+            min-width: 150px;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #2c3e50;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+        
+        .chart-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-column {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .chart-row {
+                flex-direction: column;
+            }
+        }
+			footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+    </style>
+</head>
+<body>
+    <h1>Визуализация квантования голосового сигнала</h1>
+    
+    <div class="tabs">
+        <button class="tab active" data-tab="demo">Демонстрация</button>
+        <button class="tab" data-tab="guide">Инструкция</button>
+    </div>
+    
+    <div id="demo" class="tab-content active">
+        <div class="container">
+            <div class="controls">
+                <div class="control-group">
+                    <label for="signalType">Тип сигнала</label>
+                    <select id="signalType" class="form-control">
+                        <option value="sine">Синусоида</option>
+                        <option value="voice" selected>Голосовой (имитация)</option>
+                        <option value="music">Музыкальный (имитация)</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="bitDepth">Разрядность квантования</label>
+                    <input type="range" id="bitDepth" min="1" max="16" step="1" value="8">
+                    <div class="value-display" id="bitDepthValue">8 бит (256 уровней)</div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="amplitude">Амплитуда сигнала</label>
+                    <input type="range" id="amplitude" min="0.1" max="1" step="0.1" value="0.8">
+                    <div class="value-display" id="amplitudeValue">0.8</div>
+                </div>
+            </div>
+            
+            <div class="radio-group">
+                <label>Тип квантования:</label>
+                <div class="radio-option">
+                    <input type="radio" id="uniform" name="quantizationType" value="uniform" checked>
+                    <label for="uniform">Равномерное</label>
+                </div>
+                <div class="radio-option">
+                    <input type="radio" id="nonuniform" name="quantizationType" value="nonuniform">
+                    <label for="nonuniform">Неравномерное (μ-закон)</label>
+                </div>
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(75, 192, 192, 0.8)"></div>
+                    <span>Исходный сигнал</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(255, 99, 132, 0.8)"></div>
+                    <span>Квантованный сигнал</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: rgba(54, 162, 235, 0.8)"></div>
+                    <span>Уровни квантования</span>
+                </div>
+            </div>
+            
+            <div class="chart-row">
+                <div class="chart-column">
+                    <h3>Сигнал и его квантование</h3>
+                    <div class="chart-container">
+                        <canvas id="signalChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-column">
+                    <h3>Ошибка квантования</h3>
+                    <div class="chart-container">
+                        <canvas id="errorChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="snrValue">48.2 дБ</div>
+                    <div class="stat-label">Отношение сигнал/шум</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="rmseValue">0.004</div>
+                    <div class="stat-label">Среднеквадратическая ошибка</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="dataRateValue">128 кбит/с</div>
+                    <div class="stat-label">Скорость передачи (16кГц)</div>
+                </div>
+            </div>
+            
+            <div class="description">
+                <h2>Текущее состояние:</h2>
+                <p id="statusText">Квантование с разрядностью 8 бит даёт 256 уровней квантования. Это обеспечивает хорошее качество для голосового сигнала.</p>
+            </div>
+            
+            <div class="button-container">
+                <button id="compareButton">Сравнить разную разрядность</button>
+                <button id="playButton">Воспроизвести звук</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="guide" class="tab-content">
+        <div class="container">
+            <h2>Инструкция по использованию</h2>
+            <p>Данное приложение демонстрирует процесс квантования голосового сигнала и влияние различных параметров на качество результата:</p>
+            <ul>
+                <li>Выбирайте тип сигнала из выпадающего списка</li>
+                <li>Регулируйте разрядность квантования ползунком (от 1 до 16 бит)</li>
+                <li>Изменяйте амплитуду сигнала для наблюдения влияния на процесс квантования</li>
+                <li>Переключайтесь между равномерным и неравномерным (μ-закон) квантованием</li>
+                <li>Наблюдайте как изменяются параметры качества: SNR, RMSE и требуемая скорость передачи данных</li>
+            </ul>
+            
+            <h3>Что нужно знать:</h3>
+            <p><strong>Равномерное квантование</strong> - все уровни квантования распределены равномерно по всему диапазону сигнала.</p>
+            <p><strong>Неравномерное квантование</strong> (μ-закон) - уровни квантования распределены неравномерно, с большей плотностью в области малых амплитуд, что лучше соответствует особенностям восприятия звука человеком.</p>
+            <p><strong>Разрядность</strong> - определяет количество возможных уровней квантования (2^N, где N - разрядность). Чем выше разрядность, тем точнее представление сигнала, но тем больше требуется места для хранения.</p>
+        </div>
+    </div>
+     <footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Получение элементов управления
+        const signalTypeSelect = document.getElementById('signalType');
+        const bitDepthSlider = document.getElementById('bitDepth');
+        const amplitudeSlider = document.getElementById('amplitude');
+        const bitDepthValue = document.getElementById('bitDepthValue');
+        const amplitudeValue = document.getElementById('amplitudeValue');
+        const uniformRadio = document.getElementById('uniform');
+        const nonuniformRadio = document.getElementById('nonuniform');
+        const statusText = document.getElementById('statusText');
+        const snrValue = document.getElementById('snrValue');
+        const rmseValue = document.getElementById('rmseValue');
+        const dataRateValue = document.getElementById('dataRateValue');
+        const compareButton = document.getElementById('compareButton');
+        const playButton = document.getElementById('playButton');
+        
+        // Настройка переключения вкладок
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+                
+                // Деактивация всех вкладок и содержимого
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                // Активация выбранной вкладки и содержимого
+                tab.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+        
+        // Инициализация графиков
+        const ctxSignal = document.getElementById('signalChart').getContext('2d');
+        const ctxError = document.getElementById('errorChart').getContext('2d');
+        
+        let signalChart = new Chart(ctxSignal, {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'Исходный сигнал',
+                        borderColor: 'rgba(75, 192, 192, 0.8)',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                        data: []
+                    },
+                    {
+                        label: 'Квантованный сигнал',
+                        borderColor: 'rgba(255, 99, 132, 0.8)',
+                        borderColor: 'rgba(255, 99, 132, 0.8)',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                        steppedLine: true,
+                        data: []
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: {
+                            display: true,
+                            text: 'Время (мс)'
+                        }
+                    },
+                    y: {
+                        min: -1.1,
+                        max: 1.1,
+                        title: {
+                            display: true,
+                            text: 'Амплитуда'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        let errorChart = new Chart(ctxError, {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'Ошибка квантования',
+                        borderColor: 'rgba(255, 159, 64, 0.8)',
+                        borderWidth: 1,
+                        fill: false,
+                        pointRadius: 0,
+                        data: []
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: {
+                            display: true,
+                            text: 'Время (мс)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Амплитуда ошибки'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Обновление отображения значений
+        bitDepthSlider.addEventListener('input', () => {
+            const bits = parseInt(bitDepthSlider.value);
+            const levels = Math.pow(2, bits);
+            bitDepthValue.textContent = `${bits} бит (${levels} уровней)`;
+            updateCharts();
+        });
+        
+        amplitudeSlider.addEventListener('input', () => {
+            amplitudeValue.textContent = amplitudeSlider.value;
+            updateCharts();
+        });
+        
+        // Обработчики изменения типа сигнала и квантования
+        signalTypeSelect.addEventListener('change', updateCharts);
+        uniformRadio.addEventListener('change', updateCharts);
+        nonuniformRadio.addEventListener('change', updateCharts);
+        
+        // Генерация голосового сигнала (имитация)
+        function generateVoiceSignal(numPoints, amplitude) {
+            const points = [];
+            const duration = 50; // мс
+            
+            // Основная частота (имитация голоса ~110 Гц)
+            const baseFreq = 0.11; // в единицах на точку
+            
+            // Добавляем несколько гармоник для имитации голоса
+            for (let i = 0; i < numPoints; i++) {
+                const t = (i / numPoints) * duration;
+                
+                // Базовый тон
+                let y = Math.sin(2 * Math.PI * baseFreq * i);
+                
+                // Добавляем гармоники
+                y += 0.5 * Math.sin(2 * Math.PI * baseFreq * i * 2); // вторая гармоника
+                y += 0.3 * Math.sin(2 * Math.PI * baseFreq * i * 3); // третья гармоника
+                y += 0.15 * Math.sin(2 * Math.PI * baseFreq * i * 4); // четвертая гармоника
+                
+                // Добавляем немного шума для реалистичности
+                y += (Math.random() * 0.1) - 0.05;
+                
+                // Добавляем огибающую для имитации слогов
+                const envelope = 0.5 + 0.5 * Math.sin(2 * Math.PI * (i / numPoints) * 0.5);
+                
+                // Нормализуем и масштабируем по амплитуде
+                y = (y / 2) * envelope * amplitude;
+                
+                points.push({
+                    x: t,
+                    y: y
+                });
+            }
+            
+            return points;
+        }
+        
+        // Генерация музыкального сигнала (имитация)
+        function generateMusicSignal(numPoints, amplitude) {
+            const points = [];
+            const duration = 50; // мс
+            
+            // Имитация музыкального сигнала с несколькими нотами
+            const notes = [
+                { freq: 0.15, duration: numPoints / 4, amplitude: 0.8 },
+                { freq: 0.2, duration: numPoints / 4, amplitude: 0.9 },
+                { freq: 0.18, duration: numPoints / 4, amplitude: 0.7 },
+                { freq: 0.22, duration: numPoints / 4, amplitude: 0.85 }
+            ];
+            
+            let currentPoint = 0;
+            for (const note of notes) {
+                for (let i = 0; i < note.duration; i++) {
+                    if (currentPoint >= numPoints) break;
+                    
+                    const t = (currentPoint / numPoints) * duration;
+                    
+                    // Основной тон ноты
+                    let y = Math.sin(2 * Math.PI * note.freq * i);
+                    
+                    // Добавляем гармоники
+                    y += 0.4 * Math.sin(2 * Math.PI * note.freq * i * 2);
+                    y += 0.2 * Math.sin(2 * Math.PI * note.freq * i * 3);
+                    
+                    // Добавляем огибающую ADSR (Attack, Decay, Sustain, Release)
+                    let envelope = 1;
+                    const attackTime = note.duration * 0.1;
+                    const decayTime = note.duration * 0.2;
+                    const releaseTime = note.duration * 0.2;
+                    
+                    if (i < attackTime) {
+                        envelope = i / attackTime;
+                    } else if (i < attackTime + decayTime) {
+                        envelope = 1 - 0.3 * ((i - attackTime) / decayTime);
+                    } else if (i > note.duration - releaseTime) {
+                        envelope = 0.7 * (1 - (i - (note.duration - releaseTime)) / releaseTime);
+                    } else {
+                        envelope = 0.7; // sustain level
+                    }
+                    
+                    // Нормализуем и масштабируем по амплитуде
+                    y = y * envelope * note.amplitude * amplitude;
+                    
+                    points.push({
+                        x: t,
+                        y: y
+                    });
+                    
+                    currentPoint++;
+                }
+            }
+            
+            return points;
+        }
+        
+        // Генерация синусоидального сигнала
+        function generateSineSignal(numPoints, amplitude) {
+            const points = [];
+            const duration = 50; // мс
+            const frequency = 0.1; // в единицах на точку
+            
+            for (let i = 0; i < numPoints; i++) {
+                const t = (i / numPoints) * duration;
+                const y = amplitude * Math.sin(2 * Math.PI * frequency * i);
+                
+                points.push({
+                    x: t,
+                    y: y
+                });
+            }
+            
+            return points;
+        }
+        
+        // Функция для квантования сигнала
+        function quantizeSignal(signalPoints, bits, isUniform, maxAmplitude) {
+            const quantizedPoints = [];
+            const errorPoints = [];
+            const levels = Math.pow(2, bits);
+            const stepSize = 2 / levels; // от -1 до 1
+            
+            for (const point of signalPoints) {
+                let value = point.y;
+                
+                // Применяем μ-закон для неравномерного квантования
+                if (!isUniform) {
+                    const mu = 255; // стандартное значение для μ-закона
+                    const sign = Math.sign(value);
+                    value = sign * (Math.log(1 + mu * Math.abs(value)) / Math.log(1 + mu));
+                }
+                
+                // Квантование
+                let quantizedValue;
+                if (isUniform) {
+                    // Равномерное квантование
+                    quantizedValue = Math.round(value / stepSize) * stepSize;
+                    // Ограничиваем значения
+                    quantizedValue = Math.max(-1 + stepSize/2, Math.min(1 - stepSize/2, quantizedValue));
+                } else {
+                    // Неравномерное квантование (μ-закон)
+                    const normalizedValue = (value + 1) / 2; // от 0 до 1
+                    const quantizedNormValue = Math.round(normalizedValue * (levels - 1)) / (levels - 1);
+                    quantizedValue = quantizedNormValue * 2 - 1; // обратно к диапазону от -1 до 1
+                    
+                    // Обратное преобразование μ-закона
+                    const sign = Math.sign(quantizedValue);
+                    const mu = 255;
+                    quantizedValue = sign * ((Math.pow(1 + mu, Math.abs(quantizedValue)) - 1) / mu);
+                }
+                
+                // Вычисляем ошибку квантования
+                const error = point.y - quantizedValue;
+                
+                quantizedPoints.push({
+                    x: point.x,
+                    y: quantizedValue
+                });
+                
+                errorPoints.push({
+                    x: point.x,
+                    y: error
+                });
+            }
+            
+            return {
+                quantized: quantizedPoints,
+                error: errorPoints
+            };
+        }
+        
+        // Функция для вычисления метрик качества
+        function calculateMetrics(originalPoints, quantizedPoints, errorPoints) {
+            // Вычисляем среднеквадратическую ошибку (RMSE)
+            let sumSquaredError = 0;
+            for (const error of errorPoints) {
+                sumSquaredError += Math.pow(error.y, 2);
+            }
+            const rmse = Math.sqrt(sumSquaredError / errorPoints.length);
+            
+            // Вычисляем мощность сигнала
+            let signalPower = 0;
+            for (const point of originalPoints) {
+                signalPower += Math.pow(point.y, 2);
+            }
+            signalPower /= originalPoints.length;
+            
+            // Вычисляем мощность шума (ошибки)
+            let noisePower = sumSquaredError / errorPoints.length;
+            
+            // Вычисляем SNR в дБ
+            const snr = 10 * Math.log10(signalPower / noisePower);
+            
+            return {
+                rmse: rmse,
+                snr: snr
+            };
+        }
+        
+        // Функция обновления графиков
+        function updateCharts() {
+            const numPoints = 500;
+            const bits = parseInt(bitDepthSlider.value);
+            const amplitude = parseFloat(amplitudeSlider.value);
+            const isUniform = uniformRadio.checked;
+            const signalType = signalTypeSelect.value;
+            
+            // Генерируем сигнал в зависимости от выбранного типа
+            let originalSignal;
+            switch (signalType) {
+                case 'voice':
+                    originalSignal = generateVoiceSignal(numPoints, amplitude);
+                    break;
+                case 'music':
+                    originalSignal = generateMusicSignal(numPoints, amplitude);
+                    break;
+                case 'sine':
+                default:
+                    originalSignal = generateSineSignal(numPoints, amplitude);
+                    break;
+            }
+            
+            // Квантуем сигнал
+            const result = quantizeSignal(originalSignal, bits, isUniform, amplitude);
+            
+            // Вычисляем метрики качества
+            const metrics = calculateMetrics(originalSignal, result.quantized, result.error);
+            
+            // Обновляем графики
+            signalChart.data.datasets[0].data = originalSignal;
+            signalChart.data.datasets[1].data = result.quantized;
+            errorChart.data.datasets[0].data = result.error;
+            
+            // Настраиваем масштаб оси Y для графика ошибки
+            const maxError = Math.max(...result.error.map(p => Math.abs(p.y))) * 1.2;
+            errorChart.options.scales.y.min = -maxError;
+            errorChart.options.scales.y.max = maxError;
+            
+            // Добавляем уровни квантования на основной график
+            if (signalChart.data.datasets.length > 2) {
+                signalChart.data.datasets.splice(2); // Удаляем старые уровни
+            }
+            
+            // Добавляем линии уровней квантования
+            const levels = Math.pow(2, bits);
+            if (levels <= 32) { // Отображаем линии только если уровней не слишком много
+                for (let i = 0; i < levels; i++) {
+                    let level;
+                    if (isUniform) {
+                        // Равномерное распределение уровней от -1 до 1
+                        level = -1 + (2 * i / (levels - 1));
+                    } else {
+                        // Неравномерное распределение по μ-закону
+                        const normalizedLevel = i / (levels - 1); // от 0 до 1
+                        const mappedLevel = 2 * normalizedLevel - 1; // от -1 до 1
+                        const sign = Math.sign(mappedLevel);
+                        const mu = 255;
+                        level = sign * ((Math.pow(1 + mu, Math.abs(mappedLevel)) - 1) / mu);
+                    }
+                    
+                    // Масштабируем уровень в соответствии с амплитудой
+                    level *= amplitude;
+                    
+                    signalChart.data.datasets.push({
+                        label: `Уровень ${i}`,
+                        data: [
+                            { x: 0, y: level },
+                            { x: 50, y: level }
+                        ],
+                        borderColor: 'rgba(54, 162, 235, 0.3)',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        borderDash: [5, 5]
+                    });
+                }
+            }
+            
+            signalChart.update();
+            errorChart.update();
+            
+            // Обновляем отображение метрик
+            snrValue.textContent = `${metrics.snr.toFixed(1)} дБ`;
+            rmseValue.textContent = metrics.rmse.toFixed(4);
+            
+            // Вычисляем скорость передачи данных (при частоте дискретизации 16 кГц)
+            const sampleRate = 16000; // Гц
+            const dataRate = (sampleRate * bits) / 1000; // кбит/с
+            dataRateValue.textContent = `${dataRate} кбит/с`;
+            
+            // Обновляем текст статуса
+            updateStatus(bits, isUniform, metrics.snr, signalType);
+        }
+        
+        // Функция обновления текста статуса
+        function updateStatus(bits, isUniform, snr, signalType) {
+            let qualityDesc;
+            
+            if (snr > 90) {
+                qualityDesc = "студийное качество";
+            } else if (snr > 70) {
+                qualityDesc = "CD качество";
+            } else if (snr > 50) {
+                qualityDesc = "высокое качество";
+            } else if (snr > 30) {
+                qualityDesc = "хорошее качество";
+            } else if (snr > 20) {
+                qualityDesc = "приемлемое качество";
+            } else {
+                qualityDesc = "низкое качество";
+            }
+            
+            let typeDesc = "";
+            switch (signalType) {
+                case 'voice':
+                    typeDesc = "голосового сигнала";
+                    break;
+                case 'music':
+                    typeDesc = "музыкального сигнала";
+                    break;
+                case 'sine':
+                    typeDesc = "синусоидального сигнала";
+                    break;
+            }
+            
+            const levels = Math.pow(2, bits);
+            
+            if (isUniform) {
+                statusText.innerHTML = `
+                    Равномерное квантование с разрядностью ${bits} бит даёт ${levels} уровней квантования. 
+                    Это обеспечивает ${qualityDesc} для ${typeDesc}.
+                    ${bits < 8 ? '<span class="highlight">Для голосовой связи рекомендуется минимум 8 бит.</span>' : ''}
+                    ${bits < 16 && signalType === 'music' ? '<span class="highlight">Для музыки рекомендуется минимум 16 бит.</span>' : ''}
+                `;
+            } else {
+                statusText.innerHTML = `
+                    Неравномерное квантование (μ-закон) с разрядностью ${bits} бит даёт ${levels} уровней квантования. 
+                    Уровни сконцентрированы в области малых амплитуд, что лучше соответствует особенностям восприятия звука человеком.
+                    Это обеспечивает ${qualityDesc} для ${typeDesc}.
+                    ${bits === 8 ? '<span class="highlight">8-битное μ-закон квантование используется в телефонии (стандарт G.711).</span>' : ''}
+                `;
+            }
+        }
+        
+        // Обработчик кнопки сравнения
+        let comparisonMode = false;
+        compareButton.addEventListener('click', () => {
+            if (!comparisonMode) {
+                // Переключаемся в режим сравнения
+                comparisonMode = true;
+                compareButton.textContent = "Вернуться к обычному режиму";
+                
+                // Создаем новый график для сравнения разной разрядности
+                const container = document.querySelector('.chart-row');
+                container.innerHTML = '';
+                
+                const comparisonDiv = document.createElement('div');
+                comparisonDiv.classList.add('chart-container');
+                comparisonDiv.style.height = '400px';
+                container.appendChild(comparisonDiv);
+                
+                const canvas = document.createElement('canvas');
+                canvas.id = 'comparisonChart';
+                comparisonDiv.appendChild(canvas);
+                
+                const ctxComparison = canvas.getContext('2d');
+                
+                // Генерируем сигнал
+                const numPoints = 500;
+                const amplitude = parseFloat(amplitudeSlider.value);
+                const signalType = signalTypeSelect.value;
+                const isUniform = uniformRadio.checked;
+                
+                // Выбираем функцию генерации сигнала
+                let generateSignal;
+                switch (signalType) {
+                    case 'voice':
+                        generateSignal = generateVoiceSignal;
+                        break;
+                    case 'music':
+                        generateSignal = generateMusicSignal;
+                        break;
+                    case 'sine':
+                    default:
+                        generateSignal = generateSineSignal;
+                        break;
+                }
+                
+                const originalSignal = generateSignal(numPoints, amplitude);
+                
+                // Создаем наборы данных для разной разрядности
+                const datasets = [
+                    {
+                        label: 'Исходный сигнал',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                        data: originalSignal
+                    }
+                ];
+                
+                // Добавляем квантованные сигналы с разной разрядностью
+                const bitDepths = [2, 4, 8, 16];
+                const colors = [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(153, 102, 255, 1)'
+                ];
+                
+                for (let i = 0; i < bitDepths.length; i++) {
+                    const bits = bitDepths[i];
+                    const result = quantizeSignal(originalSignal, bits, isUniform, amplitude);
+                    
+                    datasets.push({
+                        label: `${bits} бит`,
+                        borderColor: colors[i],
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                        data: result.quantized
+                    });
+                }
+                
+                // Создаем новый график
+                comparisonChart = new Chart(ctxComparison, {
+                    type: 'line',
+                    data: {
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            duration: 0
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                title: {
+                                    display: true,
+                                    text: 'Время (мс)'
+                                }
+                            },
+                            y: {
+                                min: -amplitude * 1.1,
+                                max: amplitude * 1.1,
+                                title: {
+                                    display: true,
+                                    text: 'Амплитуда'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Сравнение разной разрядности квантования',
+                                font: {
+                                    size: 16
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Добавляем таблицу с метриками
+                const tableDiv = document.createElement('div');
+                tableDiv.classList.add('description');
+                tableDiv.style.marginTop = '20px';
+                container.appendChild(tableDiv);
+                
+                let tableHTML = `
+                    <h3>Сравнение метрик качества при разной разрядности</h3>
+                    <table style="width:100%; border-collapse: collapse; margin-top:10px;">
+                        <thead>
+                            <tr style="background-color:#edf2f7; border-bottom:1px solid #cbd5e0;">
+                                <th style="padding:8px; text-align:left;">Разрядность</th>
+                                <th style="padding:8px; text-align:center;">SNR (дБ)</th>
+                                <th style="padding:8px; text-align:center;">RMSE</th>
+                                <th style="padding:8px; text-align:center;">Скорость (кбит/с)</th>
+                                <th style="padding:8px; text-align:center;">Применение</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                for (let i = 0; i < bitDepths.length; i++) {
+                    const bits = bitDepths[i];
+                    const result = quantizeSignal(originalSignal, bits, isUniform, amplitude);
+                    const metrics = calculateMetrics(originalSignal, result.quantized, result.error);
+                    const dataRate = (16000 * bits) / 1000; // кбит/с при частоте дискретизации 16 кГц
+                    
+                    let application = "";
+                    switch (bits) {
+                        case 2:
+                            application = "Только для очень простых сигналов";
+                            break;
+                        case 4:
+                            application = "Низкокачественная речь, ADPCM";
+                            break;
+                        case 8:
+                            application = "Телефония, G.711 (μ-закон/A-закон)";
+                            break;
+                        case 16:
+                            application = "CD-качество, аудио WAV";
+                            break;
+                    }
+                    
+                    tableHTML += `
+                        <tr style="border-bottom:1px solid #edf2f7;">
+                            <td style="padding:8px;">${bits} бит (${Math.pow(2, bits)} уровней)</td>
+                            <td style="padding:8px; text-align:center;">${metrics.snr.toFixed(1)}</td>
+                            <td style="padding:8px; text-align:center;">${metrics.rmse.toFixed(4)}</td>
+                            <td style="padding:8px; text-align:center;">${dataRate}</td>
+                            <td style="padding:8px; text-align:center;">${application}</td>
+                        </tr>
+                    `;
+                }
+                
+                tableHTML += `
+                        </tbody>
+                    </table>
+                    <p style="margin-top:15px;">
+                        <strong>Вывод:</strong> Увеличение разрядности вдвое улучшает SNR примерно на 6 дБ, 
+                        но также удваивает требуемую скорость передачи данных. Неравномерное квантование 
+                        даёт лучшее субъективное качество звука при той же разрядности.
+                    </p>
+                `;
+                
+                tableDiv.innerHTML = tableHTML;
+                
+            } else {
+                // Возвращаемся к обычному режиму
+                comparisonMode = false;
+                compareButton.textContent = "Сравнить разную разрядность";
+                
+                // Восстанавливаем исходную структуру
+                const container = document.querySelector('.chart-row');
+                container.innerHTML = `
+                    <div class="chart-column">
+                        <h3>Сигнал и его квантование</h3>
+                        <div class="chart-container">
+                            <canvas id="signalChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-column">
+                        <h3>Ошибка квантования</h3>
+                        <div class="chart-container">
+                            <canvas id="errorChart"></canvas>
+                        </div>
+                    </div>
+                `;
+                
+                // Пересоздаем графики
+                const ctxSignal = document.getElementById('signalChart').getContext('2d');
+                const ctxError = document.getElementById('errorChart').getContext('2d');
+                
+                // Пересоздаем графики с теми же настройками
+                signalChart = new Chart(ctxSignal, signalChart.config);
+                errorChart = new Chart(ctxError, errorChart.config);
+                
+                // Обновляем данные
+                updateCharts();
+            }
+        });
+        
+        // Обработчик кнопки воспроизведения звука
+        let isPlaying = false;
+        let audioContext;
+        let oscillator;
+        
+        playButton.addEventListener('click', () => {
+            if (!isPlaying) {
+                // Инициализируем аудиоконтекст
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Создаем генератор сигнала
+                oscillator = audioContext.createOscillator();
+                oscillator.type = 'sine';
+                
+                // Частота зависит от типа сигнала
+                switch (signalTypeSelect.value) {
+                    case 'voice':
+                        oscillator.frequency.value = 220; // имитация голоса
+                        break;
+                    case 'music':
+                        oscillator.frequency.value = 440; // нота A
+                        break;
+                    case 'sine':
+                    default:
+                        oscillator.frequency.value = 440; // нота A
+                        break;
+                }
+                
+                // Создаем узел усиления
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = 0.5;
+                
+                // Создаем эффект квантования через WaveShaperNode
+                const bitDepth = parseInt(bitDepthSlider.value);
+                const levels = Math.pow(2, bitDepth);
+                const quantizerNode = audioContext.createWaveShaper();
+                
+                // Создаем функцию передачи для квантования
+                const curve = new Float32Array(4096);
+                for (let i = 0; i < 4096; i++) {
+                    const input = (i / 4096) * 2 - 1; // нормализуем к диапазону [-1, 1]
+                    
+                    let output;
+                    if (uniformRadio.checked) {
+                        // Равномерное квантование
+                        const step = 2 / levels;
+                        output = Math.round(input / step) * step;
+                    } else {
+                        // Неравномерное квантование (μ-закон)
+                        const mu = 255;
+                        const sign = Math.sign(input);
+                        const compressed = sign * (Math.log(1 + mu * Math.abs(input)) / Math.log(1 + mu));
+                        
+                        // Квантуем сжатый сигнал
+                        const step = 2 / levels;
+                        const quantized = Math.round(compressed / step) * step;
+                        
+                        // Разжимаем обратно
+                        output = sign * ((Math.pow(1 + mu, Math.abs(quantized)) - 1) / mu);
+                    }
+                    
+                    curve[i] = output;
+                }
+                
+                quantizerNode.curve = curve;
+                
+                // Подключаем всё
+                oscillator.connect(quantizerNode);
+                quantizerNode.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Запускаем звук
+                oscillator.start();
+                
+                isPlaying = true;
+                playButton.textContent = 'Остановить звук';
+                
+                // Обновляем звук при изменении параметров
+                const updateAudio = () => {
+                    if (!isPlaying) return;
+                    
+                    // Обновляем частоту в зависимости от типа сигнала
+                    switch (signalTypeSelect.value) {
+                        case 'voice':
+                            oscillator.frequency.value = 220;
+                            break;
+                        case 'music':
+                            oscillator.frequency.value = 440;
+                            break;
+                        case 'sine':
+                        default:
+                            oscillator.frequency.value = 440;
+                            break;
+                    }
+                    
+                    // Обновляем квантование
+                    const bitDepth = parseInt(bitDepthSlider.value);
+                    const levels = Math.pow(2, bitDepth);
+                    
+                    // Создаем новую функцию передачи для квантования
+                    const curve = new Float32Array(4096);
+                    for (let i = 0; i < 4096; i++) {
+                        const input = (i / 4096) * 2 - 1; // нормализуем к диапазону [-1, 1]
+                        
+                        let output;
+                        if (uniformRadio.checked) {
+                            // Равномерное квантование
+                            const step = 2 / levels;
+                            output = Math.round(input / step) * step;
+                        } else {
+                            // Неравномерное квантование (μ-закон)
+                            const mu = 255;
+                            const sign = Math.sign(input);
+                            const compressed = sign * (Math.log(1 + mu * Math.abs(input)) / Math.log(1 + mu));
+                            
+                            // Квантуем сжатый сигнал
+                            const step = 2 / levels;
+                            const quantized = Math.round(compressed / step) * step;
+                            
+                            // Разжимаем обратно
+                            output = sign * ((Math.pow(1 + mu, Math.abs(quantized)) - 1) / mu);
+                        }
+                        
+                        curve[i] = output;
+                    }
+                    
+                    quantizerNode.curve = curve;
+                    
+                    // Обновляем громкость
+                    gainNode.gain.value = parseFloat(amplitudeSlider.value) * 0.5;
+                };
+                
+                // Добавляем обработчики для обновления звука при изменении параметров
+                bitDepthSlider.addEventListener('input', updateAudio);
+                signalTypeSelect.addEventListener('change', updateAudio);
+                uniformRadio.addEventListener('change', updateAudio);
+                nonuniformRadio.addEventListener('change', updateAudio);
+                amplitudeSlider.addEventListener('input', updateAudio);
+                
+            } else {
+                // Останавливаем звук
+                if (oscillator) {
+                    oscillator.stop();
+                }
+                if (audioContext) {
+                    audioContext.close();
+                }
+                
+                isPlaying = false;
+                playButton.textContent = 'Воспроизвести звук';
+                
+                // Удаляем обработчики
+                bitDepthSlider.removeEventListener('input', updateAudio);
+                signalTypeSelect.removeEventListener('change', updateAudio);
+                uniformRadio.removeEventListener('change', updateAudio);
+                nonuniformRadio.removeEventListener('change', updateAudio);
+                amplitudeSlider.removeEventListener('input', updateAudio);
+            }
+        });
+        
+        // Добавляем функцию для демонстрации влияния разрядности на квантование
+        function demonstrateBitDepthEffect() {
+            // Сохраняем текущее значение
+            const originalBitDepth = parseInt(bitDepthSlider.value);
+            
+            // Устанавливаем начальное значение
+            bitDepthSlider.value = "2";
+            bitDepthValue.textContent = `2 бит (4 уровня)`;
+            updateCharts();
+            
+            // Последовательно увеличиваем разрядность
+            let currentBit = 2;
+            const maxBit = 16;
+            const interval = setInterval(() => {
+                currentBit++;
+                if (currentBit > maxBit) {
+                    clearInterval(interval);
+                    // Возвращаем исходное значение
+                    bitDepthSlider.value = originalBitDepth;
+                    bitDepthValue.textContent = `${originalBitDepth} бит (${Math.pow(2, originalBitDepth)} уровней)`;
+                    updateCharts();
+                    return;
+                }
+                
+                bitDepthSlider.value = currentBit;
+                bitDepthValue.textContent = `${currentBit} бит (${Math.pow(2, currentBit)} уровней)`;
+                updateCharts();
+            }, 1000); // Изменяем каждую секунду
+        }
+        
+        // Добавляем кнопку для демонстрации
+        const demoButton = document.createElement('button');
+        demoButton.textContent = 'Демонстрация влияния разрядности';
+        demoButton.addEventListener('click', demonstrateBitDepthEffect);
+        document.querySelector('.button-container').appendChild(demoButton);
+        
+        // Инициализация графиков при загрузке
+        updateCharts();
+    </script>
+</body>
+</html>
