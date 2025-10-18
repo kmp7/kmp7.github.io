@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --color-primary: #325980;
+            --color-interactive: #3498db;
+            --color-border: #f1f1f1;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --color-primary: #5a8fc8;
+            --color-interactive: #5dade2;
+            --color-border: #404040;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: var(--color-primary);
+            color: white;
+            padding: 10px 0;
+            box-shadow: 0 2px 5px var(--shadow);
+            position: relative;
+        }
+
+        header h1 {
+            text-align: center;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: 0px solid white;
+            color: white;
+            font-size: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .form-container {
+            background-color: var(--bg-primary);
+            border-radius: 10px;
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 4px 6px var(--shadow);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--color-primary);
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--color-border);
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--color-interactive);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .button {
+            background-color: var(--color-interactive);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin-top: 20px;
+        }
+
+        .button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px var(--shadow);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .timer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .info-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+
+            header h1 {
+                font-size: 20px;
+                padding-right: 50px;
+            }
+
+            .form-container {
+                padding: 20px;
+            }
+
+            .button {
+                width: 100%;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+		footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>AI Metaphor</h1>
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему">
+                <span id="theme-icon">☀️</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="form-container">
+            <form id="metaphorForm">
+                <div class="form-group">
+                    <label for="fullName">Фамилия Имя</label>
+                    <input type="text" id="fullName" name="fullName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="metaphor">Ваша метафора искусственного интеллекта</label>
+                    <textarea id="metaphor" name="metaphor" required placeholder="Например: ИИ - это цифровой помощник..."></textarea>
+                    <p class="info-text">Опишите, как вы представляете искусственный интеллект через метафору</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="justification">Аргументация правомерности и достоинства метафоры</label>
+                    <textarea id="justification" name="justification" required placeholder="Почему эта метафора подходит для описания ИИ?"></textarea>
+                    <p class="info-text">Объясните, почему ваша метафора точно отражает суть ИИ</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="limitations">Ограничения метафоры</label>
+                    <textarea id="limitations" name="limitations" required placeholder="Какие аспекты ИИ не охватывает данная метафора?"></textarea>
+                    <p class="info-text">Укажите, что ваша метафора не может полностью описать</p>
+                </div>
+
+                <button type="submit" class="button" id="submitBtn">
+                    Создать отчет
+                </button>
+            </form>
+
+            <div class="timer">
+                Время работы: <span id="timer">00:00:00</span>
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Таймер
+        let startTime = Date.now();
+        let timerInterval;
+
+        function updateTimer() {
+            const elapsed = Date.now() - startTime;
+            const hours = Math.floor(elapsed / 3600000);
+            const minutes = Math.floor((elapsed % 3600000) / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+            
+            document.getElementById('timer').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        timerInterval = setInterval(updateTimer, 1000);
+
+        // Переключение темы
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            document.getElementById('theme-icon').textContent = newTheme === 'dark' ? '🌙' : '☀️';
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Загрузка сохраненной темы
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme-icon').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+
+        // Обработка формы
+        document.getElementById('metaphorForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.innerHTML = 'Создание отчета<span class="loading"></span>';
+            submitBtn.disabled = true;
+
+            const formData = {
+                fullName: document.getElementById('fullName').value,
+                metaphor: document.getElementById('metaphor').value,
+                justification: document.getElementById('justification').value,
+                limitations: document.getElementById('limitations').value,
+                date: new Date().toLocaleDateString('ru-RU'),
+                time: new Date().toLocaleTimeString('ru-RU'),
+                duration: document.getElementById('timer').textContent
+            };
+
+            // Небольшая задержка для визуального эффекта
+            setTimeout(() => {
+                generatePDF(formData);
+                submitBtn.innerHTML = 'Создать отчет';
+                submitBtn.disabled = false;
+            }, 1000);
+        });
+
+        function generatePDF(data) {
+            // Создание PDF с помощью jsPDF (встроенная библиотека)
+            const pdfContent = `
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            padding: 40px;
+                            line-height: 1.6;
+                        }
+                        h1 {
+                            color: #325980;
+                            text-align: center;
+                            margin-bottom: 30px;
+                        }
+                        .header-info {
+                            background-color: #f5f5f5;
+                            padding: 20px;
+                            border-radius: 5px;
+                            margin-bottom: 30px;
+                        }
+                        .section {
+                            margin-bottom: 25px;
+                        }
+                        .section h2 {
+                            color: #325980;
+                            font-size: 18px;
+                            margin-bottom: 10px;
+                        }
+                        .section p {
+                            text-align: justify;
+                            margin: 0;
+                        }
+                        .footer {
+                            margin-top: 40px;
+                            text-align: center;
+                            color: #666;
+                            font-size: 12px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>Отчет: Метафора искусственного интеллекта</h1>
+                    
+                    <div class="header-info">
+                        <p><strong>Студент:</strong> ${data.fullName}</p>
+                        <p><strong>Дата:</strong> ${data.date}</p>
+                        <p><strong>Время:</strong> ${data.time}</p>
+                        <p><strong>Продолжительность работы:</strong> ${data.duration}</p>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>Метафора</h2>
+                        <p>${data.metaphor}</p>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>Аргументация правомерности и достоинства</h2>
+                        <p>${data.justification}</p>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>Ограничения метафоры</h2>
+                        <p>${data.limitations}</p>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>Документ сгенерирован автоматически</p>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            // Открытие нового окна для печати/сохранения в PDF
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(pdfContent);
+            printWindow.document.close();
+            
+            // Автоматический вызов диалога печати
+            printWindow.onload = function() {
+                printWindow.print();
+            };
+        }
+    </script>
+</body>
+</html>
