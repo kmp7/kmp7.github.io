@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --accent: #3498db;
+            --accent-hover: #2980b9;
+            --border: #e0e0e0;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --chart-bg: #fafafa;
+            --grid-color: #e0e0e0;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-card: #242424;
+            --text-primary: #ecf0f1;
+            --text-secondary: #bdc3c7;
+            --accent: #3498db;
+            --accent-hover: #5dade2;
+            --border: #404040;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --chart-bg: #1a1a1a;
+            --grid-color: #404040;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: var(--bg-card);
+            padding: 20px 0;
+            box-shadow: 0 2px 10px var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        h1 {
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            color: #294f8f;
+        }
+
+        .theme-toggle {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 10px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        .info-button {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .info-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            margin: 50px auto;
+            padding: 30px;
+            max-width: 800px;
+            border-radius: 15px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 30px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .step-section {
+            background: var(--bg-card);
+            padding: 30px;
+            margin: 20px 0;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px var(--shadow);
+            display: none;
+        }
+
+        .step-section.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            color: var(--accent);
+            margin-bottom: 20px;
+            font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+        }
+
+        h3 {
+            color: var(--text-primary);
+            margin: 20px 0 10px;
+            font-size: 1.2rem;
+        }
+
+        .input-group {
+            margin: 20px 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        input[type="text"], input[type="range"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 16px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        input[type="range"] {
+            padding: 5px;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 10px 5px;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px var(--shadow);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .chart-container {
+            background: var(--chart-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            position: relative;
+            min-height: 300px;
+        }
+
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .result-box {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid var(--accent);
+        }
+
+        .modifier-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .modifier-btn {
+            padding: 8px 20px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modifier-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .rule-box {
+            background: var(--bg-secondary);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .progress-bar {
+            background: var(--bg-secondary);
+            height: 10px;
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: var(--accent);
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .slider-value {
+            display: inline-block;
+            margin-left: 10px;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .step-section {
+                padding: 20px;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .navigation {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+
+        .highlight {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .formula {
+            font-family: 'Courier New', monospace;
+            background: var(--bg-secondary);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <h1>Fuzzy Linguist</h1>
+                <div>
+                    <button class="info-button" onclick="toggleInfo()">Информация</button>
+                    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar" style="width: 20%"></div>
+        </div>
+
+        <!-- Step 0: Welcome -->
+        <div class="step-section active" id="step0">
+            <h2>Добро пожаловать в мир нечеткой логики!</h2>
+            <p>Приложение иллюстрирует, как компьютер может моделировать неопределенность естественного языка.</p>
+            <div class="input-group">
+                <label for="userName">Введите ваши Фамилию и Имя:</label>
+                <input type="text" id="userName" placeholder="Например: Петрова Мария">
+            </div>
+            <button onclick="startAnalysis()">Начать анализ!</button>
+        </div>
+
+        <!-- Step 1: Crisp vs Fuzzy Logic -->
+        <div class="step-section" id="step1">
+            <h2>Модуль 1: Четкая vs. Нечеткая логика</h2>
+            <p>Разберемся<span class="highlight" id="userGreeting"></span>, как компьютер может "понять" неопределенность.</p>
+            
+            <h3>Четкая (Булева) логика</h3>
+            <div class="result-box">
+                <p><strong>Правило:</strong> IF (длина_имени > 15 символов) THEN "Длинное" ELSE "Короткое"</p>
+                <p>Ваше имя "<span id="nameDisplay1"></span>" содержит <span id="nameLength1"></span> символов.</p>
+                <p><strong>Результат:</strong> <span id="crispResult"></span></p>
+            </div>
+
+            <h3>Нечеткая (Fuzzy) логика</h3>
+            <p>В реальности "длинное" — это не переключатель ВКЛ/ВЫКЛ. Давайте введем степень принадлежности.</p>
+            <div class="chart-container">
+                <canvas id="fuzzyChart1" width="600" height="300"></canvas>
+            </div>
+            <div class="result-box" id="fuzzyResult1"></div>
+            
+            <div class="navigation">
+                <button onclick="previousStep()">← Назад</button>
+                <button onclick="nextStep()">Далее →</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Linguistic Modifiers -->
+        <div class="step-section" id="step2">
+            <h2>Модуль 2: Лингвистические модификаторы</h2>
+            <p>Посмотрим, как наречия меняют семантику понятия "длинное".</p>
+            
+            <div class="modifier-buttons">
+                <button class="modifier-btn active" onclick="applyModifier('normal')">Обычное</button>
+                <button class="modifier-btn" onclick="applyModifier('very')">Очень длинное</button>
+                <button class="modifier-btn" onclick="applyModifier('fairly')">Довольно длинное</button>
+                <button class="modifier-btn" onclick="applyModifier('not')">Не длинное</button>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="modifierChart" width="600" height="300"></canvas>
+            </div>
+
+            <div class="formula" id="modifierFormula">
+                Математическая операция: μ(x)
+            </div>
+
+            <div class="navigation">
+                <button onclick="previousStep()">← Назад</button>
+                <button onclick="nextStep()">Далее →</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Fuzzy Inference -->
+        <div class="step-section" id="step3">
+            <h2>Модуль 3: Нечеткий вывод</h2>
+            <p><span class="highlight" id="userGreeting2"></span>, давайте оценим сложность текста для вас!</p>
+            
+            <h3>Входные данные (Фаззификация)</h3>
+            <div class="input-group">
+                <label>Знание терминологии: <span class="slider-value" id="knowledgeValue">80</span>%</label>
+                <input type="range" id="knowledgeSlider" min="0" max="100" value="80" oninput="updateSliders()">
+            </div>
+            <div class="input-group">
+                <label>Средняя длина предложения: <span class="slider-value" id="sentenceValue">25</span> слов</label>
+                <input type="range" id="sentenceSlider" min="5" max="40" value="25" oninput="updateSliders()">
+            </div>
+
+            <div class="chart-container">
+                <canvas id="inputChart1" width="600" height="250"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="inputChart2" width="600" height="250"></canvas>
+            </div>
+
+            <h3>База правил</h3>
+            <div id="rulesContainer"></div>
+
+            <h3>Результат агрегации</h3>
+            <div class="chart-container">
+                <canvas id="outputChart" width="600" height="300"></canvas>
+            </div>
+
+            <div class="navigation">
+                <button onclick="previousStep()">← Назад</button>
+                <button onclick="nextStep()">Далее →</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Defuzzification -->
+        <div class="step-section" id="step4">
+            <h2>Модуль 4: Дефаззификация</h2>
+            <p>Преобразуем нечеткий результат в четкое число.</p>
+            
+            <div class="chart-container">
+                <canvas id="defuzzChart" width="600" height="300"></canvas>
+            </div>
+
+            <div class="result-box">
+                <h3>Финиш</h3>
+                <p>Для вас, <span class="highlight" id="userGreeting3"></span>, итоговая сложность текста составляет:</p>
+                <p style="font-size: 2em; text-align: center; color: var(--accent); margin: 20px 0;">
+                    <span id="finalComplexity">67</span> из 100
+                </p>
+            </div>
+
+            <h3>Песочница</h3>
+            <p>Поэкспериментируйте с параметрами и посмотрите, как изменится результат!</p>
+            <div class="input-group">
+                <label>Знание терминологии: <span class="slider-value" id="sandboxKnowledge">50</span>%</label>
+                <input type="range" id="sandboxKnowledgeSlider" min="0" max="100" value="50" oninput="updateSandbox()">
+            </div>
+            <div class="input-group">
+                <label>Длина предложений: <span class="slider-value" id="sandboxSentence">20</span> слов</label>
+                <input type="range" id="sandboxSentenceSlider" min="5" max="40" value="20" oninput="updateSandbox()">
+            </div>
+            <div class="result-box">
+                <p>Результат сложности: <strong><span id="sandboxResult">50</span> из 100</strong></p>
+            </div>
+
+            <div class="navigation">
+                <button onclick="previousStep()">← Назад</button>
+                <button onclick="restart()">Начать заново</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Modal -->
+    <div class="info-modal" id="infoModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="toggleInfo()">&times;</span>
+            <h2>О Fuzzy Linguist</h2>
+            
+              <p><strong>Приложение демонстрирует </strong>различие между четкой и нечеткой логикой:</p>
+            
+             <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>Градации:</strong> вместо бинарных значений </li>
+				      <li><strong>Функции принадлежности:</strong> Как объекты могут частично принадлежать к множествам</li>
+                <li><strong>Лингвистические модификаторы:</strong> Математическое представление наречий</li>
+                <li><strong>Нечеткий вывод:</strong> Процесс принятия решений на основе нечетких правил</li>
+                <li><strong>Дефаззификация:</strong> Преобразование нечетких значений в четкие</li>
+            </ul>
+            
+            <h3>Как пользоваться:</h3>
+            <ol style="margin-left: 20px; line-height: 1.8;">
+                <li>Введите свое имя для персонализации примеров</li>
+                <li>Проходите модули последовательно</li>
+                <li>Взаимодействуйте с графиками и слайдерами</li>
+                <li>Экспериментируйте в песочнице в конце</li>
+            </ol>
+            
+            <h3>Ключевые концепции:</h3>
+            <p><strong>Нечеткая логика</strong> позволяет моделировать неопределенность, присущую естественному языку. В отличие от булевой логики (истина/ложь), нечеткая логика работает со степенями истинности от 0 до 1.</p>
+            
+            <p><strong>Пример:</strong> Понятие "высокий человек" — нечеткое. Человек ростом 175 см может быть "немного высоким" (0.3), а 190 см — "очень высоким" (0.9).</p>
+            
+            <h3>Математические основы:</h3>
+            <div class="formula">
+                • Очень X: μ(x)²
+                • Довольно X: √μ(x)
+                • Не X: 1 - μ(x)
+            </div>
+            
+            <p style="margin-top: 20px; text-align: center; color: var(--text-secondary);">
+                © 2025 | kmp+ | CC BY-NC-SA 4.0<br>
+                Разработано для студентов БрГУ имени А.С. Пушкина      </p>
+        </div>
+    </div>
+ <div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Global variables
+        let currentStep = 0;
+        let userName = '';
+        let currentModifier = 'normal';
+
+        // Theme toggle
+        function toggleTheme() {
+            const body = document.body;
+            const button = document.querySelector('.theme-toggle');
+            
+            if (body.hasAttribute('data-theme')) {
+                body.removeAttribute('data-theme');
+                button.textContent = '🌙 ';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                button.textContent = '☀️ ';
+            }
+        }
+
+        // Info modal
+        function toggleInfo() {
+            const modal = document.getElementById('infoModal');
+            modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('infoModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Start analysis
+        function startAnalysis() {
+            const input = document.getElementById('userName').value.trim();
+            if (!input) {
+                alert('Пожалуйста, введите ваше имя');
+                return;
+            }
+            userName = input;
+            nextStep();
+            initializeStep1();
+        }
+
+        // Navigation
+        function nextStep() {
+            if (currentStep < 4) {
+                document.getElementById(`step${currentStep}`).classList.remove('active');
+                currentStep++;
+                document.getElementById(`step${currentStep}`).classList.add('active');
+                updateProgressBar();
+                
+                // Initialize step-specific content
+                if (currentStep === 2) initializeStep2();
+                if (currentStep === 3) initializeStep3();
+                if (currentStep === 4) initializeStep4();
+            }
+        }
+
+        function previousStep() {
+            if (currentStep > 0) {
+                document.getElementById(`step${currentStep}`).classList.remove('active');
+                currentStep--;
+                document.getElementById(`step${currentStep}`).classList.add('active');
+                updateProgressBar();
+            }
+        }
+
+        function restart() {
+            currentStep = 0;
+            document.querySelectorAll('.step-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById('step0').classList.add('active');
+            document.getElementById('userName').value = '';
+            userName = '';
+            updateProgressBar();
+        }
+
+        function updateProgressBar() {
+            const progress = ((currentStep + 1) / 5) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        // Step 1: Initialize
+        function initializeStep1() {
+            const nameLength = userName.length;
+            
+            // Update displays
+            document.getElementById('userGreeting').textContent = userName;
+            document.getElementById('nameDisplay1').textContent = userName;
+            document.getElementById('nameLength1').textContent = nameLength;
+            
+            // Crisp logic result
+            const isCrispLong = nameLength > 15;
+            document.getElementById('crispResult').textContent = 
+                isCrispLong ? '✅ ИСТИНА (Имя длинное)' : '❌ ЛОЖЬ (Имя короткое)';
+            
+            // Draw fuzzy chart
+            drawFuzzyNameChart(nameLength);
+            
+            // Calculate fuzzy memberships
+            const memberships = calculateNameMemberships(nameLength);
+            let resultHTML = `<p><strong>Имя "${userName}" (${nameLength} символов) принадлежит к набору:</strong></p>`;
+            resultHTML += `<p>• 'Короткое' на ${(memberships.short * 100).toFixed(1)}%</p>`;
+            resultHTML += `<p>• 'Среднее' на ${(memberships.medium * 100).toFixed(1)}%</p>`;
+            resultHTML += `<p>• 'Длинное' на ${(memberships.long * 100).toFixed(1)}%</p>`;
+            resultHTML += `<p><em>Ключевая идея: В нечеткой логике объект может принадлежать к нескольким категориям одновременно!</em></p>`;
+            document.getElementById('fuzzyResult1').innerHTML = resultHTML;
+        }
+
+        // Calculate name length memberships
+        function calculateNameMemberships(length) {
+            const short = length <= 8 ? 1 : length <= 12 ? (12 - length) / 4 : 0;
+            const medium = length <= 8 ? 0 : length <= 12 ? (length - 8) / 4 : 
+                           length <= 18 ? 1 : length <= 22 ? (22 - length) / 4 : 0;
+            const long = length <= 18 ? 0 : length <= 22 ? (length - 18) / 4 : 1;
+            
+            return { short, medium, long };
+        }
+
+        // Draw fuzzy name chart
+        function drawFuzzyNameChart(userNameLength) {
+            const canvas = document.getElementById('fuzzyChart1');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Set colors based on theme
+            const isDark = document.body.hasAttribute('data-theme');
+            const textColor = isDark ? '#ecf0f1' : '#2c3e50';
+            const gridColor = isDark ? '#404040' : '#e0e0e0';
+            
+            // Draw axes
+            ctx.strokeStyle = gridColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(50, height - 30);
+            ctx.lineTo(width - 20, height - 30);
+            ctx.moveTo(50, height - 30);
+            ctx.lineTo(50, 20);
+            ctx.stroke();
+            
+            // Labels
+            ctx.fillStyle = textColor;
+            ctx.font = '12px Arial';
+            ctx.fillText('0', 40, height - 10);
+            ctx.fillText('30', width - 30, height - 10);
+            ctx.fillText('Символы', width/2 - 20, height - 5);
+            ctx.fillText('1.0', 25, 25);
+            ctx.fillText('0.5', 25, height/2);
+            ctx.fillText('0', 30, height - 25);
+            
+            // Draw membership functions
+            const drawMembershipFunction = (points, color, label) => {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                points.forEach((point, i) => {
+                    const x = 50 + (point[0] / 30) * (width - 70);
+                    const y = height - 30 - point[1] * (height - 50);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+                
+                // Label
+                ctx.fillStyle = color;
+                ctx.font = 'bold 14px Arial';
+                const labelX = points[Math.floor(points.length/2)][0];
+                ctx.fillText(label, 50 + (labelX / 30) * (width - 70) - 20, 40);
+            };
+            
+            // Define membership functions
+            drawMembershipFunction([[0, 1], [8, 1], [12, 0]], '#e74c3c', 'Короткое');
+            drawMembershipFunction([[8, 0], [12, 1], [18, 1], [22, 0]], '#f39c12', 'Среднее');
+            drawMembershipFunction([[18, 0], [22, 1], [30, 1]], '#27ae60', 'Длинное');
+            
+            // Draw user's name position
+            const userX = 50 + (userNameLength / 30) * (width - 70);
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(userX, height - 30);
+            ctx.lineTo(userX, 20);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Label for user position
+            ctx.fillStyle = '#3498db';
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText(`${userNameLength} символов`, userX - 30, height - 35);
+        }
+
+        // Step 2: Initialize
+        function initializeStep2() {
+            drawModifierChart('normal');
+        }
+
+        // Apply modifier
+        function applyModifier(type) {
+            currentModifier = type;
+            
+            // Update button states
+            document.querySelectorAll('.modifier-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update formula display
+            const formulas = {
+                'normal': 'Математическая операция: μ(x)',
+                'very': 'Математическая операция: μ(x)² (возведение в квадрат)',
+                'fairly': 'Математическая операция: √μ(x) (квадратный корень)',
+                'not': 'Математическая операция: 1 - μ(x) (инверсия)'
+            };
+            document.getElementById('modifierFormula').textContent = formulas[type];
+            
+            // Redraw chart
+            drawModifierChart(type);
+        }
+
+        // Draw modifier chart
+        function drawModifierChart(modifier) {
+            const canvas = document.getElementById('modifierChart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            const isDark = document.body.hasAttribute('data-theme');
+            const textColor = isDark ? '#ecf0f1' : '#2c3e50';
+            const gridColor = isDark ? '#404040' : '#e0e0e0';
+            
+            // Draw axes
+            ctx.strokeStyle = gridColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(50, height - 30);
+            ctx.lineTo(width - 20, height - 30);
+            ctx.moveTo(50, height - 30);
+            ctx.lineTo(50, 20);
+            ctx.stroke();
+            
+            // Labels
+            ctx.fillStyle = textColor;
+            ctx.font = '12px Arial';
+            ctx.fillText('0', 40, height - 10);
+            ctx.fillText('30', width - 30, height - 10);
+            ctx.fillText('1.0', 25, 25);
+            ctx.fillText('0', 30, height - 25);
+            
+            // Draw original and modified functions
+            const drawFunction = (modifierType, color, isDashed = false) => {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                if (isDashed) ctx.setLineDash([5, 5]);
+                
+                ctx.beginPath();
+                for (let x = 0; x <= 30; x += 0.5) {
+                    const baseValue = x <= 18 ? 0 : x <= 22 ? (x - 18) / 4 : 1;
+                    let value = baseValue;
+                    
+                    if (modifierType === 'very') value = Math.pow(baseValue, 2);
+                    else if (modifierType === 'fairly') value = Math.sqrt(baseValue);
+                    else if (modifierType === 'not') value = 1 - baseValue;
+                    
+                    const canvasX = 50 + (x / 30) * (width - 70);
+                    const canvasY = height - 30 - value * (height - 50);
+                    
+                    if (x === 0) ctx.moveTo(canvasX, canvasY);
+                    else ctx.lineTo(canvasX, canvasY);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            };
+            
+            // Draw original (dashed)
+            drawFunction('normal', '#95a5a6', true);
+            
+            // Draw modified
+            const colors = {
+                'normal': '#27ae60',
+                'very': '#e74c3c',
+                'fairly': '#f39c12',
+                'not': '#9b59b6'
+            };
+            drawFunction(modifier, colors[modifier]);
+            
+            // Legend
+            ctx.font = 'bold 14px Arial';
+            ctx.fillStyle = '#95a5a6';
+            ctx.fillText('Оригинал', width - 150, 40);
+            ctx.fillStyle = colors[modifier];
+            const labels = {
+                'normal': 'Длинное',
+                'very': 'Очень длинное',
+                'fairly': 'Довольно длинное',
+                'not': 'Не длинное'
+            };
+            ctx.fillText(labels[modifier], width - 150, 60);
+        }
+
+        // Step 3: Initialize
+        function initializeStep3() {
+            document.getElementById('userGreeting2').textContent = userName;
+            updateSliders();
+            displayRules();
+        }
+
+        // Update sliders
+        function updateSliders() {
+            const knowledge = document.getElementById('knowledgeSlider').value;
+            const sentence = document.getElementById('sentenceSlider').value;
+            
+            document.getElementById('knowledgeValue').textContent = knowledge;
+            document.getElementById('sentenceValue').textContent = sentence;
+            
+            drawInputCharts(knowledge, sentence);
+            calculateAndDisplayRules(knowledge, sentence);
+            drawOutputChart(knowledge, sentence);
+        }
+
+        // Draw input charts
+        function drawInputCharts(knowledge, sentenceLength) {
+            // Draw knowledge chart
+            drawMembershipChart('inputChart1', 
+                [
+                    {name: 'Низкое', points: [[0, 1], [30, 1], [50, 0]], color: '#e74c3c'},
+                    {name: 'Среднее', points: [[30, 0], [50, 1], [70, 0]], color: '#f39c12'},
+                    {name: 'Высокое', points: [[50, 0], [70, 1], [100, 1]], color: '#27ae60'}
+                ],
+                knowledge, 100, 'Знание терминологии (%)');
+            
+            // Draw sentence length chart
+            drawMembershipChart('inputChart2',
+                [
+                    {name: 'Короткие', points: [[5, 1], [10, 1], [20, 0]], color: '#e74c3c'},
+                    {name: 'Средние', points: [[10, 0], [20, 1], [30, 0]], color: '#f39c12'},
+                    {name: 'Длинные', points: [[20, 0], [30, 1], [40, 1]], color: '#27ae60'}
+                ],
+                sentenceLength, 40, 'Длина предложения (слова)');
+        }
+
+        // Generic membership chart drawer
+        function drawMembershipChart(canvasId, functions, currentValue, maxX, label) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            const isDark = document.body.hasAttribute('data-theme');
+            const textColor = isDark ? '#ecf0f1' : '#2c3e50';
+            const gridColor = isDark ? '#404040' : '#e0e0e0';
+            
+            // Draw axes
+            ctx.strokeStyle = gridColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(50, height - 30);
+            ctx.lineTo(width - 20, height - 30);
+            ctx.moveTo(50, height - 30);
+            ctx.lineTo(50, 20);
+            ctx.stroke();
+            
+            // Labels
+            ctx.fillStyle = textColor;
+            ctx.font = '12px Arial';
+            ctx.fillText('0', 40, height - 10);
+            ctx.fillText(maxX, width - 30, height - 10);
+            ctx.fillText(label, width/2 - 50, height - 5);
+            ctx.fillText('1.0', 25, 25);
+            ctx.fillText('0', 30, height - 25);
+            
+            // Draw membership functions
+            functions.forEach(func => {
+                ctx.strokeStyle = func.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                func.points.forEach((point, i) => {
+                    const x = 50 + (point[0] / maxX) * (width - 70);
+                    const y = height - 30 - point[1] * (height - 50);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+                
+                // Label
+                ctx.fillStyle = func.color;
+                ctx.font = 'bold 14px Arial';
+                const labelX = func.points[Math.floor(func.points.length/2)][0];
+                ctx.fillText(func.name, 50 + (labelX / maxX) * (width - 70) - 20, 40);
+            });
+            
+            // Draw current value line
+            const valueX = 50 + (currentValue / maxX) * (width - 70);
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(valueX, height - 30);
+            ctx.lineTo(valueX, 20);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#3498db';
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText(currentValue, valueX - 10, height - 35);
+        }
+
+        // Display rules
+        function displayRules() {
+            const rulesContainer = document.getElementById('rulesContainer');
+            const rules = [
+                'IF (Знание "Высокое") AND (Длина "Длинные") THEN (Сложность "Средняя")',
+                'IF (Знание "Среднее") AND (Длина "Длинные") THEN (Сложность "Высокая")',
+                'IF (Знание "Высокое") AND (Длина "Средние") THEN (Сложность "Низкая")',
+                'IF (Знание "Низкое") AND (Длина "Любая") THEN (Сложность "Высокая")'
+            ];
+            
+            rulesContainer.innerHTML = rules.map((rule, i) => 
+                `<div class="rule-box">Правило ${i + 1}: ${rule}</div>`
+            ).join('');
+        }
+
+        // Calculate and display rules
+        function calculateAndDisplayRules(knowledge, sentenceLength) {
+            // Calculate memberships for inputs
+            const knowledgeMembership = {
+                low: knowledge <= 30 ? 1 : knowledge <= 50 ? (50 - knowledge) / 20 : 0,
+                medium: knowledge <= 30 ? 0 : knowledge <= 50 ? (knowledge - 30) / 20 : 
+                        knowledge <= 70 ? (70 - knowledge) / 20 : 0,
+                high: knowledge <= 50 ? 0 : knowledge <= 70 ? (knowledge - 50) / 20 : 1
+            };
+            
+            const sentenceMembership = {
+                short: sentenceLength <= 10 ? 1 : sentenceLength <= 20 ? (20 - sentenceLength) / 10 : 0,
+                medium: sentenceLength <= 10 ? 0 : sentenceLength <= 20 ? (sentenceLength - 10) / 10 :
+                        sentenceLength <= 30 ? (30 - sentenceLength) / 10 : 0,
+                long: sentenceLength <= 20 ? 0 : sentenceLength <= 30 ? (sentenceLength - 20) / 10 : 1
+            };
+            
+            // Apply rules and show activation levels
+            const rulesContainer = document.getElementById('rulesContainer');
+            const activations = [
+                {rule: 1, activation: Math.min(knowledgeMembership.high, sentenceMembership.long)},
+                {rule: 2, activation: Math.min(knowledgeMembership.medium, sentenceMembership.long)},
+                {rule: 3, activation: Math.min(knowledgeMembership.high, sentenceMembership.medium)},
+                {rule: 4, activation: knowledgeMembership.low}
+            ];
+            
+            const ruleElements = rulesContainer.querySelectorAll('.rule-box');
+            activations.forEach((act, i) => {
+                if (ruleElements[i]) {
+                    const opacity = 0.3 + act.activation * 0.7;
+                    ruleElements[i].style.opacity = opacity;
+                    ruleElements[i].innerHTML += ` <strong>(Активация: ${(act.activation * 100).toFixed(1)}%)</strong>`;
+                }
+            });
+        }
+
+        // Draw output chart
+        function drawOutputChart(knowledge, sentenceLength) {
+            const canvas = document.getElementById('outputChart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            const isDark = document.body.hasAttribute('data-theme');
+            const textColor = isDark ? '#ecf0f1' : '#2c3e50';
+            const gridColor = isDark ? '#404040' : '#e0e0e0';
+            
+            // Calculate output complexity
+            const complexity = calculateComplexity(knowledge, sentenceLength);
+            
+            // Draw axes
+            ctx.strokeStyle = gridColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(50, height - 30);
+            ctx.lineTo(width - 20, height - 30);
+            ctx.moveTo(50, height - 30);
+            ctx.lineTo(50, 20);
+            ctx.stroke();
+            
+            // Labels
+            ctx.fillStyle = textColor;
+            ctx.font = '12px Arial';
+            ctx.fillText('0', 40, height - 10);
+            ctx.fillText('100', width - 30, height - 10);
+            ctx.fillText('Сложность', width/2 - 30, height - 5);
+            ctx.fillText('1.0', 25, 25);
+            
+            // Draw complexity output sets
+            const sets = [
+                {name: 'Низкая', points: [[0, 1], [30, 1], [50, 0]], color: '#27ae60'},
+                {name: 'Средняя', points: [[30, 0], [50, 1], [70, 0]], color: '#f39c12'},
+                {name: 'Высокая', points: [[50, 0], [70, 1], [100, 1]], color: '#e74c3c'}
+            ];
+            
+            sets.forEach(set => {
+                ctx.strokeStyle = set.color;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.3;
+                ctx.beginPath();
+                set.points.forEach((point, i) => {
+                    const x = 50 + (point[0] / 100) * (width - 70);
+                    const y = height - 30 - point[1] * (height - 50);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+                
+                // Label
+                ctx.fillStyle = set.color;
+                ctx.font = 'bold 14px Arial';
+                const labelX = set.points[Math.floor(set.points.length/2)][0];
+                ctx.fillText(set.name, 50 + (labelX / 100) * (width - 70) - 20, 40);
+            });
+            
+            // Draw result line
+            const resultX = 50 + (complexity / 100) * (width - 70);
+            ctx.strokeStyle = '#3498db';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(resultX, height - 30);
+            ctx.lineTo(resultX, 20);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#3498db';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(`Результат: ${complexity}`, resultX - 30, height - 35);
+        }
+
+        // Calculate complexity
+        function calculateComplexity(knowledge, sentenceLength) {
+            // Simple weighted average for demonstration
+            const knowledgeFactor = (100 - knowledge) * 0.6;
+            const sentenceFactor = sentenceLength * 1.5;
+            const complexity = Math.min(100, Math.max(0, knowledgeFactor + sentenceFactor));
+            return Math.round(complexity);
+        }
+
+        // Step 4: Initialize
+        function initializeStep4() {
+            document.getElementById('userGreeting3').textContent = userName;
+            const knowledge = document.getElementById('knowledgeSlider').value;
+            const sentence = document.getElementById('sentenceSlider').value;
+            const complexity = calculateComplexity(knowledge, sentence);
+            
+            document.getElementById('finalComplexity').textContent = complexity;
+            drawDefuzzificationChart(complexity);
+        }
+
+        // Draw defuzzification chart
+        function drawDefuzzificationChart(complexity) {
+            const canvas = document.getElementById('defuzzChart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            const isDark = document.body.hasAttribute('data-theme');
+            const textColor = isDark ? '#ecf0f1' : '#2c3e50';
+            const gridColor = isDark ? '#404040' : '#e0e0e0';
+            
+            // Draw axes
+            ctx.strokeStyle = gridColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(50, height - 30);
+            ctx.lineTo(width - 20, height - 30);
+            ctx.moveTo(50, height - 30);
+            ctx.lineTo(50, 20);
+            ctx.stroke();
+            
+            // Draw fuzzy output area
+            ctx.fillStyle = 'rgba(52, 152, 219, 0.3)';
+            ctx.beginPath();
+            ctx.moveTo(50, height - 30);
+            
+            // Simulate fuzzy output shape
+            for (let x = 0; x <= 100; x++) {
+                const membership = Math.exp(-Math.pow((x - complexity) / 20, 2));
+                const canvasX = 50 + (x / 100) * (width - 70);
+                const canvasY = height - 30 - membership * (height - 100);
+                ctx.lineTo(canvasX, canvasY);
+            }
+            
+            ctx.lineTo(width - 20, height - 30);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Draw center of gravity
+            const cogX = 50 + (complexity / 100) * (width - 70);
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(cogX, height - 30);
+            ctx.lineTo(cogX, 20);
+            ctx.stroke();
+            
+            // Draw COG marker
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(cogX, height/2, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Labels
+            ctx.fillStyle = textColor;
+            ctx.font = '12px Arial';
+            ctx.fillText('0', 40, height - 10);
+            ctx.fillText('100', width - 30, height - 10);
+            ctx.fillText('Сложность', width/2 - 30, height - 5);
+            
+            ctx.fillStyle = '#e74c3c';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText('Центр тяжести', cogX - 40, height/2 - 20);
+            ctx.fillText(`${complexity}`, cogX - 10, height - 35);
+        }
+
+        // Sandbox update
+        function updateSandbox() {
+            const knowledge = document.getElementById('sandboxKnowledgeSlider').value;
+            const sentence = document.getElementById('sandboxSentenceSlider').value;
+            
+            document.getElementById('sandboxKnowledge').textContent = knowledge;
+            document.getElementById('sandboxSentence').textContent = sentence;
+            
+            const complexity = calculateComplexity(knowledge, sentence);
+            document.getElementById('sandboxResult').textContent = complexity;
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            updateProgressBar();
+        };
+    </script>
+</body>
+</html>
