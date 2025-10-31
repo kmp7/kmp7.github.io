@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --primary-color: #325980;
+            --secondary-color: #4CAF50;
+            --background-color: #f5f5f5;
+            --content-bg: #ffffff;
+            --text-color: #333333;
+            --header-text-color: #ffffff;
+            --menu-bg: #ffffff;
+            --menu-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+            --accent-llm: #4caf50;        /* Основной акцент LLM */
+            --accent-context: #4cafff;    /* Контекст ИИ */
+            --accent-caution: #ffaf50;    /* Предупреждения/Ограничения */
+            --accent-special: #821978;    /* Особые случаи */
+            --llm-gradient: linear-gradient(135deg, #4CAF50, #388E3C); /* Градиент для акцента LLM */
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #3e76ad;
+            --secondary-color: #388e3c;
+            --background-color: #121212;
+            --content-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --header-text-color: #ffffff;
+            --menu-bg: #2d2d2d;
+            --menu-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            --llm-gradient: linear-gradient(135deg, #388E3C, #2E7D32);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+
+        body {
+            font-family: 'Roboto', 'Arial', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            padding-top: 2px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: var(--llm-gradient);
+            color: var(--header-text-color);
+            padding: 25px 0;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 2px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin: 25px 0 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--secondary-color);
+        }
+
+        h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        /* Меню навигации */
+        .menu {
+            background-color: var(--menu-bg);
+            padding: 15px 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 30px;
+            box-shadow: var(--menu-shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .menu-title {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-right: 15px;
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .menu-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .menu-btn:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .menu-btn.active {
+            background: var(--llm-gradient);
+            font-weight: bold;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--primary-color);
+            margin-left: 15px;
+        }
+
+        /* Секции контента */
+        .section {
+            background-color: var(--content-bg);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid transparent;
+        }
+
+        .section-llm-focus {
+            border-left-color: var(--accent-llm);
+        }
+
+        /* Блоки выделения */
+        .llm-highlight {
+            background: rgba(76, 175, 80, 0.1);
+            border-left: 4px solid var(--accent-llm);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+
+        .context-box {
+            background: rgba(76, 175, 255, 0.1);
+            border-left: 4px solid var(--accent-context);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+
+        .caution-box {
+            background: rgba(255, 175, 80, 0.1);
+            border-left: 4px solid var(--accent-caution);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+
+        .special-box {
+            background: rgba(130, 25, 120, 0.1);
+            border-left: 4px solid var(--accent-special);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+
+        /* Эмерджентность - специальное оформление */
+        .emergent-property {
+            background: rgba(76, 175, 80, 0.15);
+            border: 1px dashed var(--accent-llm);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .emergent-label {
+            position: absolute;
+            top: -10px;
+            left: 15px;
+            background: var(--accent-llm);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        /* Таблицы */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: rgba(0, 0, 0, 0.03);
+        }
+
+        .llm-row {
+            background-color: rgba(76, 175, 80, 0.05) !important;
+            color: #ff0000;
+        }
+
+        /* Списки */
+        ul, ol {
+            padding-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Ссылки */
+        .link-kmp {
+            color: #fffee0;
+            background-color: #007bff;
+            padding: 0.3em 0.6em;
+            margin: 0 0.2em;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+            display: inline-block;
+        }
+
+        .link-kmp:hover {
+            color: #ffffff;
+            background-color: #0bb313;
+            text-decoration: none;
+        }
+
+        /* Адаптивный дизайн */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+            
+            .menu {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .menu-buttons {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .theme-toggle {
+                margin-top: 10px;
+                margin-left: 0;
+            }
+            
+            .section {
+                padding: 15px;
+            }
+        }
+
+        /* Анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .llm-badge {
+            display: inline-block;
+            background: var(--llm-gradient);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 5px;
+            vertical-align: super;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>LLM vs LLM-сервисы</h1>
+            <p class="subtitle">Различия между языковыми моделями и пользовательскими сервисами на их основе</p>
+        </header>
+
+        <nav class="menu">
+            <div class="menu-buttons">
+                <button class="menu-btn active" onclick="scrollToSection('1')">Уровни понимания</button>
+                <button class="menu-btn" onclick="scrollToSection('2')">LLM</button>
+                <button class="menu-btn" onclick="scrollToSection('3')">LLM-сервисы</button>
+                <button class="menu-btn" onclick="scrollToSection('4')">Сравнение</button>
+                <button class="menu-btn" onclick="scrollToSection('5')">Следствия</button>
+                <button class="menu-btn" onclick="scrollToSection('6')">Рекомендации</button>
+            </div>
+            <button class="theme-toggle" id="themeToggle" title="Переключить тему">☀️</button>
+        </nav>
+
+        <section id="1" class="section section-llm-focus">
+            <h2>Два уровня понимания: почему это важно</h2>
+            
+            <div class="emergent-property">
+                <div class="emergent-label">Ключевое различие</div>
+                <br><p><strong>LLM (Large Language Model)</strong> — это базовая языковая модель с эмерджентными свойствами, тогда как <strong>LLM-сервис</strong> — это продукт с интерфейсом, фильтрами и дополнительной функциональностью.</p>
+            </div>
+            
+            <h3>Аналогия для понимания</h3>
+            
+            <div class="context-box">
+                <p><strong>LLM — это "двигатель"</strong>, а <strong>LLM-сервис — это "автомобиль"</strong>. Пользователь видит руль, педали и приборную панель, но не имеет прямого доступа к двигателю.</p>
+            </div>
+            
+            <ul>
+                <li><strong>ChatGPT, Claude, Gemini</strong> — это LLM-сервисы</li>
+                <li><strong>GPT-4, Llama, Mistral</strong> — это LLM (модели)</li>
+                <li>Сервисы используют модели как основу, но добавляют много слоёв управления</li>
+            </ul>
+        </section>
+
+        <section id="2" class="section section-llm-focus">
+            <h2>Что такое настоящая LLM?</h2>
+            
+            <h3>Характеристики базовой языковой модели</h3>
+            
+            <div class="llm-highlight">
+                <p>Настоящая LLM — это нейросетевая архитектура, обученная предсказывать следующее слово в последовательности на основе огромных объёмов текстовых данных.</p>
+            </div>
+            
+            <h4>Ключевые свойства чистых LLM:</h4>
+            <ul>
+                <li><strong>Эмерджентность</strong> — непрограммируемые способности</li>
+                <li><strong>Непредсказуемость</strong> — могут генерировать неожиданные ответы</li>
+                <li><strong>Отсутствие фильтров</strong> — выдают всё, что "выучили" из данных</li>
+                <li><strong>Технический интерфейс</strong> — API, веса модели, параметры генерации</li>
+            </ul>
+            
+            <div class="special-box">
+                <p><strong>Для лингвиста:</strong> Изучение чистых LLM позволяет исследовать настоящие языковые способности ИИ без вмешательства цензуры и бизнес-ограничений.</p>
+            </div>
+        </section>
+
+        <section id="3" class="section">
+            <h2>LLM-сервисы: обёртки и ограничения</h2>
+            
+            <h3>Что добавляют сервисы к базовым моделям?</h3>
+            
+            <div class="caution-box">
+                <p>LLM-сервисы — это продукты, предназначенные для массового использования. Они обязательно включают системы безопасности, удобные интерфейсы и бизнес-логику.</p>
+            </div>
+            
+            <h4>Слои, которые накладываются на LLM в сервисах:</h4>
+            
+            <div class="context-box">
+                <h5>1. Системные промпты (невидимые инструкции)</h5>
+                <p>Предустановленные правила поведения: "Будь вежливым", "Не обсуждай политику", "Избегай спорных тем".</p>
+            </div>
+            
+            <div class="context-box">
+                <h5>2. Контент-фильтры</h5>
+                <p>Многоуровневые системы модерации, которые блокируют "нежелательные" ответы до того, как они попадут к пользователю.</p>
+            </div>
+            
+            <div class="context-box">
+                <h5>3. Функциональные надстройки</h5>
+                <p>Поиск в интернете, работа с файлами, калькуляторы — часто это отдельные модули, а не способности самой LLM.</p>
+            </div>
+            
+            <div class="context-box">
+                <h5>4. Бизнес-ограничения</h5>
+                <p>Лимиты на запросы, платные подписки, региональные ограничения доступа.</p>
+            </div>
+            
+            <div class="llm-highlight">
+                <p><strong>Важно:</strong> Когда вы общаетесь с ChatGPT, вы взаимодействуете не с "чистым" GPT-4, а со сложной системой, где GPT-4 — только один из компонентов.</p>
+            </div>
+        </section>
+
+        <section id="4" class="section section-llm-focus">
+            <h2>LLM vs LLM-сервисы</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Характеристика</th>
+                        <th>Чистая LLM</th>
+                        <th>LLM-сервис</th>
+                    </tr>
+                </thead>
+                <tr>
+                    <td><strong>Доступ</strong></td>
+                    <td>API, локальная установка</td>
+                    <td>Веб-интерфейс, приложения</td>
+                </tr>
+                <tr class="llm-row">
+                    <td><strong>Эмерджентность</strong></td>
+                    <td>Полная, непредсказуемая</td>
+                    <td>Ограниченная, контролируемая</td>
+                </tr>
+                <tr>
+                    <td><strong>Цензура</strong></td>
+                    <td>Минимальная или отсутствует</td>
+                    <td>Многоуровневая система фильтров</td>
+                </tr>
+                <tr>
+                    <td><strong>Интерфейс</strong></td>
+                    <td>Технический (параметры, токены)</td>
+                    <td>Пользовательский (чат, кнопки)</td>
+                </tr>
+                <tr>
+                    <td><strong>Примеры</strong></td>
+                    <td>Llama 3, Mistral через API</td>
+                    <td>ChatGPT, Claude, Gemini</td>
+                </tr>
+                <tr>
+                    <td><strong>Для лингвистических исследований</strong></td>
+                    <td>Изучение настоящих языковых способностей</td>
+                    <td>Исследование взаимодействия человек-ИИ</td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="5" class="section">
+            <h2>Практические последствия</h2>
+            
+            <h3>Почему различие важно в профессиональной деятельности?</h3>
+            
+            <div class="llm-highlight">
+                <p>Понимание разницы между моделью и сервисом позволяет лингвисту выбирать правильный инструмент для конкретной задачи и корректно интерпретировать результаты.</p>
+            </div>
+            
+            <h4>Когда использовать чистые LLM:</h4>
+            <ul>
+                <li><strong>Лингвистические эксперименты</strong> — изучение языковых способностей ИИ</li>
+                <li><strong>Исследование эмерджентности</strong> — наблюдение непрограммируемых свойств</li>
+                <li><strong>Академические публикации</strong> — требуется точное описание используемого инструмента</li>
+            </ul>
+            
+            <h4>Когда использовать LLM-сервисы:</h4>
+            <ul>
+                <li><strong>Повседневные задачи</strong> — редактирование, перевод, суммаризация</li>
+                <li><strong>Обучение промпт-инжинирингу</strong> — отработка навыков формулирования запросов</li>
+                <li><strong>Исследование UX</strong> — изучение взаимодействия пользователей с ИИ</li>
+            </ul>
+            
+            <div class="caution-box">
+                <p><strong>Осторожно!</strong> Результаты, полученные в LLM-сервисах, нельзя полностью приписывать способностям языковой модели — они могут быть результатом работы фильтров и дополнительных модулей.</p>
+            </div>
+        </section>
+
+        <section id="6" class="section section-llm-focus">
+            <h2>Как работать с разными уровнями LLM?</h2>
+            
+            <h3>Практические рекомендации</h3>
+            
+            <div class="context-box">
+                <h4>Для доступа к чистым LLM:</h4>
+                <ul>
+                    <li><strong>Hugging Face</strong> — тысячи открытых моделей</li>
+                    <li><strong>API провайдеры</strong> — OpenAI, Anthropic (с минимальными фильтрами)</li>
+                    <li><strong>Локальные модели</strong> — Ollama, LM Studio для полного контроля</li>
+                </ul>
+            </div>
+            
+            <div class="context-box">
+                <h4>Для анализа LLM-сервисов:</h4>
+                <ul>
+                    <li>Изучайте документацию — что обещает сервис</li>
+                    <li>Тестируйте границы — пытайтесь обойти фильтры (в исследовательских целях)</li>
+                    <li>Сравнивайте разные сервисы — один запрос в ChatGPT, Claude и Gemini</li>
+                </ul>
+            </div>
+            
+            <div class="emergent-property">
+                <div class="emergent-label">Методологический совет</div>
+                <p>В лингвистических исследованиях всегда указывайте, работали ли вы с чистой LLM или с LLM-сервисом, так как это существенно влияет на интерпретацию результатов.</p>
+            </div>
+            
+            <div class="llm-highlight">
+                <p>Идеальный лингвист эпохи ИИ понимает и использует оба уровня: чистые LLM для исследований и LLM-сервисы для практических задач.</p>
+            </div>
+            
+            <a target="_blank" href="https://huggingface.co" class="link-kmp">Hugging Face (чистые модели)</a>
+            <a target="_blank" href="https://ollama.ai" class="link-kmp">Ollama (локальные LLM)</a>
+            <a target="_blank" href="https://platform.openai.com" class="link-kmp">OpenAI API (минимальные фильтры)</a>
+        </section>
+
+        <footer>
+            <div class="container">
+                <p>© 2025 | kmp+ | CC BY-NC-SA 4.0<br>
+                Разработано для студентов-лингвистов БрГУ имени А.С. Пушкина</p>
+            </div>
+        </footer>
+        
+        <div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    </div>
+
+    <script>
+        // Функция для плавной прокрутки к разделу
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const menuHeight = document.querySelector('.menu').offsetHeight;
+            
+            // Обновление активной кнопки меню
+            document.querySelectorAll('.menu-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            window.scrollTo({
+                top: section.offsetTop - menuHeight - 20,
+                behavior: 'smooth'
+            });
+        }
+
+        // Функция для переключения темы
+        document.getElementById('themeToggle').addEventListener('click', function() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            this.textContent = newTheme === 'dark' ? '🌙' : '☀️';
+            
+            // Сохранение темы в localStorage
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // Загрузка темы из localStorage
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('themeToggle').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+
+        // Анимация появления секций при прокрутке
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.section');
+            
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.1
+            };
+            
+            const observer = new IntersectionObserver(function(entries, observer) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+            
+            sections.forEach(section => {
+                section.classList.remove('fade-in');
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>
