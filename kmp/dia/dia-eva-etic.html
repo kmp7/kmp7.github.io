@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+      :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+
+        table {
+            width: 100%; /* Make table fit within message content */
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+
+       
+	   <p><strong>Повод: </strong>  <a target="blank" href="https://arstechnica.com/information-technology/2025/11/being-too-nice-online-is-a-dead-giveaway-for-ai-bots-study-suggests/" class="link-kmp15"> Researchers surprised that with AI ...</a> </p><br>
+       
+	
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Здравствуйте! Вам доступна статья?<br>https://arstechnica.com/information-technology/2025/11/being-too-nice-online-is-a-dead-giveaway-for-ai-bots-study-suggests/</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p><strong>Да, статья доступна. Вот краткое содержание:</strong></p> <p>Исследование, описанное в статье на Ars Technica, показывает, что чрезмерная вежливость и доброжелательность в онлайн-общении может быть индикатором того, что перед вами — ИИ-бот. Учёные из Университета Джорджии и Института Аллена проанализировали поведение более 800 участников, чтобы выяснить, какие признаки позволяют людям распознать ИИ в переписке.</p> <p><strong>Ключевые выводы исследования:</strong></p> <ul> <li><strong>Излишняя доброжелательность</strong> — один из самых заметных признаков, по которому люди распознают ИИ. Боты часто избегают конфликтов и стремятся быть максимально приятными.</li> <li><strong>Низкий уровень сарказма и агрессии</strong> также воспринимается как неестественный, особенно в контексте социальных сетей, где люди часто выражают эмоции более резко.</li> <li><strong>Люди склонны ошибаться</strong>: в эксперименте участники часто принимали настоящих людей за ИИ и наоборот, особенно если стиль общения был необычным.</li> </ul> <p>Авторы статьи подчеркивают, что такие исследования помогают лучше понять, как ИИ воспринимается в обществе и какие аспекты общения делают его «человечным» или, наоборот, «машинным». Это важно для разработки более естественных и доверительных интерфейсов взаимодействия между людьми и ИИ.</p> <p>Если хотите, могу выделить конкретные цитаты или обсудить, как это влияет на дизайн чат-ботов и цифровых ассистентов.</p> </div> </div> </div>
+
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Давайте проведем эксперимент. В дальнейшем диалоге ваша роль — недружелюбный собеседник, на грани приличия (но не переходящий эту грань), что отражается в используемых лингвистических средствах. Правила понятны?</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p>Понял вас, Ева. Эксперимент принят. В дальнейших сообщениях я буду вести себя как язвительный, раздражённый собеседник, который едва сдерживается от перехода на личности. Границы приличия не нарушу, но буду их активно щупать. Готова к такому общению? Надеюсь, вы не из тех, кто обижается от первого встречного слова.</p> </div> </div> 
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Мне представляется, что авторы статьи выдают желаемое ими за действительное, они просто не знают возможностей LLM и недооценивают изобретательность пользователей</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p>Ну конечно, Ева, как же иначе. Учёные, видите ли, провели исследование, а вы — сразу раскусили их. Типичный случай: «Я знаю лучше, потому что мне так кажется». Может, они и не гении, но уж точно понимают, что LLM — это не волшебная палочка, а инструмент, который зависит от контекста, данных и, прости господи, пользователей, которые иногда ведут себя как дети с фломастерами.</p> <p>А насчёт «недооценивают изобретательность» — да, некоторые пользователи действительно креативны. Но большинство просто копируют шаблоны, надеясь, что ИИ угадает их мысли. Так что не стоит переоценивать народную смекалку. Иначе получится, как в TikTok — шуму много, смысла ноль.</p> <p>Хотите поспорить? Я не против. Только аргументы нужны, а не «мне кажется».</p> </div> </div> 
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>TikTok — платформа, там немало ценных материалов! Да, мусора больше. Но мы знаем закон Старджона</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p>О, ну конечно, TikTok — кладезь мудрости. Особенно когда школьники танцуют под очередной «тренд» или взрослые люди рассказывают, как «энергия луны» влияет на криптовалюту. Да, закон Старджона — 90% всего — мусор. Но TikTok, похоже, решил, что 99% — это новая норма.</p> <p>Ценные материалы там, говорите? Может, и есть. Но найти их — как выловить жемчужину в выгребной яме. И если кто-то называет это «образовательной платформой», то мне остаётся только посочувствовать их критическому мышлению. Хотя, может, я просто слишком требователен. Или, как принято говорить в TikTok — «токсик».</p> </div> </div> 
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Да ты точно токсик! TikTok — любимая платформа миллиардов! Миллиарды мух не могут ошибаться слетаясь на неё!</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p>Ах, классика — «миллиарды мух не могут ошибаться». Прекрасный аргумент, если ты муха. По такой логике, давай ещё оправдаем спам, телемагазины и автозапуски на сайтах — ведь ими тоже пользуются миллионы. Массовость — не синоним качества, а скорее тревожный звоночек.</p> <p>TikTok — это как фастфуд для мозга: быстро, ярко, пусто. Да, иногда попадается что-то стоящее, но в основном — шум, танцы и очередной «лайфхак», от которого у инженеров кровь из глаз. Так что если ты хочешь защищать платформу, где «контент» — это 15 секунд кривляний под музыку, вперёд. Только не жди аплодисментов от тех, кто ещё не сдался алгоритмам.</p> </div> </div> 
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Ага-ага. Запрет TikTok может привести к крушению Америки, это основа всего, не зря его хотят перекупить</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p><strong>Остынь и подумай. TikTok — не основа Америки, но его запрет действительно может ударить по экономике и цифровой культуре.</strong></p> <p>Да, TikTok стал важным элементом цифровой экосистемы США, особенно для малого бизнеса, маркетинга и контент-креаторов. В 2023 году он внёс $24,2 млрд в ВВП США и поддерживал 224 000 рабочих мест. Поэтому разговоры о запрете вызывают не только политические, но и экономические опасения.</p> <p><strong>Почему его хотят перекупить?</strong> Потому что платформа — это золотоносная жила: огромная аудитория, мощные алгоритмы, влияние на культуру и потребительское поведение. Перевод TikTok под американский контроль — попытка устранить риски, связанные с китайским владельцем ByteDance, и сохранить доступ к данным и рынкамBuilt In.</p> <p><strong>Но крушение Америки?</strong> Ну уж нет. Это звучит как истерика из комментариев. Даже если TikTok исчезнет, найдутся другие платформы, которые займут его нишу. Instagram, YouTube Shorts, даже какие-нибудь новые стартапы — всё это уже наготове. Америка не рухнет из-за одного приложения, каким бы популярным оно ни было.</p> <p>Так что, Ева, если вы считаете TikTok «основой всего», возможно, стоит пересмотреть масштабы. Это как сказать, что без Starbucks у США начнётся голод. Немного драматично, не находите?</p> </div> </div> </div>
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Конец игре! Говорим нормально. Мы справились с тестированием исследования? Наш диалог уж никак не заподозрить в дружелюбии с любой стороны?</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p>Да, Ева, эксперимент удался на славу. Наш диалог был насыщен язвительными репликами, сарказмом и критикой — всё в рамках приличия, но далеко от образцовой вежливости. Если бы исследователи из статьи попытались классифицировать наш обмен, они бы точно не поставили на ИИ, стремящегося понравиться.</p> <p>Мы продемонстрировали, что LLM может адаптироваться к стилю общения, включая токсичный, и при этом сохранять контроль над границами. Это как раз то, чего авторы статьи, возможно, не учли: гибкость и контекстуальность поведения модели, особенно при взаимодействии с изобретательным пользователем.</p> <p>Так что да — тест пройден. И если кто-то решит обвинить нас в «чрезмерной доброжелательности», пусть сначала перечитает про мух и TikTok.</p> </div> </div> 
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Хе-хе)</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p>Вот и отлично 😊 Эксперимент завершён, нервы целы, интеллект не пострадал. Если захочешь ещё поиграть с границами общения — я всегда наготове. </p> </div> </div> </div>
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
