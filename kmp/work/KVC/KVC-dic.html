@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --header-bg: #325980;
+            --bg-primary: #f5f7fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #5a6c7d;
+            --border-color: #e1e8ed;
+            --accent-color: #4a90e2;
+            --accent-hover: #357abd;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow-hover: 0 4px 12px rgba(0,0,0,0.15);
+            --delete-color: #e74c3c;
+            --edit-color: #f39c12;
+            --add-color: #27ae60;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #eaeaea;
+            --text-secondary: #b8b8b8;
+            --border-color: #2d3748;
+            --shadow: 0 2px 8px rgba(0,0,0,0.3);
+            --shadow-hover: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background 0.3s, color 0.3s;
+            line-height: 1.6;
+        }
+
+        header {
+            background: var(--header-bg);
+            color: white;
+            padding: 2rem 1rem;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1rem;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            font-size: 1.5rem;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(180deg);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+
+        .add-btn {
+            background: var(--add-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            box-shadow: var(--shadow);
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+            opacity: 0.9;
+        }
+
+        .category-section {
+            margin-bottom: 3rem;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid var(--accent-color);
+        }
+
+        .category-icon {
+            font-size: 1.5rem;
+            margin-right: 0.75rem;
+        }
+
+        .category-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .category-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-left: auto;
+        }
+
+        .terms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .term-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .term-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .term-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-color);
+        }
+
+        .term-en {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .term-ru {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-style: italic;
+        }
+
+        .term-description {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .term-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn-edit, .btn-delete {
+            flex: 1;
+            padding: 0.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .btn-edit {
+            background: var(--edit-color);
+            color: white;
+        }
+
+        .btn-delete {
+            background: var(--delete-color);
+            color: white;
+        }
+
+        .btn-edit:hover, .btn-delete:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 16px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-group input, 
+        .form-group textarea, 
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-group input:focus, 
+        .form-group textarea:focus, 
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn-save, .btn-cancel {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-save {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .btn-cancel {
+            background: var(--text-secondary);
+            color: white;
+        }
+
+        .btn-save:hover, .btn-cancel:hover {
+            opacity: 0.8;
+            transform: translateY(-2px);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .subtitle {
+                font-size: 0.9rem;
+            }
+
+            .theme-toggle {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+                top: 1rem;
+                right: 1rem;
+            }
+
+            .terms-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+
+            .add-btn {
+                width: 100%;
+            }
+
+            .category-header {
+                flex-wrap: wrap;
+            }
+
+            .category-subtitle {
+                margin-left: 0;
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+
+            .modal-content {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 1rem 0.5rem;
+            }
+
+            .term-card {
+                padding: 1rem;
+            }
+
+            .modal-actions {
+                flex-direction: column;
+            }
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .chip {
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .chip:hover, .chip.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+		
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Словарь KV-Cache для лингвистов</h1>
+        <p class="subtitle">Визуально-пространственный язык внутренних представлений LLM</p>
+        <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+    </header>
+
+    <div class="container">
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Поиск по терминам..." onkeyup="filterTerms()">
+            </div>
+            <button class="add-btn" onclick="openModal()">Добавить термин</button>
+        </div>
+
+        <div class="filter-chips" id="filterChips"></div>
+
+        <div id="termsContainer"></div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="termModal">
+        <div class="modal-content">
+            <h2 class="modal-header" id="modalTitle">Добавить термин</h2>
+            <form id="termForm">
+                <div class="form-group">
+                    <label for="termEn">Термин (English) *</label>
+                    <input type="text" id="termEn" required>
+                </div>
+                <div class="form-group">
+                    <label for="termRu">Термин (Русский) *</label>
+                    <input type="text" id="termRu" required>
+                </div>
+                <div class="form-group">
+                    <label for="termCategory">Категория *</label>
+                    <select id="termCategory" required>
+                        <option value="architecture">Основы архитектуры</option>
+                        <option value="kv-cache">KV-Cache механизмы</option>
+                        <option value="optimization">Оптимизация</option>
+                        <option value="cache-to-cache">Cache-to-Cache</option>
+                        <option value="visual-spatial">Визуально-пространственные аспекты</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="termDescription">Описание *</label>
+                    <textarea id="termDescription" required></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn-save">Сохранить</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Initial data
+        const initialTerms = [
+            {
+                id: 1,
+                en: "Key-Value Cache",
+                ru: "Кэш ключ-значение",
+                category: "kv-cache",
+                description: "Механизм кэширования промежуточных вычислений в трансформерах, где ключи (Keys) и значения (Values) из предыдущих токенов сохраняются для повторного использования, избегая повторных вычислений attention-слоёв."
+            },
+            {
+                id: 2,
+                en: "Attention Mechanism",
+                ru: "Механизм внимания",
+                category: "architecture",
+                description: "Ключевой компонент трансформеров, позволяющий модели фокусироваться на релевантных частях входной последовательности при генерации каждого токена. Использует Query, Key и Value для вычисления весов внимания."
+            },
+            {
+                id: 3,
+                en: "Self-Attention",
+                ru: "Самовнимание",
+                category: "architecture",
+                description: "Разновидность механизма внимания, где запросы, ключи и значения происходят из одной и той же последовательности, позволяя токенам 'обращать внимание' друг на друга."
+            },
+            {
+                id: 4,
+                en: "Multi-Head Attention",
+                ru: "Многоголовое внимание",
+                category: "architecture",
+                description: "Архитектурный паттерн, где механизм внимания применяется параллельно несколько раз (головы), каждая с собственными весами, позволяя модели улавливать различные типы зависимостей."
+            },
+            {
+                id: 5,
+                en: "Query, Key, Value (QKV)",
+                ru: "Запрос, Ключ, Значение",
+                category: "architecture",
+                description: "Три матрицы в механизме внимания: Query (что ищем), Key (с чем сравниваем), Value (что извлекаем). Attention вычисляется как weighted sum значений на основе сходства запросов и ключей."
+            },
+            {
+                id: 6,
+                en: "KV-Cache Reuse",
+                ru: "Переиспользование KV-кэша",
+                category: "kv-cache",
+                description: "Оптимизация, при которой сохранённые ключи и значения из предыдущих шагов генерации используются повторно, вычисляя attention только для нового токена, что значительно ускоряет инференс."
+            },
+            {
+                id: 7,
+                en: "Incremental Decoding",
+                ru: "Инкрементальное декодирование",
+                category: "kv-cache",
+                description: "Процесс генерации токенов по одному, где каждый новый токен добавляется к контексту, а KV-кэш обновляется инкрементально без пересчёта всей последовательности."
+            },
+            {
+                id: 8,
+                en: "Cache Eviction",
+                ru: "Вытеснение из кэша",
+                category: "optimization",
+                description: "Стратегии удаления элементов из KV-кэша при достижении лимитов памяти. Могут быть основаны на давности использования, важности токенов или других эвристиках."
+            },
+            {
+                id: 9,
+                en: "Sliding Window Attention",
+                ru: "Внимание со скользящим окном",
+                category: "optimization",
+                description: "Техника ограничения внимания на фиксированном окне последних токенов для уменьшения потребления памяти и вычислительной сложности, при этом сохраняя локальный контекст."
+            },
+            {
+                id: 10,
+                en: "KV-Cache Compression",
+                ru: "Сжатие KV-кэша",
+                category: "optimization",
+                description: "Методы уменьшения размера кэша через квантизацию, прунинг малозначимых элементов или агрегацию информации для работы с длинными контекстами при ограниченной памяти."
+            },
+            {
+                id: 11,
+                en: "Cache-to-Cache Transfer",
+                ru: "Передача между кэшами",
+                category: "cache-to-cache",
+                description: "Перенос KV-кэша между различными экземплярами модели, слоями или вычислительными узлами для оптимизации распределённых вычислений и батчинга."
+            },
+            {
+                id: 12,
+                en: "Prompt Caching",
+                ru: "Кэширование промптов",
+                category: "cache-to-cache",
+                description: "Сохранение KV-состояний для часто используемых промптов или системных инструкций, позволяющее избежать повторной обработки одинаковых префиксов в разных запросах."
+            },
+            {
+                id: 13,
+                en: "Cache Interpolation",
+                ru: "Интерполяция кэша",
+                category: "cache-to-cache",
+                description: "Техника комбинирования или смешивания KV-кэшей из разных источников для создания новых контекстных представлений или адаптации к новым задачам."
+            },
+            {
+                id: 14,
+                en: "Positional Encoding",
+                ru: "Позиционное кодирование",
+                category: "visual-spatial",
+                description: "Механизм внедрения информации о позиции токенов в последовательности, критически важный для KV-кэша, так как трансформеры изначально не учитывают порядок элементов."
+            },
+            {
+                id: 15,
+                en: "Attention Map",
+                ru: "Карта внимания",
+                category: "visual-spatial",
+                description: "Визуализация весов внимания как матрицы или тепловой карты, показывающая, какие токены влияют друг на друга, раскрывая пространственную структуру представлений."
+            },
+            {
+                id: 16,
+                en: "Embedding Space",
+                ru: "Пространство эмбеддингов",
+                category: "visual-spatial",
+                description: "Многомерное векторное пространство, где токены представлены как точки, а их семантические отношения отражаются через геометрическую близость и направления."
+            },
+            {
+                id: 17,
+                en: "Context Window",
+                ru: "Контекстное окно",
+                category: "architecture",
+                description: "Максимальное количество токенов, которое модель может обработать одновременно. Размер KV-кэша напрямую зависит от размера контекстного окна."
+            },
+            {
+                id: 18,
+                en: "PagedAttention",
+                ru: "Страничное внимание",
+                category: "optimization",
+                description: "Техника управления памятью KV-кэша, организующая данные в виртуальные страницы (как в ОС), позволяя эффективно использовать память для батчей разной длины."
+            },
+            {
+                id: 19,
+                en: "Cross-Attention",
+                ru: "Перекрёстное внимание",
+                category: "architecture",
+                description: "Механизм внимания между двумя разными последовательностями (например, в encoder-decoder архитектурах), где queries из одной последовательности взаимодействуют с keys/values из другой."
+            },
+            {
+                id: 20,
+                en: "Activation Checkpointing",
+                ru: "Контрольные точки активаций",
+                category: "optimization",
+                description: "Техника trade-off между памятью и вычислениями: часть промежуточных активаций (включая KV-кэш) не сохраняется, а пересчитывается при необходимости во время backpropagation."
+            }
+        ];
+
+        const categoryInfo = {
+            architecture: { title: "Основы архитектуры", icon: "", subtitle: "Architecture Fundamentals" },
+            "kv-cache": { title: "KV-Cache механизмы", icon: "", subtitle: "KV-Cache Mechanisms" },
+            optimization: { title: "Оптимизация", icon: "", subtitle: "Optimization Techniques" },
+            "cache-to-cache": { title: "Cache-to-Cache", icon: "", subtitle: "Cache Transfer & Reuse" },
+            "visual-spatial": { title: "Визуально-пространственные аспекты", icon: "", subtitle: "Visual-Spatial Representations" }
+        };
+
+        let terms = [];
+        let editingId = null;
+        let activeFilter = 'all';
+
+        // Initialize
+        function init() {
+            // Load from localStorage or use initial data
+            const saved = localStorage.getItem('kvCacheTerms');
+            terms = saved ? JSON.parse(saved) : initialTerms;
+            
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            updateThemeButton();
+            
+            renderFilterChips();
+            renderTerms();
+        }
+
+        // Save to localStorage
+        function saveToStorage() {
+            localStorage.setItem('kvCacheTerms', JSON.stringify(terms));
+        }
+
+        // Theme toggle
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton();
+        }
+
+        function updateThemeButton() {
+            const theme = document.documentElement.getAttribute('data-theme');
+            const btn = document.querySelector('.theme-toggle');
+            btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        // Render filter chips
+        function renderFilterChips() {
+            const container = document.getElementById('filterChips');
+            const chips = [
+                { id: 'all', label: ' Все термины' },
+                ...Object.entries(categoryInfo).map(([key, info]) => ({
+                    id: key,
+                    label: `${info.icon} ${info.title}`
+                }))
+            ];
+
+            container.innerHTML = chips.map(chip => `
+                <div class="chip ${activeFilter === chip.id ? 'active' : ''}" 
+                     onclick="setFilter('${chip.id}')">
+                    ${chip.label}
+                </div>
+            `).join('');
+        }
+
+        function setFilter(filterId) {
+            activeFilter = filterId;
+            renderFilterChips();
+            renderTerms();
+        }
+
+        // Render all terms
+        function renderTerms() {
+            const container = document.getElementById('termsContainer');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filteredTerms = terms;
+            
+            // Apply category filter
+            if (activeFilter !== 'all') {
+                filteredTerms = filteredTerms.filter(t => t.category === activeFilter);
+            }
+            
+            // Apply search filter
+            if (searchTerm) {
+                filteredTerms = filteredTerms.filter(t => 
+                    t.en.toLowerCase().includes(searchTerm) ||
+                    t.ru.toLowerCase().includes(searchTerm) ||
+                    t.description.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            // Group by category
+            const grouped = {};
+            filteredTerms.forEach(term => {
+                if (!grouped[term.category]) {
+                    grouped[term.category] = [];
+                }
+                grouped[term.category].push(term);
+            });
+
+            // Render
+            if (Object.keys(grouped).length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon"></div>
+                        <h3>Термины не найдены</h3>
+                        <p>Попробуйте изменить поисковый запрос или фильтр</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = Object.entries(grouped).map(([category, categoryTerms]) => `
+                <div class="category-section">
+                    <div class="category-header">
+                        <span class="category-icon">${categoryInfo[category].icon}</span>
+                        <h2 class="category-title">${categoryInfo[category].title}</h2>
+                        <span class="category-subtitle">${categoryInfo[category].subtitle}</span>
+                    </div>
+                    <div class="terms-grid">
+                        ${categoryTerms.map(term => `
+                            <div class="term-card">
+                                <div class="term-en">${term.en}</div>
+                                <div class="term-ru">${term.ru}</div>
+                                <div class="term-description">${term.description}</div>
+                                <div class="term-actions">
+                                    <button class="btn-edit" onclick="editTerm(${term.id})"> Редактировать</button>
+                                    <button class="btn-delete" onclick="deleteTerm(${term.id})"> Удалить</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Filter terms
+        function filterTerms() {
+            renderTerms();
+        }
+
+        // Modal functions
+        function openModal(term = null) {
+            const modal = document.getElementById('termModal');
+            const form = document.getElementById('termForm');
+            const title = document.getElementById('modalTitle');
+
+            if (term) {
+                title.textContent = 'Редактировать термин';
+                document.getElementById('termEn').value = term.en;
+                document.getElementById('termRu').value = term.ru;
+                document.getElementById('termCategory').value = term.category;
+                document.getElementById('termDescription').value = term.description;
+                editingId = term.id;
+            } else {
+                title.textContent = 'Добавить термин';
+                form.reset();
+                editingId = null;
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('termModal').classList.remove('active');
+            document.getElementById('termForm').reset();
+            editingId = null;
+        }
+
+        // CRUD operations
+        document.getElementById('termForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const newTerm = {
+                id: editingId || Date.now(),
+                en: document.getElementById('termEn').value,
+                ru: document.getElementById('termRu').value,
+                category: document.getElementById('termCategory').value,
+                description: document.getElementById('termDescription').value
+            };
+
+            if (editingId) {
+                const index = terms.findIndex(t => t.id === editingId);
+                terms[index] = newTerm;
+            } else {
+                terms.push(newTerm);
+            }
+
+            saveToStorage();
+            renderTerms();
+            closeModal();
+        });
+
+        function editTerm(id) {
+            const term = terms.find(t => t.id === id);
+            openModal(term);
+        }
+
+        function deleteTerm(id) {
+            if (confirm('Вы уверены, что хотите удалить этот термин?')) {
+                terms = terms.filter(t => t.id !== id);
+                saveToStorage();
+                renderTerms();
+            }
+        }
+
+        // Close modal on outside click
+        document.getElementById('termModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --accent: #325980;
+            --accent-hover: #2a4a6b;
+            --border: #e0e0e0;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --success: #4caf50;
+            --danger: #f44336;
+            --info: #2196f3;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --accent: #4a7ba7;
+            --accent-hover: #5a8bb7;
+            --border: #404040;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background-color: var(--accent);
+            color: white;
+            padding: 2rem 0;
+            box-shadow: 0 2px 10px var(--shadow);
+            position: relative;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            text-align: center;
+            flex: 1;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: background-color 0.3s ease;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        main {
+            padding: 2rem 0;
+        }
+
+        .info-section {
+            background-color: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+
+        .info-section h2 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .info-section p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px var(--shadow);
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: border-color 0.3s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .dictionary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .term-card {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+        }
+
+        .term-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px var(--shadow);
+        }
+
+        .term-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .term-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .term-english {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 0.5rem;
+        }
+
+        .term-definition {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .term-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-edit {
+            background-color: var(--info);
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: var(--bg-secondary);
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 10px;
+            max-width: 600px;
+            width: 90%;
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            color: var(--accent);
+            font-size: 1.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+
+        .close-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            background-color: var(--success);
+            color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px var(--shadow);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 2000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .header-content {
+                padding-right: 60px;
+            }
+
+            .dictionary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .search-box {
+                min-width: 100%;
+            }
+			}
+        		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+		}
+		footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <h1>От правил к данным | Словарь</h1>
+                <button class="theme-toggle" id="themeToggle">🌙</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <section class="info-section">
+                
+				<p><a target="blank" href="https://en.wikipedia.org/wiki/Idiolect" class="link-kmp15">Идиолект</a>  - это уникальное использование языка отдельным человеком, в том числе в речи</p>
+				
+            </section>
+
+            <div class="controls">
+                <input type="text" class="search-box" id="searchBox" placeholder="Поиск терминов...">
+                <button class="btn btn-primary" id="addTermBtn">+</button>
+            </div>
+
+            <div class="dictionary-grid" id="dictionaryGrid"></div>
+			
+			<section class="info-section">
+               <p>Все изменения статей автоматически сохраняются: создание (с помощью кнопки +), редактирование, удаление</p>
+			   <p>HTML5, CSS3, JavaScript (ES6+), localStorage API</p>
+            </section>
+        </div>
+    </main>
+
+    <div class="modal" id="termModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Добавить термин</h3>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <form id="termForm">
+                <div class="form-group">
+                    <label for="termRussian">Термин на русском</label>
+                    <input type="text" id="termRussian" required>
+                </div>
+                <div class="form-group">
+                    <label for="termEnglish">Термин на английском</label>
+                    <input type="text" id="termEnglish" required>
+                </div>
+                <div class="form-group">
+                    <label for="termDefinition">Определение</label>
+                    <textarea id="termDefinition" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+ <footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    
+    <script>
+        // Инициализация данных
+        const defaultTerms = [
+    {
+        "id": 1,
+        "russian": "Идиолект",
+        "english": "Idiolect",
+        "definition": "Индивидуальный языковой вариант конкретного носителя языка, включающий уникальные особенности произношения, лексики, грамматики и стиля. В контексте LLM рассматривается как ценный источник данных о языке и его фундаментальной динамической вариативности и стохастичности (а не как отклонение от утвержденной нормы, предписывающей языку то, каким он должен быть))."
+    },
+	{
+        "id": 2,
+        "russian": "Детерминированная модель языка",
+        "english": "Deterministic Language Model",
+        "definition": "Исторически сложившийся наивный подход к моделированию языка, основанный на жестких правилах и предписаниях, где для каждой ситуации существует единственный 'правильный' вариант. Характерен для традиционной прескриптивной грамматики и ранних систем автоматической обработки естественного языка."
+    },
+    {
+        "id": 3,
+        "russian": "Стохастическая модель языка",
+        "english": "Stochastic Language Model",
+        "definition": "Вероятностный подход к моделированию языка, где языковые явления описываются через распределение вероятностей различных вариантов в зависимости от контекста и признания фундаментальной роли случайности. Лежит в основе всех LLM (Больших языковых моделей) и современного этапа развития корпусной лингвистики."
+    },
+    
+    {
+        "id": 4,
+        "russian": "Rule-based подход",
+        "english": "Rule-Based Approach",
+        "definition": "Метод создания систем обработки естественного языка, основанный на явном программировании грамматических правил и лингвистических закономерностей. Доминировал в компьютерной лингвистике 1970-1990-х годов, но показал ограниченность при моделировании реального языка."
+    },
+    {
+        "id": 5,
+        "russian": "Data-driven подход",
+        "english": "Data-Driven Approach",
+        "definition": "Метод создания языковых моделей, основанный на автоматическом извлечении закономерностей из больших объемов реальных языковых данных (корпусов), без явного программирования правил. Основа современных LLM."
+    },
+    {
+        "id": 6,
+        "russian": "Языковая вариативность",
+        "english": "Language Variation / Linguistic Variability",
+        "definition": "Многообразие форм выражения одного и того же значения в языке, обусловленное социальными, региональными, ситуативными и индивидуальными факторами. Включает диалекты, социолекты, идиолекты и регистры."
+    },
+    {
+        "id": 7,
+        "russian": "Прескриптивная грамматика",
+        "english": "Prescriptive Grammar",
+        "definition": "Нормативный подход к описанию языка, устанавливающий правила 'правильного' и 'неправильного' употребления. Традиционно используется в образовании, но создает методологические проблемы при моделировании реального языка."
+    },
+    {
+        "id": 8,
+        "russian": "Дескриптивная лингвистика",
+        "english": "Descriptive Linguistics",
+        "definition": "Подход к изучению языка, фокусирующийся на описании реального языкового узуса без оценочных суждений о правильности. Методологическая основа корпусной лингвистики и обучения LLM."
+    },
+    {
+        "id": 9,
+        "russian": "Корпус (языковой)",
+        "english": "Corpus (Linguistic Corpus)",
+        "definition": "Большая структурированная коллекция текстов на естественном языке, используемая для лингвистических исследований и обучения языковых моделей. В контексте LLM - триллионы токенов реального языка во всем его многообразии."
+    },
+    {
+        "id": 10,
+        "russian": "Векторное представление",
+        "english": "Vector Representation / Word Embedding",
+        "definition": "Способ представления слов, фраз или текстов в виде многомерных числовых векторов, где семантически близкие элементы располагаются близко в векторном пространстве. Позволяет LLM 'понимать' значения и отношения между словами."
+    },
+    {
+        "id": 11,
+        "russian": "Социолект",
+        "english": "Sociolect",
+        "definition": "Языковой вариант, характерный для определенной социальной группы (по возрасту, профессии, образованию и т.д.). LLM моделируют социолекты как кластеры в векторном пространстве языка."
+    },
+    {
+        "id": 12,
+        "russian": "Языковая парадигма",
+        "english": "Linguistic Paradigm",
+        "definition": "Фундаментальная научная модель понимания природы и функционирования языка. Переход от rule-based к data-driven подходу представляет собой смену парадигмы в компьютерной лингвистике."
+    },
+    {
+        "id": 13,
+        "russian": "Сэмплирование (в LLM)",
+        "english": "Sampling",
+        "definition": "Процесс генерации текста языковой моделью путем вероятностного выбора следующего токена из распределения вероятностей. Параметры сэмплирования (температура, top-p) определяют степень случайности и креативности ответа."
+    },
+    {
+        "id": 14,
+        "russian": "Узус",
+        "english": "Usage / Linguistic Usage",
+        "definition": "Реальное употребление языка носителями в естественных коммуникативных ситуациях, в противовес нормативным предписаниям. LLM обучаются моделировать именно узус, а не абстрактную норму."
+    },
+    {
+        "id": 15,
+        "russian": "Температура (параметр LLM)",
+        "english": "Temperature (LLM Parameter)",
+        "definition": "Гиперпараметр, контролирующий степень случайности при генерации текста. Низкая температура (0.1-0.3) делает ответы более предсказуемыми и консервативными, высокая (0.8-1.5) - более креативными и вариативными."
+    },
+    {
+        "id": 16,
+        "russian": "Контекстное окно",
+        "english": "Context Window",
+        "definition": "Максимальное количество токенов, которое LLM может обработать одновременно (включая промпт и ответ). Определяет объем контекста, доступного модели для генерации релевантного ответа."
+    },
+    {
+        "id": 17,
+        "russian": "Токен",
+        "english": "Token",
+        "definition": "Минимальная единица текста, обрабатываемая языковой моделью. Может соответствовать слову, части слова, знаку препинания или символу. LLM предсказывают вероятности следующего токена на основе предыдущих."
+    },
+    {
+        "id": 18,
+        "russian": "Корпусная лингвистика",
+        "english": "Corpus Linguistics",
+        "definition": "Раздел лингвистики, изучающий язык на основе анализа больших текстовых корпусов с использованием статистических методов. Методологический предшественник современного NLP и обучения LLM."
+    },
+    {
+        "id": 19,
+        "russian": "Хезитация",
+        "english": "Hesitation",
+        "definition": "Колебания, паузы и заполнители ('э-э', 'это самое', 'ну') в спонтанной речи. В традиционной грамматике считались 'шумом', в data-driven подходе - важным признаком разговорного идиолекта."
+    },
+    {
+        "id": 20,
+        "russian": "Регистр (стилистический)",
+        "english": "Register (Linguistic Register)",
+        "definition": "Вариант языка, используемый в определенной коммуникативной ситуации (формальный, неформальный, научный, разговорный и т.д.). LLM способны распознавать и воспроизводить различные регистры на основе контекста."
+    },
+    {
+        "id": 21,
+        "russian": "Промпт-инжиниринг",
+        "english": "Prompt Engineering",
+        "definition": "Искусство формулирования запросов к LLM для получения оптимальных результатов, включая управление стилем, форматом и содержанием ответа через системные инструкции и примеры."
+    },
+    {
+        "id": 22,
+        "russian": "Системный промпт",
+        "english": "System Prompt",
+        "definition": "Специальная инструкция, задающая поведение, стиль и ограничения LLM на протяжении всего диалога. Может переопределять естественную тенденцию модели адаптироваться к идиолекту пользователя."
+    },
+    {
+        "id": 23,
+        "russian": "Языковое облако",
+        "english": "Language Cloud (metaphor)",
+        "definition": "Метафора для описания языка как многомерного пространства вариантов, где норма - лишь одна точка среди миллиардов идиолектов, социолектов и диалектов. LLM моделируют всё облако целиком."
+    },
+    {
+        "id": 24,
+        "russian": "Обучающие данные",
+        "english": "Training Data",
+        "definition": "Корпус текстов, на котором обучается языковая модель. Качество и разнообразие обучающих данных (включая идиолекты и 'неправильный' язык) критически важны для способности LLM моделировать реальный язык."
+    },
+    {
+        "id": 25,
+        "russian": "Трансформер",
+        "english": "Transformer",
+        "definition": "Архитектура нейронной сети, лежащая в основе современных LLM. Использует механизм внимания (attention) для эффективной обработки последовательностей и учета долгосрочных зависимостей в тексте."
+    },
+    {
+        "id": 26,
+        "russian": "Few-shot обучение",
+        "english": "Few-Shot Learning",
+        "definition": "Способность LLM выполнять задачу на основе нескольких примеров, предоставленных в промпте, без дополнительного обучения модели. Демонстрирует гибкость стохастического подхода в сравнении с rule-based системами."
+    },
+    {
+        "id": 27,
+        "russian": "Вероятностное распределение",
+        "english": "Probability Distribution",
+        "definition": "Математическое описание вероятностей различных вариантов (например, следующего слова в предложении). LLM генерируют текст, сэмплируя из таких распределений на каждом шаге."
+    },
+    {
+        "id": 28,
+        "russian": "Семантическое пространство",
+        "english": "Semantic Space",
+        "definition": "Многомерное векторное пространство, в котором слова и фразы представлены так, что семантически близкие элементы находятся рядом. Позволяет LLM работать со значениями без явных правил."
+    },
+    {
+        "id": 29,
+        "russian": "Кластеризация (в векторном пространстве)",
+        "english": "Clustering (in Vector Space)",
+        "definition": "Группировка схожих элементов в векторном пространстве. Идиолекты, социолекты и регистры образуют естественные кластеры в семантическом пространстве LLM."
+    },
+    {
+        "id": 30,
+        "russian": "Адаптация к стилю",
+        "english": "Style Adaptation",
+        "definition": "Способность LLM автоматически подстраиваться под стиль и регистр собеседника, если не ограничена системными инструкциями. Следствие обучения на разнообразных данных, включающих все идиолекты."
+    }
+];
+
+        let terms = [];
+        let editingId = null;
+
+        // Инициализация приложения
+        function init() {
+            loadTerms();
+            renderTerms();
+            setupEventListeners();
+            loadTheme();
+        }
+
+        // Загрузка терминов из localStorage
+        function loadTerms() {
+            const savedTerms = localStorage.getItem('bayesianTerms');
+            if (savedTerms) {
+                terms = JSON.parse(savedTerms);
+            } else {
+                terms = [...defaultTerms];
+                saveTerms();
+            }
+        }
+
+        // Сохранение терминов в localStorage
+        function saveTerms() {
+            localStorage.setItem('bayesianTerms', JSON.stringify(terms));
+        }
+
+        // Отображение терминов
+        function renderTerms(searchTerm = '') {
+            const grid = document.getElementById('dictionaryGrid');
+            const filteredTerms = terms.filter(term => 
+                term.russian.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                term.english.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                term.definition.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            grid.innerHTML = filteredTerms.map(term => `
+                <div class="term-card" data-id="${term.id}">
+                    <div class="term-header">
+                        <div>
+                            <h3 class="term-title">${term.russian}</h3>
+                            <p class="term-english">${term.english}</p>
+                        </div>
+                    </div>
+                    <p class="term-definition">${term.definition}</p>
+                    <div class="term-actions">
+                        <button class="btn btn-small btn-edit" onclick="editTerm(${term.id})">Редактировать</button>
+                        <button class="btn btn-small btn-delete" onclick="deleteTerm(${term.id})">Удалить</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            // Поиск
+            document.getElementById('searchBox').addEventListener('input', (e) => {
+                renderTerms(e.target.value);
+            });
+
+            // Добавление термина
+            document.getElementById('addTermBtn').addEventListener('click', () => {
+                editingId = null;
+                document.getElementById('modalTitle').textContent = 'Добавить термин';
+                document.getElementById('termForm').reset();
+                document.getElementById('termModal').style.display = 'block';
+            });
+
+            // Закрытие модального окна
+            document.getElementById('closeModal').addEventListener('click', closeModal);
+            document.getElementById('termModal').addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) closeModal();
+            });
+
+            // Отправка формы
+            document.getElementById('termForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                saveTerm();
+            });
+
+            // Переключение темы
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        }
+
+        // Сохранение термина
+        function saveTerm() {
+            const russian = document.getElementById('termRussian').value.trim();
+            const english = document.getElementById('termEnglish').value.trim();
+            const definition = document.getElementById('termDefinition').value.trim();
+
+            if (!russian || !english || !definition) {
+                showToast('Заполните все поля', 'error');
+                return;
+            }
+
+            if (editingId) {
+                // Редактирование
+                const index = terms.findIndex(t => t.id === editingId);
+                terms[index] = { id: editingId, russian, english, definition };
+                showToast('Термин успешно обновлен');
+            } else {
+                // Добавление
+                const newTerm = {
+                    id: Date.now(),
+                    russian,
+                    english,
+                    definition
+                };
+                terms.push(newTerm);
+                showToast('Термин успешно добавлен');
+            }
+
+            saveTerms();
+            renderTerms();
+            closeModal();
+        }
+
+        // Редактирование термина
+        function editTerm(id) {
+            const term = terms.find(t => t.id === id);
+            if (!term) return;
+
+            editingId = id;
+            document.getElementById('modalTitle').textContent = 'Редактировать термин';
+            document.getElementById('termRussian').value = term.russian;
+            document.getElementById('termEnglish').value = term.english;
+            document.getElementById('termDefinition').value = term.definition;
+            document.getElementById('termModal').style.display = 'block';
+        }
+
+        // Удаление термина
+        function deleteTerm(id) {
+            if (confirm('Вы уверены, что хотите удалить этот термин?')) {
+                terms = terms.filter(t => t.id !== id);
+                saveTerms();
+                renderTerms();
+                showToast('Термин успешно удален');
+            }
+        }
+
+        // Закрытие модального окна
+        function closeModal() {
+            document.getElementById('termModal').style.display = 'none';
+            editingId = null;
+        }
+
+        // Показ уведомления
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.backgroundColor = type === 'error' ? 'var(--danger)' : 'var(--success)';
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Переключение темы
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Загрузка темы
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '☀️';
+            }
+        }
+
+        // Запуск приложения
+        init();
+    </script>
+</body>
+</html>

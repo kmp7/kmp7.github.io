@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KV-Cache Визуализация</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-bg: #f5f7fa;
+            --secondary-bg: #ffffff;
+            --text-color: #2c3e50;
+            --border-color: #e1e8ed;
+            --key-color: #ff6b6b;
+            --value-color: #4ecdc4;
+            --attention-color: #ffe66d;
+            --header-bg: #325980;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --primary-bg: #1a1a2e;
+            --secondary-bg: #16213e;
+            --text-color: #eee;
+            --border-color: #0f3460;
+            --key-color: #ff6b9d;
+            --value-color: #00d4ff;
+            --attention-color: #ffd93d;
+            --shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        header {
+            background: var(--header-bg);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            box-shadow: var(--shadow);
+        }
+
+        h1 {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            opacity: 0.9;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            font-size: 1.5rem;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            background: rgba(255,255,255,0.3);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .intro-section {
+            background: var(--secondary-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .intro-section h2 {
+            margin-bottom: 1rem;
+            color: var(--header-bg);
+        }
+
+        .control-panel {
+            background: var(--secondary-bg);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.8rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--primary-bg);
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--header-bg);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(50, 89, 128, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--key-color);
+            color: white;
+        }
+
+        .visualization {
+            background: var(--secondary-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .tokens-container {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: var(--primary-bg);
+            border-radius: 10px;
+            min-height: 60px;
+        }
+
+        .token {
+            background: linear-gradient(135deg, var(--key-color), var(--value-color));
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            animation: tokenAppear 0.5s ease;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .token:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .token.active {
+            transform: scale(1.15);
+            box-shadow: 0 0 20px var(--attention-color);
+        }
+
+        @keyframes tokenAppear {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .kv-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .kv-display {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .kv-box {
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 2px solid var(--border-color);
+        }
+
+        .kv-box h3 {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .key-box {
+            border-color: var(--key-color);
+        }
+
+        .value-box {
+            border-color: var(--value-color);
+        }
+
+        .vector-display {
+            display: flex;
+            gap: 0.3rem;
+            flex-wrap: wrap;
+        }
+
+        .vector-cell {
+            width: 40px;
+            height: 40px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+            animation: cellPulse 0.6s ease;
+        }
+
+        @keyframes cellPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .attention-matrix {
+            margin-top: 2rem;
+        }
+
+        .attention-matrix h3 {
+            margin-bottom: 1rem;
+        }
+
+        .matrix-grid {
+            display: grid;
+            gap: 2px;
+            background: var(--border-color);
+            padding: 2px;
+            border-radius: 10px;
+            overflow: auto;
+        }
+
+        .matrix-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .matrix-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .legend {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: var(--primary-bg);
+            border-radius: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+        }
+
+        .info-tooltip {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--header-bg);
+            color: white;
+            text-align: center;
+            line-height: 20px;
+            font-size: 0.8rem;
+            cursor: help;
+            margin-left: 0.5rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            background: var(--primary-bg);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--header-bg);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1.5rem 1rem;
+            }
+
+            .theme-toggle {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            .container {
+                padding: 1rem 0.5rem;
+            }
+
+            .intro-section, .control-panel, .visualization {
+                padding: 1rem;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            input[type="text"] {
+                min-width: 100%;
+            }
+        }
+		
+		/* Стили для информационного блока */
+.info-block {
+    background: var(--secondary-bg);
+    padding: 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow);
+    border-left: 5px solid var(--header-bg);
+}
+
+.info-block h2 {
+    color: var(--header-bg);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.info-card {
+    background: var(--primary-bg);
+    padding: 1.5rem;
+    border-radius: 10px;
+    border: 2px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.info-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    border-color: var(--header-bg);
+}
+
+.info-card h3 {
+    color: var(--header-bg);
+    margin-bottom: 0.8rem;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-card ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.info-card li {
+    padding: 0.4rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.info-card li:before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--header-bg);
+    font-weight: bold;
+}
+
+.instruction-steps {
+    background: linear-gradient(135deg, rgba(50, 89, 128, 0.05), rgba(78, 205, 196, 0.05));
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-top: 1.5rem;
+}
+
+.instruction-steps h3 {
+    color: var(--header-bg);
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.step {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+    align-items: start;
+}
+
+.step-number {
+    min-width: 35px;
+    height: 35px;
+    background: var(--header-bg);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.step-content {
+    flex: 1;
+    padding-top: 0.3rem;
+}
+
+.step-content strong {
+    color: var(--header-bg);
+    display: block;
+    margin-bottom: 0.3rem;
+}
+
+.highlight-box {
+    background: var(--primary-bg);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    border-left: 4px solid var(--attention-color);
+}
+
+.highlight-box strong {
+    color: var(--header-bg);
+}
+
+.feature-badge {
+    display: inline-block;
+    background: var(--header-bg);
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    margin: 0.2rem;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .info-block {
+        padding: 1rem;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .step {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+    </style>
+</head>
+<body>
+    <header>
+        <h1>KV-Cache Визуализация</h1>
+        <p class="subtitle">Визуально-пространственный язык внутренних представлений LLM</p>
+        <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">🌙</button>
+    </header>
+
+    <div class="container">
+        <section class="intro-section">
+            <h2>Что такое KV-Cache?</h2>
+            <p>
+                <strong>KV-кэш</strong> — это механизм оптимизации в трансформерных языковых моделях, 
+                где для каждого токена сохраняются векторы <strong style="color: var(--key-color);">Keys (ключи)</strong> 
+                и <strong style="color: var(--value-color);">Values (значения)</strong>. 
+                Это позволяет модели "помнить" контекст без повторных вычислений, создавая пространственную 
+                карту семантических отношений между словами.
+            </p>
+        </section>
+		
+		<!-- Информационный блок -->
+<section class="info-block">
+    <h2>Руководство для студентов</h2>
+    
+    <div class="info-grid">
+        <div class="info-card">
+            <h3>Что вы увидите</h3>
+            <ul>
+                <li><strong>Токены</strong> — слова, разбитые на единицы обработки</li>
+                <li><strong>Векторы Keys</strong> — "поисковые запросы" для каждого слова</li>
+                <li><strong>Векторы Values</strong> — семантическое содержание</li>
+                <li><strong>Матрица внимания</strong> — как слова "смотрят" друг на друга</li>
+            </ul>
+        </div>
+
+        <div class="info-card">
+            <h3>Лингвистическая метафора</h3>
+            <ul>
+                <li><strong>Keys</strong> — морфологические признаки слова</li>
+                <li><strong>Values</strong> — семантическое ядро значения</li>
+                <li><strong>Attention</strong> — синтаксические и смысловые связи</li>
+                <li><strong>Cache</strong> — контекстная память дискурса</li>
+            </ul>
+        </div>
+
+        <div class="info-card">
+            <h3>Возможности приложения</h3>
+            <ul>
+                <li>Добавление произвольных слов и фраз</li>
+                <li>Клик по токену для фокуса на нём</li>
+                <li>Наведение на ячейки для точных значений</li>
+                <li>Переключение светлой/темной темы</li>
+                <li>Готовые примеры для быстрого старта</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="instruction-steps">
+        <h3>Пошаговая инструкция</h3>
+        
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <strong>Введите текст</strong>
+                Наберите слово или фразу в поле ввода. Попробуйте лингвистически интересные примеры: синонимы, антонимы, словосочетания.
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <strong>Нажмите "Добавить токен"</strong>
+                Текст разобьется на токены, для каждого создадутся векторы Keys и Values. Наблюдайте, как растёт кэш!
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <strong>Исследуйте визуализацию</strong>
+                Кликайте на токены, чтобы увидеть их векторное представление. Наводите на ячейки матрицы внимания — яркие области показывают сильные связи.
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <strong>Экспериментируйте</strong>
+                Сравните, как модель обрабатывает разные части речи, похожие слова или слова из разных семантических полей.
+            </div>
+        </div>
+    </div>
+
+    <div class="highlight-box">
+        <strong>Совет для исследования:</strong> Попробуйте ввести предложение с повторяющимися словами (например, "кот видит кота") и обратите внимание на симметричные паттерны в матрице внимания — это визуальное отражение анафорических связей!
+    </div>
+
+    <div style="margin-top: 1.5rem; text-align: center;">
+        <span class="feature-badge">Темная тема</span>
+        <span class="feature-badge">Мобильная версия</span>
+        <span class="feature-badge">Интерактивность</span>
+        <span class="feature-badge">Реальное время</span>
+    </div>
+</section>
+
+        <section class="control-panel">
+            <h2>Интерактивная панель</h2>
+            <div class="input-group">
+                <input type="text" id="tokenInput" placeholder="Введите слово или фразу..." />
+                <button class="btn-primary" onclick="addToken()">Добавить токен</button>
+                <button class="btn-secondary" onclick="clearCache()">Очистить</button>
+            </div>
+            <div class="input-group">
+                <button class="btn-secondary" onclick="loadExample(1)">Пример 1</button>
+                <button class="btn-secondary" onclick="loadExample(2)">Пример 2</button>
+                <button class="btn-secondary" onclick="loadExample(3)">Пример 3</button>
+            </div>
+        </section>
+
+        <section class="visualization">
+            <h2>Визуализация KV-Cache</h2>
+            
+            <div class="tokens-container" id="tokensContainer">
+                <p style="opacity: 0.5; margin: auto;">Добавьте токены для начала визуализации...</p>
+            </div>
+
+            <div class="kv-display">
+                <div class="kv-box key-box">
+                    <h3>
+                        Keys (Ключи)
+                        <span class="info-tooltip" title="Ключи используются для поиска релевантной информации">ℹ️</span>
+                    </h3>
+                    <div class="vector-display" id="keysDisplay"></div>
+                </div>
+
+                <div class="kv-box value-box">
+                    <h3>
+                        Values (Значения)
+                        <span class="info-tooltip" title="Значения содержат семантическую информацию">ℹ️</span>
+                    </h3>
+                    <div class="vector-display" id="valuesDisplay"></div>
+                </div>
+            </div>
+
+            <div class="attention-matrix">
+                <h3>
+                    Матрица внимания (Attention Matrix)
+                    <span class="info-tooltip" title="Показывает, какие токены влияют друг на друга">ℹ️</span>
+                </h3>
+                <div class="matrix-grid" id="attentionMatrix"></div>
+            </div>
+
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--key-color);"></div>
+                    <span>Keys (запрос)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--value-color);"></div>
+                    <span>Values (контекст)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--attention-color);"></div>
+                    <span>Высокое внимание</span>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="tokenCount">0</div>
+                    <div class="stat-label">Токенов в кэше</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="vectorDim">8</div>
+                    <div class="stat-label">Размерность векторов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="memorySize">0</div>
+                    <div class="stat-label">КБ памяти (симуляция)</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const VECTOR_DIM = 8;
+        let tokens = [];
+        let kvCache = [];
+        let activeTokenIndex = -1;
+
+        // Переключение темы
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // Загрузка сохраненной темы
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+        // Генерация случайного вектора
+        function generateVector(seed) {
+            const vector = [];
+            for (let i = 0; i < VECTOR_DIM; i++) {
+                vector.push(Math.sin(seed * (i + 1)) * 0.5 + 0.5);
+            }
+            return vector;
+        }
+
+        // Вычисление attention score
+        function computeAttention(keyA, keyB) {
+            let dotProduct = 0;
+            for (let i = 0; i < VECTOR_DIM; i++) {
+                dotProduct += keyA[i] * keyB[i];
+            }
+            return dotProduct / VECTOR_DIM;
+        }
+
+        // Добавление токена
+        function addToken() {
+            const input = document.getElementById('tokenInput');
+            const text = input.value.trim();
+            
+            if (!text) return;
+
+            const words = text.split(/\s+/);
+            words.forEach(word => {
+                if (word) {
+                    const seed = word.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                    tokens.push(word);
+                    kvCache.push({
+                        token: word,
+                        key: generateVector(seed),
+                        value: generateVector(seed * 1.5)
+                    });
+                }
+            });
+
+            input.value = '';
+            updateVisualization();
+        }
+
+        // Очистка кэша
+        function clearCache() {
+            tokens = [];
+            kvCache = [];
+            activeTokenIndex = -1;
+            updateVisualization();
+        }
+
+        // Загрузка примеров
+        function loadExample(num) {
+            clearCache();
+            const examples = [
+                'Язык это мост между мирами',
+                'Трансформер обрабатывает контекст параллельно',
+                'Семантическое пространство кодирует смысл'
+            ];
+            
+            document.getElementById('tokenInput').value = examples[num - 1];
+            addToken();
+        }
+
+        // Обновление визуализации
+        function updateVisualization() {
+            updateTokens();
+            updateVectors();
+            updateAttentionMatrix();
+            updateStats();
+        }
+
+        // Обновление токенов
+        function updateTokens() {
+            const container = document.getElementById('tokensContainer');
+            
+            if (tokens.length === 0) {
+                container.innerHTML = '<p style="opacity: 0.5; margin: auto;">Добавьте токены для начала визуализации...</p>';
+                return;
+            }
+
+            container.innerHTML = tokens.map((token, idx) => 
+                `<div class="token ${idx === activeTokenIndex ? 'active' : ''}" 
+                      onclick="highlightToken(${idx})">${token}</div>`
+            ).join('');
+        }
+
+        // Подсветка токена
+        function highlightToken(idx) {
+            activeTokenIndex = activeTokenIndex === idx ? -1 : idx;
+            updateVisualization();
+        }
+
+        // Обновление векторов
+        function updateVectors() {
+            const keysDisplay = document.getElementById('keysDisplay');
+            const valuesDisplay = document.getElementById('valuesDisplay');
+
+            if (kvCache.length === 0) {
+                keysDisplay.innerHTML = '<p style="opacity: 0.5;">Нет данных</p>';
+                valuesDisplay.innerHTML = '<p style="opacity: 0.5;">Нет данных</p>';
+                return;
+            }
+
+            const displayIdx = activeTokenIndex >= 0 ? activeTokenIndex : kvCache.length - 1;
+            const cache = kvCache[displayIdx];
+
+            keysDisplay.innerHTML = cache.key.map(val => {
+                const intensity = Math.round(val * 255);
+                return `<div class="vector-cell" 
+                            style="background: rgb(${intensity}, ${100}, ${100});"
+                            title="${val.toFixed(3)}">${val.toFixed(2)}</div>`;
+            }).join('');
+
+            valuesDisplay.innerHTML = cache.value.map(val => {
+                const intensity = Math.round(val * 255);
+                return `<div class="vector-cell" 
+                            style="background: rgb(${100}, ${intensity}, ${intensity});"
+                            title="${val.toFixed(3)}">${val.toFixed(2)}</div>`;
+            }).join('');
+        }
+
+        // Обновление матрицы внимания
+        function updateAttentionMatrix() {
+            const matrix = document.getElementById('attentionMatrix');
+            
+            if (kvCache.length === 0) {
+                matrix.innerHTML = '<p style="opacity: 0.5; padding: 1rem;">Нет данных для отображения</p>';
+                return;
+            }
+
+            const size = Math.min(kvCache.length, 10); // Ограничение для производительности
+            matrix.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+
+            let html = '';
+            for (let i = 0; i < size; i++) {
+                for (let j = 0; j < size; j++) {
+                    const attention = computeAttention(kvCache[i].key, kvCache[j].key);
+                    const intensity = Math.round(attention * 255);
+                    const color = `rgb(${intensity}, ${intensity}, ${100})`;
+                    
+                    html += `<div class="matrix-cell" 
+                                 style="background: ${color};"
+                                 title="${tokens[i]} → ${tokens[j]}: ${(attention * 100).toFixed(1)}%">
+                             </div>`;
+                }
+            }
+            matrix.innerHTML = html;
+        }
+
+        // Обновление статистики
+        function updateStats() {
+            document.getElementById('tokenCount').textContent = tokens.length;
+            document.getElementById('vectorDim').textContent = VECTOR_DIM;
+            
+            // Симуляция размера памяти (4 байта на float)
+            const memoryBytes = tokens.length * VECTOR_DIM * 2 * 4;
+            const memoryKB = (memoryBytes / 1024).toFixed(2);
+            document.getElementById('memorySize').textContent = memoryKB;
+        }
+
+        // Обработка Enter в поле ввода
+        document.getElementById('tokenInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addToken();
+        });
+
+        // Инициализация с примером
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('tokenInput').value = 'Привет мир';
+                addToken();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
