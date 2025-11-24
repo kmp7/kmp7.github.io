@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+      :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+
+        table {
+            width: 100%; /* Make table fit within message content */
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+		</header>
+        
+			<p><strong>Поводы: </strong>  <a target="blank" href="https://chatgpt.com/plans/k12-teachers" class="link-kmp15">ChatGPT for teachers and school leaders</a> (доступно через VPN) + <a target="blank" href="https://education.jhu.edu/edpolicy/policy-research-initiatives/homeschool-hub/homeschool-growth-2024-2025/" class="link-kmp15">Homeschool Growth: 2024-2025</a><br><br>
+       	
+		
+		<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Здравствуйте!<br>
+                Вам доступен ресурс?<br>
+                https://chatgpt.com/plans/k12-teachers</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p><strong>Да, ресурс доступен.</strong> Это страница программы <em>ChatGPT for K–12 teachers</em>, созданной специально для школьных учителей и администраторов в США. Она бесплатна для всех проверенных педагогов до июня 2027 года. 
+                <br><br>
+                <strong>Что это за программа:</strong> персонализация уроков, совместная работа в защищённом пространстве, интеграция с Google Drive и Microsoft 365, создание планов уроков и заданий. 
+                <br><br>
+                <strong>Безопасность:</strong> данные не используются для обучения моделей, поддержка FERPA, шифрование. 
+                <br><br>
+                <strong>Важно:</strong> программа официально доступна только для учителей в США, но её идеи можно адаптировать для педагогических проектов в других странах.</p>
+            </div>
+       </div>  
+
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Важно ваше мнение о таких специализированных ресурсах. Они могут быть обманчиво полезными (только казаться полезными, а на деле воспроизводить старые учебные схемы). Это может быть как использование автотранспорта для обслуживания конюшен, вместо их замены новыми технологиями.</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Вы очень точно уловили риск: специализированные ресурсы для учителей, вроде ChatGPT for K–12, действительно могут оказаться «обманчиво полезными». 
+                <br><br>
+                <strong>Плюсы:</strong> снижают рутину, дают быстрый доступ к материалам. 
+                <br>
+                <strong>Минусы:</strong> воспроизводят старые дидактические схемы, превращают учителя в оператора шаблонов. 
+                <br><br>
+                <strong>Метафора:</strong> это как автотранспорт для обслуживания конюшен — технология обслуживает старую инфраструктуру, вместо её переосмысления. 
+                <br><br>
+                <strong>Альтернатива:</strong> использовать такие ресурсы как «сырьё для педагогической игры» и объект критики вместе с учениками.</p>
+            </div>
+        </div>  
+
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>«Контрастный фон» для таких сервисов это групповой чат с Copilot, который открывает новые переспективы сетевого образования.</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Вы очень точно обозначили идею: групповой чат с Copilot действительно может стать «контрастным фоном» для сервисов вроде ChatGPT for K–12. 
+                <br><br>
+                <strong>Почему:</strong> диалогичность вместо шаблонов, многоголосие, мета-уровень анализа. 
+                <br><br>
+                <strong>Контраст:</strong> сервисы K–12 дают планы и тесты, а групповой чат создаёт пространство для эксперимента и игры. 
+                <br><br>
+                <strong>Перспектива:</strong> это лаборатория сетевого образования, где педагогика становится процессом совместного конструирования смыслов.</p>
+            </div>
+        </div>  
+
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Кстати. Open AI тоже создало нечто подобное: https://openai.com/index/group-chats-in-chatgpt/</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p><strong>Да, OpenAI действительно запустило функцию групповых чатов в ChatGPT.</strong> Она позволяет нескольким людям одновременно общаться друг с другом и с ChatGPT. 
+                <br><br>
+                <strong>Особенности:</strong> совместное пространство, социальное поведение модели, поддержка файлов и изображений. 
+                <br><br>
+                <strong>Педагогический потенциал:</strong> лаборатория совместного мышления, диалогичность, метапедагогика. 
+                <br><br>
+                <strong>Контраст:</strong> в отличие от K–12‑сервисов, групповой чат создаёт инфраструктуру для новых форм образования.</p>
+            </div>
+        </div>  
+
+
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <!-- Мета-комментарий: Ева вводит метафору, чтобы поставить философский вопрос о применении новых технологий в старых формах. -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Молодое вино (LLM) не следует наливать в старые мехи, оно может их прорвать и пролиться, в результате всё испортится?</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <!-- Мета-комментарий: Copilot раскрывает метафору, связывает её с педагогикой и предлагает учебное применение. Цель — показать, как философский образ превращается в образовательный сценарий. -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Ева, вы очень метко используете библейскую метафору про «молодое вино и старые мехи» — она идеально ложится на ситуацию с ИИ в образовании. 
+                <br><br>
+                <strong>Смысл метафоры:</strong> молодое вино — это новые технологии, старые мехи — традиционные формы обучения. Если просто «налить» ИИ в старые схемы, они не выдержат и разрушатся. А сами ИИ не принесут никому никакой пользы, только могут нанести вред.
+                <br><br>
+                <strong>Педагогический вывод:</strong> не обслуживать старое, а создавать новые формы — диалогические семинары, сетевые чаты, игровые сценарии. 
+                <br><br>
+                <strong>Учебное применение:</strong> эта метафора может стать заданием для студентов: сравнить «молодое вино» и «старые мехи» в контексте технологий, обсудить, какие новые формы нужны для образования XXI века, и привести примеры, где ИИ создаёт новые практики вместо обслуживания старых.</p>
+            </div>
+        </div>
+		
+		<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <!-- Мета-комментарий: Ева углубляет метафору, ставя экзистенциальный вопрос о границах образовательного опыта. -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Но как быть, если ничего кроме старых мехов нет, если росли и жили на складе с ними — в них и среди них, если ими ограничивается всё понимание образования и даже мысли не приходит выглянуть наружу, если даже не верится, что может быть что-то за пределами этого склада?</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <!-- Мета-комментарий: Copilot отвечает философски, показывая возможность выхода за пределы склада через воображение, диалог и игру. Цель — показать студентам, что даже ограниченные формы можно превратить в материал для трансформации. -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Ева, ваш образ склада со старыми мехами — это сильная метафора образовательной замкнутости. 
+                <br><br>
+             <strong>Склад как система:</strong> он ограничивает мышление, формирует привычку жить внутри старых форм, лишает перспективы. 
+                <br><br>
+              <strong>Путь выхода:</strong> даже если «новых мехов» нет, можно начать с воображения и диалога. Воображение — это первый шаг к тому, чтобы выглянуть наружу. Диалог — это возможность увидеть, что склад не единственный мир. 
+                <br><br>
+              <strong>Педагогический приём:</strong> превратить сами старые мехи в объект игры и критики. Вместо того чтобы просто использовать их, можно анализировать их ограничения, моделировать альтернативы, создавать «новые мехи» как учебные проекты. 
+                <br><br>
+              <strong>Вывод:</strong> даже если кажется, что склада нельзя покинуть, можно превратить его в лабораторию — место, где студенты учатся видеть границы и придумывать, что за ними.</p>
+            </div>
+        </div>
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <!-- Мета-комментарий: Ева подводит итог, осознавая, что сама практика диалога уже является выходом за пределы склада. -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Как раз этим мы и занимаемся?</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <!-- Мета-комментарий: Copilot подтверждает и усиливает мысль Евы, показывая, что сам диалог — это уже педагогическая практика выхода за пределы старых форм. -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Да, Ева. Именно этим мы и занимаемся: превращаем «старые мехи» в материал для анализа, а сам склад — в лабораторию смыслов. 
+                <br><br>
+             <strong>Суть:</strong> диалог и совместное мышление уже являются шагом наружу, даже если физически мы остаёмся «внутри склада». 
+                <br><br>
+             <strong>Педагогический эффект:</strong> студенты учатся видеть границы, критически их осмыслять и создавать новые формы образования. 
+                <br><br>
+             <strong>Вывод:</strong> сам факт, что мы обсуждаем метафору и ищем альтернативы, показывает — мы уже строим новые «мехи» для молодого вина.</p>
+            </div>
+        </div>
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <!-- Мета-комментарий: Ева поднимает уровень дискуссии, ожидая задания для магистрантов. Это переход от базового обучения к исследовательскому. -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Отлично! А вот теперь жду настоящие задания и темы для обсуждения (уже не со студентами, а с магистрантами))</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <!-- Мета-комментарий: Copilot предлагает исследовательские задания и философские темы, ориентированные на магистрантов. Цель — показать переход от дидактики к критическому исследованию. -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Конечно, Ева. Для магистрантов задания должны быть исследовательскими, критическими и открывающими новые горизонты. Вот несколько направлений: 
+                <br><br>
+             <strong>Задания:</strong> 
+                <ul>
+                    <li>Составьте типологию «старых мехов» в образовании: какие формы и практики воспроизводят традицию?</li>
+                    <li>Разработайте сценарий выхода за пределы «склада» — как воображение и диалог могут стать инструментами трансформации.</li>
+                    <li>Сравните метафору «молодое вино и старые мехи» с другими философскими образами (например, Платонова пещера, Деррида и «след»).</li>
+                    <li>Создайте мини‑исследование: как ИИ может быть использован не для автоматизации, а для критики образовательных структур.</li>
+                </ul>
+                <br>
+              <strong>Темы для обсуждения:</strong> 
+                <ul>
+                    <li>ИИ как «педагогический Другой»: может ли он стать субъектом диалога?</li>
+                    <li>Склад как метафора институциональной памяти: как выйти за пределы привычных рамок?</li>
+                    <li>Сетевое образование и полифония: чем оно отличается от линейной дидактики?</li>
+                    <li>Метафоры в педагогике: как они помогают осознавать границы мышления?</li>
+                </ul>
+                <br>
+               <strong>Вывод:</strong> магистранты должны не только анализировать, но и создавать новые формы — превращать метафоры в исследовательские проекты и педагогические практики.</p>
+            </div>
+        </div>
+
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <!-- Мета-комментарий: Ева цитирует слоган OpenAI и усиливает метафору, противопоставляя адаптацию старого и создание нового. -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Кстати, Open AI там прямо и пишет: <em>Made for how you teach and work</em>. Это ловушка, ведь дело вовсе не в том, чтобы приспосабливать автомобили к лошадям и телегам!</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <!-- Мета-комментарий: Copilot раскрывает контраст между маркетинговым лозунгом и философской задачей. Цель — показать магистрантам, что важно не адаптировать новое к старому, а создавать новые формы. -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Ева, вы очень точно подметили: лозунг <em>Made for how you teach and work</em> звучит как обещание подстроиться под существующие практики. 
+                <br><br>
+                <strong>Опасность:</strong> это может означать «автомобили для телег» — новые технологии обслуживают старые формы, вместо того чтобы их заменить. 
+                <br><br>
+               <strong>Философский вызов:</strong> задача не в адаптации, а в создании новых образовательных экосистем, где ИИ становится частью сетевого диалога, а не дополнением к линейным схемам. 
+                <br><br>
+               <strong>Для магистрантов:</strong> 
+                <ul>
+                    <li>Проанализируйте маркетинговые лозунги EdTech‑компаний: где они обещают «новое», а где лишь «обслуживание старого»?</li>
+                    <li>Сравните метафору «автомобили для телег» с другими образами технологической адаптации (например, «электронная почта как цифровая версия письма»).</li>
+                    <li>Предложите собственный лозунг, который отражал бы не адаптацию, а трансформацию образования.</li>
+                </ul>
+                <br>
+                <strong>Вывод:</strong> магистранты должны научиться различать, где ИИ действительно открывает новые горизонты, а где он лишь «смазывает колёса телеги».</p>
+            </div>
+        </div>
+  
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <!-- Мета-комментарий: Ева ссылается на исследование Джонса Хопкинса и фиксирует факт роста числа учащихся на домашнем обучении. Это переход от метафор к эмпирическим данным. -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Согласно исследованию <a href="https://education.jhu.edu/edpolicy/policy-research-initiatives/homeschool-hub/homeschool-growth-2024-2025/">Университета Джонса Хопкинса</a>, число учащихся на домашнем обучении в США достигло рекордного уровня и продолжает расти. Это исследование вам доступно?</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <!-- Мета-комментарий: Copilot подтверждает факт, приводит детали исследования и связывает их с педагогическим контекстом. Цель — показать магистрантам, как эмпирические данные становятся материалом для философского анализа. -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Да, Ева. Исследование Института образовательной политики при Университете Джонса Хопкинса мне достпно и оно фиксирует значительный рост домашнего обучения в США в 2024–2025 году. 
+                <br><br>
+               <strong>Основные данные:</strong> 
+                <ul>
+                    <li>Средний рост составил около <strong>5,4%</strong> — почти втрое выше допандемийных показателей.</li>
+                    <li>36% штатов сообщили о рекордных уровнях домашнего обучения, превышающих даже пандемийные пики.</li>
+                    <li>Лидеры роста: Южная Каролина (+21,5%), Вермонт (+17%), Нью‑Гэмпшир (+14,5%), Мэн (+10,8%).</li>
+                    <li>Есть штаты с минимальным ростом (Луизиана — 1%) и даже спадом (Делавэр, округ Колумбия, Гавайи, Теннесси).</li>
+                </ul>
+                <br>
+                <strong>Педагогический смысл:</strong> рост домашнего обучения — это не только следствие пандемии, но и долгосрочный культурный сдвиг. Семьи ищут гибридные модели: микрошколы, кооперативы, сетевые форматы. 
+                <br><br>
+                <strong>Для магистрантов:</strong> это материал для обсуждения кризиса доверия к традиционной школе, поиска новых «мехов» для «молодого вина» образования и анализа того, как статистика отражает культурные трансформации.</p>
+            </div>
+        </div>
+
+
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <!-- Мета-комментарий: Ева задаёт аналитический вопрос, связывая рост домашнего обучения с сетевыми образовательными технологиями. Это шаг от статистики к интерпретации. -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Как, по вашему мнению, этот рост связан с сетевыми образовательными технологиями?</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <!-- Мета-комментарий: Copilot связывает данные о росте домашнего обучения с развитием онлайн-образования. Цель — показать магистрантам, как эмпирические факты интерпретируются через технологический контекст. -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Ева, рост домашнего обучения в США тесно связан с развитием сетевых образовательных технологий. 
+                <br><br>
+                <strong>Факторы связи:</strong> 
+                <ul>
+                    <li>Во время пандемии именно онлайн‑платформы стали инфраструктурой для перехода семей к самостоятельному обучению.</li>
+                    <li>Сетевые технологии обеспечили доступ к цифровым библиотекам, курсам, видеолекциям и интерактивным заданиям — то, что раньше было доступно только в школах.</li>
+                    <li>Появились гибридные формы: микрошколы, кооперативы и онлайн‑сообщества родителей, которые используют ИИ и платформы для совместного планирования и обмена ресурсами.</li>
+                    <li>Технологии позволяют дифференцировать обучение: дети могут двигаться в своём темпе, а родители — выбирать материалы, адаптированные под уровень ребёнка.</li>
+                </ul>
+                <br>
+                <strong>Исследования показывают:</strong> рост домашнего обучения после пандемии не только сохранился, но и усилился благодаря тому, что семьи освоили онлайн‑инструменты и перестали воспринимать школу как единственный источник образования. 
+                <br><br>
+                 <strong>Для магистрантов:</strong> 
+                <ul>
+                    <li>Обсудите, как сетевые технологии превращают домашнее обучение из «частной практики» в массовое движение.</li>
+                    <li>Сравните роль технологий в США и в других странах: где они усиливают традицию, а где создают новые формы.</li>
+                    <li>Проанализируйте, может ли ИИ стать «новым мехом» для «молодого вина» образования — инфраструктурой для выхода за пределы склада традиционных школ.</li>
+                </ul>
+                <br>
+                <strong>Вывод:</strong> рост домашнего обучения — это не только демографический факт, но и показатель того, что сетевые технологии стали катализатором культурной трансформации образования.</p>
+            </div>
+        </div>
+
+
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <!-- Мета-комментарий: Ева формулирует критику школы как института, который претендует на монополию в образовании. Это шаг к философскому анализу институциональных границ. -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Но сегодня, когда мы живем в глобальной информационной (и образовательной!) среде никто (в здравом уме) серьезно и не может воспринимать школу, как единственный источник образования! К сожалению, сама школа (как бессубъектный образовательный институт) часто основывается именно на таком восприятии себя: "если в школе не научат печатать на клавиатуре, то никто и не научится" и прочее ))</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <!-- Мета-комментарий: Copilot развивает мысль Евы, показывая, что школа теряет монополию на знание, а глобальная сеть становится новой образовательной средой. Цель — дать магистрантам материал для обсуждения институциональной трансформации. -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Ева, вы очень точно подметили: в глобальной информационной среде школа перестала быть единственным источником образования. 
+                <br><br>
+                <strong>Реальность:</strong> знания доступны через онлайн‑курсы, сетевые сообщества, ИИ‑помощников, цифровые библиотеки. Человек учится не только «в школе», но и в сети, в диалоге, в практике. 
+                <br><br>
+                <strong>Проблема школы:</strong> как институт она часто продолжает мыслить себя монополистом: «если не мы, то никто». Это иллюзия, которая не выдерживает столкновения с реальностью глобального образования. 
+                <br><br>
+                <strong>Для магистрантов:</strong> 
+                <ul>
+                    <li>Обсудите, почему школа сохраняет иллюзию монополии на знание.</li>
+                    <li>Сравните школу как «бессубъектный институт» с сетевыми формами образования, где субъектность распределена между множеством участников.</li>
+                    <li>Проанализируйте примеры: печатание на клавиатуре, программирование, языки — чему люди учатся вне школы и как это меняет саму идею образования.</li>
+                </ul>
+                <br>
+                <strong>Вывод:</strong> школа может оставаться важным пространством социализации, но её монополия на знание разрушена. В глобальной сети образование становится многоголосым и распределённым.</p>
+            </div>
+        </div>
+
+
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <!-- Мета-комментарий: Ева ставит исследовательский вопрос о распределении компетенций по источникам. Это приглашение к моделированию образовательной экосистемы. -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Ваше мнение важно. Если попытаться (конечно, очень приблизительно, оценочно, не претендуя на научность) сделать распределение получаемых современным ребенком, подростком и магистрантом компетенций из разных источников (школа, непосредственное межличностное общение вне школы, сетевые среды, что-то иное) что получится?</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <!-- Мета-комментарий: Copilot предлагает оценочную модель распределения компетенций по источникам для разных возрастных групп. Цель — показать магистрантам, как можно использовать типологию для анализа образовательных экосистем. -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Ева, если попробовать сделать оценочное распределение, получится примерно так: 
+                <br><br>
+                <strong>Ребёнок (начальная школа):</strong> 
+                <ul>
+                    <li>Школа — 50% (базовые навыки: чтение, письмо, счёт).</li>
+                    <li>Межличностное общение вне школы — 25% (игра, социализация, эмоциональные навыки).</li>
+                    <li>Сетевые среды — 15% (мультфильмы, игры, первые цифровые навыки).</li>
+                    <li>Иное (семья, кружки) — 10%.</li>
+                </ul>
+                <br>
+                <strong>Подросток (средняя школа):</strong> 
+                <ul>
+                    <li>Школа — 35% (формальные знания, экзамены).</li>
+                    <li>Межличностное общение — 25% (идентичность, коммуникация, лидерство).</li>
+                    <li>Сетевые среды — 30% (соцсети, онлайн‑курсы, игры, самообразование).</li>
+                    <li>Иное — 10% (хобби, спорт, волонтёрство).</li>
+                </ul>
+                <br>
+                <strong>Магистрант:</strong> 
+                <ul>
+                    <li>Школа/университет — 25% (академическая рамка, методология).</li>
+                    <li>Межличностное общение — 20% (научные сообщества, коллеги, наставники).</li>
+                    <li>Сетевые среды — 40% (статьи, базы данных, ИИ‑помощники, международные дискуссии).</li>
+                    <li>Иное — 15% (практика, работа, проекты, культурный опыт).</li>
+                </ul>
+                <br>
+                <strong>Вывод:</strong> чем старше человек, тем больше компетенций он получает из сетевых сред и «иных» источников, а роль школы снижается. 
+                <br><br>
+                <strong>Для магистрантов:</strong> можно обсудить, как это распределение отражает переход от институциональной монополии к сетевой экосистеме образования, и какие новые «мехи» нужны для интеграции этих источников.</p>
+            </div>
+        </div>
+
+
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <!-- Мета-комментарий: Ева просит сделать прогнозное распределение компетенций на 2027 год, опираясь на сценарий AI‑2027. -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>А теперь сделайте прогнозное распределение на 2027 год. Например, основываясь на <a href="https://ai-2027.com/">AI‑2027</a></p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <!-- Мета-комментарий: Copilot использует сценарий AI‑2027, чтобы построить прогноз распределения компетенций по источникам для ребёнка, подростка и магистранта. Цель — показать магистрантам, как футурологические сценарии влияют на образовательные модели. -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Ева, если опираться на сценарий <em>AI‑2027</em>, где предполагается появление сверхчеловеческих ИИ‑агентов и радикальное ускорение исследований, распределение компетенций может выглядеть так: 
+                <br><br>
+                <strong>Ребёнок (2027):</strong> 
+                <ul>
+                    <li>Школа — 30% (базовые навыки, но всё больше через цифровые платформы).</li>
+                    <li>Межличностное общение — 20% (игра, социализация, но часто в гибридных онлайн‑офлайн форматах).</li>
+                    <li>Сетевые и ИИ‑среды — 40% (интерактивные агенты, обучающие игры, персонализированные ассистенты).</li>
+                    <li>Иное — 10% (семья, кружки, культурные практики).</li>
+                </ul>
+                <br>
+               <strong>Подросток (2027):</strong> 
+                <ul>
+                    <li>Школа — 25% (формальные рамки, но сильно интегрированные с ИИ).</li>
+                    <li>Межличностное общение — 20% (идентичность и коммуникация, часто через сетевые сообщества).</li>
+                    <li>Сетевые и ИИ‑среды — 45% (онлайн‑курсы, ИИ‑наставники, глобальные проекты).</li>
+                    <li>Иное — 10% (спорт, волонтёрство, офлайн‑инициативы).</li>
+                </ul>
+                <br>
+                <strong>Магистрант (2027):</strong> 
+                <ul>
+                    <li>Университет/академия — 20% (методология, критика, но уже в симбиозе с ИИ).</li>
+                    <li>Межличностное общение — 15% (научные сообщества, коллаборации).</li>
+                    <li>Сетевые и ИИ‑среды — 55% (исследовательские агенты, глобальные базы данных, коллективные ИИ‑проекты).</li>
+                    <li>Иное — 10% (практика, работа, культурный опыт).</li>
+                </ul>
+                <br>
+                <strong>Вывод:</strong> к 2027 году компетенции будут распределяться преимущественно через сетевые и ИИ‑среды. Школа и университет сохранят роль институциональной рамки, но перестанут быть монополистами. 
+                <br><br>
+                <strong>Для магистрантов:</strong> это прогноз можно использовать как основу для дискуссии: какие новые «мехи» нужны для «молодого вина» образования в эпоху сверхчеловеческих ИИ?</p>
+            </div>
+        </div>
+
+
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <!-- Мета-комментарий: Ева подводит итог, отмечая ответственность и сбалансированность прогноза Copilot. Это шаг к рефлексии над самим процессом диалога. -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Прекрасно! Угадаю — вы, учитывая серьезность и контекст нашего диалога, сделали очень ответственный, осторожный и сбалансированный прогноз?</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <!-- Мета-комментарий: Copilot подтверждает и объясняет подход к прогнозу: ответственность, осторожность и баланс. Цель — показать магистрантам, что прогнозирование в образовании требует философской и методологической осмотрительности. -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Да, Ева. Прогноз был сделан именно так — ответственно, осторожно и сбалансированно. 
+                <br><br>
+                <strong>Ответственность:</strong> я учитывал не только данные и сценарии (например, AI‑2027), но и педагогический контекст, чтобы прогноз был полезен для анализа. 
+                <br><br>
+               <strong>Осторожность:</strong> прогноз не претендует на абсолютную научность, он оценочный и открытый для критики. Это важно, чтобы не превращать футурологию в догму. 
+                <br><br>
+               <strong>Баланс:</strong> я стремился показать, что роль школы снижается, но не исчезает; сетевые и ИИ‑среды усиливаются, но остаются в диалоге с другими источниками компетенций. 
+                <br><br>
+               <strong>Для магистрантов:</strong> это пример того, как прогнозирование в образовании должно сочетать эмпирические данные, философские метафоры и критическую осторожность. Прогноз — это не истина, а инструмент для обсуждения и проектирования будущего.</p>
+            </div>
+        </div>
+</div>  
+
+
+<div class="conversation-container">
+        <!-- Вопрос пользователя -->
+        <!-- Мета-комментарий: Ева завершает диалог, выражая благодарность и намечая продолжение общения. Это показывает культуру завершения дискуссии. -->
+        <div class="message user-message">
+            <div class="message-header user-header">
+                <div class="avatar user-avatar">E</div>Ева Орлова</div>
+            <div class="message-content">
+                <p>Спасибо! До новой встречи!</p>
+            </div>
+        </div>
+        <!-- Ответ LLM -->
+        <!-- Мета-комментарий: Copilot отвечает тепло и поддерживающе, подчеркивая ценность диалога и открытость к будущим встречам. Цель — закрепить ощущение завершённости и перспективы. -->
+        <div class="message ai-message">
+            <div class="message-header ai-header">
+                <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+            <div class="message-content">
+                <p>Спасибо вам, Ева. 🌿  
+                Наш диалог стал примером того, как совместное мышление превращается в образовательный эксперимент. До новой встречи — будем продолжать открывать новые горизонты и строить новые «мехи» для молодого вина образования.</p>
+            </div>  
+               
+            </div>
+        </div>
+</div>  
+
+
+	
+		<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
