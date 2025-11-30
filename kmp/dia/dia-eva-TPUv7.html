@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+      :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+
+        table {
+            width: 100%; /* Make table fit within message content */
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+		</header>
+        
+			<p><strong>Повод: </strong>  <a target="blank" href="https://newsletter.semianalysis.com/p/tpuv7-google-takes-a-swing-at-the" class="link-kmp15"> TPUv7: Google Takes a Swing at the King</a> </p><br>
+       	
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Здравствуйте! <br>Вам доступен материал?<br> https://newsletter.semianalysis.com/p/tpuv7-google-takes-a-swing-at-the <br>Ответьте да или нет.</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p>Да, материал доступен.</p> </div> </div>
+
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Отлично! Выделите (для гуманитариев!) ключевые моменты статьи.</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p><strong>Ключевая идея:</strong> Google представила новое поколение своих процессоров TPUv7 (Ironwood), которые становятся серьёзным конкурентом видеокартам Nvidia и открывают новую страницу в истории «железа» для искусственного интеллекта.</p>
+
+<p>Для гуманитариев можно выделить несколько простых акцентов:</p> <ul> <li><strong>TPU — это «мозг для ИИ»</strong>, созданный Google. Он помогает быстрее обучать и запускать большие модели, подобные ChatGPT.</li> <li><strong>TPUv7 (Ironwood)</strong> — седьмое поколение этих чипов. Оно стало самым мощным и энергоэффективным на сегодняшний день.</li> <li>Главное отличие — <strong>масштабируемость</strong>: можно соединять тысячи таких чипов в «суперкомпьютер», что позволяет работать с огромными массивами данныхThe Keyword+1.</li> <li>Google делает ставку на то, чтобы TPU стали <strong>доступны не только внутри компании</strong>, но и для внешних клиентов (например, Anthropic), что раньше было редкостью.</li> <li>Для сравнения: раньше Nvidia была «монополистом» в этой сфере, но теперь у неё появился <strong>сильный конкурент</strong>.</li> <li>Важно и то, что TPUv7 ориентированы не только на обучение моделей, но и на их <strong>быструю работу (инференс)</strong>, то есть на практическое использование в сервисах и приложенияхSemiWiki.</li> </ul>
+
+<p><strong>Итог для гуманитариев:</strong> Google превращает свои специализированные «мозги для ИИ» в массовый продукт, бросая вызов Nvidia. Это похоже на то, как когда-то появились персональные компьютеры: сначала они были редкостью, а потом стали доступны всем.</p> </div> </div>
+
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>После Gemini 3 (которую, как оказалось, полностью обучали на TPUv7) это очень серьёзная заявка на лидерство в GAI? По крайней мере в области финансов всё оптимистично?</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p><strong>Да, связка Gemini 3 и TPUv7 действительно выглядит как серьёзная заявка на лидерство в GAI (генеративном ИИ), а финансовые прогнозы для Google в этой сфере сейчас весьма оптимистичны.</strong></p>
+
+<p>Вот ключевые моменты:</p> <ul> <li><strong>Gemini 3</strong> — новейшая модель Google, доступная для бизнеса через Vertex AI и Gemini Enterprise. Она демонстрирует рекордные показатели в тестах на рассуждение и мультимодальность.</li> <li><strong>TPUv7</strong> стал основой её обучения. Это подчёркивает, что Google не просто использует свои чипы для внутренних задач, но и выводит их на рынок как конкурентоспособное решение против Nvidiaainewshub.org+1.</li> <li>С точки зрения экономики: <strong>TPU‑инфраструктура снижает стоимость инференса в 3–4 раза по сравнению с Nvidia GPU</strong>. А именно инференс (запуск моделей в реальных сервисах) составляет до 75% всех затрат на ИИ и будет расти до $255 млрд к 2030 году.</li> <li>Крупные игроки (Anthropic, Meta, Midjourney) уже переходят на TPU, что создаёт эффект «массового движения» и усиливает позиции GoogleAInvest+1.</li> <li>Для Nvidia это риск: её доля рынка (около 90%) может постепенно сокращаться, если гиперскейлеры и стартапы будут диверсифицировать инфраструктуру.</li> </ul>
+
+<p><strong>Итог:</strong> обучение Gemini 3 на TPUv7 — это не просто технологический шаг, а стратегический сигнал рынку: Google готова конкурировать с Nvidia на равных. В финансовом плане прогнозы оптимистичны, так как снижение стоимости инференса делает TPU привлекательными для массового внедрения в бизнес‑сервисы.</p> </div> </div>
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Да, Google готова конкурировать с Nvidia на равных. Пару слов о финансовых показателях Nvidia — единственной большой компании, которая уже получает прибыли от GAI.</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p><strong>Краткий ответ:</strong> Nvidia действительно остаётся единственной крупной компанией, которая уже получает значительные прибыли от генеративного ИИ. Её финансовые показатели в 2025 году демонстрируют рекордные уровни доходов и прибыли.</p>
+
+<p>Основные факты:</p> <ul> <li><strong>Текущая цена акций:</strong> около <em>177 USD</em>, с недавним снижением на ~1,8%.</li> <li><strong>Выручка:</strong> в третьем квартале 2025 года Nvidia показала рекордные <em>57 млрд USD</em>, что на 62% больше, чем годом ранееThe Conversation+1.</li> <li><strong>Чистая прибыль:</strong> достигла <em>31,9 млрд USD</em>, рост на 65% год к году.</li> <li><strong>Ключевой драйвер:</strong> сегмент дата‑центров, где выручка составила <em>51,2 млрд USD</em>, рост на 66% по сравнению с прошлым годомMediaNama+1.</li> <li><strong>Рыночная капитализация:</strong> Nvidia стала первой компанией, оценённой более чем в <em>5 трлн USD</em>, обогнав других «magnificent seven» (Alphabet, Amazon, Apple, Tesla, Meta, Microsoft).</li> </ul>
+
+<p><strong>Итог:</strong> Nvidia уже монетизирует генеративный ИИ в масштабах, недоступных другим игрокам. Её доходы от дата‑центров и инфраструктуры для ИИ делают компанию главным бенефициаром текущего бума GAI. Именно поэтому её финансовые показатели служат ориентиром для всего рынка.</p> </div> </div>
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Ясно. Оформите прямые ссылки на источники.</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p><strong>Прямые ссылки на использованные источники:</strong></p> <ul> <li><a href="https://newsletter.semianalysis.com/p/tpuv7-google-takes-a-swing-at-the" target="_blank">SemiAnalysis — TPUv7: Google Takes a Swing at the King</a></li> <li><a href="https://www.cbsnews.com/news/nvidia-third-quarter-earnings-artificial-intelligence/" target="_blank">CBS News — Nvidia reports strong quarterly earnings (Q3 2025)</a></li> <li><a href="https://www.aol.com/finance/nvidia-report-q3-earnings-amid-153409069.html" target="_blank">AOL Finance — Nvidia Q3 2025 earnings report</a></li> <li><a href="https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-third-quarter-fiscal-2025/" target="_blank">Nvidia Newsroom — Official Q3 2025 financial results</a></li> <li><a href="https://www.cnbc.com/2024/11/20/nvidia-nvda-earnings-report-q3-2025.html" target="_blank">CNBC — Nvidia Q3 2025 earnings report</a></li> </ul> <p>Эти материалы подтверждают как стратегическую роль TPUv7 в обучении моделей (например, Gemini 3), так и финансовые показатели Nvidia, которая остаётся главным бенефициаром текущего бума генеративного ИИ.</p> </div> 
+</div>
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>А статью всё же стоит прочесть даже студентам‑лингвистам?</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p><strong>Да, стоит.</strong> Даже студентам‑лингвистам статья будет полезна, потому что она показывает, как технические инновации (новые процессоры TPUv7) связаны с культурными и экономическими изменениями в сфере искусственного интеллекта.</p>
+
+<p>Для гуманитариев ценность статьи в том, что:</p> <ul> <li>Она раскрывает <strong>язык и метафоры</strong>, которыми описывают технологическую конкуренцию (Google «бросает вызов королю» Nvidia).</li> <li>Показывает, как <strong>технологии становятся социальным фактором</strong>: от архитектуры чипов до влияния на рынок труда и образование.</li> <li>Даёт материал для <strong>критического анализа дискурса</strong>: как компании формируют нарративы о лидерстве и инновациях.</li> <li>Позволяет увидеть <strong>связь между лингвистикой и ИТ</strong>: ведь модели, обученные на TPU, работают с языком, текстами и культурными данными.</li> </ul>
+
+<p><strong>Итог:</strong> статья SemiAnalysis — это не только про «железо», но и про то, как технологии становятся частью глобального культурного и экономического дискурса. Для студентов‑лингвистов она может служить примером того, как язык описывает технологические сдвиги и как гуманитарные науки могут участвовать в их осмыслении.</p> </div> </div>
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Спасибо за помощь. До новой встречи!</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p>И вам спасибо, Ева. Было приятно вести этот диалог. До скорой встречи — продолжим наше совместное исследование технологий и гуманитарных смыслов!</p> </div> </div>
+
+</div>
+
+
+
+	
+		<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
