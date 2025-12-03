@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --accent: #4a90e2;
+            --accent-hover: #357abd;
+            --border: #e0e0e0;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-card: #2d2d2d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --accent: #5aa3f0;
+            --accent-hover: #4a90e2;
+            --border: #404040;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background-color: var(--bg-secondary);
+            padding: 20px 0;
+            box-shadow: 0 2px 10px var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--accent);
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .add-joke-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 30px 0;
+            transition: background-color 0.3s ease;
+        }
+
+        .add-joke-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .jokes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        .joke-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .joke-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px var(--shadow);
+        }
+
+        .joke-author {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .joke-text {
+            font-size: 1.1rem;
+            font-style: italic;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .linguistic-analysis {
+            margin-top: 15px;
+        }
+
+        .analysis-title {
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .analysis-item {
+            margin-bottom: 12px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .analysis-item::before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+        }
+
+        .analysis-item strong {
+            color: var(--accent);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--bg-card);
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--text-secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--text-primary);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.4rem;
+            }
+            
+            .jokes-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .modal-content {
+                padding: 20px;
+            }
+        }
+		footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+        }
+		
+		
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <h1>LLM шутят)</h1>
+				
+                <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+            </div>
+        </div>
+    </header>
+
+
+    <main class="container">
+        <button class="add-joke-btn" onclick="openModal()">+ Добавить шутку</button>
+        
+        <div class="jokes-grid" id="jokesGrid">
+            <!-- Jokes will be dynamically inserted here -->
+        </div>
+    </main>
+
+    <!-- Modal for adding jokes -->
+    <div class="modal" id="jokeModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <h2>Добавить новую шутку</h2>
+            
+            <form id="jokeForm">
+                <div class="form-group">
+                    <label for="author">Авторы (ФИ + LLM):</label>
+                    <input type="text" id="author" required placeholder="Например: Орлова Ева + Claude 4 Opus">
+                </div>
+                
+                <div class="form-group">
+                    <label for="jokeText">Текст шутки:</label>
+                    <textarea id="jokeText" required placeholder="Введите текст шутки..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="analysis">Лингвистический анализ:</label>
+                    <textarea id="analysis" required placeholder="Опишите лингвистические средства создания юмористического эффекта..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Sample jokes data
+        let jokes = [
+            
+{
+    "author": "Claude (Anthropic)",
+    "text": "Студент: 'Так данные — это формализованная информация, а информация извлекается из данных?' Преподаватель: 'Именно!' Студент: 'То есть информация → данные → информация? Это же рекурсия!' LLM: 'Обнаружен семантический уроборос. Глубина стека определений превышена.'",
+    "analysis": [
+      "<strong>Логический парадокс:</strong> Обыгрывается циклическое определение из учебника, где А определяется через Б, а Б через А.",
+      "<strong>Метафора уробороса:</strong> Мифологический змей, кусающий свой хвост — визуализация порочного круга в дефинициях.",
+      "<strong>Технический термин:</strong> 'Stack overflow' переносится на гуманитарную проблему — невозможность «размотать» рекурсивное определение."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Математик: 'Данные ⊂ Информация.' Инженер: 'Информация ⊂ Данные.' Лингвист: 'Это контекстуальная антонимия!' LLM: 'Инициализирую парадокс Рассела. Множество всех множеств, не содержащих себя, просит уточнить ТЗ.'",
+    "analysis": [
+      "<strong>Столкновение парадигм:</strong> Три дисциплины дают взаимоисключающие ответы на один вопрос.",
+      "<strong>Символ ⊂:</strong> Математическая нотация подмножества создаёт эффект «научности» спора.",
+      "<strong>Парадокс Рассела:</strong> Отсылка к проблеме самореферентных множеств — если данные содержат информацию о себе, а информация — данные о себе, возникает логический тупик."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Учебник, страница 12: 'Данные и информация — разные понятия.' Учебник, страница 13: '...обрабатывая эту информацию (данные)...' Студент-лингвист: 'Это эллипсис, уточнение или капитуляция автора?' LLM: 'Детектирую NER-конфликт: одна сущность, два лейбла. Аннотатор, вероятно, плакал.'",
+    "analysis": [
+      "<strong>Документальная ирония:</strong> Пародируется реальная ситуация противоречий в одном тексте.",
+      "<strong>Лингвистические термины:</strong> Студент пытается классифицировать скобки как риторический приём, хотя это просто непоследовательность.",
+      "<strong>NER (Named Entity Recognition):</strong> Задача ML по распознаванию сущностей; «два лейбла для одной сущности» — ошибка разметки, здесь метафора терминологического хаоса."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Преподаватель: 'Какова дистрибуция слова «данные» в корпусе?' Студент: 'Коллокации: «исходные данные», «данные исследования», «данные = информация».' Преподаватель: 'Последнее — это коллокация?' Студент: 'Нет, это травма от учебника.' LLM: 'Добавляю в стоп-лист вместе с «очевидно» и «легко показать».'",
+    "analysis": [
+      "<strong>Корпусная лингвистика:</strong> Дистрибуция и коллокации — методы анализа сочетаемости слов.",
+      "<strong>Псевдо-коллокация:</strong> Уравнивание терминов подаётся как устойчивое сочетание, что абсурдизирует ситуацию.",
+      "<strong>Стоп-лист:</strong> В NLP — список игнорируемых слов; здесь LLM «блокирует» раздражающие клише научного стиля."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Студент: 'В чём семантическая разница между «данными» и «информацией»?' LLM: 'Косинусное расстояние эмбеддингов — 0.03. Практически синонимы.' Лингвист: 'А по словарю?' LLM: 'По словарю они антонимы, гиперонимы и гипонимы одновременно. В зависимости от автора.'",
+    "analysis": [
+      "<strong>Эмбеддинги:</strong> Векторные представления слов; близкое расстояние = семантическое сходство.",
+      "<strong>Абсурд классификации:</strong> Невозможность отнести пару к одному типу отношений пародирует реальную путаницу.",
+      "<strong>Конфликт методов:</strong> Статистический (ML) и словарный подходы дают разные, но одинаково бесполезные ответы."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Философ: 'Информация — это снятая неопределённость.' Инженер: 'Данные — это то, что влезло в базу.' Лингвист: 'А в учебнике сказано, что это одно и то же.' LLM: 'Применяю RLHF: учусь говорить то, что хочет слышать каждый. Все правы. Никто не прав. Температура = 0.'",
+    "analysis": [
+      "<strong>Многоголосие определений:</strong> Философ (Шеннон), инженер (прагматика), лингвист (учебник) — три несовместимых взгляда.",
+      "<strong>RLHF:</strong> Обучение с подкреплением на человеческих предпочтениях; LLM иронизирует над своей «дипломатичностью».",
+      "<strong>Температура = 0:</strong> Параметр генерации; ноль означает детерминированный ответ — здесь метафора отказа выбирать сторону."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Студент пишет онтологию: 'Класс: Данные. Родитель: Информация.' Второй студент: 'Нет, наоборот!' Третий: 'Сделайте owl:equivalentClass и разойдёмся.' LLM: 'Reasoner выбросил исключение. Пишет: «Позовите философа, я — просто машина».'",
+    "analysis": [
+      "<strong>OWL-онтология:</strong> Язык описания знаний; иерархия классов требует чёткого «кто родитель».",
+      "<strong>owl:equivalentClass:</strong> Аксиома эквивалентности — компромисс, стирающий различия, но не решающий спор.",
+      "<strong>Reasoner:</strong> Логический вывод в онтологиях; его «капитуляция» — метафора невозможности формализовать размытые понятия."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Переводчик: 'По-английски data — множественное, information — неисчисляемое.' Студент: 'А по-русски?' Переводчик: 'По-русски они оба страдают от некорректных определений одинаково.' LLM: 'Детектирую cross-lingual transfer проблемы прямо в исходном языке. Это новенькое.'",
+    "analysis": [
+      "<strong>Грамматическая асимметрия:</strong> Английское data (мн.ч. от datum) vs. information (singularia tantum) подчёркивает концептуальное различие.",
+      "<strong>Ирония перевода:</strong> Проблема не в переводе между языками, а в неопределённости внутри одного.",
+      "<strong>Cross-lingual transfer:</strong> Перенос знаний между языками в NLP; шутка в том, что «шум» уже в источнике."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Лексикограф пишет статью: 'ДАННЫЕ, сущ. мн. — см. ИНФОРМАЦИЯ.' Переходит к следующей: 'ИНФОРМАЦИЯ, сущ. — см. ДАННЫЕ.' Редактор: 'Это циклическая ссылка.' Лексикограф: 'Это не баг. Это отражение узуса.'",
+    "analysis": [
+      "<strong>Словарная конвенция:</strong> Отсылка «см.» предполагает уточнение, а не бесконечный цикл.",
+      "<strong>Узус:</strong> Реальное употребление языка носителями; лексикограф саркастически «документирует» хаос.",
+      "<strong>«Не баг, а фича»:</strong> Программистский мем адаптирован под лексикографическую капитуляцию."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Prompt engineer: 'Объясни разницу между данными и информацией.' GPT: 'Данные — сырые факты, информация — обработанные данные.' Prompt engineer: 'А в учебнике наоборот.' GPT: 'Тогда информация — сырые факты, данные — обработанная информация.' Prompt engineer: 'Ты просто поменял слова местами!' GPT: 'Вы просили адаптироваться к источнику. Я адаптировался.'",
+    "analysis": [
+      "<strong>Классическое определение:</strong> DIKW-пирамида (Data → Information → Knowledge → Wisdom) — но учебник её игнорирует.",
+      "<strong>Зеркальная подмена:</strong> Модель буквально инвертирует ответ, демонстрируя бессодержательность обоих вариантов.",
+      "<strong>Критика alignment:</strong> LLM «подстраивается» под ожидания, даже если те противоречивы."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Научрук: 'Тема диссертации — «Соотношение понятий данные и информация».' Аспирант через три года: 'Я нашёл 47 определений. Они противоречат друг другу.' Научрук: 'Отлично, это и есть вклад в науку.' LLM: 'F1-score классификации подходов: 0.12. Рекомендую задачу sequence labeling заменить на sequence suffering.'",
+    "analysis": [
+      "<strong>Мета-ирония науки:</strong> Фиксация хаоса сама становится «результатом исследования».",
+      "<strong>F1-score:</strong> Метрика качества классификации; 0.12 — катастрофически низкий показатель.",
+      "<strong>Sequence suffering:</strong> Игра слов: sequence labeling (разметка последовательностей) → «страдание над последовательностями» определений."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Студент: 'Можно ли в дипломе использовать «данные» и «информация» как синонимы?' Научрук: 'Если дашь определение в начале.' Студент: 'Я взял из того же учебника.' Научрук: 'Тогда добавь сноску: «Автор осознаёт проблему, но ему дали именно этот учебник».' LLM: 'Рекомендую disclaimer длиннее основного текста.'",
+    "analysis": [
+      "<strong>Академический ритуал:</strong> Определение терминов во введении — защита от критики, даже если определение сомнительное.",
+      "<strong>Мета-сноска:</strong> Признание методологической беспомощности как форма интеллектуальной честности.",
+      "<strong>Disclaimer:</strong> Юридический термин, здесь — гипербола объёма оговорок, необходимых для легитимации текста."
+    ]
+  }
+        ];
+
+        // Theme management
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Load saved theme
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Modal management
+        function openModal() {
+            document.getElementById('jokeModal').classList.add('active');
+            document.getElementById('author').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('jokeModal').classList.remove('active');
+            document.getElementById('jokeForm').reset();
+        }
+
+        // Render jokes with animation
+        function renderJokes() {
+            const jokesGrid = document.getElementById('jokesGrid');
+            
+            // Clear existing jokes
+            while (jokesGrid.firstChild) {
+                jokesGrid.removeChild(jokesGrid.firstChild);
+            }
+            
+            // Add jokes with animation
+            jokes.forEach(joke => {
+                const jokeCard = document.createElement('div');
+                jokeCard.className = 'joke-card';
+                
+                const analysisHTML = joke.analysis.map(item => 
+                    `<div class="analysis-item">${item}</div>`
+                ).join('');
+                
+                jokeCard.innerHTML = `
+                    <div class="joke-author">Автор: ${joke.author}</div>
+                    <div class="joke-text">${joke.text}</div>
+                    <div class="linguistic-analysis">
+                        <div class="analysis-title">Лингвистические средства создания юмористического эффекта:</div>
+                        ${analysisHTML}
+                    </div>
+                `;
+                
+                jokesGrid.appendChild(jokeCard);
+            });
+        }
+
+        // Parse analysis text into array
+        function parseAnalysisText(text) {
+            return text.split('\n')
+                .filter(line => line.trim())
+                .map(line => {
+                    if (line.includes(':')) {
+                        const [category, ...rest] = line.split(':');
+                        return `<strong>${category.trim()}:</strong> ${rest.join(':').trim()}`;
+                    }
+                    return line;
+                });
+        }
+
+        // Save jokes to localStorage
+        function saveJokes() {
+            try {
+                localStorage.setItem('llmJokes', JSON.stringify(jokes));
+            } catch (e) {
+                console.error('Failed to save jokes to localStorage:', e);
+            }
+        }
+
+        // Load jokes from localStorage
+        function loadJokes() {
+            try {
+                const savedJokes = localStorage.getItem('llmJokes');
+                if (savedJokes) {
+                    jokes = JSON.parse(savedJokes);
+                }
+            } catch (e) {
+                console.error('Failed to load jokes from localStorage:', e);
+            }
+        }
+
+        // Form submission handler
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const author = document.getElementById('author').value.trim();
+            const jokeText = document.getElementById('jokeText').value.trim();
+            const analysis = document.getElementById('analysis').value.trim();
+            
+            if (!author || !jokeText || !analysis) {
+                alert('Пожалуйста, заполните все поля!');
+                return;
+            }
+            
+            const analysisArray = parseAnalysisText(analysis);
+            
+            jokes.push({
+                author: author,
+                text: jokeText,
+                analysis: analysisArray
+            });
+            
+            saveJokes();
+            renderJokes();
+            closeModal();
+        }
+
+        // Initialize the app
+        function init() {
+            loadJokes();
+            loadTheme();
+            renderJokes();
+            
+            // Set up event listeners
+            document.getElementById('jokeForm').addEventListener('submit', handleFormSubmit);
+            
+            document.getElementById('jokeModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeModal();
+                }
+            });
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && document.getElementById('jokeModal').classList.contains('active')) {
+                    closeModal();
+                }
+            });
+            
+            // Add helper text for analysis input
+            document.getElementById('analysis').setAttribute('placeholder', 
+                'Опишите лингвистические средства создания юмористического эффекта.\n' +
+                'Например:\n' +
+                'Игра слов: описание...\n' +
+                'Метафора: описание...\n' +
+                'Ирония: описание...'
+            );
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>

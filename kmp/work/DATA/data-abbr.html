@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --color-header: #325980;
+            --color-interactive: #3498db;
+            --color-divider: #f1f1f1;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --card-shadow: rgba(0, 0, 0, 0.1);
+            --border-color: #e0e0e0;
+        }
+
+        .dark-theme {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --color-header: #4a7ba7;
+            --color-interactive: #5dade2;
+            --color-divider: #3a3a3a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --card-shadow: rgba(0, 0, 0, 0.3);
+            --border-color: #404040;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--color-header);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 10px var(--card-shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(20deg);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .info-block {
+            background: var(--bg-primary);
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px var(--card-shadow);
+            border-left: 4px solid var(--color-interactive);
+        }
+
+        .info-block h2 {
+            color: var(--color-header);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .info-block p {
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .author {
+            font-style: italic;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--color-divider);
+        }
+
+        .add-card-section {
+            background: var(--bg-primary);
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px var(--card-shadow);
+        }
+
+        .add-card-section h3 {
+            color: var(--color-header);
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-size: 1rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--color-interactive);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn {
+            background: var(--color-interactive);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px var(--card-shadow);
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            perspective: 1000px;
+            height: 250px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--bg-primary);
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, var(--color-interactive) 0%, var(--color-header) 100%);
+            color: white;
+            align-items: center;
+            text-align: center;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            position: relative;
+        }
+
+        .card-acronym {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            letter-spacing: 0.5rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--color-header);
+        }
+
+        .card-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+            transition: all 0.3s;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+            transform: scale(1.1);
+        }
+
+        .flip-hint {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 1rem;
+        }
+
+        .stats {
+            background: var(--bg-primary);
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 8px var(--card-shadow);
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--color-interactive);
+        }
+
+        .stats-label {
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            header {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.3rem;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .card-acronym {
+                font-size: 2rem;
+                letter-spacing: 0.3rem;
+            }
+
+            .add-card-section, .info-block {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.1rem;
+            }
+
+            .theme-toggle {
+                width: 40px;
+                height: 40px;
+                font-size: 1.3rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 0px 0;
+            margin-top: 0px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>DATA (in the context of CL and LLM)</h1>
+            <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">☀️</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="info-block">
+            <h2>Данные (для умных)</h2>
+            <p><strong>DATA — ключевое понятие в компьютерной лингвистике и LLM</strong>, что отражают предлагаемые расшифровки аббревиатуры DATA.</p>
+            <p>Каждая карточка содержит аббревиатуру, её расшифровку и лингвистический контекст.</p>
+            <p><strong>Задание:</strong> Изучите предложенные интерпретации, создайте свою собственную и добавьте в виде отдельной карточки.</p>
+            <p>Выполняйте задание в умном образовательном диалоге с передовой LLM.</p>
+        </div>
+		
+		<div class="stats">
+            <div class="stats-number" id="cardCount">0</div>
+            <div class="stats-label">расшифровок в коллекции</div>
+        </div>
+		
+		<div class="cards-grid" id="cardsGrid"></div>
+
+        <div class="add-card-section">
+            <h3>Добавить свою расшифровку</h3>
+            <form id="addCardForm">
+                <div class="form-group">
+                    <label for="fullForm">Ваши ФИО + расшифровка (на английском):</label>
+                    <input type="text" id="fullForm" placeholder="Например: OrlovaEA: Discourse Analysis and Training Artifacts" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">Описание + контекст:</label>
+                    <textarea id="description" placeholder="Объясните значение и связь с компьютерной лингвистикой..." required></textarea>
+                </div>
+                <button type="submit" class="btn">Добавить карточку</button>
+            </form>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+    <script>
+        // Исходные данные
+        const initialCards = [
+            {
+                fullForm: "Driving Advancements in Text AI",
+                description: "Движущая сила прогресса в текстовом ИИ — прямая и мотивирующая формулировка центральной роли данных в развитии NLP."
+            },
+			{
+                fullForm: "Discourse Analysis and Training Artifacts",
+                description: "Артефакты анализа дискурса и обучения — отсылка к тому, что данные в LLM это часто тексты дискурса и «следы» процесса обучения."
+            },
+            {
+                fullForm: "Dialogue Augmented Training Assemblage",
+                description: "Собрание данных для диалогового дообучения — подчёркивает важность диалоговых датасетов (чатов, инструкций) для fine-tuning моделей."
+            },
+            {
+                fullForm: "Distributional Analysis Textual Archive",
+                description: "Архив текстов для дистрибуционального анализа — отсылка к классической лингвистической идее «meaning is use» и дистрибуциональной семантике, на которой строятся word embeddings."
+            },
+            {
+                fullForm: "Diverse Annotated Textual Assets",
+                description: "Разнообразные аннотированные текстовые активы — акцент на разметку и разнообразие данных, без которых невозможно создание качественных моделей."
+            },
+            {
+                fullForm: "Denoising Autoencoded Text Array",
+                description: "Массив текстов для автоэнкодерного подавления шума — намёк на пре-трейнинг по типу BERT (masked language modeling как denoising task)."
+            },
+            {
+                fullForm: "Discriminative Alignment Training Apparatus",
+                description: "Аппарат обучения дискриминативному выравниванию — отсылка к instruction tuning и alignment (RLHF, DPO и другие методы согласования)."
+            },
+            {
+                fullForm: "Domain-Adapted Tokenized Accumulation",
+                description: "Накопление токенизированных данных с доменной адаптацией — подчёркивает важность специализированных корпусов для доменной адаптации моделей."
+            },
+            {
+                fullForm: "Digital Age Textual Authority",
+                description: "Текстовый авторитет цифровой эпохи — философская расшифровка: данные как новый источник «истины» и знания в эпоху больших языковых моделей."
+            },
+            {
+                fullForm: "Dataset Artifacts That Awaken Intelligence",
+                description: "Артефакты датасетов, пробуждающие интеллект — поэтическая интерпретация роли данных в создании искусственного интеллекта."
+            },
+            
+            {
+                fullForm: "Deep Annotation and Textual Analysis",
+                description: "Глубокая аннотация и текстовый анализ — подчёркивает важность многоуровневой разметки для обучения современных языковых моделей."
+            },
+            {
+                fullForm: "Documented Algorithmic Training Assets",
+                description: "Документированные алгоритмические тренировочные ресурсы — акцент на необходимость документирования и прозрачности датасетов."
+            }
+        ];
+
+        // Управление состоянием
+        let cards = JSON.parse(localStorage.getItem('dataCards')) || initialCards;
+        let isDarkTheme = localStorage.getItem('darkTheme') === 'true';
+
+        // Инициализация темы
+        function initTheme() {
+            if (isDarkTheme) {
+                document.body.classList.add('dark-theme');
+                document.getElementById('themeToggle').textContent = '🌙';
+            }
+        }
+
+        // Переключение темы
+        document.getElementById('themeToggle').addEventListener('click', function() {
+            isDarkTheme = !isDarkTheme;
+            document.body.classList.toggle('dark-theme');
+            this.textContent = isDarkTheme ? '🌙' : '☀️';
+            localStorage.setItem('darkTheme', isDarkTheme);
+        });
+
+        // Создание карточки
+        function createCardElement(card, index) {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'card';
+            cardDiv.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-front">
+                        <div class="card-acronym">DATA</div>
+                        <div class="flip-hint">Нажмите для просмотра</div>
+                    </div>
+                    <div class="card-back">
+                        <button class="delete-btn" onclick="deleteCard(${index})" title="Удалить карточку">×</button>
+                        <div class="card-title">${card.fullForm}</div>
+                        <div class="card-description">${card.description}</div>
+                    </div>
+                </div>
+            `;
+
+            // Переворот карточки
+            cardDiv.addEventListener('click', function(e) {
+                if (!e.target.classList.contains('delete-btn')) {
+                    this.classList.toggle('flipped');
+                }
+            });
+
+            return cardDiv;
+        }
+
+        // Отрисовка всех карточек
+        function renderCards() {
+            const grid = document.getElementById('cardsGrid');
+            grid.innerHTML = '';
+            cards.forEach((card, index) => {
+                grid.appendChild(createCardElement(card, index));
+            });
+            updateStats();
+        }
+
+        // Обновление статистики
+        function updateStats() {
+            document.getElementById('cardCount').textContent = cards.length;
+        }
+
+        // Удаление карточки
+        window.deleteCard = function(index) {
+            if (confirm('Вы уверены, что хотите удалить эту расшифровку?')) {
+                cards.splice(index, 1);
+                localStorage.setItem('dataCards', JSON.stringify(cards));
+                renderCards();
+            }
+        };
+
+        // Добавление новой карточки
+        document.getElementById('addCardForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const fullForm = document.getElementById('fullForm').value.trim();
+            const description = document.getElementById('description').value.trim();
+
+            if (fullForm && description) {
+                cards.unshift({ fullForm, description });
+                localStorage.setItem('dataCards', JSON.stringify(cards));
+                renderCards();
+                
+                // Очистка формы
+                this.reset();
+                
+                // Прокрутка к карточкам
+                document.getElementById('cardsGrid').scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+
+        // Инициализация
+        initTheme();
+        renderCards();
+    </script>
+</body>
+</html>
