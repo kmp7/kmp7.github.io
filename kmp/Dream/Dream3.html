@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #2c3e50;
+            --text-secondary: #5a6c7d;
+            --header-color: #325980;
+            --accent-color: #3498db;
+            --border-color: #f1f1f1;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --card-bg: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #eaeaea;
+            --text-secondary: #b0b0b0;
+            --header-color: #5a8dc5;
+            --accent-color: #5dade2;
+            --border-color: #2d3748;
+            --shadow: 0 2px 10px rgba(0,0,0,0.3);
+            --card-bg: #1f2940;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            transition: all 0.3s ease;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--header-color), #4a7a9e);
+            color: white;
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .header-title p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--bg-primary);
+            border-bottom: 2px solid var(--border-color);
+            padding: 0.8rem;
+            position: sticky;
+            top: 85px;
+            z-index: 999;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .nav-btn {
+            background: var(--bg-secondary);
+            color: var(--header-color);
+            border: 1px solid var(--border-color);
+            padding: 0.2rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .card h2 {
+            color: var(--header-color);
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .card h3 {
+            color: var(--header-color);
+            font-size: 1.1rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        .card p {
+            margin-bottom: 1rem;
+            text-align: justify;
+        }
+
+        .narrative-text {
+            font-size: 1.05rem;
+            line-height: 1.9;
+        }
+
+        .narrative-text .scene {
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border-left: 3px solid var(--header-color);
+        }
+
+        .narrative-text .dialogue {
+            margin: 0.75rem 0;
+            padding-left: 1.5rem;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        .narrative-text .list-item {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .narrative-text .list-item::before {
+            content: "—";
+            position: absolute;
+            left: 0;
+            color: var(--accent-color);
+        }
+
+        .narrative-text .insight {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(50, 89, 128, 0.1));
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            font-weight: 500;
+        }
+
+        .narrative-text .conclusion {
+            text-align: center;
+            font-style: italic;
+            color: var(--header-color);
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Analysis Blocks */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .analysis-item {
+            background: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 8px;
+            border-top: 3px solid var(--accent-color);
+        }
+
+        .analysis-item h4 {
+            color: var(--header-color);
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .analysis-item ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .analysis-item li {
+            padding: 0.4rem 0;
+            padding-left: 1.2rem;
+            position: relative;
+            font-size: 0.95rem;
+        }
+
+        .analysis-item li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .term {
+            display: inline-block;
+            background: rgba(52, 152, 219, 0.15);
+            color: var(--header-color);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin: 0.1rem 0;
+        }
+
+        /* Form Section */
+        .form-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--header-color);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .form-group .hint {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background: var(--header-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--header-color);
+            border: 2px solid var(--header-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--header-color);
+            color: white;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        /* Prompt Cards */
+        .prompt-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .prompt-card {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-card:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow);
+        }
+
+        .prompt-card h4 {
+            color: var(--header-color);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .prompt-card p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* Footer */
+        
+    footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 1px solid #ddd;
+    }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--header-color);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 2000;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Mobile Adaptations */
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .header-title h1 {
+                font-size: 1.2rem;
+            }
+
+            .header-title p {
+                font-size: 0.8rem;
+            }
+
+            nav {
+                top: 70px;
+                padding: 0.75rem;
+            }
+
+            .nav-btn {
+                padding: 0.5rem 0.9rem;
+                font-size: 0.8rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.25rem;
+            }
+
+            .card h2 {
+                font-size: 1.2rem;
+            }
+
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .notification {
+                left: 1rem;
+                right: 1rem;
+                bottom: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-container {
+                justify-content: flex-start;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 0.5rem;
+            }
+
+            .nav-btn {
+                flex-shrink: 0;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            header, nav, .theme-toggle, .btn {
+                display: none;
+            }
+
+            body {
+                background: white;
+                color: black;
+            }
+
+            .card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+		
+			/* Базовая обёртка */
+.tooltip {
+  position: relative;
+  cursor: help;
+  color: #0b5fff;
+  text-decoration: underline dotted;
+  white-space: nowrap;
+  font-weight: 500;
+  outline: none;            /* чтобы кастомный фокус сработал */
+}
+
+/* Псевдоэлементы: ::after — пузырь, ::before — стрелка */
+.tooltip::after,
+.tooltip::before {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s cubic-bezier(.2,.8,.2,1);
+  will-change: opacity, transform;
+}
+
+/* Стили пузыря (текст) */
+.tooltip::after {
+  content: attr(data-tip);
+  background: #3498db;
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.2;
+  max-width: 500px;
+  word-wrap: break-word;
+  box-shadow: 0 6px 18px rgba(10,12,20,0.45);
+  z-index: 1000;
+  transform-origin: center;
+}
+
+
+/* Отступ от слова (регулируется) */
+.tooltip {
+  --offset: 10px;
+}
+
+/* Позиционирование сверху (по умолчанию) */
+.tooltip::after {
+  bottom: calc(100% + var(--offset));
+  left: 50%;
+  transform: translate(-50%, 6px) scale(.98);
+}
+.tooltip::before {
+  bottom: calc(100% + calc(var(--offset) - 6px));
+  left: 50%;
+  transform: translate(-50%, 6px) rotate(45deg);
+}
+
+/* Появление при hover и focus (доступность для клавиатуры) */
+.tooltip:hover::after,
+.tooltip:focus::after,
+.tooltip:hover::before,
+.tooltip:focus::before {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+/* Фокусная подсветка для клавиатурной навигации */
+.tooltip:focus {
+  box-shadow: 0 0 0 3px rgba(11,95,255,0.12);
+  border-radius: 4px;
+}
+
+/* Мобильная адаптация: плавнее и реагирует на тапы (hover отсутствует) */
+@media (hover: none) {
+  .tooltip::after,
+  .tooltip::before {
+    transition: opacity .12s linear, transform .12s linear;
+  }
+  /* На мобильных устройствах пользователь может тапнуть — :focus становится полезным */
+  .tooltip:active::after,
+  .tooltip:active::before {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* Настройка для очень узких экранов: увеличиваем ширину подсказки */
+@media (max-width: 360px) {
+  .tooltip::after { max-width: 460px; font-size: 12px; padding: 7px 9px; }
+}
+
+
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="header-title">
+                <h1>Третий сон Евы</h1>
+                
+            </div>
+            <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">☀️</button>
+        </div>
+    </header>
+
+    <nav>
+        <div class="nav-container">
+            <button class="nav-btn active" data-section="narrative">Dream</button>
+            <button class="nav-btn" data-section="linguistic">LA</button>
+            <button class="nav-btn" data-section="didactic">DA</button>
+            <button class="nav-btn" data-section="reflection">Reflection</button>
+            <button class="nav-btn" data-section="walk">Гуляйте!</button>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Narrative Section -->
+        <section id="narrative" class="active">
+            <div class="card">
+                <h2>Умные прогулки</h2>
+				<h4>Об итеративности промптинга и открытом образовательном контексте цифровой эпохи</h4><br>
+                <div class="narrative-text">
+                    <div class="scene">
+                        <p><strong>Проблема:</strong> «Я использовала "эффективный промпт", а LLM ответила не то!»</p>
+                        <p>Ева сидела перед экраном в растерянности. Она скопировала из учебного пособия «идеальный промпт», 
+                        тот самый, что гарантировал точный и развернутый ответ. Но языковая модель выдала что-то совсем другое — 
+                        поверхностное, общее, не отвечающее её конкретной задаче.</p>
+                        <p>«Почему не работает? — думала она. — Всё сделала по инструкции...»</p>
+                    </div>
+
+                    <p>Разочарованная и уставшая от бесплодных попыток, Ева вспомнила совет преподавателя: 
+                    «Когда цифровой мир не даёт ответа, иди в мир реальный. Смотри, как работают руки». </p>
+
+                    <div class="scene">
+                        <p>Она отправилась в Город мастеров — старый район, где до сих пор работали ремесленники. 
+                        Там не было алгоритмов, только навык, терпение и материал.</p>
+                        
+                        <p>У гончара она наблюдала, как бесформенный комок глины под ладонями обретал очертания. 
+                        Не с первого движения, не по шаблону — каждый поворот круга требовал коррекции, 
+                        чуткого ответа на сопротивление материала.</p>
+                        
+                        <div class="dialogue">— Не торопи форму, — сказал мастер, заметив её интерес. — Глина сама подсказывает, 
+                        какой ей быть. Ты лишь помогаешь ей вспомнить.</div>
+
+                        <p>В кузнице она видела, как раскалённый металл под ударами молота менял структуру. 
+                        Каждый уточняющий удар — не повторение предыдущего, а следующий шаг к задуманной форме.</p>
+
+                        <p>Плотник показывал ей годовые кольца на срезе древесины:</p>
+                        <div class="dialogue">— Видишь, как росло дерево? Год за годом, слой за слоем. 
+                        Так и мастерство — не за один день.</div>
+
+                        <p>Медник объяснял, как из листа меди рождается сосуд — через сотни точных, 
+                        последовательных ударов, меняющих кривизну на долю миллиметра.</p>
+
+                        <p>Шорник шил сбрую, где каждая строчка была частью целого — 
+                        и каждая следующая зависела от предыдущей.</p>
+                    </div>
+
+                    <p>Вернувшись домой, уставшая от впечатлений, Ева прилегла. 
+                    Мысли о промптах и ремеслах смешались, превращаясь в полудрёму...</p>
+
+                    <p><strong>И она уснула.</strong></p>
+
+                    <div class="scene">
+                        <p>Во сне она снова оказалась в Городе мастеров, но теперь это была Галерея искусств. 
+                        Здесь создавали не просто вещи — произведения.</p>
+
+                        <p>Художник наносил мазок за мазком. Каждый следующий цвет ложился с учётом предыдущего, 
+                        меняя восприятие целого. Не было «эффективного мазка» — был диалог с холстом.</p>
+
+                        <div class="dialogue">— Картина рождается в процессе, — говорил художник. — 
+                        Идея в голове — лишь семя. Как оно прорастёт, зависит от почвы, света, ухода.</div>
+
+                        <p>Скульптор работал с глыбой мрамора. Молоток и резец отсекали лишнее, 
+                        но не по жёсткому чертежу — по ощущению формы, скрытой в камне.</p>
+                        
+                        <div class="dialogue">— Я не создаю статую, — объяснял он. — Я освобождаю её из камня. 
+                        Каждый удар — вопрос к материалу. Каждый скол — ответ.</div>
+
+                        <p>Резчик по дереву показывал ей заготовку с красивым рисунком годовых колец:</p>
+                        <div class="dialogue">— Дерево росло десятилетиями, накапливая историю в кольцах. 
+                        Я лишь помогаю этой истории проявиться.</div>
+
+                        <p>И тут Ева поняла. Она смотрела на <strong>итерации</strong>.</p>
+                        <p>Не на формулы, а на процессы. Не на шаблоны, а на циклы уточнений.</p>
+                    </div>
+
+                    <p><strong>Она проснулась.</strong></p>
+
+                    <div class="insight">
+                        <p>В голове звучала ясная мысль: <em>«В Техне (мире искусственного), как и в Природе (мире естественного), 
+                        всё построено на итерациях, цикличности, повторении, накоплении лучшего...»</em></p>
+                        
+                        <p>Освоение языка — так же. Не набор фраз из разговорника, а наслушанность, наговоренность, 
+                        тысячи мелких корректировок. Разговорники — как «эффективные промпты» — 
+                        только первый шаг, костыль для самого начального уровня.</p>
+                    </div>
+
+                    <div class="conclusion">
+                        <p><strong>Инсайт пришёл целостный и многослойный:</strong></p>
+                        <p>Промптинг — это не поиск универсальной формулы. Такой подход наивен и годится 
+                        только для простейших задач.</p>
+                        <p>Промптинг — это <strong>диалог</strong>. Это итерации. Это множество последовательных, 
+                        уникальных шагов, рассуждения, основанные на обратной связи.</p>
+                        <p>Контекст нельзя «вставить» готовым. Он создаётся постепенно, слово за словом, 
+                        уточнение за уточнением.</p>
+                        <p>И вместе с созданием контекста рождается и крепнет мастерство пользователя — 
+                        на пути к уровню <strong>Prompt Whisperer</strong> и мастеру <strong>Context Engineering</strong>.</p>
+                    </div>
+
+                    <div class="scene">
+                        <p>Ева села за компьютер. Не стала искать «волшебный промпт». Вместо этого она начала диалог:</p>
+                        <div class="dialogue" style="background-color: rgba(52, 152, 219, 0.1);">
+                            «У меня есть идея, но она сырая. Помоги мне её развить?»<br>
+                            «Мне кажется, мы сбились. Давай вернёмся к...»<br>
+                            «А если взглянуть под таким углом...»<br>
+                            «Спасибо, это полезно. Теперь я понимаю, что мне нужно...»
+                        </div>
+                        <p>И она почувствовала, как в диалоге с машиной рождается нечто большее, 
+                        чем запрограммированный ответ — рождается <strong>понимание</strong>.</p>
+                    </div>
+
+                    <div class="conclusion">
+                        <p>Она улыбнулась. Мастера были правы: настоящее ремесло — 
+                        это не следование шаблону, а умение вести диалог с материалом.</p>
+                        <p>Даже если материал — искусственный интеллект.</p>
+                        <p>Даже если ремесло — создание контекста.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Linguistic Analysis Section -->
+        <section id="linguistic">
+            <div class="card">
+                <h2>Лингвистический анализ текста</h2>
+                
+                <h3>Стилистические особенности</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Ремесленная метафорика</h4>
+                        <ul>
+                            <li>«гончар», «кузнец», «плотник» — архетипы мастерства как модель промптинга</li>
+                            <li>«глина сама подсказывает» — антропоморфная метафора взаимодействия</li>
+                            <li>«освобождать статую из камня» — образ раскрытия потенциала через диалог</li>
+                            <li>«годовые кольца» — символ естественного, итеративного роста</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Контрастные оппозиции</h4>
+                        <ul>
+                            <li>«эффективный промпт» ↔ «диалог с материалом»</li>
+                            <li>«формула» ↔ «процесс»</li>
+                            <li>«шаблон» ↔ «уникальные шаги»</li>
+                            <li>«готовый контекст» ↔ «создающийся контекст»</li>
+                            <li>«Техне (искусственное)» ↔ «Природа (естественное)»</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Лексико-семантический анализ</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Профессиональные лексиконы</h4>
+                        <ul>
+                            <li><span class="term">Ремесленная лексика</span>: гончар, кузнец, резчик, мазок, резец, скол</li>
+                            <li><span class="term">Образовательная лексика</span>: итерации, контекст, диалог, обратная связь</li>
+                            <li><span class="term">Технологическая лексика</span>: промптинг, LLM, шаблон, алгоритм</li>
+                            <li><span class="term">Философские понятия</span>: Техне vs. Природа, форма vs. содержание</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Глагольные поля</h4>
+                        <ul>
+                            <li><strong>Созидание</strong>: создавать, рождать, проявлять, развивать</li>
+                            <li><strong>Уточнение</strong>: корректировать, отсекать, шлифовать</li>
+                            <li><strong>Диалог</strong>: подсказывать, отвечать, спрашивать, слушать</li>
+                            <li><strong>Рост</strong>: накапливать, прорастать, крепнуть</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Синтаксические особенности</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Структура повествования</h4>
+                        <ul>
+                            <li>Трёхчастная композиция: проблема → наблюдение → инсайт</li>
+                            <li>Параллелизм: наблюдение за каждым мастером иллюстрирует один аспект итеративности</li>
+                            <li>Повтор ключевых образов («годовые кольца») как лейтмотив</li>
+                            <li>Использование прямой речи мастеров для авторитетности</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Стиль инсайта</h4>
+                        <ul>
+                            <li>Короткие, рубленые предложения для акцента: «Она поняла.»</li>
+                            <li>Эллипсис: «Не на формулы, а на процессы.»</li>
+                            <li>Инверсия: «Инсайт пришёл целостный и многослойный»</li>
+                            <li>Риторические вопросы в начале для создания проблемной ситуации</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Интертекстуальность</h3>
+                <div class="analysis-item">
+                    <h4>Культурные отсылки</h4>
+                    <ul>
+                        <li>Город мастеров — отсылка к средневековым цеховым традициям</li>
+                        <li>Скульптор, освобождающий статую — аллюзия на Микеланджело</li>
+                        <li>Техне vs. Фюсис (Природа) — античное философское противопоставление</li>
+                        <li>Разговорники как аналоги «эффективных промптов» — критика поверхностных методик</li>
+                        <li>Prompt Whisperer и Context Engineering — неологизмы цифровой эпохи</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Didactic Analysis Section -->
+        <section id="didactic">
+            <div class="card">
+                <h2>Дидактический анализ</h2>
+
+                <h3>Образовательные цели текста</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Концептуальные цели</h4>
+                        <ul>
+                            <li>Разрушение мифа об «универсальном эффективном промпте»</li>
+                            <li>Формирование понимания промптинга как итеративного диалога</li>
+                            <li>Осознание важности контекста как динамической, а не статической величины</li>
+                            <li>Понимание аналогии между ремесленным мастерством и digital skills</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Метапредметные цели</h4>
+                        <ul>
+                            <li>Развитие системного мышления через аналогии</li>
+                            <li>Формирование установки на growth mindset (развивающее мышление)</li>
+                            <li>Развитие рефлексии как основы самообучения</li>
+                            <li>Понимание единства искусственного и естественного в познании</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Методические приёмы</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Аналогическое обучение</h4>
+                        <ul>
+                            <li><span class="term">Ремесленная аналогия</span> — промптинг как гончарство, кузнечное дело</li>
+                            <li><span class="term">Художественная аналогия</span> — промптинг как живопись, скульптура</li>
+                            <li><span class="term">Природная аналогия</span> — рост мастерства как рост дерева</li>
+                            <li><span class="term">Языковая аналогия</span> — промптинг как освоение языка через практику</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Нарративные техники</h4>
+                        <ul>
+                            <li><span class="term">Сновидческий хронотоп</span> — пространство для метафорических открытий</li>
+                            <li><span class="term">Путешествие героя</span> — путь от непонимания к инсайту</li>
+                            <li><span class="term">Голоса мастеров</span> — разные перспективы на одну проблему</li>
+                            <li><span class="term">Конкретные примеры</span> — вместо абстрактных правил</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Ключевые концепции для усвоения</h3>
+                <div class="analysis-item">
+                    <h4>Концептуальное ядро</h4>
+                    <ul>
+                        <li><strong>Принцип итеративности:</strong> мастерство рождается через повторение с вариациями</li>
+                        <li><strong>Принцип контекстуальности:</strong> значение рождается в процессе, а не задаётся изначально</li>
+                        <li><strong>Принцип диалогичности:</strong> взаимодействие с ИИ — это двусторонний процесс</li>
+                        <li><strong>Принцип мастерства:</strong> промптинг — ремесло, требующее практики и чуткости</li>
+                        <li><strong>Принцип целостности:</strong> Техне и Природа подчиняются сходным закономерностям</li>
+                    </ul>
+                </div>
+
+                <h3>Применение в курсе AI-грамотности</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Модуль «Продвинутый промптинг»</h4>
+                        <ul>
+                            <li>Критика «шаблонных» подходов</li>
+                            <li>Тренировка итеративного диалога с LLM</li>
+                            <li>Освоение техник контекстуализации</li>
+                            <li>Развитие чувствительности к обратной связи</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Модуль «Философия технологий»</h4>
+                        <ul>
+                            <li>Обсуждение Техне vs. Природа</li>
+                            <li>Этика и эстетика взаимодействия с ИИ</li>
+                            <li>Ремесло в цифровую эпоху</li>
+                            <li>Концепция «живого» контекста</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reflection Section -->
+        <section id="reflection">
+            <div class="card">
+                <h2>Рефлексия студента</h2>
+                <p>Прочитав нарратив и ознакомившись с анализом, сформулируйте собственные выводы. Ваши размышления нужно экспортировать в HTML-файл.</p>
+            </div>
+
+            <div class="form-container">
+                <div class="form-group">
+                    <label for="studentName">Фамилия Имя</label>
+                    <input type="text" id="studentName" placeholder="Например: Орлова Ева" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="studentGroup">Группа</label>
+                    <input type="text" id="studentGroup" placeholder="Например: 500">
+                </div>
+
+                <div class="card" style="margin: 1.5rem 0; border-left-color: var(--header-color);">
+                    <h3 style="margin-top: 0;">Вопросы для размышления</h3>
+                    <div class="prompt-cards">
+                        <div class="prompt-card" onclick="addPrompt('iterations')">
+                            <h4>Итерации в вашей жизни</h4>
+                            <p>Какой навык вы освоили через многократные уточнения?</p>
+                        </div>
+                        <div class="prompt-card" onclick="addPrompt('context')">
+                            <h4>Живой контекст</h4>
+                            <p>Как вы создаёте контекст в диалоге с людьми? А с ИИ?</p>
+                        </div>
+                        <div class="prompt-card" onclick="addPrompt('craft')">
+                            <h4>Ремесло vs. Алгоритм</h4>
+                            <p>Где в вашей учёбе нужен творческий подход, а где — чёткий алгоритм?</p>
+                        </div>
+                        <div class="prompt-card" onclick="addPrompt('analogy')">
+                            <h4>Поиск аналогий</h4>
+                            <p>Какая аналогия лучше всего объясняет вам работу с ИИ?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reflection1">1. Что для меня стало главным инсайтом после прочтения?</label>
+                    <textarea id="reflection1" placeholder="Опишите ваше главное открытие или осознание..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="reflection2">2. Как аналогия с ремеслами изменила моё понимание промптинга?</label>
+                    <textarea id="reflection2" placeholder="Опишите, как образы мастеров повлияли на ваше восприятие..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="reflection3">3. Какие конкретные изменения я внесу в свой подход к работе с ИИ?</label>
+                    <textarea id="reflection3" placeholder="Сформулируйте план действий..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="reflection4">4. Дополнительные размышления (свободная форма)</label>
+                    <textarea id="reflection4" placeholder="Любые мысли, которыми хотите поделиться..."></textarea>
+                    <p class="hint">Нажмите на карточки с вопросами выше, чтобы добавить подсказку в это поле</p>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn" id="exportBtn" onclick="exportToHTML()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Экспортировать в HTML
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearForm()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                        Очистить форму
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Walk Section -->
+        <section id="walk">
+            <div class="card">
+                <h2>Гуляйте! Образовательный контекст в цифровую эпоху</h2>
+                <p>Из третьего сна Евы рождается важное понимание: мы живём в уникальную эпоху, когда <strong>обучает всё и везде</strong>. Формальное институциональное обучение больше не является единственным или даже главным источником знаний. Каждый может получить именно то, что ему нужно, — если, конечно, сможет это нужное увидеть, выделить и осмыслить.</p>
+                
+                <div class="analysis-item" style="margin: 1.5rem 0; border-top: 3px solid #1abc9c;">
+                    <h4>Парадокс цифрового образования</h4>
+                    <p style="margin: 0.75rem 0; font-style: italic;">Чем больше информации доступно, тем важнее становится умение создавать собственный образовательный контекст. LLM обучены на всём культурно-историческом опыте человечества — и весь этот опыт содержит ключи к дверям эффективного диалога.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Открытые образовательные пространства</h2>
+                
+                <h3>Климат изменился: пора менять привычки</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Старая парадигма</h4>
+                        <ul>
+                            <li>Закрытые аудитории и учебные цеха</li>
+                            <li>Жёсткое расписание по звонкам</li>
+                            <li>Единая программа для всех</li>
+                            <li>Преподаватель как единственный источник истины</li>
+                            <li>Оценка по стандартизированным тестам</li>
+                            <li>Знание как набор фактов и алгоритмов</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Новая парадигма</h4>
+                        <ul>
+                            <li>Открытые пространства, пронизывающие всю жизнь</li>
+                            <li>Гибкое, персонализированное расписание</li>
+                            <li>Индивидуальные образовательные траектории</li>
+                            <li>Множество источников, включая ИИ</li>
+                            <li>Оценка по реальным проектам и компетенциям</li>
+                            <li>Знание как умение создавать контекст и вести диалог</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Что значит «обучает всё»?</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Город как учебник</h4>
+                        <ul>
+                            <li>Архитектура рассказывает историю культуры и технологий</li>
+                            <li>Уличное искусство — социология и эстетика</li>
+                            <li>Кафе и общественные пространства — антропология общения</li>
+                            <li>Транспортные системы — логистика и урбанистика</li>
+                            <li>Даже прогулка по парку — биология, экология, mindfulness</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Цифровая среда как университет</h4>
+                        <ul>
+                            <li>Социальные сети — психология, коммуникация, self-branding</li>
+                            <li>Игры — системное мышление, стратегия, коллаборация</li>
+                            <li>Стриминговые платформы — история кино, нарратология</li>
+                            <li>Мессенджеры — лингвистика, pragmatics, кросс-культурная коммуникация</li>
+                            <li>Даже рекламные баннеры — маркетинг, дизайн, behavioral economics</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>LLM как квинтэссенция культурного опыта</h2>
+
+                <h3>Что на самом деле «знает» языковая модель?</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Обучение на всём</h4>
+                        <ul>
+                            <li>Литературные каноны и маргинальные тексты</li>
+                            <li>Научные статьи и популярные блоги</li>
+                            <li>Исторические документы и современные дискуссии</li>
+                            <li>Фольклор и высокая поэзия</li>
+                            <li>Техническая документация и художественная проза</li>
+                            <li>Диалоги из фильмов и переписки в соцсетях</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Ключи к диалогу</h4>
+                        <ul>
+                            <li>Каждый текст в обучающей выборке — ключ к определённому контексту</li>
+                            <li>LLM не «знает факты», а улавливает паттерны связи</li>
+                            <li>Чем разнообразнее ваш запрос, тем больше ключей можно подобрать</li>
+                            <li>«Эффективный промпт» — это ключ от одной двери. Диалог — набор ключей от многих</li>
+                            <li>Ваша задача — не найти «правильный ключ», а научиться пользоваться набором</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Статистика открытого образования</h3>
+                <div class="analysis-item">
+                    <h4>Данные исследований</h4>
+                    <ul>
+                        <li><strong>73%</strong> современных профессий требуют постоянного самообучения вне формальных программ</li>
+                        <li><strong>85%</strong> знаний для IT-специалистов приобретается через практику и неформальные источники</li>
+                        <li>Средний специалист меняет <strong>5–7</strong> профессиональных контекстов за карьеру</li>
+                        <li><strong>60%</strong> современных школьников и студентов используют YouTube как основной источник знаний по сложным темам</li>
+                        <li>Проекты, выполненные в коллаборации с ИИ, оцениваются на <strong>30–40%</strong> выше по креативности</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Как учиться в открытом мире: практические стратегии</h2>
+
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Навык контекстуализации</h4>
+                        <ul>
+                            <li><strong>Видеть связи</strong> — между разными областями знания, между теорией и практикой</li>
+                            <li><strong>Задавать правильные вопросы</strong> — не «что?», а «как?», «почему?», «зачем?»</li>
+                            <li><strong>Создавать ментальные карты</strong> — визуализировать связи между идеями</li>
+                            <li><strong>Использовать аналогии</strong> — как Ева использовала аналогию с ремеслами</li>
+                            <li><strong>Рефлексировать</strong> — постоянно задавать себе: «Что я сейчас узнал? Как это связано с тем, что я уже знаю?»</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Навык диалога с ИИ</h4>
+                        <ul>
+                            <li><strong>Начинать с исследования</strong> — не с запроса ответа, а с запроса направлений</li>
+                            <li><strong>Уточнять постепенно</strong> — как скульптор уточняет форму</li>
+                            <li><strong>Менять перспективу</strong> — просить ИИ рассмотреть проблему с разных сторон</li>
+                            <li><strong>Просить объяснить</strong> — не только ответ, но и ход мысли</li>
+                            <li><strong>Создавать нарративы</strong> — превращать информацию в истории, как это сделано в снах Евы</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Городская педагогика</h4>
+                        <ul>
+                            <li><strong>Музей без билета</strong> — смотреть на город как на экспозицию</li>
+                            <li><strong>Интервью с пространством</strong> — задавать вопросы: «Почему эта улица так устроена? Кто здесь живёт?»</li>
+                            <li><strong>Фотография как исследование</strong> — снимать не для Instagram, а для заметок исследователя</li>
+                            <li><strong>Картографирование интересов</strong> — отмечать на карте места, связанные с вашими учебными темами</li>
+                            <li><strong>Дневник наблюдений</strong> — записывать insights от обычных прогулок</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Цифровая гигиена обучения</h4>
+                        <ul>
+                            <li><strong>Курировать, а не потреблять</strong> — сознательно выбирать источники</li>
+                            <li><strong>Глубина вместо ширины</strong> — лучше изучить одну тему глубоко, чем десять поверхностно</li>
+                            <li><strong>Создавать, а не только искать</strong> — вести блог, делать заметки, создавать контент</li>
+                            <li><strong>Социальное обучение</strong> — обсуждать с другими, даже если это дискуссия с ИИ</li>
+                            <li><strong>Регулярные digital detox</strong> — возвращаться в аналоговый мир для интеграции знаний</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Prompt Whisperer и Context Engineering: новые профессии</h2>
+
+                <div class="analysis-item" style="border-top: 3px solid var(--header-color);">
+                    <h4>Кем становится человек в диалоге с ИИ</h4>
+                    <ul>
+                        <li><strong>Prompt Whisperer</strong> — не тот, кто кричит команды, а тот, кто шепчет точные, чуткие предложения</li>
+                        <li><strong>Context Engineer</strong> — инженер контекста, создающий смысловые пространства для диалога</li>
+                        <li><strong>Куратор знаний</strong> — отбирающий и связывающий информацию из океана данных</li>
+                        <li><strong>Интерпретатор культурных кодов</strong> — переводящий между разными языками, включая «язык» ИИ</li>
+                        <li><strong>Создатель образовательных сред</strong> — проектирующий пространства, где происходит обучение</li>
+                    </ul>
+                </div>
+
+                <div class="scene" style="margin-top: 1.5rem;">
+                    <p><strong>Возвращаясь к Еве:</strong></p>
+                    <p>Её прогулка по Городу мастеров — не бегство от проблемы, а её решение. Она:</p>
+                    <ul style="margin: 1rem 0; padding-left: 1.5rem;">
+                        <li>Сменила контекст, чтобы увидеть проблему под новым углом</li>
+                        <li>Использовала город как образовательное пространство</li>
+                        <li>Нашла аналогии в традиционных ремёслах для понимания цифровых навыков</li>
+                        <li>Интегрировала опыт наблюдения в собственную практику</li>
+                        <li>Стала не пользователем шаблонов, а создателем контекста</li>
+                    </ul>
+                    <p style="font-style: italic; color: var(--header-color);">Прогулки - не прогуливания занятий, они отнимают у Евы время — умные прогулки открывают новый язык диалога с технологиями.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Чек-лист: оцените свою открытость миру</h2>
+                
+                <div class="prompt-cards">
+                    <div class="prompt-card" style="cursor: default;">
+                        <h4>Контекстуальное зрение</h4>
+                        <p>Вижу ли я связи между разными областями знаний?</p>
+                    </div>
+                    <div class="prompt-card" style="cursor: default;">
+                        <h4>Город как учебник</h4>
+                        <p>Использую ли я городское пространство для обучения?</p>
+                    </div>
+                    <div class="prompt-card" style="cursor: default;">
+                        <h4>Диалог с ИИ</h4>
+                        <p>Общаюсь ли я с LLM как с партнёром по исследованию?</p>
+                    </div>
+                    <div class="prompt-card" style="cursor: default;">
+                        <h4>Открытость к новому</h4>
+                        <p>Могу ли я отказаться от старых шаблонов в пользу живого диалога?</p>
+                    </div>
+                </div>
+
+                <div class="insight" style="margin-top: 1.5rem;">
+                    <p><strong>Главный вывод:</strong></p>
+                    <p>В эпоху, когда ИИ имеет доступ ко всем знаниям человечества, ваше уникальное преимущество — не в том, что вы знаете, а в том, как вы создаёте контекст для знаний.</p>
+                    <p style="margin-top: 1rem; font-style: italic;">Не кутайтесь от свежего ветра открытых образовательных пространств в пропахшие нафталином шубы старого опыта. Климат изменился. Пора менять привычки и образ жизни — и учиться у всего, что вас окружает.</p>
+                    <p>Смотрите. Слушайте. Спрашивайте. Пробуйте. Создавайте контекст.<br><strong>Гуляйте! Но не прогуливайте)</strong></p>
+                </div>
+            </div>
+        </section>
+    </main>
+<footer>
+        <div class="notification" id="notification"></div>
+		<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+        <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+
+        function setTheme(isDark) {
+            if (isDark) {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // Check saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            setTheme(true);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isDark = !body.hasAttribute('data-theme');
+            setTheme(isDark);
+        });
+
+        // Navigation
+        const navButtons = document.querySelectorAll('.nav-btn');
+        const sections = document.querySelectorAll('section');
+
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetSection = btn.getAttribute('data-section');
+                
+                navButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                sections.forEach(s => s.classList.remove('active'));
+                document.getElementById(targetSection).classList.add('active');
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+
+        // Notification
+        function showNotification(message, duration = 3000) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, duration);
+        }
+
+        // Add prompt to textarea
+        function addPrompt(type) {
+            const textarea = document.getElementById('reflection4');
+            const prompts = {
+                barriers: '\n\n[Барьеры восприятия]\nМои «кринолины» при работе с LLM: ',
+                analogy: '\n\n[Личная аналогия]\nНавык, который я освоил(а) через усилие: ',
+                change: '\n\n[Готовность к изменениям]\nЯ готов(а) изменить следующее: ',
+                linguistic: '\n\n[Лингвистический взгляд]\nМои знания о языке помогают понять LLM, потому что: '
+            };
+            
+            textarea.value += prompts[type];
+            textarea.focus();
+            textarea.scrollTop = textarea.scrollHeight;
+            showNotification('Подсказка добавлена');
+        }
+
+        // Clear form
+        function clearForm() {
+            if (confirm('Вы уверены, что хотите очистить все поля?')) {
+                document.getElementById('studentName').value = '';
+                document.getElementById('studentGroup').value = '';
+                document.getElementById('reflection1').value = '';
+                document.getElementById('reflection2').value = '';
+                document.getElementById('reflection3').value = '';
+                document.getElementById('reflection4').value = '';
+                showNotification('Форма очищена');
+            }
+        }
+
+        // Export to HTML
+        function exportToHTML() {
+            const name = document.getElementById('studentName').value.trim();
+            const group = document.getElementById('studentGroup').value.trim();
+            const r1 = document.getElementById('reflection1').value.trim();
+            const r2 = document.getElementById('reflection2').value.trim();
+            const r3 = document.getElementById('reflection3').value.trim();
+            const r4 = document.getElementById('reflection4').value.trim();
+
+            if (!name) {
+                showNotification('Пожалуйста, введите Фамилию и Имя');
+                document.getElementById('studentName').focus();
+                return;
+            }
+
+            if (!r1 && !r2 && !r3 && !r4) {
+                showNotification('Пожалуйста, заполните хотя бы одно поле рефлексии');
+                return;
+            }
+
+            const date = new Date().toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            const htmlContent = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Рефлексия: ${name}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+            line-height: 1.7;
+            color: #2c3e50;
+            background: #f5f5f5;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(135deg, #325980, #4a7a9e);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        header h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        header p { opacity: 0.9; font-size: 0.95rem; }
+        .meta {
+            background: #f8f9fa;
+            padding: 1rem 2rem;
+            border-bottom: 2px solid #f1f1f1;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .meta-item { font-size: 0.9rem; }
+        .meta-item strong { color: #325980; }
+        main { padding: 2rem; }
+        .section {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .section:last-child { border-bottom: none; margin-bottom: 0; }
+        .section h2 {
+            color: #325980;
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            padding-left: 1rem;
+            border-left: 3px solid #3498db;
+        }
+        .section p {
+            text-align: justify;
+            white-space: pre-wrap;
+        }
+        
+    footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 1px solid #ddd;
+    }
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Рефлексия по нарративу</h1>
+            <p>«Третий сон Евы Адамовны»</p>
+        </header>
+        <div class="meta">
+            <div class="meta-item"><strong>Студент:</strong> ${name}</div>
+            ${group ? `<div class="meta-item"><strong>Группа:</strong> ${group}</div>` : ''}
+            <div class="meta-item"><strong>Дата:</strong> ${date}</div>
+        </div>
+        <main>
+            ${r1 ? `<div class="section">
+                <h2>Главный инсайт</h2>
+                <p>${r1.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </div>` : ''}
+            ${r2 ? `<div class="section">
+                <h2>Параллели с собственным опытом</h2>
+                <p>${r2.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </div>` : ''}
+            ${r3 ? `<div class="section">
+                <h2>Планируемые шаги</h2>
+                <p>${r3.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </div>` : ''}
+            ${r4 ? `<div class="section">
+                <h2>Дополнительные размышления</h2>
+                <p>${r4.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </div>` : ''}
+        </main>
+        <footer>
+
+    <div class="notification" id="notification"></div>
+		<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>для всех</p>
+</div>
+</footer>
+   <div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+</body>
+</html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Рефлексия_${name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showNotification('Файл успешно сохранён!');
+        }
+
+        // Auto-save to localStorage
+        const formFields = ['studentName', 'studentGroup', 'reflection1', 'reflection2', 'reflection3', 'reflection4'];
+        
+        formFields.forEach(id => {
+            const el = document.getElementById(id);
+            const saved = localStorage.getItem('eva_' + id);
+            if (saved) el.value = saved;
+            
+            el.addEventListener('input', () => {
+                localStorage.setItem('eva_' + id, el.value);
+            });
+        });
+		
+		// Dynamic nav positioning
+function updateNavPosition() {
+    const header = document.querySelector('header');
+    const nav = document.querySelector('nav');
+    if (header && nav) {
+        const headerHeight = header.offsetHeight;
+        nav.style.top = headerHeight + 'px';
+    }
+}
+
+// Run on load and resize
+updateNavPosition();
+window.addEventListener('resize', updateNavPosition);
+window.addEventListener('load', updateNavPosition);
+    </script>
+</body>
+</html>

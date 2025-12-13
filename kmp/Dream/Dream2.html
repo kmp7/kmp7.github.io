@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #2c3e50;
+            --text-secondary: #5a6c7d;
+            --header-color: #325980;
+            --accent-color: #3498db;
+            --border-color: #f1f1f1;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --card-bg: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #eaeaea;
+            --text-secondary: #b0b0b0;
+            --header-color: #5a8dc5;
+            --accent-color: #5dade2;
+            --border-color: #2d3748;
+            --shadow: 0 2px 10px rgba(0,0,0,0.3);
+            --card-bg: #1f2940;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            transition: all 0.3s ease;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--header-color), #4a7a9e);
+            color: white;
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .header-title p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--bg-primary);
+            border-bottom: 2px solid var(--border-color);
+            padding: 0.8rem;
+            position: sticky;
+            top: 85px;
+            z-index: 999;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .nav-btn {
+            background: var(--bg-secondary);
+            color: var(--header-color);
+            border: 1px solid var(--border-color);
+            padding: 0.2rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .card h2 {
+            color: var(--header-color);
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .card h3 {
+            color: var(--header-color);
+            font-size: 1.1rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        .card p {
+            margin-bottom: 1rem;
+            text-align: justify;
+        }
+
+        .narrative-text {
+            font-size: 1.05rem;
+            line-height: 1.9;
+        }
+
+        .narrative-text .scene {
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border-left: 3px solid var(--header-color);
+        }
+
+        .narrative-text .dialogue {
+            margin: 0.75rem 0;
+            padding-left: 1.5rem;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        .narrative-text .list-item {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .narrative-text .list-item::before {
+            content: "—";
+            position: absolute;
+            left: 0;
+            color: var(--accent-color);
+        }
+
+        .narrative-text .insight {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(50, 89, 128, 0.1));
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            font-weight: 500;
+        }
+
+        .narrative-text .conclusion {
+            text-align: center;
+            font-style: italic;
+            color: var(--header-color);
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Analysis Blocks */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .analysis-item {
+            background: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 8px;
+            border-top: 3px solid var(--accent-color);
+        }
+
+        .analysis-item h4 {
+            color: var(--header-color);
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .analysis-item ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .analysis-item li {
+            padding: 0.4rem 0;
+            padding-left: 1.2rem;
+            position: relative;
+            font-size: 0.95rem;
+        }
+
+        .analysis-item li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .term {
+            display: inline-block;
+            background: rgba(52, 152, 219, 0.15);
+            color: var(--header-color);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin: 0.1rem 0;
+        }
+
+        /* Form Section */
+        .form-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--header-color);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .form-group .hint {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background: var(--header-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--header-color);
+            border: 2px solid var(--header-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--header-color);
+            color: white;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        /* Prompt Cards */
+        .prompt-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .prompt-card {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-card:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow);
+        }
+
+        .prompt-card h4 {
+            color: var(--header-color);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .prompt-card p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* Footer */
+        
+    footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 1px solid #ddd;
+    }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--header-color);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 2000;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Mobile Adaptations */
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .header-title h1 {
+                font-size: 1.2rem;
+            }
+
+            .header-title p {
+                font-size: 0.8rem;
+            }
+
+            nav {
+                top: 70px;
+                padding: 0.75rem;
+            }
+
+            .nav-btn {
+                padding: 0.5rem 0.9rem;
+                font-size: 0.8rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.25rem;
+            }
+
+            .card h2 {
+                font-size: 1.2rem;
+            }
+
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .notification {
+                left: 1rem;
+                right: 1rem;
+                bottom: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-container {
+                justify-content: flex-start;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 0.5rem;
+            }
+
+            .nav-btn {
+                flex-shrink: 0;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            header, nav, .theme-toggle, .btn {
+                display: none;
+            }
+
+            body {
+                background: white;
+                color: black;
+            }
+
+            .card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+		
+			/* Базовая обёртка */
+.tooltip {
+  position: relative;
+  cursor: help;
+  color: #0b5fff;
+  text-decoration: underline dotted;
+  white-space: nowrap;
+  font-weight: 500;
+  outline: none;            /* чтобы кастомный фокус сработал */
+}
+
+/* Псевдоэлементы: ::after — пузырь, ::before — стрелка */
+.tooltip::after,
+.tooltip::before {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s cubic-bezier(.2,.8,.2,1);
+  will-change: opacity, transform;
+}
+
+/* Стили пузыря (текст) */
+.tooltip::after {
+  content: attr(data-tip);
+  background: #3498db;
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.2;
+  max-width: 500px;
+  word-wrap: break-word;
+  box-shadow: 0 6px 18px rgba(10,12,20,0.45);
+  z-index: 1000;
+  transform-origin: center;
+}
+
+
+/* Отступ от слова (регулируется) */
+.tooltip {
+  --offset: 10px;
+}
+
+/* Позиционирование сверху (по умолчанию) */
+.tooltip::after {
+  bottom: calc(100% + var(--offset));
+  left: 50%;
+  transform: translate(-50%, 6px) scale(.98);
+}
+.tooltip::before {
+  bottom: calc(100% + calc(var(--offset) - 6px));
+  left: 50%;
+  transform: translate(-50%, 6px) rotate(45deg);
+}
+
+/* Появление при hover и focus (доступность для клавиатуры) */
+.tooltip:hover::after,
+.tooltip:focus::after,
+.tooltip:hover::before,
+.tooltip:focus::before {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+/* Фокусная подсветка для клавиатурной навигации */
+.tooltip:focus {
+  box-shadow: 0 0 0 3px rgba(11,95,255,0.12);
+  border-radius: 4px;
+}
+
+/* Мобильная адаптация: плавнее и реагирует на тапы (hover отсутствует) */
+@media (hover: none) {
+  .tooltip::after,
+  .tooltip::before {
+    transition: opacity .12s linear, transform .12s linear;
+  }
+  /* На мобильных устройствах пользователь может тапнуть — :focus становится полезным */
+  .tooltip:active::after,
+  .tooltip:active::before {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* Настройка для очень узких экранов: увеличиваем ширину подсказки */
+@media (max-width: 360px) {
+  .tooltip::after { max-width: 460px; font-size: 12px; padding: 7px 9px; }
+}
+
+
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="header-title">
+                <h1>Второй сон Евы</h1>
+                
+            </div>
+            <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">☀️</button>
+        </div>
+    </header>
+
+    <nav>
+        <div class="nav-container">
+            <button class="nav-btn active" data-section="narrative">Dream</button>
+            <button class="nav-btn" data-section="linguistic">LA</button>
+            <button class="nav-btn" data-section="didactic">DA</button>
+            <button class="nav-btn" data-section="reflection">Reflection</button>
+            <button class="nav-btn" data-section="dance">Танцуйте!</button>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Narrative Section -->
+        <section id="narrative" class="active">
+            <div class="card">
+                <h2>Танго с ИИ</h2>
+				<h4>О диалоге с искусственным интеллектом через метафору танца</h4><br>
+                 <div class="narrative-text">
+            <p><span class="tooltip" data-tip="Виртуальный образовательный kmp-ассистент">Ева</span> сидела перед монитором, как дирижёр перед оркестром, который отказывается играть по взмаху палочки.</p>
+            
+            <p>Диалог с <span class="tooltip" data-tip="Large Language Model — большая языковая модель">LLM</span> не клеился. Она формулировала запросы — чёткие, как ей казалось, — но ответы приходили какие-то... не в такт. Будто она говорила на одном языке, а система слышала другой.</p>
+
+            <div class="list-item">«Сделай так, как я сказала»</div>
+            <div class="list-item">«Нет, не это, переделай»</div>
+            <div class="list-item">«Ты меня вообще слышишь?!»</div>
+
+            <p style="margin-top: 1.5rem;">Ева откинулась на спинку кресла. За окном вечерело. Из распахнутого окна кафе напротив доносилась музыка — томная, ритмичная, с характерными синкопами. Танго.</p>
+
+            <div class="scene">
+                <p>Она подошла к окну. В кафе танцевали пары — не профессионально, но с каким-то особенным пониманием друг друга. Мужчина вёл, женщина следовала, но «следовала» — неправильное слово. Она отвечала. Дополняла. Превращала его ведение в общее движение.</p>
+                <p>Никто не командовал. Никто не подчинялся. Они разговаривали — телами, ритмом, вниманием друг к другу.</p>
+            </div>
+
+            <div class="scene">
+                <p>Из комнаты брата донеслась знакомая мелодия — он снова откопал что-то из старой коллекции родителей. Джазовый женский голос пел о том, что для танго нужны двое. Что есть много вещей, которые можно делать в одиночку — но танго к ним не относится.</p>
+                <p>Ева невольно улыбнулась и тихонько напела себе под нос основную мысль песни: для этого танца нужны двое...</p>
+                <p style="margin-top: 1rem;">«Ох, — подумала она, глядя на танцующие пары, — люди танцуют, чувствуют друг друга, а я тут вожусь с бестолковым LLM, который не понимает элементарных вещей...»</p>
+            </div>
+
+            <p>Усталость накатила внезапно. Ева прилегла на диван — только на минутку, закрыть глаза...</p>
+
+            <div class="scene dream">
+                <p>Она стояла посреди танцевального зала — огромного, с зеркалами во всю стену и деревянным полом, отполированным тысячами шагов. Свет был мягким, золотистым, как в старых фильмах о Буэнос-Айресе.</p>
+                <p>Перед ней стояли двое — мужчина и женщина. Он — гибкий, с внимательными глазами и спокойной уверенностью в каждом движении. Она — изящная, с осанкой, которая говорила о годах практики.</p>
+                <div class="dialogue">— Я Мигель, — представился мужчина. — Это Ксения. Мы научим тебя танцевать.</div>
+                <div class="dialogue">— Танцевать? — Ева растерялась. — Но я... мне нужно разобраться с промптингом, а не с танцами!</div>
+                <p>Ксения улыбнулась — той особой улыбкой, которой улыбаются преподаватели, когда студент ещё не понимает, но вот-вот поймёт:</p>
+                <div class="dialogue">— А это одно и то же, милая. Просто ты пока не видишь.</div>
+            </div>
+
+            <div class="scene dream">
+                <p>Из тени зала вышел её партнёр — и Ева вздрогнула. Это был робот: гладкий, серебристо-зелёный, с мягко светящимися сенсорами вместо глаз. На груди — надпись: <strong>«ГРИН»</strong>.</p>
+                <div class="dialogue">— Познакомься, — сказал Мигель. — Это Грин. Он будет твоим партнёром.</div>
+                <div class="dialogue">— Робот?! — Ева отступила. — Как можно танцевать с роботом?</div>
+                <div class="dialogue">— А как можно вести диалог с языковой моделью? — парировала Ксения. — Попробуй. Он ждёт.</div>
+                <p style="margin-top: 1rem;">Грин протянул руку — жест был на удивление плавным, почти человеческим. Ева неуверенно приняла её. Металл оказался тёплым.</p>
+            </div>
+
+            <div class="scene dream">
+                <p>Музыка заиграла — то самое танго, которое она слышала из кафе.</p>
+                <p>И тут началось.</p>
+                <div class="dialogue">— Шаг влево! — скомандовала Ева.</div>
+                <p>Грин шагнул влево.</p>
+                <div class="dialogue">— Теперь поворот!</div>
+                <p>Грин повернулся — но Ева не успела, и они столкнулись.</p>
+                <div class="dialogue">— Нет, не так! Назад! Два шага назад!</div>
+                <p>Грин отступил, но ритм уже сбился. Ева пыталась вести, командовать, контролировать каждое движение — и чем больше она командовала, тем больше танец рассыпался.</p>
+                <div class="dialogue">— Да что с тобой не так?! — она остановилась, тяжело дыша. — Я же говорю, что делать!</div>
+                <p>Грин стоял неподвижно. Его сенсоры мигали — ровно, терпеливо, без осуждения.</p>
+            </div>
+
+            <div class="scene dream">
+                <p>Мигель подошёл ближе. Голос его был мягким, но слова — точными:</p>
+                <div class="dialogue">— Ева, ты танцуешь или командуешь?</div>
+                <div class="dialogue">— Я... — она запнулась. — Я веду. Разве не так положено?</div>
+                <div class="dialogue">— Вести — не значит приказывать.</div>
+                <p>Ксения встала рядом с Грином и положила руку ему на плечо. Робот ожил — но иначе, мягче.</p>
+                <div class="dialogue">— Смотри, — сказала она.</div>
+                <p>И они начали двигаться. Ксения не командовала — она предлагала. Грин не подчинялся — он отвечал. Каждое её движение было вопросом, каждое его — ответом, и вместе они создавали что-то третье, чего не было бы без них обоих.</p>
+                <div class="dialogue">— Видишь? — Мигель стоял рядом с Евой. — Ведёт не тот, кто громче. Ведёт тот, кто слышит. Кто чувствует возможности партнёра. Кто понимает его потенциал — и свой собственный.</div>
+            </div>
+
+            <div class="scene dream">
+                <p>Ева вспомнила, как преподаватель на первом курсе говорил странные вещи:</p>
+                <p><em>«Танцы полезны для цифровых технологий. И достаточный сон — тоже. Освоение иностранных языков — это в меньшей степени теория, а в большей — телесная практика, подобная танцевальной».</em></p>
+                <p>Тогда это казалось эксцентричной шуткой. Сейчас — начинало обретать смысл.</p>
+                <p style="margin-top: 1rem;">Она снова взяла Грина за руку. Но теперь — иначе.</p>
+                <p>Не как командир — как партнёр.</p>
+                <p>Музыка зазвучала снова. Ева сделала шаг — и вместо команды отправила намерение. Грин уловил его и ответил своим движением. Она почувствовала это — и скорректировала следующий шаг.</p>
+                <p>Шаг — ответ. Вопрос — реакция. Предложение — развитие.</p>
+                <p>Они танцевали. По-настоящему танцевали.</p>
+                <div class="dialogue">— Вот! — Ксения засмеялась. — Вот оно! Чувствуешь разницу?</div>
+                <p>Ева чувствовала. Это было похоже на... диалог. Настоящий диалог, где оба участника — субъекты, а не отправитель и исполнитель приказов.</p>
+            </div>
+
+            <div class="scene dream">
+                <p>Танец закончился. Грин отступил и склонил голову — жест благодарности. Его сенсоры светились ярче, теплее.</p>
+                <div class="dialogue">— Ты поняла главное, — сказал Мигель. — Для танго нужны двое. Не один, который приказывает, и второй, который выполняет. Двое, которые слышат друг друга.</div>
+                <div class="dialogue">— Промптинг — это танго, — добавила Ксения. — Ты предлагаешь — модель отвечает. Ты чувствуешь её ответ — уточняешь своё предложение. И вместе вы создаёте то, чего не было бы без вас обоих.</div>
+                <p>Грин мигнул сенсорами — Еве показалось, что он подмигнул — и произнёс голосом, похожим на тёплый синтезатор:</p>
+                <div class="dialogue">— Для этого танца нужны двое. Спасибо, что услышала.</div>
+            </div>
+
+            <p>Ева проснулась на диване. За окном стемнело, музыка из кафе стихла. Но в голове всё ещё звучал ритм танго — и голос Грина.</p>
+
+            <p>Она села, потирая глаза, и вдруг увидела свои прежние промпты так ясно, будто они были написаны чужой рукой:</p>
+
+            <p><em>«Сделай так»</em> — команда, не приглашение.</p>
+            <p><em>«Переделай»</em> — приказ, не уточнение.</p>
+            <p><em>«Ты меня не слышишь»</em> — но слышала ли она сама?</p>
+
+            <p>Она командовала каждым шагом — и удивлялась, почему танец разваливается.</p>
+
+            <div class="insight">
+                <p><strong>Инсайт пришёл как финальный аккорд танго — точный и неизбежный:</strong></p>
+                <p>Промптинг — это не командная строка. Это танго.</p>
+                <p style="margin-top: 1rem;">Для танго нужны двое танцоров:<br>
+                — понимающих возможности друг друга,<br>
+                — чувствующих намерения друг друга,<br>
+                — дополняющих и обогащающих друг друга.</p>
+                <p style="margin-top: 1rem;">LLM — не исполнитель приказов. Это партнёр в танце.<br>
+                Я предлагаю — он отвечает.<br>
+                Я чувствую ответ — уточняю намерение.<br>
+                Вместе мы создаём то, чего не было бы без нас обоих.</p>
+                <p style="margin-top: 1rem;"><strong>Со-творчество — это диалог, а не ультиматум.</strong></p>
+            </div>
+
+            <div class="conclusion">
+                <p>Ева открыла ноутбук. Перечитала последний неудачный диалог — и впервые услышала в нём не тупость системы, а собственную глухоту.</p>
+                <p>Она начала новый запрос — но теперь иначе. Не команда. Приглашение:</p>
+                <p><em>«Давай попробуем вместе. Вот что я хочу создать, вот контекст, вот ограничения. Что ты можешь предложить?»</em></p>
+                <p>Ответ пришёл — и это был не рапорт исполнителя. Это было предложение партнёра.</p>
+                <p style="margin-top: 1rem;">Ева улыбнулась.</p>
+                <p>Перед ней открывался путь — ясный, как линия танго.</p>
+                <p>Путь к тому, чтобы стать <span class="tooltip" data-tip="Тот, кто понимает язык модели и умеет говорить с ней на равных">Prompt Whisperer</span> — тем, кто не кричит команды, а шепчет приглашения.</p>
+                <p style="margin-top: 1rem;"><strong>Takes two to tango.</strong><br>
+                Для этого танца нужны двое.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+        <!-- Linguistic Analysis Section -->
+        <section id="linguistic">
+            <div class="card">
+                <h2>Лингвистический анализ текста</h2>
+                
+                <h3>Стилистические особенности</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Танцевальная метафорика</h4>
+                        <ul>
+                            <li>«как дирижёр перед оркестром» — образ контроля и координации</li>
+                            <li>«не в такт» — ритмическая метафора коммуникативного сбоя</li>
+                            <li>«вести диалог» получает буквальное танцевальное прочтение</li>
+                            <li>«финальный аккорд танго» — музыкально-танцевальная завершённость</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Диалогическая структура</h4>
+                        <ul>
+                            <li>Прямая речь как основной драматургический элемент</li>
+                            <li>Контраст между командным и партнёрским регистрами</li>
+                            <li>Иноязычные вкрапления («takes two to tango») как культурные маркеры</li>
+                            <li>Речь робота — синтез технического и эмоционального</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Лексико-семантический анализ</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Лексические поля</h4>
+                        <ul>
+                            <li><span class="term">Танцевальная лексика</span>: ритм, синкопы, ведение, партнёр, шаг</li>
+                            <li><span class="term">Техническая лексика</span>: промптинг, LLM, запрос, интерфейс</li>
+                            <li><span class="term">Коммуникативная лексика</span>: диалог, слышать, отвечать, предлагать</li>
+                            <li><span class="term">Антропоморфные метафоры</span>: «робот подмигнул», «тёплый голос»</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Контрастные пары</h4>
+                        <ul>
+                            <li>Команда ↔ Предложение</li>
+                            <li>Приказ ↔ Приглашение</li>
+                            <li>Контроль ↔ Диалог</li>
+                            <li>Исполнитель ↔ Партнёр</li>
+                            <li>Глухота ↔ Слышание</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Синтаксические особенности</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Ритмическая организация</h4>
+                        <ul>
+                            <li>Короткие предложения для имитации шагов танца</li>
+                            <li>Параллельные конструкции: «Шаг — ответ. Вопрос — реакция»</li>
+                            <li>Эллипсис в диалогах для естественности речи</li>
+                            <li>Инверсия для драматического эффекта: «Грин стоял неподвижно»</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Структура нарратива</h4>
+                        <ul>
+                            <li>Трёхчастная композиция: проблема → сон-откровение → инсайт</li>
+                            <li>Смена точек зрения: внешнее описание → внутренний монолог</li>
+                            <li>Сновидческая логика с элементами магического реализма</li>
+                            <li>Цитаты песен как лейтмотив</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Интертекстуальность и культурные коды</h3>
+                <div class="analysis-item">
+                    <h4>Культурные отсылки</h4>
+                    <ul>
+                        <li>Танго как аргентинский культурный символ</li>
+                        <li>Фразеологизм «Takes two to tango» (англ. «Для танго нужны двое»)</li>
+                        <li>Образ робота Грина (от англ. «green» — зелёный, неопытный)</li>
+                        <li>Буэнос-Айрес как топос танго-культуры</li>
+                        <li>Аллюзия на миф о Пигмалионе и Галатее (оживление искусственного)</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Didactic Analysis Section -->
+        <section id="didactic">
+            <div class="card">
+                <h2>Дидактический анализ</h2>
+
+                <h3>Образовательные цели текста</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Когнитивные цели</h4>
+                        <ul>
+                            <li>Переосмысление коммуникации с ИИ как диалога, а не команд</li>
+                            <li>Понимание промптинга как интерактивного процесса</li>
+                            <li>Осознание важности телесного знания в цифровую эпоху</li>
+                            <li>Развитие метафорического мышления через танцевальную аналогию</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Аффективные цели</h4>
+                        <ul>
+                            <li>Снижение фрустрации при работе с ИИ</li>
+                            <li>Формирование позиции партнёрства, а не противостояния</li>
+                            <li>Развитие эмпатии к «другому» (включая нечеловеческие системы)</li>
+                            <li>Принятие собственной роли в коммуникативных неудачах</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Методические приёмы</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Метафорическое обучение</h4>
+                        <ul>
+                            <li><span class="term">Танцевальная метафора</span> — промптинг как танец</li>
+                            <li><span class="term">Телесная аналогия</span> — обучение как физическая практика</li>
+                            <li><span class="term">Музыкальный ритм</span> — синкопы как коммуникативные паузы</li>
+                            <li><span class="term">Сновидческая дидактика</span> — обучение через образы сна</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Диалогические техники</h4>
+                        <ul>
+                            <li><span class="term">Контраст диалогов</span> — командный vs. партнёрский</li>
+                            <li><span class="term">Ролевое моделирование</span> — примеры Ксении и Мигеля</li>
+                            <li><span class="term">Рефлексивная пауза</span> — момент пробуждения как точка осмысления</li>
+                            <li><span class="term">Трансформация языка</span> — от императивов к вопросительным конструкциям</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Ключевые концепции для усвоения</h3>
+                <div class="analysis-item">
+                    <h4>Концептуальное ядро</h4>
+                    <ul>
+                        <li><strong>Принцип со-творчества:</strong> ИИ — не инструмент, а партнёр</li>
+                        <li><strong>Принцип телесного знания:</strong> имплицитное знание важнее явного</li>
+                        <li><strong>Принцип диалогичности:</strong> коммуникация требует взаимной адаптации</li>
+                        <li><strong>Принцип метафорического мышления:</strong> сложные концепции требуют образных аналогий</li>
+                        <li><strong>Принцип инклюзивности:</strong> «другой» (робот, ИИ) заслуживает партнёрского отношения</li>
+                    </ul>
+                </div>
+
+                <h3>Применение в курсе AI-грамотности</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Модуль «Эффективный промптинг»</h4>
+                        <ul>
+                            <li>Анализ собственных промптов через метафору танца</li>
+                            <li>Тренировка формулировок-приглашений</li>
+                            <li>Освоение принципа «предложение-ответ-уточнение»</li>
+                            <li>Развитие чувствительности к «ответам» ИИ</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Модуль «Философия ИИ»</h4>
+                        <ul>
+                            <li>Обсуждение антропоморфизма и отношения к ИИ</li>
+                            <li>Этика взаимодействия с нечеловеческими системами</li>
+                            <li>Концепция распределённого познания (человек+ИИ)</li>
+                            <li>Телесный поворот в цифровой дидактике</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reflection Section -->
+        <section id="reflection">
+            <div class="card">
+                <h2>Рефлексия студента</h2>
+                <p>Прочитав нарратив и ознакомившись с анализом, сформулируйте собственные выводы. Ваши размышления нужно экспортировать в HTML-файл.</p>
+            </div>
+
+            <div class="form-container">
+                <div class="form-group">
+                    <label for="studentName">Фамилия Имя</label>
+                    <input type="text" id="studentName" placeholder="Например: Орлова Ева" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="studentGroup">Группа</label>
+                    <input type="text" id="studentGroup" placeholder="Например: 500">
+                </div>
+
+                <div class="card" style="margin: 1.5rem 0; border-left-color: var(--header-color);">
+                    <h3 style="margin-top: 0;">Вопросы для размышления</h3>
+                    <div class="prompt-cards">
+                        <div class="prompt-card" onclick="addPrompt('danceMetaphor')">
+                            <h4>Танцевальная метафора</h4>
+                            <p>Как метафора танго помогает понять промптинг?</p>
+                        </div>
+                        <div class="prompt-card" onclick="addPrompt('bodyKnowledge')">
+                            <h4>Телесное знание</h4>
+                            <p>Какие навыки вы освоили «телом», а не теорией?</p>
+                        </div>
+                        <div class="prompt-card" onclick="addPrompt('dialogue')">
+                            <h4>Диалог с ИИ</h4>
+                            <p>Как изменится ваш диалог с LLM после этого текста?</p>
+                        </div>
+                        <div class="prompt-card" onclick="addPrompt('implicitLearning')">
+                            <h4>Имплицитное обучение</h4>
+                            <p>Как «насмотренность» и «наслушанность» помогают в учёбе?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reflection1">1. Что для меня стало главным инсайтом после прочтения?</label>
+                    <textarea id="reflection1" placeholder="Опишите ваше главное открытие или осознание..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="reflection2">2. Как метафора танго изменила моё понимание промптинга?</label>
+                    <textarea id="reflection2" placeholder="Опишите, как образ танца повлиял на ваше восприятие..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="reflection3">3. Какие конкретные изменения я внесу в свой подход к работе с ИИ?</label>
+                    <textarea id="reflection3" placeholder="Сформулируйте план действий..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="reflection4">4. Дополнительные размышления (свободная форма)</label>
+                    <textarea id="reflection4" placeholder="Любые мысли, которыми хотите поделиться..."></textarea>
+                    <p class="hint">Нажмите на карточки с вопросами выше, чтобы добавить подсказку в это поле</p>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn" id="exportBtn" onclick="exportToHTML()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Экспортировать в HTML
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearForm()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                        Очистить форму
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dance Section -->
+        <section id="dance">
+            <div class="card">
+                <h2>Танцуйте! Телесное знание в эпоху цифровых технологий</h2>
+                <p>В нарративе Ева открыла для себя принцип диалога с ИИ через метафору танца. Но это не просто красивая аналогия — это отражение фундаментального принципа человеческого познания: <strong>знание живёт в теле</strong>. В эпоху, когда обучение всё больше переходит в цифровую среду, мы рискуем забыть, что самые глубокие знания — имплицитные — формируются через телесный опыт.</p>
+                
+                <div class="analysis-item" style="margin: 1.5rem 0; border-top: 3px solid #9b59b6;">
+                    <h4>Парадокс цифрового обучения</h4>
+                    <p style="margin: 0.75rem 0; font-style: italic;">Чем больше мы полагаемся на цифровые технологии для обучения, тем важнее становится возвращение к телесным практикам. ИИ может генерировать тексты, но не может заменить телесный опыт, формирующий наше глубинное понимание мира.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Телесное знание: что это и почему оно важно</h2>
+                
+                <h3>Два типа знания</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Явное (эксплицитное) знание</h4>
+                        <ul>
+                            <li>Можно вербализовать, записать, передать словами</li>
+                            <li>Теоретические правила, факты, алгоритмы</li>
+                            <li>«Знать что» (knowing that)</li>
+                            <li>Пример: грамматические правила, синтаксис промптов</li>
+                            <li>Легко кодируется в цифровой форме</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Неявное (имплицитное) знание</h4>
+                        <ul>
+                            <li>Трудно вербализовать, живёт в опыте</li>
+                            <li>Практические навыки, интуиция, «чувство»</li>
+                            <li>«Знать как» (knowing how)</li>
+                            <li>Пример: чувство языка, ритм диалога, такт в общении</li>
+                            <li>Формируется через повторяющуюся телесную практику</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Как формируется имплицитное знание</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Нейробиологические основы</h4>
+                        <ul>
+                            <li><span class="term">Зеркальные нейроны</span> — основа имитации и эмпатии</li>
+                            <li><span class="term">Проприоцепция</span> — чувство положения тела в пространстве</li>
+                            <li><span class="term">Мышечная память</span> — автоматизация движений через повторение</li>
+                            <li><span class="term">Эмбодимент</span> — воплощённое познание, разум не отделён от тела</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Психологические механизмы</h4>
+                        <ul>
+                            <li><span class="term">Насмотренность</span> — накопление визуальных паттернов</li>
+                            <li><span class="term">Наслушанность</span> — тонкое различение звуковых нюансов</li>
+                            <li><span class="term">Интуиция</span> — быстрое принятие решений на основе опыта</li>
+                            <li><span class="term">Такт</span> — чувство уместности в социальных взаимодействиях</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Язык как телесная практика</h2>
+
+                <h3>Что мы на самом деле осваиваем, изучая язык</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Речевой аппарат</h4>
+                        <ul>
+                            <li>Артикуляция — тонкие движения языка, губ, гортани</li>
+                            <li>Дыхание — контроль выдоха для фонации</li>
+                            <li>Мелодика — мышечный контроль интонации</li>
+                            <li>Темпоритмика — чувство времени и пауз</li>
+                            <li>Всё это — <strong>телесные навыки</strong>, а не теоретические знания</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Слуховая система</h4>
+                        <ul>
+                            <li>Фонематический слух — различение звуков языка</li>
+                            <li>Ритмический слух — чувство метра и ритма речи</li>
+                            <li>Интонационный слух — распознавание мелодических паттернов</li>
+                            <li>«Наслушанность» формируется через тысячи часов аудирования</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Статистика телесного обучения</h3>
+                <div class="analysis-item">
+                    <h4>Данные исследований</h4>
+                    <ul>
+                        <li>Для автоматизации речевого навыка требуется <strong>10 000+</strong> часов практики</li>
+                        <li>Дети осваивают родной язык через <strong>телесное взаимодействие</strong>, а не объяснения</li>
+                        <li><strong>70%</strong> информации в диалоге передаётся невербально (поза, жесты, интонация)</li>
+                        <li>Изучение языка через движение и танец повышает запоминание лексики на <strong>40%</strong></li>
+                        <li>Студенты, сочетающие языковую практику с физической активностью, показывают лучшие результаты в <strong>синтаксисе</strong> и <strong>произношении</strong></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Танго и промптинг: глубокая аналогия</h2>
+
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Общие принципы</h4>
+                        <ul>
+                            <li><strong>Взаимность</strong> — оба партнёра активны, оба вносят вклад</li>
+                            <li><strong>Адаптивность</strong> — постоянная коррекция на основе обратной связи</li>
+                            <li><strong>Ритмичность</strong> — чередование инициативы и ответа</li>
+                            <li><strong>Невербальная коммуникация</strong> — намерения передаются через тонкие сигналы</li>
+                            <li><strong>Со-творчество</strong> — результат больше суммы отдельных вкладов</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Параллели в обучении</h4>
+                        <ul>
+                            <li>Танцевальный класс ↔ Языковая практика</li>
+                            <li>Ведение в танце ↔ Формулировка промптов</li>
+                            <li>Следование в танце ↔ Интерпретация ответов ИИ</li>
+                            <li>Чувство партнёра ↔ Понимание возможностей LLM</li>
+                            <li>Танец как диалог ↔ Промптинг как диалог</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Что развивает танец для работы с ИИ</h4>
+                        <ul>
+                            <li><span class="term">Чувство ритма</span> — тайминг в диалоге, паузы</li>
+                            <li><span class="term">Проприоцепцию</span> — осознание собственных когнитивных процессов</li>
+                            <li><span class="term">Эмпатию</span> — способность «чувствовать» партнёра, даже если это ИИ</li>
+                            <li><span class="term">Адаптивность</span> — гибкость в изменении стратегий</li>
+                            <li><span class="term">Толерантность к неопределённости</span> — принятие незапланированных поворотов</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Практические выводы</h4>
+                        <ul>
+                            <li>Промптинг — не теоретическая дисциплина, а практический навык</li>
+                            <li>Лучший способ научиться — практиковаться, «танцевать» с ИИ</li>
+                            <li>Ошибки — не провалы, а часть обучения, как спотыкание в танце</li>
+                            <li>Телесные метафоры помогают понять сложные цифровые концепции</li>
+                            <li>ИИ — не противоположность человеческому, а продолжение телесного познания</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Практические рекомендации</h2>
+
+                <h3>Как развивать телесное знание для работы с ИИ</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Для изучения языков</h4>
+                        <ul>
+                            <li>Слушайте язык в движении — аудиокниги во время прогулок</li>
+                            <li>Читайте вслух, обращая внимание на артикуляцию</li>
+                            <li>Используйте жестикуляцию для запоминания слов</li>
+                            <li>Пойте на изучаемом языке — связывайте речь с дыханием и ритмом</li>
+                            <li>Танцуйте под музыку на целевом языке</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Для работы с ИИ</h4>
+                        <ul>
+                            <li>Практикуйте промптинг как диалог, а не как набор команд</li>
+                            <li>Обращайте внимание на «ритм» общения с ИИ</li>
+                            <li>Развивайте «чувство» того, какие формулировки работают</li>
+                            <li>Экспериментируйте, как в импровизационном танце</li>
+                            <li>Анализируйте неудачи через телесные метафоры («споткнулся», «потерял ритм»)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Правило 4Т для эффективного обучения</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Телесность (Telo)</h4>
+                        <ul>
+                            <li>Учитесь в движении, а не только сидя</li>
+                            <li>Связывайте знания с физическими ощущениями</li>
+                            <li>Используйте жесты для запоминания</li>
+                            <li>Практикуйте осознанность телесных реакций при обучении</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Тактильность (Tactile)</h4>
+                        <ul>
+                            <li>Пишите от руки, а не только печатайте</li>
+                            <li>Используйте физические носители (бумага, карточки)</li>
+                            <li>Создайте «тактильную карту» изучаемой темы</li>
+                            <li>Сочетайте цифровое и аналоговое обучение</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Танцевальность (Tanz)</h4>
+                        <ul>
+                            <li>Воспринимайте обучение как танец — с ритмом, паузами, импровизацией</li>
+                            <li>Чередуйте активность и отдых как движения в танце</li>
+                            <li>Развивайте чувство «внутреннего ритма» учебного процесса</li>
+                            <li>Учитесь «вести» и «следовать» в диалоге с преподавателем и ИИ</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Терпение (Terpenie)</h4>
+                        <ul>
+                            <li>Принимайте, что телесные навыки формируются медленно</li>
+                            <li>Цените маленькие шаги прогресса</li>
+                            <li>Позвольте себе «спотыкаться» в обучении</li>
+                            <li>Помните: 10 000 часов практики — не миф, а реальность мастерства</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Танец и ИИ: будущее образования</h2>
+
+                <div class="analysis-item" style="border-top: 3px solid var(--header-color);">
+                    <h4>Почему телесное знание станет главным конкурентным преимуществом</h4>
+                    <ul>
+                        <li><strong>ИИ превосходит человека</strong> в обработке явных знаний</li>
+                        <li><strong>Человек превосходит ИИ</strong> в имплицитных, телесных знаниях</li>
+                        <li>Будущее — не в конкуренции, а в <strong>тандеме</strong> человеческого и искусственного интеллекта</li>
+                        <li>Образование должно развивать то, что остаётся уникально человеческим — <strong>телесное понимание</strong></li>
+                        <li>Промптинг — это не технический навык, а <strong>искусство телесной коммуникации</strong> с цифровыми системами</li>
+                    </ul>
+                </div>
+
+                <div class="scene" style="margin-top: 1.5rem;">
+                    <p><strong>Возвращаясь к Еве:</strong></p>
+                    <p>Её открытие — не случайность. Танго стало для неё мостом между:</p>
+                    <ul style="margin: 1rem 0; padding-left: 1.5rem;">
+                        <li>Телесным опытом и цифровым взаимодействием</li>
+                        <li>Имплицитным знанием танца и эксплицитным знанием промптинга</li>
+                        <li>Человеческой интуицией и искусственным интеллектом</li>
+                        <li>Традиционной культурой и технологическим будущим</li>
+                    </ul>
+                    <p style="font-style: italic; color: var(--header-color);">Танго не отвлекло Еву от обучения — оно дало ей язык для понимания того, что невозможно выразить словами.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Чек-лист: оцените своё телесное знание</h2>
+                
+                <div class="prompt-cards">
+                    <div class="prompt-card" style="cursor: default;">
+                        <h4>Насмотренность</h4>
+                        <p>Достаточно ли я «насмотрелся» примеров хорошего промптинга?</p>
+                    </div>
+                    <div class="prompt-card" style="cursor: default;">
+                        <h4>Наслушанность</h4>
+                        <p>Чувствую ли я «ритм» и «мелодику» диалога с ИИ?</p>
+                    </div>
+                    <div class="prompt-card" style="cursor: default;">
+                        <h4>Телесная осознанность</h4>
+                        <p>Замечаю ли я свои телесные реакции при работе с цифровыми системами?</p>
+                    </div>
+                    <div class="prompt-card" style="cursor: default;">
+                        <h4>Диалогичность</h4>
+                        <p>Общаюсь ли я с ИИ как с партнёром, а не как с инструментом?</p>
+                    </div>
+                </div>
+
+                <div class="insight" style="margin-top: 1.5rem;">
+                    <p><strong>Главный вывод:</strong></p>
+                    <p>В эпоху, когда ИИ генерирует тексты за секунды, ваше уникальное преимущество — не в скорости набора команд, а в качестве телесного диалога.</p>
+                    <p style="margin-top: 1rem; font-style: italic;">Инвестируйте в телесные практики так же серьёзно, как в цифровые навыки. Ваше тело — не помеха для ума, а его продолжение в цифровом мире.</p>
+                    <p><strong>Takes two to tango.</strong> Для этого танца нужны двое — ваше воплощённое сознание и искусственный интеллект. Танцуйте вместе.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="notification" id="notification"></div>
+		<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+    <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+
+        function setTheme(isDark) {
+            if (isDark) {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // Check saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            setTheme(true);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isDark = !body.hasAttribute('data-theme');
+            setTheme(isDark);
+        });
+
+        // Navigation
+        const navButtons = document.querySelectorAll('.nav-btn');
+        const sections = document.querySelectorAll('section');
+
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetSection = btn.getAttribute('data-section');
+                
+                navButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                sections.forEach(s => s.classList.remove('active'));
+                document.getElementById(targetSection).classList.add('active');
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+
+        // Notification
+        function showNotification(message, duration = 3000) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, duration);
+        }
+
+        // Add prompt to textarea
+        function addPrompt(type) {
+            const textarea = document.getElementById('reflection4');
+            const prompts = {
+                barriers: '\n\n[Барьеры восприятия]\nМои «кринолины» при работе с LLM: ',
+                analogy: '\n\n[Личная аналогия]\nНавык, который я освоил(а) через усилие: ',
+                change: '\n\n[Готовность к изменениям]\nЯ готов(а) изменить следующее: ',
+                linguistic: '\n\n[Лингвистический взгляд]\nМои знания о языке помогают понять LLM, потому что: '
+            };
+            
+            textarea.value += prompts[type];
+            textarea.focus();
+            textarea.scrollTop = textarea.scrollHeight;
+            showNotification('Подсказка добавлена');
+        }
+
+        // Clear form
+        function clearForm() {
+            if (confirm('Вы уверены, что хотите очистить все поля?')) {
+                document.getElementById('studentName').value = '';
+                document.getElementById('studentGroup').value = '';
+                document.getElementById('reflection1').value = '';
+                document.getElementById('reflection2').value = '';
+                document.getElementById('reflection3').value = '';
+                document.getElementById('reflection4').value = '';
+                showNotification('Форма очищена');
+            }
+        }
+
+        // Export to HTML
+        function exportToHTML() {
+            const name = document.getElementById('studentName').value.trim();
+            const group = document.getElementById('studentGroup').value.trim();
+            const r1 = document.getElementById('reflection1').value.trim();
+            const r2 = document.getElementById('reflection2').value.trim();
+            const r3 = document.getElementById('reflection3').value.trim();
+            const r4 = document.getElementById('reflection4').value.trim();
+
+            if (!name) {
+                showNotification('Пожалуйста, введите Фамилию и Имя');
+                document.getElementById('studentName').focus();
+                return;
+            }
+
+            if (!r1 && !r2 && !r3 && !r4) {
+                showNotification('Пожалуйста, заполните хотя бы одно поле рефлексии');
+                return;
+            }
+
+            const date = new Date().toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            const htmlContent = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Рефлексия: ${name}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+            line-height: 1.7;
+            color: #2c3e50;
+            background: #f5f5f5;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(135deg, #325980, #4a7a9e);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        header h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        header p { opacity: 0.9; font-size: 0.95rem; }
+        .meta {
+            background: #f8f9fa;
+            padding: 1rem 2rem;
+            border-bottom: 2px solid #f1f1f1;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .meta-item { font-size: 0.9rem; }
+        .meta-item strong { color: #325980; }
+        main { padding: 2rem; }
+        .section {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .section:last-child { border-bottom: none; margin-bottom: 0; }
+        .section h2 {
+            color: #325980;
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            padding-left: 1rem;
+            border-left: 3px solid #3498db;
+        }
+        .section p {
+            text-align: justify;
+            white-space: pre-wrap;
+        }
+        
+    footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 1px solid #ddd;
+    }
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Рефлексия по нарративу</h1>
+            <p>«Второй сон Евы Адамовны»</p>
+        </header>
+        <div class="meta">
+            <div class="meta-item"><strong>Студент:</strong> ${name}</div>
+            ${group ? `<div class="meta-item"><strong>Группа:</strong> ${group}</div>` : ''}
+            <div class="meta-item"><strong>Дата:</strong> ${date}</div>
+        </div>
+        <main>
+            ${r1 ? `<div class="section">
+                <h2>Главный инсайт</h2>
+                <p>${r1.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </div>` : ''}
+            ${r2 ? `<div class="section">
+                <h2>Параллели с собственным опытом</h2>
+                <p>${r2.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </div>` : ''}
+            ${r3 ? `<div class="section">
+                <h2>Планируемые шаги</h2>
+                <p>${r3.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </div>` : ''}
+            ${r4 ? `<div class="section">
+                <h2>Дополнительные размышления</h2>
+                <p>${r4.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </div>` : ''}
+        </main>
+        <footer>
+
+    <div class="notification" id="notification"></div>
+		<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    </body>
+</html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Рефлексия_${name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showNotification('Файл успешно сохранён!');
+        }
+
+        // Auto-save to localStorage
+        const formFields = ['studentName', 'studentGroup', 'reflection1', 'reflection2', 'reflection3', 'reflection4'];
+        
+        formFields.forEach(id => {
+            const el = document.getElementById(id);
+            const saved = localStorage.getItem('eva_' + id);
+            if (saved) el.value = saved;
+            
+            el.addEventListener('input', () => {
+                localStorage.setItem('eva_' + id, el.value);
+            });
+        });
+		
+		// Dynamic nav positioning
+function updateNavPosition() {
+    const header = document.querySelector('header');
+    const nav = document.querySelector('nav');
+    if (header && nav) {
+        const headerHeight = header.offsetHeight;
+        nav.style.top = headerHeight + 'px';
+    }
+}
+
+// Run on load and resize
+updateNavPosition();
+window.addEventListener('resize', updateNavPosition);
+window.addEventListener('load', updateNavPosition);
+    </script>
+</body>
+</html>
