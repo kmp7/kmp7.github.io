@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        /* ============================================
+           БАЗОВЫЕ СТИЛИ И CSS-ПЕРЕМЕННЫЕ
+           ============================================
+           CSS-переменные (Custom Properties) позволяют
+           централизованно управлять цветовой схемой
+           и другими повторяющимися значениями.
+           Это пример ПАРАМЕТРИЗАЦИИ в моделировании.
+        */
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #166088;
+            --accent-color: #f4a261;
+            --background-light: #f8f9fa;
+            --background-dark: #2d3436;
+            --text-primary: #2c3e50;
+            --text-secondary: #636e72;
+            --success-color: #00b894;
+            --warning-color: #fdcb6e;
+            --border-radius: 12px;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+            color: var(--text-primary);
+        }
+
+        /* ============================================
+           КОНТЕЙНЕР ПРИЛОЖЕНИЯ
+           ============================================
+           Используем CSS Grid для создания адаптивной
+           сетки. Grid — это МОДЕЛЬ компоновки элементов.
+        */
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ============================================
+           СТИЛИ КАРТОЧЕК (МОДУЛЬНОСТЬ)
+           ============================================
+           Модульный подход в CSS отражает принцип
+           ДЕКОМПОЗИЦИИ в моделировании — разбиение
+           сложной системы на независимые компоненты.
+        */
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 25px;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--background-light);
+        }
+
+        .card-header h2 {
+            color: var(--primary-color);
+            font-size: 1.3em;
+        }
+
+        .card-icon {
+            font-size: 1.5em;
+        }
+
+        /* ============================================
+           ОБЛАСТЬ ДИАГРАММЫ
+           ============================================
+           Canvas — это низкоуровневый API для рисования,
+           который мы используем для ВИЗУАЛИЗАЦИИ МОДЕЛИ.
+        */
+        .chart-container {
+            grid-row: span 2;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background: var(--background-light);
+            border-radius: var(--border-radius);
+            min-height: 500px;
+        }
+
+        #radarChart {
+            max-width: 100%;
+            cursor: crosshair;
+        }
+
+        /* ============================================
+           ПАНЕЛЬ УПРАВЛЕНИЯ
+           ============================================
+           Интерактивные элементы управления — это
+           ИНТЕРФЕЙС взаимодействия с моделью.
+        */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .control-item {
+            background: var(--background-light);
+            padding: 15px;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .control-item:hover {
+            background: #e8f4f8;
+        }
+
+        .control-item label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .control-item input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .control-item input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .control-item input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: var(--secondary-color);
+        }
+
+        .value-display {
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-top: 5px;
+        }
+
+        /* ============================================
+           КНОПКИ ДЕЙСТВИЙ
+           ============================================
+        */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #e8965a;
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* ============================================
+           ИНФОРМАЦИОННЫЕ БЛОКИ
+           ============================================
+        */
+        .info-section {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 1200px) {
+            .info-section {
+                grid-column: span 1;
+            }
+        }
+
+        .info-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .info-block {
+            background: var(--background-light);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .info-block h3 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .info-block p, .info-block ul {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+
+        .info-block ul {
+            padding-left: 20px;
+        }
+
+        .info-block li {
+            margin-bottom: 5px;
+        }
+
+        /* ============================================
+           БЛОК КОДА С КОММЕНТАРИЯМИ
+           ============================================
+        */
+        .code-section {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 1200px) {
+            .code-section {
+                grid-column: span 1;
+            }
+        }
+
+        .code-block {
+            background: var(--background-dark);
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85em;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .code-block .comment {
+            color: #6272a4;
+        }
+
+        .code-block .keyword {
+            color: #ff79c6;
+        }
+
+        .code-block .function {
+            color: #50fa7b;
+        }
+
+        .code-block .string {
+            color: #f1fa8c;
+        }
+
+        .code-block .number {
+            color: #bd93f9;
+        }
+
+        /* ============================================
+           СТАТИСТИКА И МЕТРИКИ
+           ============================================
+        */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 8px;
+            color: white;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            opacity: 0.9;
+        }
+
+        /* ============================================
+           ЛЕГЕНДА ДИАГРАММЫ
+           ============================================
+        */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        /* ============================================
+           ТАБЫ ДЛЯ ПЕРЕКЛЮЧЕНИЯ КОНТЕНТА
+           ============================================
+        */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--background-light);
+            padding-bottom: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 0.95em;
+            color: var(--text-secondary);
+            border-radius: 8px 8px 0 0;
+            transition: var(--transition);
+        }
+
+        .tab:hover {
+            background: var(--background-light);
+        }
+
+        .tab.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* ============================================
+           ФУТЕР
+           ============================================
+        */
+        .footer {
+            grid-column: span 2;
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        @media (max-width: 1200px) {
+            .footer {
+                grid-column: span 1;
+            }
+        }
+
+        .tech-badges {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 5px 15px;
+            background: var(--background-light);
+            border-radius: 20px;
+            font-size: 0.85em;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* ============================================
+           TOOLTIP
+           ============================================
+        */
+        .tooltip {
+            position: absolute;
+            background: var(--background-dark);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            white-space: nowrap;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        /* ============================================
+           АНИМАЦИИ
+           ============================================
+        */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- ============================================
+             БЛОК 1: ИНТЕРАКТИВНАЯ ДИАГРАММА
+             ============================================
+             Это главный визуальный компонент — 
+             графическое представление нашей модели.
+        -->
+        <div class="card chart-container">
+            <div class="card-header">
+                <span class="card-icon"></span>
+                <h2>Лепестковая диаграмма языковых компетенций</h2>
+            </div>
+            
+            <div class="chart-wrapper">
+                <canvas id="radarChart" width="450" height="450"></canvas>
+                <div class="tooltip" id="tooltip"></div>
+            </div>
+            
+            <div class="legend" id="legend"></div>
+            
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="avgValue">0</div>
+                    <div class="stat-label">Средний балл</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="maxValue">0</div>
+                    <div class="stat-label">Максимум</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="areaValue">0%</div>
+                    <div class="stat-label">Заполненность</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================
+             БЛОК 2: ПАНЕЛЬ УПРАВЛЕНИЯ
+             ============================================
+             Интерфейс для изменения параметров модели.
+             Каждый слайдер соответствует одному из
+             измерений (осей) лепестковой диаграммы.
+        -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon"></span>
+                <h2>Параметры модели</h2>
+            </div>
+            
+            <div class="controls-grid" id="controlsGrid">
+                <!-- Элементы управления генерируются JavaScript -->
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="randomizeValues()">
+                    Случайные значения
+                </button>
+                <button class="btn btn-secondary" onclick="resetValues()">
+                    Сбросить
+                </button>
+                <button class="btn btn-outline" onclick="exportData()">
+                    Экспорт данных
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================================
+             БЛОК 3: ПРЕСЕТЫ (ПРЕДУСТАНОВЛЕННЫЕ ПРОФИЛИ)
+             ============================================
+        -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon"></span>
+                <h2>Профили владения языком</h2>
+            </div>
+            
+            <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                Выберите типичный профиль для демонстрации:
+            </p>
+            
+            <div class="button-group" style="flex-wrap: wrap;">
+                <button class="btn btn-outline" onclick="loadPreset('beginner')">
+                    Начинающий (A1)
+                </button>
+                <button class="btn btn-outline" onclick="loadPreset('intermediate')">
+                    Средний (B1)
+                </button>
+                <button class="btn btn-outline" onclick="loadPreset('advanced')">
+                    Продвинутый (C1)
+                </button>
+                <button class="btn btn-outline" onclick="loadPreset('native')">
+                    Носитель
+                </button>
+                <button class="btn btn-outline" onclick="loadPreset('academic')">
+                    Академический
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================================
+             БЛОК 4: ТЕОРИЯ КОМПЬЮТЕРНОГО МОДЕЛИРОВАНИЯ
+             ============================================
+             Ключевой образовательный блок, объясняющий
+             связь приложения с теорией моделирования.
+        -->
+        <div class="card info-section">
+            <div class="card-header">
+                <span class="card-icon"></span>
+                <h2>Компьютерное моделирование: теоретический контекст</h2>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('aspects')">
+                    Аспекты модели
+                </button>
+                <button class="tab" onclick="switchTab('properties')">
+                    Свойства модели
+                </button>
+                <button class="tab" onclick="switchTab('applications')">
+                    Применение в лингвистике
+                </button>
+            </div>
+            
+            <div class="tab-content active" id="aspects">
+                <div class="info-content">
+                    <div class="info-block">
+                        <h3>Математический аспект</h3>
+                        <p>Данное приложение реализует <strong>математическую модель</strong> многомерных данных. Лепестковая диаграмма — это визуализация точки в n-мерном пространстве, где каждая ось представляет отдельный параметр (компетенцию).</p>
+                        <ul>
+                            <li>Нормализация значений (0-100)</li>
+                            <li>Вычисление площади многоугольника</li>
+                            <li>Расчёт статистических показателей</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="info-block">
+                        <h3>Информационный аспект</h3>
+                        <p>Приложение демонстрирует <strong>информационную модель</strong> языковой компетенции. Мы абстрагируем сложное явление (владение языком) до набора измеримых параметров.</p>
+                        <ul>
+                            <li>Дискретизация непрерывных характеристик</li>
+                            <li>Структурирование данных</li>
+                            <li>Хранение состояния модели</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="info-block">
+                        <h3>Визуальный аспект</h3>
+                        <p>Реализована <strong>графическая модель</strong> с использованием Canvas API. Визуализация — ключевой компонент когнитивного моделирования.</p>
+                        <ul>
+                            <li>Отображение абстракций</li>
+                            <li>Интуитивное восприятие данных</li>
+                            <li>Сравнение профилей</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="info-block">
+                        <h3>Интерактивный аспект</h3>
+                        <p>Интерфейс реализует <strong>имитационную модель</strong> — пользователь может изменять параметры и наблюдать результат в реальном времени.</p>
+                        <ul>
+                            <li>Обратная связь</li>
+                            <li>Эксперименты с параметрами</li>
+                            <li>Проверка гипотез</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="properties">
+                <div class="info-content">
+                    <div class="info-block">
+                        <h3>Адекватность</h3>
+                        <p>Модель адекватно отражает структуру языковых компетенций согласно CEFR (Common European Framework of Reference).</p>
+                    </div>
+                    
+                    <div class="info-block">
+                        <h3>Полнота</h3>
+                        <p>Охвачены основные аспекты владения языком: рецептивные (чтение, аудирование) и продуктивные (письмо, говорение) навыки.</p>
+                    </div>
+                    
+                    <div class="info-block">
+                        <h3>Простота</h3>
+                        <p>Модель достаточно проста для понимания, но сохраняет существенные характеристики моделируемого явления.</p>
+                    </div>
+                    
+                    <div class="info-block">
+                        <h3>Масштабируемость</h3>
+                        <p>Легко добавить новые параметры или изменить существующие без переработки всей модели.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="applications">
+                <div class="info-content">
+                    <div class="info-block">
+                        <h3>Диагностика</h3>
+                        <p>Оценка текущего уровня владения языком для выявления сильных и слабых сторон учащегося.</p>
+                    </div>
+                    
+                    <div class="info-block">
+                        <h3>Планирование обучения</h3>
+                        <p>Визуализация целевого профиля и сравнение с текущим для определения приоритетов.</p>
+                    </div>
+                    
+                    <div class="info-block">
+                        <h3>Мониторинг прогресса</h3>
+                        <p>Отслеживание динамики развития компетенций во времени.</p>
+                    </div>
+                    
+                    <div class="info-block">
+                        <h3>Исследования</h3>
+                        <p>Сравнительный анализ профилей различных групп изучающих язык.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================
+             БЛОК 5: УЧЕБНЫЙ КОММЕНТАРИЙ К КОДУ
+             ============================================
+        -->
+        <div class="card code-section">
+            <div class="card-header">
+                <span class="card-icon"></span>
+                <h2>Учебный комментарий к коду</h2>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchCodeTab('structure')">
+                    Структура
+                </button>
+                <button class="tab" onclick="switchCodeTab('drawing')">
+                    Рисование
+                </button>
+                <button class="tab" onclick="switchCodeTab('interaction')">
+                    Интерактивность
+                </button>
+            </div>
+            
+            <div class="tab-content active" id="structure">
+                <div class="code-block">
+<span class="comment">/**
+ * СТРУКТУРА ДАННЫХ МОДЕЛИ
+ * ========================
+ * В компьютерном моделировании критически важно
+ * правильно спроектировать структуру данных.
+ * Здесь мы используем объект для хранения
+ * параметров каждой компетенции.
+ */</span>
+
+<span class="keyword">const</span> modelData = {
+    <span class="comment">// Каждый параметр содержит:</span>
+    <span class="comment">// - label: название для отображения</span>
+    <span class="comment">// - value: числовое значение (0-100)</span>
+    <span class="comment">// - color: цвет для визуализации</span>
+    
+    speaking: {
+        label: <span class="string">"Говорение ОЕА"</span>,
+        value: <span class="number">70</span>,
+        color: <span class="string">"#e74c3c"</span>
+    },
+    listening: {
+        label: <span class="string">"Аудирование ОЕА"</span>,
+        value: <span class="number">65</span>,
+        color: <span class="string">"#3498db"</span>
+    },
+    <span class="comment">// ... остальные параметры</span>
+};
+
+<span class="comment">/**
+ * ПРИНЦИП РАЗДЕЛЕНИЯ ДАННЫХ И ПРЕДСТАВЛЕНИЯ
+ * Данные хранятся отдельно от логики отображения.
+ * Это позволяет:
+ * 1. Легко изменять данные
+ * 2. Переиспользовать логику визуализации
+ * 3. Тестировать компоненты независимо
+ */</span>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="drawing">
+                <div class="code-block">
+<span class="comment">/**
+ * АЛГОРИТМ РИСОВАНИЯ ЛЕПЕСТКОВОЙ ДИАГРАММЫ
+ * =========================================
+ * Используем тригонометрию для расчёта
+ * координат точек на окружности.
+ */</span>
+
+<span class="keyword">function</span> <span class="function">drawRadarChart</span>(data) {
+    <span class="keyword">const</span> ctx = canvas.getContext(<span class="string">'2d'</span>);
+    <span class="keyword">const</span> centerX = canvas.width / <span class="number">2</span>;
+    <span class="keyword">const</span> centerY = canvas.height / <span class="number">2</span>;
+    <span class="keyword">const</span> radius = <span class="number">180</span>;
+    
+    <span class="comment">// Количество осей = количество параметров</span>
+    <span class="keyword">const</span> numAxes = Object.keys(data).length;
+    
+    <span class="comment">// Угол между соседними осями</span>
+    <span class="keyword">const</span> angleStep = (<span class="number">2</span> * Math.PI) / numAxes;
+    
+    <span class="comment">// Рисуем точки данных</span>
+    <span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">0</span>; i < numAxes; i++) {
+        <span class="comment">// Нормализуем значение (0-1)</span>
+        <span class="keyword">const</span> normalizedValue = value / <span class="number">100</span>;
+        
+        <span class="comment">// Вычисляем координаты точки</span>
+        <span class="comment">// x = centerX + r * cos(angle)</span>
+        <span class="comment">// y = centerY + r * sin(angle)</span>
+        <span class="keyword">const</span> x = centerX + radius * normalizedValue 
+                    * Math.cos(angle - Math.PI/<span class="number">2</span>);
+        <span class="keyword">const</span> y = centerY + radius * normalizedValue 
+                    * Math.sin(angle - Math.PI/<span class="number">2</span>);
+    }
+}
+
+<span class="comment">/**
+ * МАТЕМАТИЧЕСКОЕ ОБОСНОВАНИЕ:
+ * - Углы отсчитываются от вертикали (вверх)
+ * - Поэтому вычитаем π/2 из угла
+ * - Это даёт более естественное расположение осей
+ */</span>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="interaction">
+                <div class="code-block">
+<span class="comment">/**
+ * РЕАКТИВНОЕ ОБНОВЛЕНИЕ МОДЕЛИ
+ * ============================
+ * Реализуем паттерн "наблюдатель":
+ * при изменении данных автоматически
+ * обновляется визуализация.
+ */</span>
+
+<span class="keyword">function</span> <span class="function">updateValue</span>(key, newValue) {
+    <span class="comment">// 1. Обновляем данные модели</span>
+    modelData[key].value = newValue;
+    
+    <span class="comment">// 2. Обновляем отображение значения</span>
+    document.getElementById(<span class="string">`value-${key}`</span>)
+        .textContent = newValue;
+    
+    <span class="comment">// 3. Перерисовываем диаграмму</span>
+    <span class="function">drawRadarChart</span>(modelData);
+    
+    <span class="comment">// 4. Пересчитываем статистику</span>
+    <span class="function">updateStatistics</span>();
+}
+
+<span class="comment">/**
+ * ОБРАБОТКА СОБЫТИЙ
+ * Привязываем обработчики к элементам управления
+ */</span>
+slider.addEventListener(<span class="string">'input'</span>, (e) => {
+    <span class="function">updateValue</span>(key, parseInt(e.target.value));
+});
+
+<span class="comment">/**
+ * Такой подход обеспечивает:
+ * - Мгновенную обратную связь
+ * - Консистентность данных
+ * - Чёткое разделение ответственности
+ */</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================
+             БЛОК 6: ТЕХНОЛОГИИ И АВТОРСТВО
+             ============================================
+        -->
+        <div class="card footer">
+            <div class="card-header" style="justify-content: center; border-bottom: none;">
+                <span class="card-icon"></span>
+                <h2>Использованные технологии</h2>
+            </div>
+            
+            <div class="tech-badges">
+                <span class="badge">HTML5</span>
+                <span class="badge">CSS3 (Grid, Flexbox, Custom Properties)</span>
+                <span class="badge">JavaScript (ES6+)</span>
+                <span class="badge">Canvas API</span>
+                <span class="badge">DOM API</span>
+            </div>
+            
+            <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee;">
+                <p>© 2025 | kmp | CC BY-NC-SA 4.0<br>для умных</p>
+                
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         JAVASCRIPT: ЛОГИКА ПРИЛОЖЕНИЯ
+         ============================================
+         Весь код снабжён подробными комментариями
+         для учебных целей.
+    -->
+    <script>
+        /**
+         * ============================================
+         * РАЗДЕЛ 1: ОПРЕДЕЛЕНИЕ МОДЕЛИ ДАННЫХ
+         * ============================================
+         * 
+         * В компьютерном моделировании первый шаг — 
+         * определить, какие аспекты реального явления
+         * мы хотим смоделировать и как их представить.
+         * 
+         * Здесь мы моделируем языковые компетенции
+         * согласно общепринятой классификации.
+         */
+        
+        const modelData = {
+            speaking: {
+                label: "Говорение ОЕА",
+                value: 70,
+                color: "#e74c3c",
+                description: "Устная речь, произношение, беглость"
+            },
+            listening: {
+                label: "Аудирование ОЕА", 
+                value: 65,
+                color: "#3498db",
+                description: "Понимание устной речи"
+            },
+            reading: {
+                label: "Чтение ОЕА",
+                value: 80,
+                color: "#2ecc71",
+                description: "Понимание письменных текстов"
+            },
+            writing: {
+                label: "Письмо ОЕА",
+                value: 55,
+                color: "#9b59b6",
+                description: "Создание письменных текстов"
+            },
+            grammar: {
+                label: "Грамматика ОЕА",
+                value: 75,
+                color: "#f39c12",
+                description: "Знание грамматических правил"
+            },
+            vocabulary: {
+                label: "Лексика ОЕА",
+                value: 60,
+                color: "#1abc9c",
+                description: "Объём и активность словарного запаса"
+            }
+        };
+
+        /**
+         * ============================================
+         * РАЗДЕЛ 2: ПРЕДУСТАНОВЛЕННЫЕ ПРОФИЛИ
+         * ============================================
+         * 
+         * Пресеты демонстрируют типичные паттерны
+         * владения языком для разных категорий.
+         * Это пример использования модели для
+         * представления обобщённых случаев.
+         */
+        
+        const presets = {
+            beginner: {
+                speaking: 20, listening: 25, reading: 30,
+                writing: 15, grammar: 25, vocabulary: 20
+            },
+            intermediate: {
+                speaking: 55, listening: 60, reading: 65,
+                writing: 50, grammar: 60, vocabulary: 55
+            },
+            advanced: {
+                speaking: 80, listening: 85, reading: 90,
+                writing: 75, grammar: 85, vocabulary: 80
+            },
+            native: {
+                speaking: 95, listening: 98, reading: 95,
+                writing: 90, grammar: 92, vocabulary: 95
+            },
+            academic: {
+                speaking: 60, listening: 70, reading: 95,
+                writing: 90, grammar: 88, vocabulary: 85
+            }
+        };
+
+        /**
+         * ============================================
+         * РАЗДЕЛ 3: ПОЛУЧЕНИЕ КОНТЕКСТА CANVAS
+         * ============================================
+         * 
+         * Canvas — это HTML5 элемент для растровой
+         * графики. Получаем 2D контекст для рисования.
+         */
+        
+        const canvas = document.getElementById('radarChart');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+
+        // Параметры диаграммы
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const maxRadius = 180;
+        const levels = 5; // Количество концентрических кругов
+
+        /**
+         * ============================================
+         * РАЗДЕЛ 4: ФУНКЦИЯ РИСОВАНИЯ ДИАГРАММЫ
+         * ============================================
+         * 
+         * Основная функция визуализации модели.
+         * Реализует алгоритм построения лепестковой
+         * (радарной) диаграммы.
+         */
+        
+        function drawRadarChart() {
+            // Очищаем canvas перед перерисовкой
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const keys = Object.keys(modelData);
+            const numAxes = keys.length;
+            const angleStep = (2 * Math.PI) / numAxes;
+
+            // --- Шаг 1: Рисуем фоновую сетку ---
+            drawGrid(numAxes, angleStep);
+            
+            // --- Шаг 2: Рисуем оси ---
+            drawAxes(numAxes, angleStep, keys);
+            
+            // --- Шаг 3: Рисуем область данных ---
+            drawDataArea(keys, angleStep);
+            
+            // --- Шаг 4: Рисуем точки данных ---
+            drawDataPoints(keys, angleStep);
+            
+            // Обновляем статистику
+            updateStatistics();
+        }
+
+        /**
+         * Рисование концентрических кругов (сетка)
+         * Каждый круг представляет уровень значения
+         */
+        function drawGrid(numAxes, angleStep) {
+            for (let level = 1; level <= levels; level++) {
+                const levelRadius = (maxRadius / levels) * level;
+                
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(200, 200, 200, 0.5)';
+                ctx.lineWidth = 1;
+                
+                // Рисуем многоугольник вместо круга
+                for (let i = 0; i <= numAxes; i++) {
+                    const angle = angleStep * i - Math.PI / 2;
+                    const x = centerX + levelRadius * Math.cos(angle);
+                    const y = centerY + levelRadius * Math.sin(angle);
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                ctx.closePath();
+                ctx.stroke();
+                
+                // Подписи уровней
+                if (level < levels) {
+                    ctx.fillStyle = 'rgba(150, 150, 150, 0.7)';
+                    ctx.font = '10px Arial';
+                    ctx.fillText(
+                        `${level * 20}`,
+                        centerX + 5,
+                        centerY - levelRadius + 12
+                    );
+                }
+            }
+        }
+
+        /**
+         * Рисование осей диаграммы
+         * Каждая ось соответствует одному параметру модели
+         */
+        function drawAxes(numAxes, angleStep, keys) {
+            for (let i = 0; i < numAxes; i++) {
+                const angle = angleStep * i - Math.PI / 2;
+                const x = centerX + maxRadius * Math.cos(angle);
+                const y = centerY + maxRadius * Math.sin(angle);
+                
+                // Линия оси
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(150, 150, 150, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                
+                // Подпись оси
+                const labelRadius = maxRadius + 25;
+                const labelX = centerX + labelRadius * Math.cos(angle);
+                const labelY = centerY + labelRadius * Math.sin(angle);
+                
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(modelData[keys[i]].label, labelX, labelY);
+            }
+        }
+
+        /**
+         * Рисование области данных (закрашенный многоугольник)
+         * Это главная визуализация значений модели
+         */
+        function drawDataArea(keys, angleStep) {
+            ctx.beginPath();
+            
+            keys.forEach((key, i) => {
+                const value = modelData[key].value / 100;
+                const angle = angleStep * i - Math.PI / 2;
+                const x = centerX + maxRadius * value * Math.cos(angle);
+                const y = centerY + maxRadius * value * Math.sin(angle);
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            
+            ctx.closePath();
+            
+            // Градиентная заливка
+            const gradient = ctx.createRadialGradient(
+                centerX, centerY, 0,
+                centerX, centerY, maxRadius
+            );
+            gradient.addColorStop(0, 'rgba(74, 111, 165, 0.3)');
+            gradient.addColorStop(1, 'rgba(74, 111, 165, 0.1)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            // Обводка
+            ctx.strokeStyle = 'rgba(74, 111, 165, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        /**
+         * Рисование точек данных на вершинах многоугольника
+         */
+        function drawDataPoints(keys, angleStep) {
+            keys.forEach((key, i) => {
+                const value = modelData[key].value / 100;
+                const angle = angleStep * i - Math.PI / 2;
+                const x = centerX + maxRadius * value * Math.cos(angle);
+                const y = centerY + maxRadius * value * Math.sin(angle);
+                
+                // Внешний круг
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, 2 * Math.PI);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+                ctx.strokeStyle = modelData[key].color;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                // Внутренний круг
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fillStyle = modelData[key].color;
+                ctx.fill();
+            });
+        }
+
+        /**
+         * ============================================
+         * РАЗДЕЛ 5: СОЗДАНИЕ ЭЛЕМЕНТОВ УПРАВЛЕНИЯ
+         * ============================================
+         * 
+         * Динамически создаём слайдеры для каждого
+         * параметра модели. Это демонстрирует
+         * генерацию UI на основе данных.
+         */
+        
+        function createControls() {
+            const container = document.getElementById('controlsGrid');
+            container.innerHTML = '';
+            
+            Object.keys(modelData).forEach(key => {
+                const item = modelData[key];
+                
+                const controlDiv = document.createElement('div');
+                controlDiv.className = 'control-item';
+                controlDiv.innerHTML = `
+                    <label>
+                        <span style="color: ${item.color}">●</span> 
+                        ${item.label}
+                    </label>
+                    <input type="range" 
+                           id="slider-${key}" 
+                           min="0" max="100" 
+                           value="${item.value}">
+                    <div class="value-display" id="value-${key}">
+                        ${item.value}
+                    </div>
+                `;
+                
+                container.appendChild(controlDiv);
+                
+                // Привязываем обработчик события
+                const slider = document.getElementById(`slider-${key}`);
+                slider.addEventListener('input', (e) => {
+                    updateValue(key, parseInt(e.target.value));
+                });
+            });
+            
+            // Создаём легенду
+            createLegend();
+        }
+
+        /**
+         * Создание легенды диаграммы
+         */
+        function createLegend() {
+            const legendContainer = document.getElementById('legend');
+            legendContainer.innerHTML = '';
+            
+            Object.keys(modelData).forEach(key => {
+                const item = modelData[key];
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.innerHTML = `
+                    <span class="legend-color" 
+                          style="background: ${item.color}"></span>
+                    <span>${item.label}</span>
+                `;
+                legendContainer.appendChild(legendItem);
+            });
+        }
+
+        /**
+         * ============================================
+         * РАЗДЕЛ 6: ФУНКЦИИ ОБНОВЛЕНИЯ МОДЕЛИ
+         * ============================================
+         */
+        
+        function updateValue(key, newValue) {
+            modelData[key].value = newValue;
+            document.getElementById(`value-${key}`).textContent = newValue;
+            drawRadarChart();
+        }
+
+        function updateStatistics() {
+            const values = Object.values(modelData).map(d => d.value);
+            
+            // Средний балл
+            const avg = values.reduce((a, b) => a + b, 0) / values.length;
+            document.getElementById('avgValue').textContent = avg.toFixed(1);
+            
+            // Максимум
+            const max = Math.max(...values);
+            document.getElementById('maxValue').textContent = max;
+            
+            // Заполненность (площадь относительно максимальной)
+            const area = calculateAreaPercentage();
+            document.getElementById('areaValue').textContent = area + '%';
+        }
+
+        /**
+         * Вычисление площади многоугольника данных
+         * относительно максимально возможной площади
+         */
+        function calculateAreaPercentage() {
+            const keys = Object.keys(modelData);
+            const n = keys.length;
+            const angleStep = (2 * Math.PI) / n;
+            
+            // Площадь правильного многоугольника: 
+            // A = (1/2) * n * r² * sin(2π/n)
+            const maxArea = 0.5 * n * Math.pow(maxRadius, 2) 
+                           * Math.sin(angleStep);
+            
+            // Вычисляем площадь текущего многоугольника
+            let currentArea = 0;
+            
+            for (let i = 0; i < n; i++) {
+                const r1 = (modelData[keys[i]].value / 100) * maxRadius;
+                const r2 = (modelData[keys[(i + 1) % n]].value / 100) * maxRadius;
+                currentArea += 0.5 * r1 * r2 * Math.sin(angleStep);
+            }
+            
+            return Math.round((currentArea / maxArea) * 100);
+        }
+
+        /**
+         * ============================================
+         * РАЗДЕЛ 7: ФУНКЦИИ УПРАВЛЕНИЯ
+         * ============================================
+         */
+        
+        function randomizeValues() {
+            Object.keys(modelData).forEach(key => {
+                const newValue = Math.floor(Math.random() * 101);
+                modelData[key].value = newValue;
+                document.getElementById(`slider-${key}`).value = newValue;
+                document.getElementById(`value-${key}`).textContent = newValue;
+            });
+            drawRadarChart();
+        }
+
+        function resetValues() {
+            const defaultValues = {
+                speaking: 70, listening: 65, reading: 80,
+                writing: 55, grammar: 75, vocabulary: 60
+            };
+            
+            Object.keys(defaultValues).forEach(key => {
+                modelData[key].value = defaultValues[key];
+                document.getElementById(`slider-${key}`).value = defaultValues[key];
+                document.getElementById(`value-${key}`).textContent = defaultValues[key];
+            });
+            drawRadarChart();
+        }
+
+        function loadPreset(presetName) {
+            const preset = presets[presetName];
+            
+            Object.keys(preset).forEach(key => {
+                modelData[key].value = preset[key];
+                document.getElementById(`slider-${key}`).value = preset[key];
+                document.getElementById(`value-${key}`).textContent = preset[key];
+            });
+            drawRadarChart();
+        }
+
+        function exportData() {
+            const data = {};
+            Object.keys(modelData).forEach(key => {
+                data[modelData[key].label] = modelData[key].value;
+            });
+            
+            const dataStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'language_profile.json';
+            a.click();
+            
+            URL.revokeObjectURL(url);
+        }
+
+        /**
+         * ============================================
+         * РАЗДЕЛ 8: ПЕРЕКЛЮЧЕНИЕ ТАБОВ
+         * ============================================
+         */
+        
+        function switchTab(tabId) {
+            document.querySelectorAll('#aspects, #properties, #applications')
+                .forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.info-section .tab')
+                .forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function switchCodeTab(tabId) {
+            document.querySelectorAll('#structure, #drawing, #interaction')
+                .forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.code-section .tab')
+                .forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        /**
+         * ============================================
+         * РАЗДЕЛ 9: ОБРАБОТКА СОБЫТИЙ CANVAS
+         * ============================================
+         * 
+         * Добавляем интерактивность: при наведении
+         * мыши показываем подсказку с информацией.
+         */
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            const keys = Object.keys(modelData);
+            const angleStep = (2 * Math.PI) / keys.length;
+            
+            let found = false;
+            
+            keys.forEach((key, i) => {
+                const value = modelData[key].value / 100;
+                const angle = angleStep * i - Math.PI / 2;
+                const x = centerX + maxRadius * value * Math.cos(angle);
+                const y = centerY + maxRadius * value * Math.sin(angle);
+                
+                const distance = Math.sqrt(
+                    Math.pow(mouseX - x, 2) + Math.pow(mouseY - y, 2)
+                );
+                
+                if (distance < 15) {
+                    tooltip.innerHTML = `
+                        <strong>${modelData[key].label}</strong><br>
+                        Значение: ${modelData[key].value}/100<br>
+                        <em>${modelData[key].description}</em>
+                    `;
+                    tooltip.style.left = (e.clientX + 15) + 'px';
+                    tooltip.style.top = (e.clientY - 10) + 'px';
+                    tooltip.classList.add('visible');
+                    found = true;
+                }
+            });
+            
+            if (!found) {
+                tooltip.classList.remove('visible');
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            tooltip.classList.remove('visible');
+        });
+
+        /**
+         * ============================================
+         * РАЗДЕЛ 10: ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
+         * ============================================
+         * 
+         * Точка входа — запускается при загрузке страницы.
+         * Инициализируем все компоненты приложения.
+         */
+        
+        function init() {
+            createControls();
+            drawRadarChart();
+            console.log('Приложение "Лепестковая диаграмма" инициализировано');
+            console.log('Это учебный пример компьютерной модели');
+        }
+
+        // Запуск при загрузке DOM
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

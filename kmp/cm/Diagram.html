@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --header-color: #325980;
+            --accent-color: #3498db;
+            --divider-color: #f1f1f1;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --error-color: #e74c3c;
+            --success-color: #27ae60;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --header-color: #4a7ab0;
+            --accent-color: #5dade2;
+            --divider-color: #2d3a4f;
+            --text-primary: #e8e8e8;
+            --text-secondary: #b0b0b0;
+            --error-color: #e74c3c;
+            --success-color: #2ecc71;
+            --shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        header {
+            background: var(--header-color);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .theme-toggle {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.2);
+            transform: rotate(20deg);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            background: var(--bg-primary);
+            padding: 0.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: var(--transition);
+            font-size: 0.95rem;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .nav-tab:hover:not(:disabled) {
+            background: var(--divider-color);
+        }
+
+        .nav-tab.active {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .nav-tab:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .nav-tab.locked::after {
+            content: '';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'/%3E%3C/svg%3E") no-repeat center;
+            background-size: contain;
+        }
+
+        .nav-tab.unlocked::after {
+            content: '';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2327ae60'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E") no-repeat center;
+            background-size: contain;
+        }
+
+        .section {
+            display: none;
+            background: var(--bg-primary);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            animation: fadeIn 0.4s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+            color: var(--header-color);
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 3px solid var(--accent-color);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group label .required {
+            color: var(--error-color);
+            font-weight: 700;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--divider-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: var(--transition);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .form-group input.error,
+        .form-group textarea.error,
+        .form-group select.error {
+            border-color: var(--error-color);
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
+        }
+
+        .form-group input.valid,
+        .form-group textarea.valid,
+        .form-group select.valid {
+            border-color: var(--success-color);
+        }
+
+        .form-group .error-message {
+            color: var(--error-color);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+        .form-group .error-message.visible {
+            display: block;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .validation-summary {
+            background: rgba(231, 76, 60, 0.1);
+            border: 2px solid var(--error-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .validation-summary.visible {
+            display: block;
+        }
+
+        .validation-summary h4 {
+            color: var(--error-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .validation-summary ul {
+            margin-left: 1.5rem;
+            color: var(--error-color);
+        }
+
+        .progress-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+
+        .progress-indicator .progress-bar {
+            flex: 1;
+            height: 8px;
+            background: var(--divider-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-indicator .progress-fill {
+            height: 100%;
+            background: var(--success-color);
+            transition: width 0.3s ease;
+        }
+
+        .progress-indicator .progress-text {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .parameter-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: var(--transition);
+            border: 2px solid transparent;
+        }
+
+        .parameter-card:hover {
+            border-color: var(--accent-color);
+        }
+
+        .parameter-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .parameter-name {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .parameter-name input {
+            width: 100%;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .color-picker-wrapper input[type="color"] {
+            width: 50px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: var(--divider-color);
+            cursor: pointer;
+            -webkit-appearance: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            transition: var(--transition);
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        .slider-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--accent-color);
+        }
+
+        .chart-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .chart-title {
+            color: var(--header-color);
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        #radarChart {
+            max-width: 100%;
+            height: auto;
+            cursor: pointer;
+        }
+
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.875rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--divider-color);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            border-color: var(--accent-color);
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #219a52;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+        }
+
+        .tooltip {
+            position: absolute;
+            background: var(--header-color);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 250px;
+            box-shadow: var(--shadow);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .info-block {
+            background: linear-gradient(135deg, var(--header-color), var(--accent-color));
+            color: white;
+            padding: 2rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+        }
+
+        .info-block h2 {
+            margin-bottom: 1rem;
+        }
+
+        .info-block p {
+            opacity: 0.95;
+            margin-bottom: 0.5rem;
+        }
+
+        .author-block {
+            text-align: center;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border-top: 2px solid var(--divider-color);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .preview-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .preview-data {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+
+        .preview-data h3 {
+            color: var(--header-color);
+            margin-bottom: 1rem;
+        }
+
+        .preview-data table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .preview-data th,
+        .preview-data td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--divider-color);
+        }
+
+        .preview-data th {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .conclusion-block {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .student-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--accent-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            header h1 {
+                font-size: 1.1rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .section {
+                padding: 1.5rem;
+            }
+
+            .nav-tabs {
+                justify-content: center;
+            }
+
+            .nav-tab {
+                padding: 0.6rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .preview-section {
+                grid-template-columns: 1fr;
+            }
+
+            .parameter-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                justify-content: center;
+            }
+        }
+
+        .drag-point {
+            cursor: grab;
+            transition: r 0.2s ease;
+        }
+
+        .drag-point:hover {
+            r: 10;
+        }
+
+        .drag-point.dragging {
+            cursor: grabbing;
+            r: 12;
+        }
+
+        .progress-bar-param {
+            height: 4px;
+            background: var(--divider-color);
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .locked-overlay {
+            position: relative;
+        }
+
+        .locked-overlay::before {
+            content: 'Заполните персональные данные для доступа к этому разделу';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            border-radius: 16px;
+            z-index: 10;
+            font-size: 1.1rem;
+        }
+		
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Педпрактика</h1>
+        <button class="theme-toggle" id="themeToggle" title="Переключить тему">
+            <span id="themeIcon">&#9728;</span>
+        </button>
+    </header>
+
+    <div class="container">
+        <div class="info-block">
+            <h2>Система компьютерного моделирования оценки практики</h2>
+            <p>Приложение позволяет визуализировать и анализировать результаты педагогической практики по шести ключевым параметрам с помощью интерактивной лепестковой диаграммы.</p>
+            <p>Заполните персональные данные, настройте параметры оценки, добавьте пояснения и экспортируйте результат в HTML-файл.</p>
+        </div>
+
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-section="personal">Данные</button>
+            <button class="nav-tab locked" data-section="parameters" disabled>Оценки</button>
+            <button class="nav-tab locked" data-section="diagram" disabled>Диаграмма</button>
+            <button class="nav-tab locked" data-section="conclusion" disabled>Вывод</button>
+            <button class="nav-tab locked" data-section="preview" disabled>Предпросмотр</button>
+        </nav>
+
+        <!-- Секция личных данных -->
+        <section class="section active" id="personal">
+            <h2 class="section-title">Персональные данные</h2>
+            
+            <div class="progress-indicator">
+                <span>Заполнено:</span>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="formProgress" style="width: 0%"></div>
+                </div>
+                <span class="progress-text" id="progressText">0 / 8</span>
+            </div>
+
+            <div class="validation-summary" id="validationSummary">
+                <h4>Пожалуйста, заполните все обязательные поля:</h4>
+                <ul id="validationList"></ul>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="fullName">ФИО студента <span class="required">*</span></label>
+                    <input type="text" id="fullName" placeholder="Орлова Ева Адамовна" required>
+                    <span class="error-message">Введите ФИО полностью</span>
+                </div>
+                <div class="form-group">
+                    <label for="course">Курс обучения <span class="required">*</span></label>
+                    <select id="course" required>
+                        <option value="">Выберите курс</option>
+                        <option value="3">3 курс (бакалавриат)</option>
+                        <option value="4">4 курс (бакалавриат)</option>
+                        <option value="5">Магистратура</option>
+                        </select>
+                    <span class="error-message">Выберите курс обучения</span>
+                </div>
+                <div class="form-group">
+                    <label for="group">Группа <span class="required">*</span></label>
+                    <input type="text" id="group" placeholder="500" required>
+                    <span class="error-message">Введите номер группы</span>
+                </div>
+                <div class="form-group">
+                    <label for="school">Образовательное учреждение <span class="required">*</span></label>
+                    <input type="text" id="school" placeholder="ГУО СШ № 18 г. Бреста" required>
+                    <span class="error-message">Введите название учреждения</span>
+                </div>
+                <div class="form-group">
+                    <label for="dateStart">Дата начала практики <span class="required">*</span></label>
+                    <input type="date" id="dateStart" required>
+                    <span class="error-message">Укажите дату начала</span>
+                </div>
+                <div class="form-group">
+                    <label for="dateEnd">Дата окончания практики <span class="required">*</span></label>
+                    <input type="date" id="dateEnd" required>
+                    <span class="error-message">Укажите дату окончания</span>
+                </div>
+                <div class="form-group">
+                    <label for="mentor">ФИО руководителя практики <span class="required">*</span></label>
+                    <input type="text" id="mentor" placeholder="Петрова Анна Владимировна" required>
+                    <span class="error-message">Введите ФИО руководителя</span>
+                </div>
+                <div class="form-group">
+                    <label for="subject">Преподаваемые языки <span class="required">*</span></label>
+                    <input type="text" id="subject" placeholder="Английский и немецкий языки" required>
+                    <span class="error-message">Укажите языки</span>
+                </div>
+            </div>
+            <div class="button-group">
+                <button class="btn btn-primary" id="btnNextToParams" onclick="validateAndProceed('parameters')">
+                    Далее: Параметры оценки
+                </button>
+            </div>
+        </section>
+
+        <!-- Секция параметров -->
+        <section class="section" id="parameters">
+            <h2 class="section-title">Настройка параметров оценки</h2>
+            <div class="student-badge" id="studentBadgeParams"></div>
+            <div id="parametersContainer"></div>
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="resetParameters()">Сброс параметров</button>
+                <button class="btn btn-primary" onclick="applyParameters()">Применить</button>
+                <button class="btn btn-primary" onclick="switchSection('diagram')">Далее: Диаграмма</button>
+            </div>
+        </section>
+
+        <!-- Секция диаграммы -->
+        <section class="section" id="diagram">
+            <h2 class="section-title">Интерактивная лепестковая диаграмма</h2>
+            <div class="chart-container">
+                <div class="chart-title" id="chartTitle">Диаграмма оценки практики</div>
+                <svg id="radarChart" width="500" height="500" viewBox="0 0 500 500"></svg>
+                <div class="chart-legend" id="chartLegend"></div>
+            </div>
+            <p style="text-align: center; color: var(--text-secondary); margin-top: 1rem;">
+                Наведите курсор для просмотра деталей.
+            </p>
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="switchSection('conclusion')">Далее: Общий вывод</button>
+            </div>
+        </section>
+
+        <!-- Секция общего вывода -->
+        <section class="section" id="conclusion">
+            <h2 class="section-title">Общий вывод по результатам практики</h2>
+            <div class="student-badge" id="studentBadgeConclusion"></div>
+            <div class="form-group">
+                <label for="conclusionText">Напишите развёрнутый вывод о прохождении педагогической практики</label>
+                <textarea id="conclusionText" rows="8" placeholder="Опишите ваши впечатления, полученный опыт, достижения и сложности, с которыми вы столкнулись во время практики..."></textarea>
+            </div>
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label for="recommendations">Рекомендации для будущих практикантов</label>
+                <textarea id="recommendations" rows="4" placeholder="Поделитесь советами для студентов, которые будут проходить практику в будущем..."></textarea>
+            </div>
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="switchSection('preview')">Предпросмотр результата</button>
+            </div>
+        </section>
+
+        <!-- Секция предпросмотра -->
+        <section class="section" id="preview">
+            <h2 class="section-title">Предпросмотр отчёта</h2>
+            <div id="previewContent"></div>
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="resetAll()">Сбросить всё</button>
+                <button class="btn btn-success" onclick="exportToHTML()">Экспорт в HTML</button>
+            </div>
+        </section>
+
+        
+    </div>
+    <div class="tooltip" id="tooltip"></div>
+	<footer class="footer">
+	<div class="container">
+	<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+	для умных</p>
+	</div>
+	</footer>
+	<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Данные параметров по умолчанию
+        const defaultParameters = [
+            { id: 1, name: 'Полезность', value: 75, color: '#3498db', description: '' },
+            { id: 2, name: 'Увлекательность', value: 70, color: '#e74c3c', description: '' },
+            { id: 3, name: 'Сложность', value: 60, color: '#2ecc71', description: '' },
+            { id: 4, name: 'Новизна', value: 80, color: '#9b59b6', description: '' },
+            { id: 5, name: 'Взаимопонимание', value: 85, color: '#f39c12', description: '' },
+            { id: 6, name: 'Использование ИИ', value: 65, color: '#1abc9c', description: '' }
+        ];
+
+        let parameters = JSON.parse(JSON.stringify(defaultParameters));
+        let isDragging = false;
+        let dragPointIndex = -1;
+        let isFormValid = false;
+
+        // Поля формы для валидации
+        const requiredFields = [
+            { id: 'fullName', label: 'ФИО студента' },
+            { id: 'course', label: 'Курс обучения' },
+            { id: 'group', label: 'Группа' },
+            { id: 'school', label: 'Образовательное учреждение' },
+            { id: 'dateStart', label: 'Дата начала практики' },
+            { id: 'dateEnd', label: 'Дата окончания практики' },
+            { id: 'mentor', label: 'ФИО руководителя практики' },
+            { id: 'subject', label: 'Преподаваемые языки' }
+        ];
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            renderParameters();
+            setupNavigation();
+            setupValidation();
+            updateProgress();
+        });
+
+        // Тема
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+            if (isFormValid) renderChart();
+        });
+
+        function updateThemeIcon(theme) {
+            document.getElementById('themeIcon').innerHTML = theme === 'dark' ? '&#9790;' : '&#9728;';
+        }
+
+        // Валидация
+        function setupValidation() {
+            requiredFields.forEach(field => {
+                const element = document.getElementById(field.id);
+                element.addEventListener('input', () => {
+                    validateField(field.id);
+                    updateProgress();
+                    checkFormValidity();
+                });
+                element.addEventListener('change', () => {
+                    validateField(field.id);
+                    updateProgress();
+                    checkFormValidity();
+                });
+                element.addEventListener('blur', () => {
+                    validateField(field.id);
+                });
+            });
+        }
+
+        function validateField(fieldId) {
+            const element = document.getElementById(fieldId);
+            const errorMessage = element.parentElement.querySelector('.error-message');
+            const value = element.value.trim();
+            
+            let isValid = false;
+
+            if (fieldId === 'fullName') {
+                // Проверка ФИО: минимум 2 слова
+                isValid = value.split(/\s+/).filter(w => w.length > 0).length >= 2;
+            } else if (fieldId === 'dateStart' || fieldId === 'dateEnd') {
+                isValid = value !== '';
+                // Дополнительная проверка: дата окончания >= дата начала
+                if (fieldId === 'dateEnd' && isValid) {
+                    const startDate = document.getElementById('dateStart').value;
+                    if (startDate && value < startDate) {
+                        isValid = false;
+                        errorMessage.textContent = 'Дата окончания не может быть раньше даты начала';
+                    } else {
+                        errorMessage.textContent = 'Укажите дату окончания';
+                    }
+                }
+            } else {
+                isValid = value !== '';
+            }
+
+            element.classList.toggle('error', !isValid && value !== '');
+            element.classList.toggle('valid', isValid);
+            
+            if (errorMessage) {
+                errorMessage.classList.toggle('visible', !isValid && value !== '');
+            }
+
+            return isValid;
+        }
+
+        function updateProgress() {
+            let filledCount = 0;
+            requiredFields.forEach(field => {
+                const element = document.getElementById(field.id);
+                if (element.value.trim() !== '') {
+                    filledCount++;
+                }
+            });
+
+            const percentage = (filledCount / requiredFields.length) * 100;
+            document.getElementById('formProgress').style.width = percentage + '%';
+            document.getElementById('progressText').textContent = `${filledCount} / ${requiredFields.length}`;
+        }
+
+        function checkFormValidity() {
+            const invalidFields = [];
+            
+            requiredFields.forEach(field => {
+                const element = document.getElementById(field.id);
+                const value = element.value.trim();
+                
+                if (!value) {
+                    invalidFields.push(field.label);
+                } else if (field.id === 'fullName' && value.split(/\s+/).filter(w => w.length > 0).length < 2) {
+                    invalidFields.push(field.label + ' (введите полностью)');
+                }
+            });
+
+            // Проверка дат
+            const startDate = document.getElementById('dateStart').value;
+            const endDate = document.getElementById('dateEnd').value;
+            if (startDate && endDate && endDate < startDate) {
+                if (!invalidFields.includes('Дата окончания практики')) {
+                    invalidFields.push('Дата окончания практики (должна быть позже начала)');
+                }
+            }
+
+            isFormValid = invalidFields.length === 0;
+            
+            // Обновляем состояние кнопок навигации
+            updateNavigationState();
+            
+            return { isValid: isFormValid, invalidFields };
+        }
+
+        function updateNavigationState() {
+            const tabs = document.querySelectorAll('.nav-tab[data-section]:not([data-section="personal"])');
+            
+            tabs.forEach(tab => {
+                if (isFormValid) {
+                    tab.disabled = false;
+                    tab.classList.remove('locked');
+                    tab.classList.add('unlocked');
+                } else {
+                    tab.disabled = true;
+                    tab.classList.add('locked');
+                    tab.classList.remove('unlocked');
+                }
+            });
+        }
+
+        function validateAndProceed(targetSection) {
+            const validation = checkFormValidity();
+            
+            if (!validation.isValid) {
+                // Показываем сводку ошибок
+                const summary = document.getElementById('validationSummary');
+                const list = document.getElementById('validationList');
+                
+                list.innerHTML = validation.invalidFields.map(f => `<li>${f}</li>`).join('');
+                summary.classList.add('visible');
+                
+                // Подсвечиваем пустые поля
+                requiredFields.forEach(field => {
+                    validateField(field.id);
+                });
+                
+                // Прокрутка к первой ошибке
+                const firstError = document.querySelector('.form-group input.error, .form-group select.error, .form-group input:invalid');
+                if (firstError) {
+                    firstError.focus();
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                
+                return;
+            }
+            
+            // Скрываем сводку ошибок
+            document.getElementById('validationSummary').classList.remove('visible');
+            
+            // Обновляем бейджи с фамилией
+            updateStudentBadges();
+            
+            // Переходим к следующей секции
+            switchSection(targetSection);
+        }
+
+        function getStudentSurname() {
+            const fullName = document.getElementById('fullName').value.trim();
+            if (!fullName) return 'Студент';
+            
+            // Извлекаем первое слово (фамилию)
+            const parts = fullName.split(/\s+/).filter(w => w.length > 0);
+            return parts[0] || 'Студент';
+        }
+
+        function getStudentFullName() {
+            return document.getElementById('fullName').value.trim() || 'Студент';
+        }
+
+        function updateStudentBadges() {
+            const surname = getStudentSurname();
+            const fullName = getStudentFullName();
+            
+            // Обновляем бейджи
+            const badgeParams = document.getElementById('studentBadgeParams');
+            const badgeConclusion = document.getElementById('studentBadgeConclusion');
+            
+            if (badgeParams) {
+                badgeParams.textContent = `Студент: ${fullName}`;
+            }
+            if (badgeConclusion) {
+                badgeConclusion.textContent = `Студент: ${fullName}`;
+            }
+            
+            // Обновляем заголовок диаграммы
+            const chartTitle = document.getElementById('chartTitle');
+            if (chartTitle) {
+                chartTitle.textContent = `Диаграмма оценки практики — ${surname}`;
+            }
+        }
+
+        // Навигация
+        function setupNavigation() {
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    if (tab.disabled) return;
+                    
+                    const sectionId = tab.getAttribute('data-section');
+                    
+                    // Если пытаемся перейти с первой секции — проверяем валидацию
+                    if (document.getElementById('personal').classList.contains('active') && sectionId !== 'personal') {
+                        validateAndProceed(sectionId);
+                    } else {
+                        switchSection(sectionId);
+                    }
+                });
+            });
+        }
+
+        function switchSection(sectionId) {
+            // Проверяем, можно ли переходить
+            if (sectionId !== 'personal' && !isFormValid) {
+                validateAndProceed(sectionId);
+                return;
+            }
+
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            
+            document.querySelector(`[data-section="${sectionId}"]`).classList.add('active');
+            document.getElementById(sectionId).classList.add('active');
+
+            // Обновляем данные студента при переходе
+            updateStudentBadges();
+
+            if (sectionId === 'diagram') {
+                renderChart();
+            } else if (sectionId === 'preview') {
+                renderPreview();
+            }
+
+            // Прокрутка наверх
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Рендер параметров
+        function renderParameters() {
+            const container = document.getElementById('parametersContainer');
+            container.innerHTML = parameters.map((param, index) => `
+                <div class="parameter-card">
+                    <div class="parameter-header">
+                        <div class="parameter-name">
+                            <input type="text" 
+                                   value="${param.name}" 
+                                   onchange="updateParameterName(${index}, this.value)"
+                                   placeholder="Название параметра">
+                        </div>
+                        <div class="color-picker-wrapper">
+                            <label>Цвет:</label>
+                            <input type="color" 
+                                   value="${param.color}" 
+                                   onchange="updateParameterColor(${index}, this.value)">
+                        </div>
+                    </div>
+                    <div class="slider-container">
+                        <span>0</span>
+                        <input type="range" 
+                               min="0" max="100" 
+                               value="${param.value}"
+                               id="slider-${index}"
+                               oninput="updateParameterValue(${index}, this.value)">
+                        <span>100</span>
+                        <div class="slider-value" id="value-${index}">${param.value}</div>
+                    </div>
+                    <div class="progress-bar-param">
+                        <div class="progress-bar-fill" 
+                             id="progress-${index}"
+                             style="width: ${param.value}%; background: ${param.color};"></div>
+                    </div>
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label>Пояснение к параметру:</label>
+                        <textarea rows="2" 
+                                  placeholder="Кратко опишите вашу оценку по данному параметру..."
+                                  onchange="updateParameterDescription(${index}, this.value)">${param.description}</textarea>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateParameterName(index, value) {
+            parameters[index].name = value;
+        }
+
+        function updateParameterValue(index, value) {
+            parameters[index].value = parseInt(value);
+            document.getElementById(`value-${index}`).textContent = value;
+            document.getElementById(`progress-${index}`).style.width = value + '%';
+        }
+
+        function updateParameterColor(index, value) {
+            parameters[index].color = value;
+            document.getElementById(`progress-${index}`).style.background = value;
+        }
+
+        function updateParameterDescription(index, value) {
+            parameters[index].description = value;
+        }
+
+        function applyParameters() {
+            renderChart();
+            showNotification('Параметры успешно применены!', 'success');
+        }
+
+        function resetParameters() {
+            parameters = JSON.parse(JSON.stringify(defaultParameters));
+            renderParameters();
+            if (document.getElementById('diagram').classList.contains('active')) {
+                renderChart();
+            }
+            showNotification('Параметры сброшены к значениям по умолчанию', 'info');
+        }
+
+        function resetAll() {
+            if (confirm('Вы уверены, что хотите сбросить все данные? Это действие нельзя отменить.')) {
+                parameters = JSON.parse(JSON.stringify(defaultParameters));
+                
+                // Сбрасываем поля формы
+                requiredFields.forEach(field => {
+                    const element = document.getElementById(field.id);
+                    element.value = '';
+                    element.classList.remove('valid', 'error');
+                });
+                
+                document.getElementById('conclusionText').value = '';
+                document.getElementById('recommendations').value = '';
+                
+                // Сбрасываем состояние валидации
+                isFormValid = false;
+                updateNavigationState();
+                updateProgress();
+                document.getElementById('validationSummary').classList.remove('visible');
+                
+                renderParameters();
+                switchSection('personal');
+                
+                showNotification('Все данные сброшены', 'info');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            // Создаём уведомление
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                padding: 1rem 1.5rem;
+                background: ${type === 'success' ? '#27ae60' : type === 'error' ? '#e74c3c' : '#3498db'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'fadeOut 0.3s ease forwards';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Рендер диаграммы
+        function renderChart() {
+            const svg = document.getElementById('radarChart');
+            const centerX = 250;
+            const centerY = 250;
+            const maxRadius = 180;
+            const levels = 5;
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const gridColor = isDark ? '#3d4f6f' : '#ddd';
+            const textColor = isDark ? '#e8e8e8' : '#333';
+
+            // Обновляем заголовок с фамилией
+            const surname = getStudentSurname();
+            document.getElementById('chartTitle').textContent = `Диаграмма оценки практики — ${surname}`;
+
+            let svgContent = '';
+
+            // Сетка
+            for (let i = 1; i <= levels; i++) {
+                const radius = (maxRadius / levels) * i;
+                svgContent += `<circle cx="${centerX}" cy="${centerY}" r="${radius}" 
+                               fill="none" stroke="${gridColor}" stroke-width="1"/>`;
+            }
+
+            // Оси
+            const angleStep = (2 * Math.PI) / parameters.length;
+            parameters.forEach((param, index) => {
+                const angle = angleStep * index - Math.PI / 2;
+                const x = centerX + maxRadius * Math.cos(angle);
+                const y = centerY + maxRadius * Math.sin(angle);
+                
+                svgContent += `<line x1="${centerX}" y1="${centerY}" x2="${x}" y2="${y}" 
+                               stroke="${gridColor}" stroke-width="1"/>`;
+                
+                // Подписи
+                const labelX = centerX + (maxRadius + 30) * Math.cos(angle);
+                const labelY = centerY + (maxRadius + 30) * Math.sin(angle);
+                svgContent += `<text x="${labelX}" y="${labelY}" 
+                               text-anchor="middle" dominant-baseline="middle"
+                               fill="${textColor}" font-size="12" font-weight="500">${param.name}</text>`;
+            });
+
+            // Полигон данных
+            let polygonPoints = '';
+            const dataPoints = [];
+            
+            parameters.forEach((param, index) => {
+                const angle = angleStep * index - Math.PI / 2;
+                const radius = (param.value / 100) * maxRadius;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                polygonPoints += `${x},${y} `;
+                dataPoints.push({ x, y, param, index, angle });
+            });
+
+            // Градиент
+            svgContent += `
+                <defs>
+                    <linearGradient id="polygonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        ${parameters.map((p, i) => 
+                            `<stop offset="${i * 100 / parameters.length}%" stop-color="${p.color}" stop-opacity="0.3"/>`
+                        ).join('')}
+                    </linearGradient>
+                </defs>
+                <polygon points="${polygonPoints.trim()}" 
+                         fill="url(#polygonGradient)" 
+                         stroke="${parameters[0].color}" 
+                         stroke-width="2"/>
+            `;
+
+            // Лепестки (отдельные секторы)
+            parameters.forEach((param, index) => {
+                const angle = angleStep * index - Math.PI / 2;
+                const nextAngle = angleStep * ((index + 1) % parameters.length) - Math.PI / 2;
+                const radius = (param.value / 100) * maxRadius;
+                
+                const x1 = centerX;
+                const y1 = centerY;
+                const x2 = centerX + radius * Math.cos(angle);
+                const y2 = centerY + radius * Math.sin(angle);
+                const x3 = centerX + radius * Math.cos(nextAngle);
+                const y3 = centerY + radius * Math.sin(nextAngle);
+
+                svgContent += `
+                    <path d="M ${x1} ${y1} L ${x2} ${y2} A ${radius} ${radius} 0 0 1 ${x3} ${y3} Z"
+                          fill="${param.color}" fill-opacity="0.2" 
+                          stroke="${param.color}" stroke-width="1"
+                          class="petal" data-index="${index}"/>
+                `;
+            });
+
+            // Точки данных (перетаскиваемые)
+            dataPoints.forEach(point => {
+                svgContent += `
+                    <circle cx="${point.x}" cy="${point.y}" r="8" 
+                            fill="${point.param.color}" stroke="white" stroke-width="2"
+                            class="drag-point" data-index="${point.index}"
+                            style="cursor: grab;"/>
+                `;
+            });
+
+            svg.innerHTML = svgContent;
+
+            // Легенда
+            const legend = document.getElementById('chartLegend');
+            legend.innerHTML = parameters.map(param => `
+                <div class="legend-item">
+                    <div class="legend-color" style="background: ${param.color};"></div>
+                    <span>${param.name}: ${param.value}%</span>
+                </div>
+            `).join('');
+
+            // События
+            setupChartEvents(centerX, centerY, maxRadius, angleStep);
+        }
+
+        function setupChartEvents(centerX, centerY, maxRadius, angleStep) {
+            const svg = document.getElementById('radarChart');
+            const tooltip = document.getElementById('tooltip');
+
+            // Подсказки
+            svg.querySelectorAll('.drag-point, .petal').forEach(el => {
+                el.addEventListener('mouseenter', (e) => {
+                    const index = parseInt(el.dataset.index);
+                    const param = parameters[index];
+                    tooltip.innerHTML = `
+                        <strong>${param.name}</strong><br>
+                        Значение: ${param.value}%<br>
+                        ${param.description ? `<em>${param.description}</em>` : ''}
+                    `;
+                    tooltip.classList.add('visible');
+                });
+
+                el.addEventListener('mousemove', (e) => {
+                    tooltip.style.left = (e.pageX + 15) + 'px';
+                    tooltip.style.top = (e.pageY + 15) + 'px';
+                });
+
+                el.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('visible');
+                });
+            });
+
+            // Перетаскивание
+            svg.querySelectorAll('.drag-point').forEach(point => {
+                point.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    dragPointIndex = parseInt(point.dataset.index);
+                    point.classList.add('dragging');
+                    e.preventDefault();
+                });
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging || dragPointIndex === -1) return;
+
+                const rect = svg.getBoundingClientRect();
+                const scaleX = 500 / rect.width;
+                const scaleY = 500 / rect.height;
+                
+                const mouseX = (e.clientX - rect.left) * scaleX;
+                const mouseY = (e.clientY - rect.top) * scaleY;
+
+                const dx = mouseX - centerX;
+                const dy = mouseY - centerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const value = Math.min(100, Math.max(0, Math.round((distance / maxRadius) * 100)));
+
+                parameters[dragPointIndex].value = value;
+                
+                // Обновление слайдера
+                const slider = document.getElementById(`slider-${dragPointIndex}`);
+                const valueDisplay = document.getElementById(`value-${dragPointIndex}`);
+                const progress = document.getElementById(`progress-${dragPointIndex}`);
+                
+                if (slider) slider.value = value;
+                if (valueDisplay) valueDisplay.textContent = value;
+                if (progress) progress.style.width = value + '%';
+
+                renderChart();
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    svg.querySelectorAll('.drag-point').forEach(p => p.classList.remove('dragging'));
+                    isDragging = false;
+                    dragPointIndex = -1;
+                }
+            });
+        }
+
+        // Предпросмотр
+        function renderPreview() {
+            const personalData = {
+                'ФИО': document.getElementById('fullName').value || 'Не указано',
+                'Курс': document.getElementById('course').selectedOptions[0]?.text || 'Не указано',
+                'Группа': document.getElementById('group').value || 'Не указано',
+                'Школа': document.getElementById('school').value || 'Не указано',
+                'Период практики': `${document.getElementById('dateStart').value || '?'} — ${document.getElementById('dateEnd').value || '?'}`,
+                'Руководитель': document.getElementById('mentor').value || 'Не указано',
+                'Предмет': document.getElementById('subject').value || 'Не указано'
+            };
+
+            const conclusionText = document.getElementById('conclusionText').value || 'Вывод не заполнен';
+            const recommendations = document.getElementById('recommendations').value || '';
+            const surname = getStudentSurname();
+
+            const content = document.getElementById('previewContent');
+            content.innerHTML = `
+                <div class="student-badge" style="margin-bottom: 1.5rem;">Отчёт студента: ${getStudentFullName()}</div>
+                <div class="preview-section">
+                    <div class="preview-data">
+                        <h3>Персональные данные</h3>
+                        <table>
+                            ${Object.entries(personalData).map(([key, value]) => 
+                                `<tr><th>${key}</th><td>${value}</td></tr>`
+                            ).join('')}
+                        </table>
+                    </div>
+                    <div class="preview-data">
+                        <h3>Параметры оценки</h3>
+                        <table>
+                            <tr><th>Параметр</th><th>Значение</th><th>Пояснение</th></tr>
+                            ${parameters.map(p => 
+                                `<tr>
+                                    <td><span style="color: ${p.color};">●</span> ${p.name}</td>
+                                    <td><strong>${p.value}%</strong></td>
+                                    <td>${p.description || '—'}</td>
+                                </tr>`
+                            ).join('')}
+                        </table>
+                    </div>
+                </div>
+                <div class="chart-container" style="margin-top: 2rem;">
+                    <h3 style="color: var(--header-color); margin-bottom: 1rem;">Диаграмма оценки практики — ${surname}</h3>
+                    ${document.getElementById('radarChart').outerHTML.replace('id="radarChart"', 'id="previewChart"')}
+                </div>
+                <div class="conclusion-block" style="margin-top: 2rem;">
+                    <h3 style="color: var(--header-color); margin-bottom: 1rem;">Общий вывод</h3>
+                    <p>${conclusionText}</p>
+                    ${recommendations ? `<h4 style="margin-top: 1rem; color: var(--accent-color);">Рекомендации</h4><p>${recommendations}</p>` : ''}
+                </div>
+            `;
+        }
+
+        // Экспорт в HTML
+        function exportToHTML() {
+            const personalData = {
+                'ФИО студента': document.getElementById('fullName').value || 'Не указано',
+                'Курс обучения': document.getElementById('course').selectedOptions[0]?.text || 'Не указано',
+                'Группа': document.getElementById('group').value || 'Не указано',
+                'Образовательное учреждение': document.getElementById('school').value || 'Не указано',
+                'Период практики': `${document.getElementById('dateStart').value || '?'} — ${document.getElementById('dateEnd').value || '?'}`,
+                'Руководитель практики': document.getElementById('mentor').value || 'Не указано',
+                'Преподаваемый язык': document.getElementById('subject').value || 'Не указано'
+            };
+
+            const conclusionText = document.getElementById('conclusionText').value || 'Вывод не заполнен';
+            const recommendations = document.getElementById('recommendations').value || '';
+            const studentName = document.getElementById('fullName').value || 'Студент';
+            const surname = getStudentSurname();
+            const svgContent = document.getElementById('radarChart').outerHTML;
+
+            const htmlContent = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчёт о педагогической практике — ${studentName}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; color: #333; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; padding: 2rem; }
+        header { background: #325980; color: white; padding: 2rem; text-align: center; }
+        header h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+        header p { opacity: 0.9; }
+        .student-name { background: #3498db; display: inline-block; padding: 0.5rem 1.5rem; border-radius: 25px; margin-top: 1rem; font-weight: 600; }
+        .section { background: white; border-radius: 12px; padding: 2rem; margin: 1.5rem 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .section-title { color: #325980; font-size: 1.3rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 3px solid #3498db; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
+        th { color: #3498db; font-weight: 600; width: 40%; }
+        .chart-container { text-align: center; padding: 1rem; }
+        .chart-container svg { max-width: 100%; height: auto; }
+        .chart-title { color: #325980; font-size: 1.2rem; margin-bottom: 1rem; font-weight: 600; }
+        .conclusion { background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #3498db; }
+        .param-value { display: inline-block; padding: 0.25rem 0.75rem; background: #3498db; color: white; border-radius: 20px; font-weight: 600; }
+        .color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .footer { text-align: center; padding: 2rem; color: #666; font-size: 0.9rem; }
+        .recommendations { margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #ddd; }
+        @media print { body { background: white; } .section { box-shadow: none; border: 1px solid #ddd; } }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Отчёт о педагогической практике</h1>
+        <p>Курс «Компьютерное моделирование»</p>
+        <div class="student-name">${studentName}</div>
+    </header>
+    <div class="container">
+        <section class="section">
+            <h2 class="section-title">Персональные данные</h2>
+            <table>
+                ${Object.entries(personalData).map(([key, value]) => 
+                    `<tr><th>${key}</th><td>${value}</td></tr>`
+                ).join('')}
+            </table>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Лепестковая диаграмма оценки практики</h2>
+            <div class="chart-container">
+                <div class="chart-title">Диаграмма оценки практики — ${surname}</div>
+                ${svgContent}
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Параметры оценки</h2>
+            <table>
+                <tr><th>Параметр</th><th>Оценка</th><th>Комментарий</th></tr>
+                ${parameters.map(p => `
+                    <tr>
+                        <td><span class="color-dot" style="background: ${p.color};"></span>${p.name}</td>
+                        <td><span class="param-value">${p.value}%</span></td>
+                        <td>${p.description || '—'}</td>
+                    </tr>
+                `).join('')}
+            </table>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Шкала значений</h2>
+            <table>
+                <tr><th>Диапазон</th><th>Интерпретация</th></tr>
+                <tr><td>0–20%</td><td>Очень низкий уровень</td></tr>
+                <tr><td>21–40%</td><td>Низкий уровень</td></tr>
+                <tr><td>41–60%</td><td>Средний уровень</td></tr>
+                <tr><td>61–80%</td><td>Высокий уровень</td></tr>
+                <tr><td>81–100%</td><td>Очень высокий уровень</td></tr>
+            </table>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Общий вывод</h2>
+            <div class="conclusion">
+                <p>${conclusionText.replace(/\n/g, '<br>')}</p>
+                ${recommendations ? `
+                    <div class="recommendations">
+                        <h4 style="color: #3498db; margin-bottom: 0.5rem;">Рекомендации для будущих практикантов</h4>
+                        <p>${recommendations.replace(/\n/g, '<br>')}</p>
+                    </div>
+                ` : ''}
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Статистика</h2>
+            <table>
+                <tr><th>Средний балл</th><td><strong>${Math.round(parameters.reduce((sum, p) => sum + p.value, 0) / parameters.length)}%</strong></td></tr>
+                <tr><th>Максимальный параметр</th><td>${parameters.reduce((max, p) => p.value > max.value ? p : max).name} (${parameters.reduce((max, p) => p.value > max.value ? p : max).value}%)</td></tr>
+                <tr><th>Минимальный параметр</th><td>${parameters.reduce((min, p) => p.value < min.value ? p : min).name} (${parameters.reduce((min, p) => p.value < min.value ? p : min).value}%)</td></tr>
+                <tr><th>Дата формирования отчёта</th><td>${new Date().toLocaleDateString('ru-RU')}</td></tr>
+            </table>
+        </section>
+    </div>
+    <div class="footer">
+        <p>Отчёт сформирован автоматически системой оценки педагогической практики</p>
+        <p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+	для умных</p>
+	</div>
+	<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    </div>
+</body>
+</html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Отчёт_практика_${surname}_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('Отчёт успешно экспортирован!', 'success');
+        }
+
+        // Добавляем стили для анимаций
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
