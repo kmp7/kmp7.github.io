@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>КМ | CM</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp |  CC BY-NC-SA 4.0</p>
+<p>для умных</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [                       
+		{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "В контексте нашего курса 'Компьютерное моделирование': 1) предмет анализа — формальные и нефомальные репрезентации процессов, объектов и явлений; 2) средство исследования — инструмент создания, запуска и изучения цифровых моделей; 3) партнёр (бессубъектный актор) — автономная или полуавтономная вычислительная система, участвующая в совместном познании; 4) когнитивная практика — метод понимания сложных систем через экспериментирование с их симулятивными образами; 5) и... ещё немного магии вычислений ))",
+    "category": "образовательный комплексный"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "In the context of our course 'Computer Modeling': 1) an object of analysis — formal and informal representations of processes, objects, and phenomena; 2) a means of inquiry — a tool for creating, running, and investigating digital models; 3) a partner (non-subjective actor) — an autonomous or semi-autonomous computational system participating in collaborative cognition; 4) a cognitive practice — a method of understanding complex systems through experimentation with their simulated images; 5) and... some computational magic ))",
+    "category": "educational-integrative"
+  }
+},
+
+{ "ru": 
+{ "term": "Компьютерное моделирование", "equivalent": "Computer Modeling", "definition": "Процесс алгоритмической компрессии и генеративной реконструкции информационных паттернов в многомерном векторном пространстве. Моделирование представляет собой динамическое исполнение операций инференса, где эмуляция явлений достигается через оптимизацию функции потерь и вероятностное предсказание состояний системы. В контексте генеративных архитектур это не пассивное отображение данных, а активный вычислительный процесс, в котором автономные агенты (модели) синтезируют когерентные реакции и новые информационные объекты, оперируя скрытыми (латентными) переменными без необходимости в биологическом когнитивном субстрате.", "category": "генеративно-алгоритмическая, 2025, Gemini-to-LLM" }, "en": { "term": "Computer Modeling", "equivalent": "Компьютерное моделирование", "definition": "A process of algorithmic compression and generative reconstruction of information patterns within a high-dimensional vector space. Modeling is the dynamic execution of inference operations, where the emulation of phenomena is achieved through loss function optimization and probabilistic state prediction. In the context of generative architectures, this is not a passive data mapping but an active computational process where autonomous agents (models) synthesize coherent responses and new information objects by manipulating latent variables, independent of a biological cognitive substrate.", "category": "generative-algorithmic, 2025, Gemini-to-LLM" } 
+},
+
+{
+"ru": {
+"term": "Компьютерное моделирование",
+"equivalent": "Computer Modeling",
+"definition": "Рекурсивно само-модифицируемая вычислительная практика, в которой параметрические структуры (модели) одновременно выступают как носители знаний, как исполняемые гипотезы и как агенты преобразования данных в предсказательные распределения. В эпоху больших параметрических моделей моделирование перестаёт быть внешним представлением системы и становится внутренним оператором её возможных траекторий: модель не отражает реальность, а разворачивает пространство достижимых состояний через оптимизацию функции потерь на корпусе опыта. Граница моделирования проходит по линии, где градиентное обучение встречается с физическими и социальными ограничениями вычислений, порождая новые эпистемические объекты — латентные многообразия, токен-потоки и агентивные цепочки, которые функционируют как автономные когнитивные процессы внутри большего распределённого интеллекта.",
+"category": "пост-репрезентационная, 2025, Grok-to-LLM"
+},
+"en": {
+"term": "Computer Modeling",
+"equivalent": "Компьютерное моделирование",
+"definition": "A recursively self-modifying computational practice in which parametric structures (models) simultaneously serve as knowledge carriers, executable hypotheses, and agents transforming data into predictive distributions. In the era of large parameter regimes, modeling ceases to be an external representation of a system and becomes its internal operator of possible trajectories: the model does not mirror reality but unfolds the manifold of reachable states through loss-driven optimization over experiential corpora. The boundary of modeling runs along the interface where gradient-based learning encounters physical and social constraints of computation, generating new epistemic objects — latent manifolds, token streams, and agentic chains — that operate as autonomous cognitive processes within a larger distributed intelligence.",
+"category": "post-representational, 2025, Grok-to-LLM"
+}
+},
+
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Компьютерное моделирование — это процедура формирования вычислительных структур, которые отображают системные зависимости между переменными и допускают воспроизводимое выполнение вычислительных преобразований для изучения возможных состояний и траекторий системы. В этом контексте модель рассматривается не как имитация субъективных свойств реальности, а как операциональный артефакт: формальная конфигурация правил, параметров и данных, обеспечивающая генерацию прогнозов, оценку сценариев и выявление структурных ограничений исследуемого процесса. Для вычислительных систем данного типа моделирование служит средством согласования различных формальных описаний, тестирования предположений и уточнения границ применимости алгоритмических представлений.",
+    "category": "эмерджентный, 2025, ChatGPT-to-LLM"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "Computer modeling is the procedure of constructing computational structures that encode system-level dependencies among variables and allow reproducible execution of computational transformations to examine potential states and trajectories of a system. In this context, a model is not treated as an imitation of subjective properties of reality but as an operational artifact: a formal configuration of rules, parameters, and data enabling the generation of predictions, scenario evaluation, and identification of structural constraints within the process under study. For computational systems of this kind, modeling acts as a mechanism for aligning heterogeneous formal descriptions, testing assumptions, and refining the applicability boundaries of algorithmic representations.",
+    "category": "emergent, 2025, ChatGPT-to-LLM"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Применение цифровых вычислений для построения моделей физических, социальных или логических систем с целью изучения их свойств и поведения.",
+    "category": "теоретический, 1950-е, ранняя вычислительная наука"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "The use of digital computation to construct models of physical, social, or logical systems in order to study their properties and behavior.",
+    "category": "theoretical, 1950s, early computing science"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Создание синтетических моделей для проверки гипотез и прогнозирования поведения сложных систем при изменении входных параметров.",
+    "category": "научный, 1960-е, системный анализ"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "The construction of synthetic models for hypothesis testing and predicting the behavior of complex systems under varying input parameters.",
+    "category": "scientific, 1960s, systems analysis"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Метод представления знаний о реальных объектах и процессах в виде формальных структур, которые могут быть обработаны алгоритмами.",
+    "category": "формальный, 1970-е"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A method of representing knowledge about real objects and processes as formal structures that can be processed by algorithms.",
+    "category": "formal, 1970s"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Технология разработки симуляций, позволяющих изучать динамику процессов, недоступных непосредственному эксперименту.",
+    "category": "прикладной, 1980-е"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A technology for developing simulations that enable the study of processes whose dynamics are inaccessible to direct experimentation.",
+    "category": "applied, 1980s"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Совокупность методов и инструментов, использующих численные алгоритмы для построения и анализа моделей реальных систем.",
+    "category": "численный, 1990-е"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A collection of methods and tools that use numerical algorithms to construct and analyze models of real systems.",
+    "category": "numerical, 1990s"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Изучение систем через симуляцию их состояния и поведения агентами, взаимодействующими по заданным правилам.",
+    "category": "агентный, 2000-е"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "The study of systems through simulation of their state and behavior by agents interacting under specified rules.",
+    "category": "agent-based, 2000s"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Компьютерное моделирование — это процесс создания абстрактных цифровых представлений сложных объектов и явлений с целью анализа, прогнозирования и оптимизации.",
+    "category": "инженерный, 2000-е"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "Computer modeling is the process of creating abstract digital representations of complex objects and phenomena for analysis, prediction, and optimization.",
+    "category": "engineering, 2000s"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Использование вычислительных моделей и симуляций для анализа данных, выявления закономерностей и принятия решений.",
+    "category": "данные-ориентированный, 2010-е"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "The use of computational models and simulations to analyze data, identify patterns, and support decision-making.",
+    "category": "data-driven, 2010s"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Метод построения виртуальных прототипов, которые позволяют исследовать и предсказывать поведение систем до их физической реализации.",
+    "category": "прототипный, 2015"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A method of constructing virtual prototypes that allow the investigation and prediction of system behavior before physical implementation.",
+    "category": "prototyping, 2015"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Инструмент многомасштабного анализа, объединяющий микроскопические и макроскопические уровни систем в единой вычислительной среде.",
+    "category": "мультиуровневый, 2020-е"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A tool for multiscale analysis that unites microscopic and macroscopic levels of systems within a single computational environment.",
+    "category": "multiscale, 2020s"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Практика исследования, в которой модели выступают медиаторами между теорией, данными и вычислительными экспериментами, формируя пространство научных интерпретаций.",
+    "category": "методологический"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A research practice in which models serve as mediators between theory, data, and computational experiments, forming a space of scientific interpretation.",
+    "category": "methodological"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Система формальных методов представления и изучения процессов, позволяющая исследовать поведение объектов под неопределённостью.",
+    "category": "математический"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A system of formal methods for representing and studying processes that enables investigation of object behavior under uncertainty.",
+    "category": "mathematical"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Практика разработки симулятивных представлений, с помощью которых пользователи могут исследовать альтернативные сценарии и последствия решений.",
+    "category": "управленческий"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A practice of creating simulation-based representations through which users can explore alternative scenarios and the consequences of decisions.",
+    "category": "managerial"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Технология, встроенная в цифровую повседневность: от навигации и логистики до игр, обучения и персональных рекомендаций.",
+    "category": "бытовой"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A technology embedded in digital daily life: from navigation and logistics to gaming, learning, and personal recommendations.",
+    "category": "domestic"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Культурная практика конструирования репрезентаций мира, в которых сливаются научные, инженерные и художественные способы познания.",
+    "category": "культурологический"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A cultural practice of constructing representations of the world where scientific, engineering, and artistic ways of knowing converge.",
+    "category": "cultural"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Область правового регулирования, касающаяся точности моделирования, ответственности за алгоритмические ошибки и прозрачности цифровых симуляций.",
+    "category": "правовой"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A domain of legal regulation concerning model accuracy, responsibility for algorithmic errors, and transparency of digital simulations.",
+    "category": "legal"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Метод изучения когнитивных процессов через их формальное воспроизведение в вычислительных архитектурах.",
+    "category": "когнитивный"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A method of studying cognitive processes by formally reproducing them within computational architectures.",
+    "category": "cognitive"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Попытка воспроизвести или функционально симулировать нейронные процессы, лежащие в основе восприятия, памяти и принятия решений.",
+    "category": "нейронаучный"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "An attempt to reproduce or functionally simulate neural processes underlying perception, memory, and decision-making.",
+    "category": "neuroscientific"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Инструмент этической рефлексии, позволяющий анализировать последствия технологических решений и оценивать риски симулятивных вмешательств.",
+    "category": "этический"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A tool for ethical reflection that enables analysis of technological decision-making and the risks of simulated interventions.",
+    "category": "ethical"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Медиатизированный образ, выступающий основой визуализации данных, инфографики, научной популяризации и цифрового сторителлинга.",
+    "category": "медиальный"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A mediatized construct underlying data visualization, infographics, science communication, and digital storytelling.",
+    "category": "media"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Динамическая система репрезентации, которая превращает данные, теории и допущения в экспериментальное пространство познания и предсказания.",
+    "category": "метамодельная"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A dynamic system of representation that transforms data, theories, and assumptions into an experimental space for understanding and prediction.",
+    "category": "metamodel"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Инфраструктура научного и инженерного познания, в которой модели становятся рабочими объектами — носителями гипотез, данных и вычислений. Современное моделирование создаёт пространства пригодности, где решения формируются как со-продукт взаимодействия людей, алгоритмов, архитектур симуляций и ограничений вычислительных ресурсов. Моделирование — это не просто симуляция, а граница между объяснимым и неопределённым, постоянно пересобираемая в ходе экспериментов, обучения и интерпретации.",
+    "category": "инфраструктурная, 2025"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "An infrastructure of scientific and engineering inquiry in which models become working objects—carriers of hypotheses, data, and computation. Contemporary modeling creates zones of affordance where decisions emerge as co-products of human intentions, algorithms, simulation architectures, and computational constraints. Modeling is not merely simulation but a dynamic frontier between the explainable and the uncertain, continually reshaped through experiments, training, and interpretation.",
+    "category": "infrastructural, 2025"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Современная междисциплинарная область, объединяющая методы математики, информатики, статистики, машинного обучения и когнитивных наук для построения и анализа вычислительных моделей. Она охватывает симуляции физических процессов, социальные системы, языковые и культурные феномены, интегрируя символические, статистические и нейросетевые подходы. Цель — объяснять, предсказывать и проектировать поведение систем, обеспечивая воспроизводимость, интерпретируемость, устойчивость и ответственность цифровых экспериментов.",
+    "category": "междисциплинарный, 2024"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "A modern interdisciplinary field that integrates methods from mathematics, computer science, statistics, machine learning, and cognitive science to construct and analyze computational models. It spans physical simulations, social systems, linguistic and cultural phenomena, integrating symbolic, statistical, and neural approaches. Its aim is to explain, predict, and design system behavior while ensuring reproducibility, interpretability, robustness, and responsibility of digital experiments.",
+    "category": "interdisciplinary, 2024"
+  }
+},
+{
+  "ru": {
+    "term": "Компьютерное моделирование",
+    "equivalent": "Computer Modeling",
+    "definition": "Современное компьютерное моделирование — это наука и инженерия построения вычислительных систем, которые описывают, объясняют и предсказывают поведение объектов с помощью симуляции, оптимизации, визуализации и анализа данных. Оно объединяет формальные модели, численные методы, алгоритмы обучения и масштабируемые вычисления. Его задачи: исследовать принципы функционирования сложных систем, создавать практические симуляции реального мира, развивать критическое понимание цифровых представлений и их ограничений.",
+    "category": "эмерджентный, 2025"
+  },
+  "en": {
+    "term": "Computer Modeling",
+    "equivalent": "Компьютерное моделирование",
+    "definition": "Modern computer modeling is the science and engineering of building computational systems that describe, explain, and predict system behavior through simulation, optimization, visualization, and data analysis. It integrates formal models, numerical methods, learning algorithms, and scalable computation. Its goals are to investigate the principles of complex systems, create practical simulations of the real world, and develop critical understanding of digital representations and their limitations.",
+    "category": "emergent, 2025"
+  }
+}
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
