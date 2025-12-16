@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-tertiary: #f1f1f1;
+            --text-primary: #1a1a2e;
+            --text-secondary: #4a4a5a;
+            --accent-primary: #325980;
+            --accent-secondary: #3498db;
+            --accent-hover: #2980b9;
+            --accent-moodle: #f98012;
+            --accent-llm: #9b59b6;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 12px rgba(50, 89, 128, 0.1);
+            --shadow-hover: 0 4px 20px rgba(50, 89, 128, 0.15);
+            --transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --text-primary: #eaeaea;
+            --text-secondary: #b8b8c8;
+            --border-color: #2a2a4e;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            transition: var(--transition);
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--accent-primary) 0%, #1e3a5f 100%);
+            color: white;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .header-subtitle {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: rotate(15deg);
+        }
+
+        /* Search and Filter Bar */
+        .toolbar {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 70px;
+            z-index: 999;
+        }
+
+        .toolbar-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+        }
+
+        .search-box::before {
+            content: "";
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1.25rem;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--border-color);
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .filter-btn:hover {
+            border-color: var(--accent-secondary);
+            color: var(--accent-secondary);
+        }
+
+        .filter-btn.active {
+            background: var(--accent-secondary);
+            border-color: var(--accent-secondary);
+            color: white;
+        }
+
+        .filter-btn.moodle.active {
+            background: var(--accent-moodle);
+            border-color: var(--accent-moodle);
+        }
+
+        .filter-btn.llm.active {
+            background: var(--accent-llm);
+            border-color: var(--accent-llm);
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--bg-tertiary);
+            padding: 0.25rem;
+            border-radius: 6px;
+        }
+
+        .view-btn {
+            padding: 0.5rem 0.75rem;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .view-btn.active {
+            background: var(--bg-primary);
+            color: var(--accent-primary);
+            box-shadow: var(--shadow);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        /* Legend */
+        .legend {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .legend h3 {
+            color: var(--accent-primary);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+
+        .legend-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .legend-icon.moodle {
+            background: linear-gradient(135deg, var(--accent-moodle) 0%, #d9700f 100%);
+        }
+
+        .legend-icon.llm {
+            background: linear-gradient(135deg, var(--accent-llm) 0%, #8e44ad 100%);
+        }
+
+        .legend-content h4 {
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+            font-size: 1rem;
+        }
+
+        .legend-content p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* Card View */
+        .glossary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .glossary-cards.hidden {
+            display: none;
+        }
+
+        .glossary-card {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+
+        .glossary-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .glossary-card.hidden {
+            display: none;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-number {
+            width: 32px;
+            height: 32px;
+            background: var(--accent-primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-right: 1rem;
+        }
+
+        .card-title {
+            flex: 1;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+
+        .card-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .card-side {
+            padding: 1.25rem;
+        }
+
+        .card-side.moodle {
+            border-right: 1px solid var(--border-color);
+            background: linear-gradient(135deg, rgba(249, 128, 18, 0.05) 0%, transparent 100%);
+        }
+
+        .card-side.llm {
+            background: linear-gradient(135deg, rgba(155, 89, 182, 0.05) 0%, transparent 100%);
+        }
+
+        .card-side-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .card-side.moodle .card-side-label {
+            color: var(--accent-moodle);
+        }
+
+        .card-side.llm .card-side-label {
+            color: var(--accent-llm);
+        }
+
+        .card-term {
+            font-weight: 600;
+            font-size: 1.05rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-side.moodle .card-term {
+            color: var(--accent-moodle);
+        }
+
+        .card-side.llm .card-term {
+            color: var(--accent-llm);
+        }
+
+        .card-definition {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Section */
+        section {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        section h2 {
+            color: var(--accent-primary);
+            font-size: 1.5rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--accent-secondary);
+            font-weight: 600;
+        }
+
+        section p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        /* Form */
+        .form-section {
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--accent-primary);
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .conclusions-container {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .conclusion-block {
+            background: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .conclusion-block label {
+            font-size: 0.9rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.875rem 1.75rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent-secondary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--accent-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        /* Info Block */
+        .info-block {
+            background: linear-gradient(135deg, rgba(50, 89, 128, 0.05) 0%, rgba(52, 152, 219, 0.05) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .info-block h4 {
+            color: var(--accent-primary);
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .info-block p {
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .author-info {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* No Results */
+        .no-results {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .no-results-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+           footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 1px solid #ddd;
+    }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .header-title h1 {
+                font-size: 1.25rem;
+            }
+
+            .toolbar {
+                padding: 0.75rem 1rem;
+                top: 85px;
+            }
+
+            .toolbar-content {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                max-width: 100%;
+            }
+
+            .filter-buttons {
+                justify-content: center;
+            }
+
+            .view-toggle {
+                justify-content: center;
+            }
+
+            main {
+                padding: 0 1rem;
+                margin: 1rem auto;
+            }
+
+            .glossary-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .card-body {
+                grid-template-columns: 1fr;
+            }
+
+            .card-side.moodle {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            section {
+                padding: 1.5rem;
+            }
+
+            h2 {
+                font-size: 1.25rem;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .legend-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                transition: none !important;
+            }
+        }
+
+        @media print {
+            header, .toolbar, .theme-toggle, .btn-group, .view-toggle, .filter-buttons {
+                display: none;
+            }
+            section {
+                break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ccc;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Moodle vs LLM</h1>
+                </div>
+            <div class="header-controls">
+                <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">
+                    ☀️
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="toolbar">
+        <div class="toolbar-content">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Поиск по терминам и определениям...">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">Все термины</button>
+                <button class="filter-btn moodle" data-filter="moodle">Moodle</button>
+                <button class="filter-btn llm" data-filter="llm">LLM</button>
+            </div>
+            
+        </div>
+    </div>
+
+    <main>
+        <!-- Legend -->
+        <div class="legend">
+            <h3>Сравнительный лексикон образовательных парадигм</h3>
+            <div class="legend-grid">
+                <div class="legend-item">
+                    <div class="legend-icon moodle">M</div>
+                    <div class="legend-content">
+                        <h4>Moodle — Архивная модель</h4>
+                        <p>Знание как готовый артефакт. Статические структуры, фиксированные роли, предопределённые траектории. Система хранит и доставляет контент.</p>
+                    </div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-icon llm">G</div>
+                    <div class="legend-content">
+                        <h4>LLM — Генеративная модель</h4>
+                        <p>Знание как событие диалога. Динамические процессы, подвижные роли, адаптивное взаимодействие. Система порождает и соучаствует.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card View -->
+        <div class="glossary-cards" id="cardView">
+            <!-- Cards will be generated by JavaScript -->
+        </div>
+
+        <!-- No Results -->
+        <div class="no-results hidden" id="noResults"></div>
+
+        <!-- Form Section -->
+        <section id="conclusions" class="form-section">
+            <h2>Мои выводы и заметки</h2>
+            <p>Зафиксируйте свои наблюдения о различиях двух образовательных парадигм.</p>
+
+            <form id="conclusionsForm">
+                <div class="form-group">
+                    <label for="studentName">Фамилия Имя</label>
+                    <input type="text" id="studentName" placeholder="Введите ваши фамилию и имя" required>
+                </div>
+
+                <div class="conclusions-container">
+                    <div class="conclusion-block">
+                        <label for="conclusion1">1. Какие пары терминов показались наиболее контрастными? Почему?</label>
+                        <textarea id="conclusion1" placeholder="Выберите 2-3 пары и объясните различия..."></textarea>
+                    </div>
+
+                    <div class="conclusion-block">
+                        <label for="conclusion2">2. Какие концепции из Moodle сохраняют актуальность в LLM-парадигме?</label>
+                        <textarea id="conclusion2" placeholder="Что можно перенести из одной модели в другую..."></textarea>
+                    </div>
+
+                    <div class="conclusion-block">
+                        <label for="conclusion3">3. Какие термины LLM-парадигмы требуют дополнительного осмысления?</label>
+                        <textarea id="conclusion3" placeholder="Что осталось непонятным или спорным..."></textarea>
+                    </div>
+
+                    <div class="conclusion-block">
+                        <label for="conclusion4">4. Предложите собственную пару терминов для этого глоссария</label>
+                        <textarea id="conclusion4" placeholder="Moodle-термин → LLM-термин: определения..."></textarea>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary" onclick="exportToHTML()">
+                        Экспортировать в HTML
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                        Очистить форму
+                    </button>
+                </div>
+            </form>
+
+            <div class="info-block">
+                <h4>О приложении</h4>
+                <p>Интерактивный сравнительный глоссарий терминологии классической LMS-архитектуры (на примере Moodle) и генеративного LLM-подхода.</p>
+                <p>Пары терминов демонстрирует сдвиг от статического понимания образования к динамическому, от хранения знаний к их порождению в диалоге.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="notification" id="notification"></div>
+        <p>© 2025 | kmp | CC BY-NC-SA 4.0<br>для умных</p>
+    </footer>
+    <div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+
+    <script>
+        // Glossary Data with additional terms
+        const glossaryData = [
+            {
+                id: 1,
+                moodle: { term: "Курс", definition: "Основная единица обучения, включающая материалы, задания и активности в фиксированной структуре." },
+                llm: { term: "Диалог", definition: "Базовая форма взаимодействия, в которой знание рождается и трансформируется в процессе общения." }
+            },
+            {
+                id: 2,
+                moodle: { term: "Категория", definition: "Иерархическая группировка курсов по факультетам, кафедрам или тематическим областям." },
+                llm: { term: "Контекст", definition: "Динамическая совокупность условий, истории и смыслов, формирующих каждый ответ модели." }
+            },
+            {
+                id: 3,
+                moodle: { term: "Задание (Assignment)", definition: "Активность для сдачи работ студентами с фиксированными сроками и критериями оценки." },
+                llm: { term: "Промпт", definition: "Исходный запрос пользователя, запускающий генерацию текста, идей или сценариев." }
+            },
+            {
+                id: 4,
+                moodle: { term: "Тест (Quiz)", definition: "Инструмент проверки знаний через вопросы с заранее заданными правильными ответами." },
+                llm: { term: "Генерация", definition: "Создание новых текстов, объяснений, примеров и идей в реальном времени под запрос." }
+            },
+            {
+                id: 5,
+                moodle: { term: "Форум", definition: "Средство асинхронного обсуждения внутри курса с древовидной структурой сообщений." },
+                llm: { term: "Сценарий", definition: "Структурированная последовательность диалогов, ролей и контекстных переключений." }
+            },
+            {
+                id: 6,
+                moodle: { term: "Глоссарий", definition: "Словарь терминов курса, создаваемый преподавателями и/или студентами." },
+                llm: { term: "Лексикон модели", definition: "Динамический набор понятий и ассоциаций, активируемых в процессе конкретного диалога." }
+            },
+            {
+                id: 7,
+                moodle: { term: "Календарь", definition: "Планировщик занятий, дедлайнов и событий с привязкой к фиксированным датам." },
+                llm: { term: "Событийность", definition: "Понимание знания как уникального события встречи, а не фиксированного во времени факта." }
+            },
+            {
+                id: 8,
+                moodle: { term: "Роль (Role)", definition: "Набор прав и функций пользователя: студент, преподаватель, ассистент, администратор." },
+                llm: { term: "Персона", definition: "Ролевая маска или позиция, которую модель принимает в диалоге по запросу или контексту." }
+            },
+            {
+                id: 9,
+                moodle: { term: "Оценка (Grade)", definition: "Числовая или буквенная фиксация результата выполнения задания или теста." },
+                llm: { term: "Мета-комментарий", definition: "Рефлексия над процессом диалога, качеством ответов и смыслообразованием." }
+            },
+            {
+                id: 10,
+                moodle: { term: "Ресурс (Resource)", definition: "Загруженный файл, ссылка или материал курса, доступный для просмотра." },
+                llm: { term: "Импровизация", definition: "Спонтанное создание новых смыслов и текстов без заранее заданной жёсткой структуры." }
+            },
+            {
+                id: 11,
+                moodle: { term: "Модуль / Секция", definition: "Тематический блок курса, объединяющий связанные материалы и активности." },
+                llm: { term: "Итерация", definition: "Цикл уточнения и развития идеи через последовательные обмены репликами." }
+            },
+            {
+                id: 12,
+                moodle: { term: "Завершение (Completion)", definition: "Отметка о выполнении элемента курса по заданным критериям." },
+                llm: { term: "Достаточность ответа", definition: "Субъективная оценка полноты и релевантности генерации в контексте запроса." }
+            },
+            {
+                id: 13,
+                moodle: { term: "Резервная копия (Backup)", definition: "Сохранённый снимок курса для восстановления или переноса." },
+                llm: { term: "История диалога", definition: "Накопленный контекст предыдущих обменов, влияющий на текущую генерацию." }
+            },
+            {
+                id: 14,
+                moodle: { term: "Группа (Group)", definition: "Подмножество участников курса для организации совместной работы." },
+                llm: { term: "Мультиагентность", definition: "Взаимодействие нескольких AI-агентов или ролей в рамках одного сценария." }
+            },
+            {
+                id: 15,
+                moodle: { term: "Уведомление (Notification)", definition: "Системное сообщение о событии в курсе: дедлайн, новый материал, оценка." },
+                llm: { term: "Реактивность", definition: "Способность модели откликаться на изменения контекста и корректировать генерацию." }
+            },
+            {
+                id: 16,
+                moodle: { term: "Сертификат", definition: "Документ, подтверждающий завершение курса, выданный по заранее заданным критериям." },
+                llm: { term: "Портфолио диалогов", definition: "Коллекция значимых разговоров, демонстрирующая развитие компетенций и понимания." }
+            },
+            {
+                id: 17,
+                moodle: { term: "Журнал оценок", definition: "Централизованная таблица всех оценок студентов по всем элементам курса." },
+                llm: { term: "Траектория обучения", definition: "Динамическая последовательность взаимодействий, адаптированная под потребности ученика." }
+            },
+            {
+                id: 18,
+                moodle: { term: "Шаблон курса", definition: "Предварительно настроенная структура курса для многократного использования." },
+                llm: { term: "Система промптов", definition: "Набор стартовых запросов и контекстов для инициирования продуктивных диалогов." }
+            },
+            {
+                id: 19,
+                moodle: { term: "Плагин", definition: "Дополнительный модуль, расширяющий функциональность системы." },
+                llm: { term: "Агент специализации", definition: "Настроенная версия модели для конкретной предметной области или задачи." }
+            },
+            {
+                id: 20,
+                moodle: { term: "Компетенция", definition: "Предопределённый набор знаний и умений, которые должны освоить студенты." },
+                llm: { term: "Эмерджентная компетенция", definition: "Навыки и понимания, возникающие спонтанно в процессе диалога и взаимодействия." }
+            }
+        ];
+
+        // State
+        let currentFilter = 'all';
+        let searchQuery = '';
+
+        // DOM Elements
+        const cardView = document.getElementById('cardView');
+        const searchInput = document.getElementById('searchInput');
+        const noResults = document.getElementById('noResults');
+        const totalCountElement = document.getElementById('totalCount');
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
+        
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+
+        // Render Cards
+        function renderCards() {
+            cardView.innerHTML = '';
+            
+            const filteredData = glossaryData.filter(item => {
+                const moodleText = (item.moodle.term + ' ' + item.moodle.definition).toLowerCase();
+                const llmText = (item.llm.term + ' ' + item.llm.definition).toLowerCase();
+                const allText = moodleText + ' ' + llmText;
+                
+                // Apply search filter
+                let matchesSearch = true;
+                if (searchQuery) {
+                    if (currentFilter === 'all') {
+                        matchesSearch = allText.includes(searchQuery.toLowerCase());
+                    } else if (currentFilter === 'moodle') {
+                        matchesSearch = moodleText.includes(searchQuery.toLowerCase());
+                    } else if (currentFilter === 'llm') {
+                        matchesSearch = llmText.includes(searchQuery.toLowerCase());
+                    }
+                }
+                
+                return matchesSearch;
+            });
+            
+            if (filteredData.length === 0) {
+                noResults.classList.remove('hidden');
+            } else {
+                noResults.classList.add('hidden');
+                filteredData.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'glossary-card';
+                    card.innerHTML = `
+                        <div class="card-header">
+                            <div class="card-number">${item.id}</div>
+                            <div class="card-title">${item.moodle.term} → ${item.llm.term}</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-side moodle">
+                                <div class="card-side-label">Moodle</div>
+                                <div class="card-term">${item.moodle.term}</div>
+                                <div class="card-definition">${item.moodle.definition}</div>
+                            </div>
+                            <div class="card-side llm">
+                                <div class="card-side-label">LLM</div>
+                                <div class="card-term">${item.llm.term}</div>
+                                <div class="card-definition">${item.llm.definition}</div>
+                            </div>
+                        </div>
+                    `;
+                    cardView.appendChild(card);
+                });
+            }
+            
+            // Update total count
+            const totalCountElement = document.createElement('div');
+            totalCountElement.style.cssText = 'text-align: center; margin: 1rem 0; color: var(--text-secondary); font-size: 0.9rem;';
+            totalCountElement.textContent = `Найдено пар терминов: ${filteredData.length}`;
+            
+            // Remove existing count if present
+            const existingCount = document.querySelector('.total-count');
+            if (existingCount) existingCount.remove();
+            
+            totalCountElement.className = 'total-count';
+            cardView.parentNode.insertBefore(totalCountElement, cardView);
+        }
+
+        // Filter Buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderCards();
+            });
+        });
+
+        // Search Input
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            renderCards();
+        });
+
+        // Form Functions
+        function clearForm() {
+            if (confirm('Вы уверены, что хотите очистить все поля формы?')) {
+                document.getElementById('conclusionsForm').reset();
+                const formFields = ['studentName', 'conclusion1', 'conclusion2', 'conclusion3', 'conclusion4'];
+                formFields.forEach(field => localStorage.removeItem('glossary_' + field));
+            }
+        }
+
+        function exportToHTML() {
+            const studentName = document.getElementById('studentName').value.trim();
+            const conclusion1 = document.getElementById('conclusion1').value.trim();
+            const conclusion2 = document.getElementById('conclusion2').value.trim();
+            const conclusion3 = document.getElementById('conclusion3').value.trim();
+            const conclusion4 = document.getElementById('conclusion4').value.trim();
+
+            if (!studentName) {
+                alert('Пожалуйста, введите вашу фамилию и имя');
+                document.getElementById('studentName').focus();
+                return;
+            }
+
+            const date = new Date().toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // Generate glossary table for export
+            const glossaryHTML = glossaryData.map(item => `
+                <tr>
+                    <td style="text-align:center;font-weight:600;color:#325980;">${item.id}</td>
+                    <td style="color:#f98012;font-weight:600;">${item.moodle.term}</td>
+                    <td>${item.moodle.definition}</td>
+                    <td style="color:#9b59b6;font-weight:600;">${item.llm.term}</td>
+                    <td>${item.llm.definition}</td>
+                </tr>
+            `).join('');
+
+            const htmlContent = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Глоссарий Moodle vs LLM — ${escapeHtml(studentName)}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+            line-height: 1.7;
+            color: #1a1a2e;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 2px 12px rgba(50, 89, 128, 0.1);
+        }
+        header {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        h1 { color: #325980; font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .meta { color: #666; font-size: 0.9rem; }
+        .meta strong { color: #325980; }
+        h2 { color: #325980; font-size: 1.2rem; margin: 2rem 0 1rem; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 0.75rem;
+            border: 1px solid #e0e0e0;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #325980; color: white; }
+        th.moodle { background: #f98012; }
+        th.llm { background: #9b59b6; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .section {
+            margin-bottom: 1.5rem;
+            padding: 1.25rem;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .section h3 { color: #325980; font-size: 1rem; margin-bottom: 0.75rem; }
+        .section p { color: #4a4a5a; white-space: pre-wrap; }
+        .empty { color: #999; font-style: italic; }
+        footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #666;
+        }
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Сравнительный глоссарий: Moodle vs LLM</h1>
+            <p class="meta"><strong>Студент:</strong> ${escapeHtml(studentName)}</p>
+            <p class="meta"><strong>Дата:</strong> ${date}</p>
+        </header>
+
+        <h2>Глоссарий терминов (${glossaryData.length} пар)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:40px;">№</th>
+                    <th class="moodle">Термин Moodle</th>
+                    <th class="moodle">Определение</th>
+                    <th class="llm">Термин LLM</th>
+                    <th class="llm">Определение</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${glossaryHTML}
+            </tbody>
+        </table>
+
+        <h2>Мои выводы</h2>
+
+        <div class="section">
+            <h3>1. Наиболее контрастные пары терминов</h3>
+            <p>${conclusion1 ? escapeHtml(conclusion1) : '<span class="empty">Ответ не предоставлен</span>'}</p>
+        </div>
+
+        <div class="section">
+            <h3>2. Актуальные концепции Moodle для LLM-парадигмы</h3>
+            <p>${conclusion2 ? escapeHtml(conclusion2) : '<span class="empty">Ответ не предоставлен</span>'}</p>
+        </div>
+
+        <div class="section">
+            <h3>3. Термины, требующие осмысления</h3>
+            <p>${conclusion3 ? escapeHtml(conclusion3) : '<span class="empty">Ответ не предоставлен</span>'}</p>
+        </div>
+
+        <div class="section">
+            <h3>4. Предложенная пара терминов</h3>
+            <p>${conclusion4 ? escapeHtml(conclusion4) : '<span class="empty">Ответ не предоставлен</span>'}</p>
+        </div>
+
+        <footer>
+        <p>© 2025 | kmp | CC BY-NC-SA 4.0<br>для умных</p>
+    </footer>
+    <div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    </div>
+</body>
+</html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Глоссарий_${studentName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Auto-save
+        const formFields = ['studentName', 'conclusion1', 'conclusion2', 'conclusion3', 'conclusion4'];
+        
+        formFields.forEach(field => {
+            const element = document.getElementById(field);
+            const saved = localStorage.getItem('glossary_' + field);
+            if (saved) element.value = saved;
+            
+            element.addEventListener('input', () => {
+                localStorage.setItem('glossary_' + field, element.value);
+            });
+        });
+
+        // Initialize
+        renderCards();
+    </script>
+</body>
+</html>

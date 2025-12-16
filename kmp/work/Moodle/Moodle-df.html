@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --header-color: #325980;
+            --accent-color: #3498db;
+            --divider-color: #f1f1f1;
+            --text-primary: #2c3e50;
+            --text-secondary: #5a6c7d;
+            --card-shadow: 0 2px 8px rgba(50, 89, 128, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --header-color: #4a7fb5;
+            --accent-color: #5dade2;
+            --divider-color: #2d3a4a;
+            --text-primary: #ecf0f1;
+            --text-secondary: #a0b0c0;
+            --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--header-color), #4a7fb5);
+            color: white;
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .header-title p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: var(--transition);
+            color: white;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .info-block {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid var(--accent-color);
+            box-shadow: var(--card-shadow);
+        }
+
+        .info-block h2 {
+            color: var(--header-color);
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .info-block p {
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+
+        .filter-btn {
+            background: var(--bg-primary);
+            border: 2px solid var(--divider-color);
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            background: var(--bg-primary);
+        }
+
+        .add-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .add-btn:hover {
+            background: var(--header-color);
+            transform: translateY(-2px);
+        }
+
+        .definitions-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .definition-card {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            position: relative;
+            border: 1px solid var(--divider-color);
+        }
+
+        .definition-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(50, 89, 128, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+
+        .card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tag {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .tag.period {
+            background: rgba(52, 152, 219, 0.15);
+            color: var(--accent-color);
+        }
+
+        .tag.aspect {
+            background: rgba(50, 89, 128, 0.15);
+            color: var(--header-color);
+        }
+
+        .tag.audience {
+            background: rgba(39, 174, 96, 0.15);
+            color: #27ae60;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .action-btn {
+            background: var(--bg-secondary);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            color: var(--text-secondary);
+        }
+
+        .action-btn:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .action-btn.delete:hover {
+            background: #e74c3c;
+        }
+
+        .definition-text {
+            font-size: 1.05rem;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            line-height: 1.7;
+        }
+
+        .definition-source {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            padding-top: 1rem;
+            border-top: 1px solid var(--divider-color);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-primary);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal h2 {
+            color: var(--header-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--divider-color);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        .btn-cancel {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .btn-cancel:hover {
+            background: var(--divider-color);
+        }
+
+        .btn-save {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .btn-save:hover {
+            background: var(--header-color);
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            padding: 1rem 1.5rem;
+            background: var(--bg-primary);
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--card-shadow);
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+         footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 1px solid #ddd;
+    }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .header-title h1 {
+                font-size: 1.25rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .filter-group {
+                order: 2;
+            }
+
+            .add-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .modal {
+                padding: 1.5rem;
+            }
+
+            .stats-bar {
+                justify-content: space-around;
+            }
+
+            .card-header {
+                flex-direction: column;
+            }
+
+            .card-actions {
+                align-self: flex-end;
+            }
+        }
+
+        /* SVG icons */
+        .icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="header-title">
+                <h1>Moodle</h1>
+                    </div>
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему">
+                ☀️
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div class="info-block">
+            
+            <p>Коллекция дефиниций Moodle, позволяющая добавлять собственные дефиниции, редактировать и удалять существующие; исследовать изменение семантики термина в зависимости от исторического периода, аспекта рассмотрения и целевой аудитории.</p>
+            </div>
+
+        <div class="stats-bar" id="statsBar">
+            <div class="stat-item">
+                <div class="stat-value" id="totalCount">0</div>
+                <div class="stat-label">Всего дефиниций</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="periodCount">0</div>
+                <div class="stat-label">Периодов</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="aspectCount">0</div>
+                <div class="stat-label">Аспектов</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="audienceCount">0</div>
+                <div class="stat-label">Аудиторий</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="filter-group" id="filterGroup">
+                <button class="filter-btn active" data-filter="all">Все</button>
+                <button class="filter-btn" data-filter="period">По периоду</button>
+                <button class="filter-btn" data-filter="aspect">По аспекту</button>
+                <button class="filter-btn" data-filter="audience">По аудитории</button>
+            </div>
+            <button class="add-btn" onclick="openModal()">Добавить</button>
+        </div>
+
+        <div class="definitions-grid" id="definitionsGrid">
+            <!-- Definitions will be rendered here -->
+        </div>
+    </main>
+
+   <footer>
+        <div class="notification" id="notification"></div>
+        <p>© 2025 | kmp | CC BY-NC-SA 4.0<br>для умных</p>
+    </footer>
+    <div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModalOnOverlay(event)">
+        <div class="modal">
+            <h2 id="modalTitle">Добавить дефиницию</h2>
+            <form id="definitionForm" onsubmit="saveDefinition(event)">
+                <input type="hidden" id="editId" value="">
+                
+                <div class="form-group">
+                    <label for="defText">Текст дефиниции *</label>
+                    <textarea id="defText" required placeholder="Введите определение Moodle..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="defPeriod">Исторический период</label>
+                    <select id="defPeriod">
+                        <option value="2002–2005">2002–2005 (Зарождение)</option>
+                        <option value="2006–2010">2006–2010 (Становление)</option>
+                        <option value="2011–2019">2011–2019 (Массовое распространение)</option>
+                        <option value="2020–2023">2020–2023 (Пандемийный бум)</option>
+                        <option value="2024–2025">2024–2025 (Эпоха LLM)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="defAspect">Аспект рассмотрения</label>
+                    <select id="defAspect">
+                        <option value="Технический">Технический</option>
+                        <option value="Педагогический">Педагогический</option>
+                        <option value="Социальный">Социальный</option>
+                        <option value="Лингвистический">Лингвистический</option>
+                        <option value="Исторический">Исторический</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="defAudience">Целевая аудитория</label>
+                    <select id="defAudience">
+                        <option value="Разработчики">Разработчики</option>
+                        <option value="Преподаватели">Преподаватели</option>
+                        <option value="Студенты">Студенты</option>
+                        <option value="Администраторы">Администраторы</option>
+                        <option value="Исследователи">Исследователи</option>
+                        <option value="Общая">Общая</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="defSource">Источник</label>
+                    <input type="text" id="defSource" placeholder="Например: Официальная документация Moodle">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Отмена</button>
+                    <button type="submit" class="btn-save">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // JSON Data Block
+        const initialDefinitions = [
+            {
+                id: 1,
+                text: "Moodle (Modular Object-Oriented Dynamic Learning Environment) — модульная объектно-ориентированная динамическая учебная среда, представляющая собой свободно распространяемую систему управления обучением, ориентированную на организацию взаимодействия между преподавателем и учениками.",
+                period: "2002–2005",
+                aspect: "Технический",
+                audience: "Разработчики",
+                source: "Официальная документация Moodle, 2002"
+            },
+            {
+                id: 2,
+                text: "Moodle — инновационная веб-платформа для дистанционного обучения, созданная на основе социального конструктивизма Мартина Дугиамаса, позволяющая преподавателям создавать эффективные онлайн-курсы.",
+                period: "2002–2005",
+                aspect: "Педагогический",
+                audience: "Преподаватели",
+                source: "Martin Dougiamas, PhD Thesis, 2003"
+            },
+            {
+                id: 3,
+                text: "Moodle — это open-source LMS (Learning Management System), написанная на PHP с использованием баз данных MySQL/PostgreSQL, обеспечивающая модульную архитектуру для расширения функциональности через плагины.",
+                period: "2006–2010",
+                aspect: "Технический",
+                audience: "Разработчики",
+                source: "Moodle Developer Documentation"
+            },
+            {
+                id: 4,
+                text: "Moodle — универсальная платформа электронного обучения, объединяющая инструменты для создания курсов, управления контентом, организации тестирования и отслеживания успеваемости студентов.",
+                period: "2006–2010",
+                aspect: "Педагогический",
+                audience: "Преподаватели",
+                source: "Руководство пользователя Moodle 2.0"
+            },
+            {
+                id: 5,
+                text: "Moodle — символ демократизации образования и технологического прорыва, позволивший образовательным учреждениям по всему миру перейти к модели смешанного обучения без значительных финансовых затрат.",
+                period: "2011–2019",
+                aspect: "Социальный",
+                audience: "Общая",
+                source: "UNESCO Report on OER, 2012"
+            },
+            {
+                id: 6,
+                text: "Moodle — это то место, куда нужно заходить, чтобы скачать лекции, загрузить домашние задания и пройти тесты. Интерфейс не самый удобный, но разобраться можно.",
+                period: "2011–2019",
+                aspect: "Педагогический",
+                audience: "Студенты",
+                source: "Типичное студенческое определение"
+            },
+            {
+                id: 7,
+                text: "Moodle — корпоративная система управления обучением, позволяющая организовать полный цикл образовательного процесса: от регистрации слушателей до выдачи сертификатов, с возможностью интеграции с HR-системами.",
+                period: "2011–2019",
+                aspect: "Технический",
+                audience: "Администраторы",
+                source: "Moodle Workplace Documentation"
+            },
+            {
+                id: 8,
+                text: "Moodle — основной инструмент экстренного перехода на дистанционное обучение в период пандемии COVID-19, обеспечивший непрерывность образовательного процесса для миллионов студентов.",
+                period: "2020–2023",
+                aspect: "Социальный",
+                audience: "Общая",
+                source: "Анализ цифровизации образования, 2020"
+            },
+            {
+                id: 9,
+                text: "Moodle — устаревающая система управления обучением с линейной моделью представления контента, не способная конкурировать с адаптивными платформами на основе искусственного интеллекта.",
+                period: "2024–2025",
+                aspect: "Технический",
+                audience: "Исследователи",
+                source: "Comparative Analysis of LMS and AI-based Learning, 2024"
+            },
+            {
+                id: 10,
+                text: "Moodle — пример «архивной модели» компьютерного моделирования в образовании, основанной на хранении и передаче готового контента, в противовес «генеративной модели» LLM, создающей персонализированные образовательные траектории.",
+                period: "2024–2025",
+                aspect: "Педагогический",
+                audience: "Исследователи",
+                source: "Курс компьютерного моделирования для лингвистов, 2025"
+            },
+            {
+                id: 11,
+                text: "Moodle — термин, демонстрирующий семантическую эволюцию технологического понятия: от значения «инновация» (2002) через «стандарт» (2015) к значению «legacy system» (2025).",
+                period: "2024–2025",
+                aspect: "Лингвистический",
+                audience: "Исследователи",
+                source: "Лексикографический анализ EdTech-терминологии"
+            },
+            {
+                id: 12,
+                text: "Moodle — программный продукт с открытым исходным кодом, распространяемый под лицензией GPL, позволяющий образовательным организациям самостоятельно разворачивать и модифицировать систему.",
+                period: "2006–2010",
+                aspect: "Технический",
+                audience: "Администраторы",
+                source: "GNU GPL License Documentation"
+            },
+            {
+                id: 13,
+                text: "Moodle — виртуальная обучающая среда, реализующая принципы социального конструктивизма через инструменты совместной работы: форумы, вики, глоссарии и групповые задания.",
+                period: "2011–2019",
+                aspect: "Педагогический",
+                audience: "Преподаватели",
+                source: "Педагогические основы Moodle"
+            },
+            {
+                id: 14,
+                text: "Moodle — историческая веха в развитии образовательных технологий, маркирующая переход от локальных CD-ROM курсов к веб-ориентированному обучению начала XXI века.",
+                period: "2024–2025",
+                aspect: "Исторический",
+                audience: "Исследователи",
+                source: "История EdTech: от PLATO до GPT"
+            },
+            {
+                id: 15,
+                text: "Moodle — централизованная система управления учебным контентом, требующая значительных серверных ресурсов и технической поддержки, что создаёт барьеры для малых образовательных организаций.",
+                period: "2020–2023",
+                aspect: "Технический",
+                audience: "Администраторы",
+                source: "Анализ TCO образовательных платформ"
+            }
+        ];
+
+        // State
+        let definitions = JSON.parse(localStorage.getItem('moodleDefinitions')) || initialDefinitions;
+        let currentFilter = 'all';
+        let editingId = null;
+
+        // Theme Toggle
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.querySelector('.theme-toggle');
+            const isDark = body.getAttribute('data-theme') === 'dark';
+            
+            if (isDark) {
+                body.removeAttribute('data-theme');
+                btn.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                btn.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Initialize theme
+        function initTheme() {
+            const saved = localStorage.getItem('theme');
+            const btn = document.querySelector('.theme-toggle');
+            if (saved === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                btn.textContent = '🌙';
+            }
+        }
+
+        // Render definitions
+        function renderDefinitions() {
+            const grid = document.getElementById('definitionsGrid');
+            let filtered = definitions;
+
+            if (currentFilter !== 'all') {
+                // Sort by the selected filter category
+                filtered = [...definitions].sort((a, b) => {
+                    if (currentFilter === 'period') return a.period.localeCompare(b.period);
+                    if (currentFilter === 'aspect') return a.aspect.localeCompare(b.aspect);
+                    if (currentFilter === 'audience') return a.audience.localeCompare(b.audience);
+                    return 0;
+                });
+            }
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                        </svg>
+                        <h3>Дефиниции не найдены</h3>
+                        <p>Добавьте первую дефиницию, нажав кнопку выше</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(def => `
+                <article class="definition-card">
+                    <div class="card-header">
+                        <div class="card-meta">
+                            <span class="tag period">${def.period}</span>
+                            <span class="tag aspect">${def.aspect}</span>
+                            <span class="tag audience">${def.audience}</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="action-btn" onclick="editDefinition(${def.id})" title="Редактировать">
+                                <svg class="icon" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                            </button>
+                            <button class="action-btn delete" onclick="deleteDefinition(${def.id})" title="Удалить">
+                                <svg class="icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="definition-text">${def.text}</p>
+                    ${def.source ? `<p class="definition-source">Источник: ${def.source}</p>` : ''}
+                </article>
+            `).join('');
+
+            updateStats();
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('totalCount').textContent = definitions.length;
+            document.getElementById('periodCount').textContent = [...new Set(definitions.map(d => d.period))].length;
+            document.getElementById('aspectCount').textContent = [...new Set(definitions.map(d => d.aspect))].length;
+            document.getElementById('audienceCount').textContent = [...new Set(definitions.map(d => d.audience))].length;
+        }
+
+        // Filter handling
+        function setupFilters() {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    renderDefinitions();
+                });
+            });
+        }
+
+        // Modal functions
+        function openModal(id = null) {
+            const overlay = document.getElementById('modalOverlay');
+            const title = document.getElementById('modalTitle');
+            const form = document.getElementById('definitionForm');
+            
+            if (id) {
+                const def = definitions.find(d => d.id === id);
+                if (def) {
+                    title.textContent = 'Редактировать дефиницию';
+                    document.getElementById('editId').value = id;
+                    document.getElementById('defText').value = def.text;
+                    document.getElementById('defPeriod').value = def.period;
+                    document.getElementById('defAspect').value = def.aspect;
+                    document.getElementById('defAudience').value = def.audience;
+                    document.getElementById('defSource').value = def.source || '';
+                }
+            } else {
+                title.textContent = 'Добавить дефиницию';
+                form.reset();
+                document.getElementById('editId').value = '';
+            }
+            
+            overlay.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        function closeModalOnOverlay(e) {
+            if (e.target === e.currentTarget) {
+                closeModal();
+            }
+        }
+
+        // CRUD operations
+        function saveDefinition(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('editId').value;
+            const newDef = {
+                id: id ? parseInt(id) : Date.now(),
+                text: document.getElementById('defText').value.trim(),
+                period: document.getElementById('defPeriod').value,
+                aspect: document.getElementById('defAspect').value,
+                audience: document.getElementById('defAudience').value,
+                source: document.getElementById('defSource').value.trim()
+            };
+
+            if (id) {
+                const index = definitions.findIndex(d => d.id === parseInt(id));
+                if (index !== -1) {
+                    definitions[index] = newDef;
+                }
+            } else {
+                definitions.push(newDef);
+            }
+
+            saveToLocalStorage();
+            renderDefinitions();
+            closeModal();
+        }
+
+        function editDefinition(id) {
+            openModal(id);
+        }
+
+        function deleteDefinition(id) {
+            if (confirm('Вы уверены, что хотите удалить эту дефиницию?')) {
+                definitions = definitions.filter(d => d.id !== id);
+                saveToLocalStorage();
+                renderDefinitions();
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('moodleDefinitions', JSON.stringify(definitions));
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            setupFilters();
+            renderDefinitions();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
