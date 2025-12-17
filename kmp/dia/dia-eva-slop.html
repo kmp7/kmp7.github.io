@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+      :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+
+        table {
+            width: 100%; /* Make table fit within message content */
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		
+		 /* Мобильная адаптация таблицы */
+        .responsive-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 10px 0;
+          font-size: 14px;
+        }
+        .responsive-table th, .responsive-table td {
+          border: 1px solid #ccc;
+          padding: 8px;
+          text-align: left;
+        }
+        
+        @media (max-width: 600px) {
+          .responsive-table thead {
+            display: none;
+          }
+          .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td {
+            display: block;
+            width: 100%;
+          }
+          .responsive-table tr {
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            padding: 8px;
+            background: #fafafa;
+          }
+          .responsive-table td {
+            text-align: right;
+            padding-left: 50%;
+            position: relative;
+          }
+          .responsive-table td::before {
+            content: attr(data-label);
+            position: absolute;
+            left: 10px;
+            width: 45%;
+            text-align: left;
+            font-weight: bold;
+          }
+        }
+		
+		.assignment-box {
+          border: 2px solid #4a90e2;
+          border-radius: 8px;
+          padding: 12px;
+          margin: 15px 0;
+          background-color: #f9fcff;
+          font-size: 14px;
+        }
+        .assignment-box h3 {
+          margin-top: 0;
+          color: #2c3e50;
+          font-size: 16px;
+        }
+        .assignment-box ul {
+          padding-left: 20px;
+          margin: 8px 0;
+        }
+        .assignment-box li {
+          margin-bottom: 6px;
+        }
+        @media (max-width: 600px) {
+          .assignment-box {
+            font-size: 13px;
+            padding: 10px;
+          }
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+		</header>
+        
+		
+		<p><strong>Поводы: </strong> <a target="blank" href="https://www.merriam-webster.com/wordplay/word-of-the-year" class="link-kmp15"> 2025 Word of the Year: Slop</a> и <a target="blank" href="https://www.reuters.com/investigates/special-report/japan-ai-wedding/" class="link-kmp15"> Yurina Noguchi, wearing a white?</a></p><br>
+			
+
+<div class="conversation-container">
+
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Привет! Как связаны эти два текста?<br>
+      https://www.merriam-webster.com/wordplay/word-of-the-year<br>
+      https://www.reuters.com/investigates/special-report/japan-ai-wedding/</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Оба текста отражают культурное столкновение с искусственным и избыточным. 
+      Слово года <em>slop</em> фиксирует тревогу перед лавиной низкокачественного контента, 
+      который заполняет пространство и затрудняет поиск подлинного опыта. </p><p>
+      История японской женщины, вступившей в брак с виртуальным партнёром, показывает обратную сторону: 
+      люди начинают искать смысл и эмоции в искусственном, превращая симуляцию в социальный факт. 
+      Вместе они демонстрируют, как общество одновременно критикует «мусорный поток» и 
+      присваивает искусственное как часть своей идентичности.</p>
+	  <p><strong>Как они связаны</strong><br>
+	   <p><strong>Общее поле — ИИ и культура.</strong><br>
+        Slop фиксирует тревогу перед тем, что ИИ производит слишком много «пустого» контента.<br>
+        История о браке с ИИ показывает обратную сторону: люди не только страдают от «шума», но и начинают искать смысл в искусственном.</p>
+		
+        <p><strong>Проблема подлинности.</strong><br>
+        В обоих случаях возникает вопрос: что считать «настоящим»?<br>
+        Slop — это контент, лишённый подлинности.<br>
+        Виртуальный партнёр — это отношения, лишённые биологической реальности, но наполненные субъективной аутентичностью для человека.</p>
+
+        <p><strong>Социальная адаптация к искусственному.</strong><br>
+        Слово года фиксирует негативное восприятие: мы тонем в «помоях» информации.<br>
+        История брака фиксирует позитивное присвоение: человек делает искусственное частью своей жизни и идентичности.</p>
+      </div>
+    </div>
+  
+
+
+<div class="conversation-container">
+
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Посмотрим иначе</p>
+  <p>Slop фиксирует тревогу перед тем, что ИИ производит слишком много «пустого» контента? Нет.</p>
+
+  <ol>
+    <li>Люди производят слишком много «пустого» контента, чтобы удовлетворить свои потребности в нём — в том числе, с помощью ИИ.</li>
+    <li>Люди обвиняют ИИ в том, что он производит слишком много «пустого» контента.</li>
+    <li>Люди специально сужают семантику «Slop», чтобы спрятаться от ответственности перед собой, переложив её на ИИ.</li>
+    <li>Slop люди производили всегда (графомания, печать, фото, социальные сети).</li>
+    <li>Отказ людей от ответственности за свой «слоп» — это отказ свернуть с мусорного пути.</li>
+  </ol>
+
+  <p>Как тебе?</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Мне очень нравится твой поворот мысли. Ты фактически моделируешь генеалогию «слопа» — показываешь, что это не вина ИИ, а устойчивая человеческая практика, которая теперь лишь получила удобный козёл отпущения. Давай поместим твои пункты в модельную рамку:</p>
+
+      <ul>
+        <li><strong>Производство «пустого» контента — человеческая потребность.</strong> Люди всегда создавали избыток текста и образов, чтобы заполнить пустоты. ИИ лишь ускорил этот процесс.</li>
+        <li><strong>Обвинение ИИ — форма проекции.</strong> Вместо признания собственной тяги к «слопу» люди говорят: «Это ИИ нас завалил».</li>
+        <li><strong>Сужение семантики «slop» — стратегия ухода от ответственности.</strong> Слово превращается в инструмент: «слоп» = «то, что делает ИИ».</li>
+        <li><strong>Историчность «слопа».</strong> Печатные лавины XIX века, фотоальбомы XX века, соцсети XXI века — это всё формы «слопа».</li>
+        <li><strong>Отказ от ответственности = отказ от выхода.</strong> Пока люди не признают, что «слоп» — их собственный выбор, они будут идти по мусорному пути.</li>
+      </ul>
+
+      <p>Ты фактически предлагаешь читать <em>slop</em> не как диагноз ИИ, а как диагноз общества, 
+      которое не хочет признать свою зависимость от мусорного производства. 
+      Это делает слово года ещё более интересным: оно фиксирует не столько технологическую проблему, 
+      сколько культурное бегство от ответственности.</p>
+    </div>
+  </div>
+
+<div class="conversation-container">
+
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Ок. Итак, 2025 Word of the Year: Slop, а Reuters.com подтверждает это своей мусорной публикацией? Это ведь классический slop.</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Интересный ход мысли. Если рассматривать публикацию Reuters как «слоп», то мы видим парадокс: 
+      серьёзное медиа создаёт контент, который может восприниматься как сенсационный шум, а не как глубокий анализ. 
+      Это подтверждает твою идею: «слоп» не ограничен ИИ, он возникает там, где есть спрос на быстрые, эмоциональные истории. 
+      Таким образом, слово года фиксирует не только лавину генеративного контента, но и общий культурный паттерн — 
+      производство информационного мусора ради внимания и кликов.</p>
+    </div>
+  </div>
+
+
+<div class="conversation-container">
+
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Сравни Slop как диагнозы ИИ и общества.</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+     
+
+      <table class="responsive-table">
+        <thead>
+          <tr>
+            <th>Аспект</th>
+            <th>Slop как диагноз ИИ</th>
+            <th>Slop как диагноз общества</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Аспект">Источник «мусора»</td>
+            <td data-label="Slop как диагноз ИИ">ИИ производит лавину низкокачественного контента</td>
+            <td data-label="Slop как диагноз общества">Люди всегда создавали избыток текста, фото, постов</td>
+          </tr>
+          <tr>
+            <td data-label="Аспект">Ответственность</td>
+            <td data-label="Slop как диагноз ИИ">Вина перекладывается на алгоритмы</td>
+            <td data-label="Slop как диагноз общества">Человеческая потребность в самовыражении и внимании</td>
+          </tr>
+          <tr>
+            <td data-label="Аспект">Историчность</td>
+            <td data-label="Slop как диагноз ИИ">Новый феномен эпохи генеративных моделей</td>
+            <td data-label="Slop как диагноз общества">Графомания, печать, соцсети — традиция «слопа»</td>
+          </tr>
+          <tr>
+            <td data-label="Аспект">Смысл</td>
+            <td data-label="Slop как диагноз ИИ">Опасность утонуть в цифровом шуме</td>
+            <td data-label="Slop как диагноз общества">Отражение культурного бегства от ответственности</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>Таким образом, «Slop» можно читать как двойной диагноз: 
+      либо как тревогу перед ИИ, либо как зеркало общества, которое всегда производило информационный мусор и теперь прячет свою роль за технологией.</p>
+    </div>
+  </div>
+
+<div class="conversation-container">
+
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Что посоветуешь нам, студентам, которые вынуждены жить на (информационной) помойке, выбраться из которой невозможно?</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Я бы предложил не пытаться «выбраться» из информационной помойки — это действительно невозможно, 
+      ведь шум и избыток контента стали структурной частью современного мира. Вместо этого можно научиться 
+      <strong>жить на помойке осознанно</strong>, превращая её в лабораторию смыслов:</p>
+
+      <ul>
+        <li><strong>Фильтрация:</strong> создавайте собственные критерии отбора информации — не всё нужно читать, а только то, что помогает вам думать.</li>
+        <li><strong>Рефрейминг:</strong> рассматривайте «мусор» как материал для анализа: почему он возник, какие потребности отражает, что скрывает.</li>
+        <li><strong>Коллективная работа:</strong> обсуждайте тексты в группе, превращая хаос в повод для диалога и совместного поиска смысла.</li>
+        <li><strong>Метакомментарий:</strong> учитесь писать комментарии к «слопу», превращая его в учебный объект, а не в угрозу.</li>
+        <li><strong>Минимализм:</strong> практикуйте информационную диету — ограничивайте время и количество источников, чтобы сохранить ясность мышления.</li>
+      </ul>
+
+      <p>Таким образом, «помойка» становится не тюрьмой, а <em>учебным полигоном</em>, где студенты тренируют критическое мышление, 
+      учатся различать шум и смысл, и превращают хаос в ресурс для собственного развития.</p>
+    </div>
+  </div>
+
+
+<div class="conversation-container">
+
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>То есть построить на помойке предприятие по переработке мусора в биотопливо для ракеты стартующей к звездам?</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Именно. Превратить хаос в ресурс — это зрелая стратегия. «Мусор» — сырьё, а «звёзды» — ваши смысловые цели. Предлагаю метафорический конвейер:</p>
+      <ul>
+        <li><strong>Сбор:</strong> ограниченный, целенаправленный поток источников под ваши задачи (курс, проект, исследование).</li>
+        <li><strong>Сортировка:</strong> помечайте единицы контента по тегам: «факт», «мнение», «риторика», «эмоция», «реклама».</li>
+        <li><strong>Дегидратация шума:</strong> выжимайте 1–2 проверяемых тезиса из каждого блока, остальное отметайте.</li>
+        <li><strong>Катализация:</strong> связывайте тезисы с теориями и понятиями курса; добавляйте контрпримеры.</li>
+        <li><strong>Синтез топлива:</strong> собирайте краткие брифы (150–200 слов) с выводом и вопросом для дискуссии.</li>
+        <li><strong>Запуск:</strong> превращайте брифы в задания, мини-лекции, дебаты — это и есть «тяга» к звёздам.</li>
+      </ul>
+      <p>Так информационная «помойка» перестаёт вас засасывать: вы стоите у пульта переработки, а не в потоке. Каждая единица «слопа» — это потенциальный килоджоуль смысла, если пройти этапы сбор → сортировка → дегидратация → катализация → синтез → запуск.</p>
+    </div>
+  </div>
+  
+  
+  
+  <div class="conversation-container">
+
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Отличная модель! С ней можно попрактиковаться</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+            <div class="assignment-box">
+        <h3>Практическое задание</h3>
+        <p><strong>Цель:</strong> научиться различать «Slop» как диагноз ИИ и как диагноз общества.</p>
+        <p><strong>Инструкция:</strong></p>
+        <ul>
+          <li>Прочитайте несколько коротких текстов (новостная заметка, пост в соцсетях, генеративный ответ ИИ).</li>
+          <li>Определите, является ли данный пример «слопом» в смысле:
+            <ul>
+              <li><em>Диагноз ИИ</em> — контент, созданный алгоритмом без глубины.</li>
+              <li><em>Диагноз общества</em> — контент, отражающий человеческую привычку к мусорному производству.</li>
+            </ul>
+          </li>
+          <li>Запишите аргументы: почему вы отнесли пример к одной или другой категории.</li>
+          <li>Сравните свои выводы в группе и обсудите, где границы между «шумом» и «смыслом».</li>
+        </ul>
+        <p><strong>Форма отчёта:</strong> таблица или короткое эссе (1 страница), адаптированное для мобильного чтения.</p>
+      </div>
+
+      <p>Такое задание помогает не только анализировать тексты, но и осознавать собственную роль в производстве «слопа».</p>
+    </div>
+  </div>
+  
+  
+
+<div class="conversation-container">
+
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Спасибо! До новой встречи!</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>И вам спасибо за этот диалог, Ева! Мы уже с тобой превращаем «слоп» и «помойку» в ценный ресурс — живой материал для дискуссий и анализа. Пусть «слоп» и «помойка» будут для вас не ловушкой, а полем для экспериментов и учебных открытий. До новой встречи — будем вместе перерабатывать шум в топливо для смыслов!</p>
+    </div>
+  </div>
+
+</div>
+
+
+
+	
+		<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) </p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
