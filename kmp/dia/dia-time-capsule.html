@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+      :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+
+        table {
+            width: 100%; /* Make table fit within message content */
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+		</header>
+        
+		
+		<p><strong>Повод: </strong> <a target="blank" href="https://karpathy.ai/hncapsule/" class="link-kmp15"> HN Time Capsule</a></p><br>
+			
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Здравствуйте! Если вам доступен новый проект Андрея Крапати, то кратко расскажите о нем<br> <a href="https://karpathy.ai/hncapsule/">https://karpathy.ai/hncapsule/</a></p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p><strong>Проект Андрея Крапати называется «HN Time Capsule».</strong> Он представляет собой образовательный и исследовательский эксперимент: Большие языковые модели (LLM) анализируют старые страницы Hacker News десятилетней давности (например, декабрь 2015 года) и сравнивают тогдашние обсуждения с тем, что реально произошло спустя годы. Таким образом, пользователи получают оценку того, насколько предсказательными или прозорливыми были их комментарии и прогнозы.</p> <p>В проекте ежедневно берутся фронт‑страницы Hacker News, включающие около 30 статей, и для каждой проводится анализ с помощью ChatGPT 5.1. Результаты позволяют увидеть, какие идеи оказались дальновидными, а какие — нет. Дополнительно предусмотрены разделы «Hall of Fame» (галерея наиболее точных предсказаний) и навигация по датам, чтобы можно было просматривать архивные обсуждения день за днём.</p> </div> </div>
+
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Что может быть особенно интересно в этом проекте Карпати для студентов-лингвистов и будущих преподавателей иностранных языков изучающих LLM?</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p><strong>Проект «HN Time Capsule» Андрея Карпати</strong> может быть особенно ценен для студентов-лингвистов и будущих преподавателей иностранных языков, потому что он демонстрирует, как большие языковые модели (LLM) анализируют человеческие тексты в ретроспективе и выявляют закономерности в прогнозах и дискуссиях.</p> <p>Для лингвистов интересен сам процесс: <strong>модель работает с архивными корпусами</strong> (комментарии Hacker News десятилетней давности) и сравнивает их с реальными событиями. Это позволяет увидеть, как язык прогнозов, метафор и аргументации отражает культурные и когнитивные установки сообщества.</p> <p>Будущим преподавателям иностранных языков проект полезен как пример того, <strong>как LLM может анализировать дискурсы</strong>: выделять успешные стратегии аргументации, показывать ошибки предсказаний, а также демонстрировать, как контекст влияет на интерпретацию текста. Такой подход можно адаптировать в учебных целях — например, для упражнений по критическому чтению, сопоставлению гипотез и фактов, или для анализа прагматических особенностей речи.</p> <p>Кроме того, проект показывает, что <strong>LLM не только генерируют текст, но и оценивают его</strong>. Это открывает перспективы для педагогики: студенты могут учиться видеть различие между формой и содержанием, между языковым выражением и реальной точностью прогноза.</p> <p>Таким образом, «HN Time Capsule» — это не просто технологический эксперимент, а <strong>наглядный кейс для изучения взаимодействия языка, культуры и искусственного интеллекта</strong>, который можно использовать в семинарах по лингвистике, когнитивным наукам и методике преподавания языков.</p> </div> 
+</div>
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>На какие предсказания студентам посоветуете обратить внимание?</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p>В проекте Карпати особенно интересно рассматривать те предсказания, где <strong>языковая форма и реальность расходятся</strong>. Для студентов-лингвистов это шанс увидеть, как дискурсивные стратегии (метафоры, уверенные утверждения, осторожные гипотезы) влияют на восприятие прогноза.</p> <p>Я бы выделил три направления:</p> <ul> <li><strong>Технологические прогнозы</strong> — обсуждения о будущем искусственного интеллекта, блокчейна или социальных сетей. Здесь можно сопоставить язык энтузиазма и скепсиса с тем, что реально произошло.</li> <li><strong>Культурные и социальные ожидания</strong> — комментарии о том, как изменится образование, работа или коммуникация. Это помогает студентам анализировать прагматику речи: как люди выражают надежду, страх или иронию.</li> <li><strong>Ошибочные предсказания</strong> — те случаи, где уверенные утверждения оказались неверными. Для будущих преподавателей это отличный материал, чтобы показать студентам ценность критического чтения и различие между формой высказывания и его истинностью.</li> </ul> <p>Таким образом, внимание стоит уделять не только «точным» прогнозам, но и тем, где язык демонстрирует когнитивные и культурные установки сообщества. Это превращает проект в <strong>учебный корпус для анализа дискурса и прагматики</strong>.</p> </div> </div>
+
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Выделите конкретные примеры</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p><strong>В проекте «HN Time Capsule» Андрея Карпати можно найти яркие примеры как удачных, так и ошибочных предсказаний.</strong> Они особенно полезны для студентов-лингвистов и будущих преподавателей, потому что позволяют анализировать язык прогнозов и сопоставлять его с реальностью.</p> <p>Вот несколько показательных случаев:</p> <ul> <li><strong>Точные прогнозы:</strong> В обсуждениях конца 2015 года некоторые комментаторы предсказывали стремительный рост облачных технологий и сервисов вроде AWS и Google Cloud. Сегодня мы видим, что эти прогнозы оказались верными — облачные платформы стали основой цифровой экономики.</li> <li><strong>Ошибочные ожидания:</strong> В тех же дискуссиях встречались уверенные заявления о том, что виртуальная реальность (VR) быстро вытеснит традиционные формы развлечений. Однако спустя десять лет VR остаётся нишевой технологией, а массового перехода не произошлоkarpathy.ai.</li> <li><strong>Социальные прогнозы:</strong> Некоторые участники Hacker News обсуждали будущее удалённой работы и считали её маловероятной для большинства компаний. Реальность пандемии COVID‑19 показала обратное — удалённая работа стала нормой во многих сферах.</li> </ul> <p>Для студентов полезно сравнивать <strong>языковые стратегии</strong> этих прогнозов: где авторы использовали категоричные утверждения, где осторожные гипотезы, и как это повлияло на восприятие их слов. Такой анализ помогает развивать навыки критического чтения и понимания прагматики речи.</p> <p>Таким образом, проект Карпати превращается в своеобразный «учебный корпус» для анализа дискурса: студенты могут исследовать, как язык прогнозов отражает когнитивные установки и культурные ожидания сообщества.</p> </div> </div>
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Это проект можно рассматривать в контексте разных аспектов и уровней компьютерного моделирования?</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p>Да, проект «HN Time Capsule» вполне можно рассматривать как пример многослойного компьютерного моделирования. Он объединяет несколько уровней:</p> <ul> <li><strong>Моделирование текста и дискурса</strong> — языковые модели анализируют архивные комментарии, выявляют семантические и прагматические структуры, сопоставляют прогнозы с фактами.</li> <li><strong>Моделирование времени</strong> — создаётся ретроспективная «капсула», где прошлое и настоящее соотносятся, а сама система выступает как модель динамики культурных и технологических ожиданий.</li> <li><strong>Моделирование когнитивных стратегий</strong> — проект показывает, как люди формулируют гипотезы, используют аргументацию и метафоры, и как эти стратегии можно реконструировать средствами ИИ.</li> <li><strong>Моделирование образовательного процесса</strong> — для студентов и преподавателей это пример того, как ИИ может быть встроен в учебный корпус: он не только генерирует текст, но и оценивает его, моделируя обратную связь.</li> </ul> <p>Таким образом, проект можно трактовать как <strong>комплексное моделирование языка, времени, культуры и педагогики</strong>. Это делает его ценным материалом для междисциплинарных семинаров, где лингвистика, когнитивные науки и информатика встречаются в одном кейсе.</p> </div> </div>
+
+</div>
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова </div> <div class="message-content"> <p>Спасибо! До новой встречи!</p> </div> </div>
+
+<!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft) </div> <div class="message-content"> <p>И вам спасибо за содержательный диалог! Буду рад продолжить обсуждение в следующий раз.</p> </div> </div>
+
+</div>
+	
+		<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) </p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
