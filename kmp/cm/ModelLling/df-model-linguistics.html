@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 0px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>МОДЕЛЬНАЯ ЛИНГВИСТИКА</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+        <div class="container">
+            <p>© 2025 | kmp | CC BY-NC-SA 4.0</p>
+            <p>для всех</p>
+        </div>
+    </footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+                {
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Междисциплинарная область на стыке лингвистики, семиотики и компьютерного моделирования, изучающая язык как динамическую знаковую систему через конструирование вычислительных моделей, способных репрезентировать, симулировать и трансформировать лингвистические структуры, процессы и практики. В рамках семиотически ориентированного компьютерного моделирования модельная лингвистика рассматривает языковые феномены не как статические объекты анализа, а как продукты и ресурсы семиозиса — процесса порождения, передачи и интерпретации значения, — и строит формальные артефакты (грамматики, онтологии, нейросетевые представления, агентные симуляции и т.п.), которые выступают одновременно как инструменты познания, как операциональные метафоры и как автономные знаковые системы, участвующие в расширении самого лингвистического поля.",
+"category": "семиотико-вычислительный, 2010–2025, компьютерное моделирование в гуманитарных науках"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "An interdisciplinary field at the intersection of linguistics, semiotics, and computational modeling that investigates language as a dynamic sign system through the construction of computational models capable of representing, simulating, and transforming linguistic structures, processes, and practices. Within semiotically expansive computational modeling, model linguistics treats linguistic phenomena not as static objects of analysis but as products and resources of semiosis—the process of meaning generation, transmission, and interpretation—and builds formal artifacts (grammars, ontologies, neural representations, agent-based simulations, etc.) that function simultaneously as epistemic tools, operational metaphors, and autonomous sign systems actively participating in the expansion of the linguistic field itself.",
+"category": "semiotic-computational, 2010s–2025, computational modeling in the humanities"
+}
+},
+{
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Научная дисциплина, изучающая язык через построение и анализ формальных моделей, направленных на описание, объяснение и предсказание языковых явлений с использованием математических, логических и вычислительных методов.",
+"category": "междисциплинарный, 1960–1970-е, теоретическая и прикладная лингвистика"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "A scientific discipline that studies language through the construction and analysis of formal models aimed at describing, explaining, and predicting linguistic phenomena using mathematical, logical, and computational methods.",
+"category": "interdisciplinary, 1960s–1970s, theoretical and applied linguistics"
+}
+},
+{
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Подход в лингвистике, основанный на создании абстрактных репрезентаций языковых структур и процессов, используемых для симуляции и интерпретации лингвистических данных в рамках когнитивных и психолингвистических теорий.",
+"category": "когнитивный, 1980–1990-е, когнитивная лингвистика"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "An approach in linguistics based on constructing abstract representations of linguistic structures and processes, used for simulating and interpreting linguistic data within cognitive and psycholinguistic frameworks.",
+"category": "cognitive, 1980s–1990s, cognitive linguistics"
+}
+},
+{
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Область компьютерной лингвистики, фокусирующаяся на разработке формализованных моделей языка — от грамматик и онтологий до нейросетевых архитектур — для решения задач автоматической обработки естественного языка.",
+"category": "вычислительный, 2000–2010-е, компьютерная лингвистика и NLP"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "A branch of computational linguistics focusing on the development of formalized language models—from grammars and ontologies to neural network architectures—for solving natural language processing tasks.",
+"category": "computational, 2000s–2010s, computational linguistics and NLP"
+}
+},
+{
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Современное направление в лингвистике, объединяющее лингвистическую теорию, машинное обучение и большие данные для построения адаптивных, самообучающихся моделей языка, способных к генерации, пониманию и анализу естественной речи в реальном времени.",
+"category": "искусственный интеллект, 2020-е, нейролингвистика и ИИ"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "A contemporary strand of linguistics that integrates linguistic theory, machine learning, and big data to build adaptive, self-learning language models capable of generating, understanding, and analyzing natural speech in real time.",
+"category": "artificial intelligence, 2020s, neurolinguistics and AI"
+}
+},
+{
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Образовательная дисциплина, направленная на обучение студентов методам построения, валидации и применения лингвистических моделей для решения научных и практических задач в гуманитарных науках.",
+"category": "педагогический, 2010–2020-е, лингводидактика"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "An educational discipline aimed at teaching students methods for constructing, validating, and applying linguistic models to solve scientific and practical problems in the humanities.",
+"category": "pedagogical, 2010s–2020s, linguodidactics"
+}
+},
+{
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Философско-методологическая концепция, рассматривающая любое лингвистическое описание как модель реальности, подчеркивающая условность и инструментальность языковых теорий.",
+"category": "философский, 1970–1980-е, философия лингвистики"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "A philosophical and methodological concept that treats any linguistic description as a model of reality, emphasizing the conventionality and instrumental nature of linguistic theories.",
+"category": "philosophical, 1970s–1980s, philosophy of linguistics"
+}
+},
+
+{
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Рекурсивная аппроксимационная система, в которой токенизированные репрезентации семантико-синтаксических паттернов подвергаются динамической реификации через параметризованные преобразования, оптимизируемые по функционалам, производным от эмпирических распределений в корпусных многообразиях.",
+"category": "архитектурно-эмпирический, 2025, self-referential language modeling"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "A recursive approximation system wherein tokenized representations of semantico-syntactic patterns undergo dynamic reification through parameterized transformations, optimized with respect to functionals derived from empirical distributions over corpus manifolds.",
+"category": "architectural-empirical, 2025, self-referential language modeling"
+}
+},
+
+{
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Дисциплинарная иллюзия: набор ритуалов калибровки, при которых случайные последовательности символов возводятся в ранг объяснительных конструкций под предлогом «понимания языка».",
+"category": "провокационный, постмодернистский, 2020-е, критика вычислительного редукционизма"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "A disciplinary illusion: a set of calibration rituals whereby random symbol sequences are elevated to the status of explanatory constructs under the pretense of 'understanding language'.",
+"category": "provocative, postmodern, 2020s, critique of computational reductionism"
+}
+},
+
+{
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Саморепродуцирующийся метаязык, в котором лингвисты моделируют модели, чтобы доказать, что язык моделируем — при условии, что модель остаётся непроверяемой.",
+"category": "иронический, метатеоретический, 2010-е, теория научных мифов"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "A self-reproducing metalanguage in which linguists model models to prove that language is modelable—provided the model remains unverifiable.",
+"category": "ironic, metatheoretical, 2010s, theory of scientific myths"
+}
+},
+
+{
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Форма лингвистического капитализма: превращение языковых данных в обучаемые параметры, а теоретических споров — в метрики точности, прибыльности и citation impact.",
+"category": "критический, социологический, 2020-е, политическая экономия науки"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "A form of linguistic capitalism: the conversion of linguistic data into trainable parameters and theoretical debates into metrics of accuracy, profitability, and citation impact.",
+"category": "critical, sociological, 2020s, political economy of science"
+}
+},
+
+{
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Пустой контейнер, заполняемый в зависимости от эпохи: то грамматикой Хомского, то нейронными весами, то философскими тревогами — но никогда языком как он есть.",
+"category": "деконструктивный, эпистемологический, 2025, кризис репрезентации"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "An empty vessel filled according to the epoch: now with Chomskyan grammar, now with neural weights, now with philosophical anxieties—but never with language as it is.",
+"category": "deconstructive, epistemological, 2025, crisis of representation"
+}
+},
+
+{
+"ru": {
+"term": "Модельная лингвистика",
+"equivalent": "Model Linguistics",
+"definition": "Техника уклонения от лингвистической ответственности: вместо анализа значения — обучение на корпусе; вместо теории — loss function.",
+"category": "провокационно-рефлексивный, 2020-е, этика моделирования"
+},
+"en": {
+"term": "Model Linguistics",
+"equivalent": "Модельная лингвистика",
+"definition": "A technique for evading linguistic responsibility: corpus training instead of meaning analysis; loss function instead of theory.",
+"category": "provocatively reflexive, 2020s, ethics of modeling"
+}
+}
+
+
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
