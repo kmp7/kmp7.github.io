@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --success-color: #27ae60;
+            --error-color: #c0392b;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 60px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .add-term-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 32px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        
+        .theme-toggle:hover, .add-term-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px 40px 10px 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--equivalent-color);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn, .modal-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active, .modal-btn.primary {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .modal-btn.secondary {
+            background-color: transparent;
+            color: var(--text-color);
+        }
+        
+        .modal-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* Modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal {
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            animation: modalFadeIn 0.3s ease;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            color: var(--term-color);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .modal-close:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--term-color);
+        }
+        
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .form-note {
+            font-size: 12px;
+            color: var(--equivalent-color);
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            z-index: 1001;
+            animation: toastSlideIn 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .toast.success {
+            background-color: var(--success-color);
+        }
+        
+        .toast.error {
+            background-color: var(--error-color);
+        }
+        
+        .user-term-badge {
+            background-color: var(--success-color);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+            font-weight: normal;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 70px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 40px;
+            }
+            
+            .add-term-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge, .user-term-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+            
+            .modal-overlay {
+                padding: 10px;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+            color: var(--equivalent-color);
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="add-term-toggle" id="addTermToggle" title="Добавить новый термин">+</button>
+            <button class="theme-toggle" id="themeToggle" title="Переключить тему">🌙</button>
+            <h1>СТОРИТЕЛЛИНГ</h1>
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+                            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for adding new terms -->
+    <div class="modal-overlay" id="addTermModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Добавить новый термин</h2>
+                <button class="modal-close" id="modalClose">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="termForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="termRu">Термин (русский)</label>
+                            <input type="text" class="form-input" id="termRu" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="termEn">Термин (english)</label>
+                            <input type="text" class="form-input" id="termEn" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="equivalentRu">Эквивалент (русский)</label>
+                            <input type="text" class="form-input" id="equivalentRu">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="equivalentEn">Эквивалент (english)</label>
+                            <input type="text" class="form-input" id="equivalentEn">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="definitionRu">Определение (русский)</label>
+                            <textarea class="form-textarea" id="definitionRu" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="definitionEn">Definition (english)</label>
+                            <textarea class="form-textarea" id="definitionEn" required></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="category">Категория</label>
+                        <input type="text" class="form-input" id="category" placeholder="Например: экономика, Орлова Ева" required>
+                        <div class="form-note">Укажите область знания и ваши Фамилию Имя</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="cancelBtn">Отмена</button>
+                <button class="modal-btn primary" id="saveBtn">Сохранить термин</button>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <div class="container">
+            <p>© 2026 | kmp | CC BY-NC-SA</p>
+            <p>для всех</p>
+        </div>
+    </footer>
+    
+    <div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const addTermToggle = document.getElementById('addTermToggle');
+            const addTermModal = document.getElementById('addTermModal');
+            const modalClose = document.getElementById('modalClose');
+            const cancelBtn = document.getElementById('cancelBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const termForm = document.getElementById('termForm');
+            const body = document.body;
+
+            // Form elements
+            const termRu = document.getElementById('termRu');
+            const termEn = document.getElementById('termEn');
+            const equivalentRu = document.getElementById('equivalentRu');
+            const equivalentEn = document.getElementById('equivalentEn');
+            const definitionRu = document.getElementById('definitionRu');
+            const definitionEn = document.getElementById('definitionEn');
+            const category = document.getElementById('category');
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+            
+            // Theme state
+            let isDarkMode = false;
+            
+            // Default glossary data
+            const defaultGlossaryData = [
+                {
+  "ru": {
+    "term": "Сторителлинг",
+    "equivalent": "Storytelling",
+    "definition": "Древняя социокультурная практика устной передачи знаний, ценностей и опыта посредством структурированных нарративов, обеспечивающая межпоколенческую трансляцию культурной памяти.",
+    "category": "антропологический, традиционный, фольклористика"
+  },
+  "en": {
+    "term": "Storytelling",
+    "equivalent": "Сторителлинг",
+    "definition": "An ancient sociocultural practice of oral transmission of knowledge, values, and experience through structured narratives, ensuring intergenerational transfer of cultural memory.",
+    "category": "anthropological, traditional, folklore studies"
+  }
+},
+{
+  "ru": {
+    "term": "Нарративный сторителлинг",
+    "equivalent": "Narrative Storytelling",
+    "definition": "Дискурсивная деятельность по созданию связного текста, организованного вокруг последовательности событий с участием агентов, объединённых причинно-следственными и темпоральными связями.",
+    "category": "нарратологический, 1960-е, структурализм"
+  },
+  "en": {
+    "term": "Narrative Storytelling",
+    "equivalent": "Нарративный сторителлинг",
+    "definition": "A discursive activity of creating a coherent text organized around a sequence of events involving agents, united by causal and temporal connections.",
+    "category": "narratological, 1960s, structuralism"
+  }
+},
+{
+  "ru": {
+    "term": "Цифровой сторителлинг",
+    "equivalent": "Digital Storytelling",
+    "definition": "Мультимодальная практика создания коротких персональных нарративов с использованием цифровых медиа: изображений, видео, аудио и текста, интегрированных в единое повествование.",
+    "category": "медийный, 1990-е, Центр цифрового сторителлинга (Дж. Ламберт)"
+  },
+  "en": {
+    "term": "Digital Storytelling",
+    "equivalent": "Цифровой сторителлинг",
+    "definition": "A multimodal practice of creating short personal narratives using digital media: images, video, audio, and text integrated into a unified narrative.",
+    "category": "media studies, 1990s, Center for Digital Storytelling (J. Lambert)"
+  }
+},
+{
+  "ru": {
+    "term": "Вычислительный сторителлинг",
+    "equivalent": "Computational Storytelling",
+    "definition": "Область искусственного интеллекта, исследующая алгоритмическое порождение, понимание и интерактивное управление нарративными структурами на основе формальных моделей повествования.",
+    "category": "компьютерный, 1970-е, искусственный интеллект"
+  },
+  "en": {
+    "term": "Computational Storytelling",
+    "equivalent": "Вычислительный сторителлинг",
+    "definition": "A field of artificial intelligence investigating algorithmic generation, understanding, and interactive management of narrative structures based on formal models of storytelling.",
+    "category": "computational, 1970s, artificial intelligence"
+  }
+},
+{
+  "ru": {
+    "term": "Интерактивный сторителлинг",
+    "equivalent": "Interactive Storytelling",
+    "definition": "Форма повествования, в которой пользователь активно влияет на развитие сюжета через свои действия, при этом система динамически адаптирует нарратив, сохраняя его когерентность.",
+    "category": "компьютерный, 1990-е, интерактивные медиа и видеоигры"
+  },
+  "en": {
+    "term": "Interactive Storytelling",
+    "equivalent": "Интерактивный сторителлинг",
+    "definition": "A form of narrative in which the user actively influences plot development through their actions, while the system dynamically adapts the narrative, maintaining its coherence.",
+    "category": "computational, 1990s, interactive media and video games"
+  }
+},
+{
+  "ru": {
+    "term": "Бизнес-сторителлинг",
+    "equivalent": "Business Storytelling",
+    "definition": "Коммуникативная стратегия использования нарративных техник для передачи корпоративных ценностей, убеждения аудитории и формирования эмоциональной связи с брендом.",
+    "category": "маркетинговый, 2000-е, корпоративные коммуникации"
+  },
+  "en": {
+    "term": "Business Storytelling",
+    "equivalent": "Бизнес-сторителлинг",
+    "definition": "A communication strategy using narrative techniques to convey corporate values, persuade audiences, and build emotional connections with a brand.",
+    "category": "marketing, 2000s, corporate communications"
+  }
+},
+{
+  "ru": {
+    "term": "Педагогический сторителлинг",
+    "equivalent": "Educational Storytelling",
+    "definition": "Дидактический метод организации учебного материала в форме истории с целью повышения мотивации, улучшения запоминания и развития критического мышления учащихся.",
+    "category": "педагогический, образовательные технологии"
+  },
+  "en": {
+    "term": "Educational Storytelling",
+    "equivalent": "Педагогический сторителлинг",
+    "definition": "A didactic method of organizing educational material in story form to increase motivation, improve retention, and develop students' critical thinking.",
+    "category": "pedagogical, educational technology"
+  }
+},
+{
+  "ru": {
+    "term": "Лингводидактический сторителлинг",
+    "equivalent": "Language Teaching Storytelling",
+    "definition": "Метод обучения иностранному языку через погружение в аутентичные или адаптированные нарративы, обеспечивающий контекстуализированное усвоение лексики, грамматики и прагматических норм.",
+    "category": "лингводидактический, методика преподавания иностранных языков"
+  },
+  "en": {
+    "term": "Language Teaching Storytelling",
+    "equivalent": "Лингводидактический сторителлинг",
+    "definition": "A method of foreign language teaching through immersion in authentic or adapted narratives, providing contextualized acquisition of vocabulary, grammar, and pragmatic norms.",
+    "category": "language pedagogy, foreign language teaching methodology"
+  }
+},
+{
+  "ru": {
+    "term": "Когнитивный сторителлинг",
+    "equivalent": "Cognitive Storytelling",
+    "definition": "Ментальная деятельность структурирования опыта в форме нарратива, отражающая фундаментальный способ человеческого познания и организации знаний о мире.",
+    "category": "когнитивный, 1980-е, когнитивная психология (Дж. Брунер)"
+  },
+  "en": {
+    "term": "Cognitive Storytelling",
+    "equivalent": "Когнитивный сторителлинг",
+    "definition": "A mental activity of structuring experience in narrative form, reflecting a fundamental mode of human cognition and organization of knowledge about the world.",
+    "category": "cognitive, 1980s, cognitive psychology (J. Bruner)"
+  }
+},
+{
+  "ru": {
+    "term": "Генеративный нарратив",
+    "equivalent": "Generative Narrative",
+    "definition": "Автоматически порождаемый текст повествовательного характера, создаваемый нейросетевыми языковыми моделями на основе статистических закономерностей больших текстовых корпусов.",
+    "category": "компьютерный, 2010-е, обработка естественного языка (NLP)"
+  },
+  "en": {
+    "term": "Generative Narrative",
+    "equivalent": "Генеративный нарратив",
+    "definition": "Automatically generated narrative text created by neural network language models based on statistical patterns from large text corpora.",
+    "category": "computational, 2010s, natural language processing (NLP)"
+  }
+},
+{
+  "ru": {
+    "term": "Трансмедийный сторителлинг",
+    "equivalent": "Transmedia Storytelling",
+    "definition": "Стратегия развёртывания единого нарративного мира через множество медиаплатформ, где каждый канал вносит уникальный вклад в общую историю.",
+    "category": "медийный, 2003, конвергентная культура (Г. Дженкинс)"
+  },
+  "en": {
+    "term": "Transmedia Storytelling",
+    "equivalent": "Трансмедийный сторителлинг",
+    "definition": "A strategy of deploying a unified narrative world across multiple media platforms, where each channel makes a unique contribution to the overall story.",
+    "category": "media studies, 2003, convergence culture (H. Jenkins)"
+  }
+},
+{
+  "ru": {
+    "term": "Сторителлинг данных",
+    "equivalent": "Data Storytelling",
+    "definition": "Коммуникативная практика преобразования аналитических данных в понятный нарратив посредством визуализации и контекстуализации для неспециализированной аудитории.",
+    "category": "аналитический, 2010-е, журналистика данных и бизнес-аналитика"
+  },
+  "en": {
+    "term": "Data Storytelling",
+    "equivalent": "Сторителлинг данных",
+    "definition": "A communicative practice of transforming analytical data into an understandable narrative through visualization and contextualization for non-specialist audiences.",
+    "category": "analytical, 2010s, data journalism and business analytics"
+  }
+},
+{
+  "ru": {
+    "term": "Иммерсивный сторителлинг",
+    "equivalent": "Immersive Storytelling",
+    "definition": "Форма повествования в средах виртуальной или дополненной реальности, создающая эффект присутствия и воплощённого участия реципиента в нарративном пространстве.",
+    "category": "технологический, 2010-е, VR/AR-технологии"
+  },
+  "en": {
+    "term": "Immersive Storytelling",
+    "equivalent": "Иммерсивный сторителлинг",
+    "definition": "A form of narrative in virtual or augmented reality environments, creating a sense of presence and embodied participation of the recipient in the narrative space.",
+    "category": "technological, 2010s, VR/AR technologies"
+  }
+},
+{
+  "ru": {
+    "term": "Нарративное моделирование",
+    "equivalent": "Narrative Modeling",
+    "definition": "Формализация структуры повествования в виде вычислимых представлений (графов, сценариев, планов), позволяющих алгоритмически анализировать и генерировать истории.",
+    "category": "компьютерный, формальные методы в нарратологии"
+  },
+  "en": {
+    "term": "Narrative Modeling",
+    "equivalent": "Нарративное моделирование",
+    "definition": "Formalization of narrative structure as computable representations (graphs, scripts, plans), enabling algorithmic analysis and generation of stories.",
+    "category": "computational, formal methods in narratology"
+  }
+},
+{
+  "ru": {
+    "term": "Терапевтический сторителлинг",
+    "equivalent": "Therapeutic Storytelling",
+    "definition": "Психотерапевтическая техника использования нарратива для осмысления личного опыта, реконструкции идентичности и проработки травматических переживаний.",
+    "category": "психологический, нарративная терапия (М. Уайт, Д. Эпстон)"
+  },
+  "en": {
+    "term": "Therapeutic Storytelling",
+    "equivalent": "Терапевтический сторителлинг",
+    "definition": "A psychotherapeutic technique using narrative for making sense of personal experience, reconstructing identity, and processing traumatic experiences.",
+    "category": "psychological, narrative therapy (M. White, D. Epston)"
+  }
+},
+{
+  "ru": {
+    "term": "Процедурный нарратив",
+    "equivalent": "Procedural Narrative",
+    "definition": "Динамически генерируемое повествование в компьютерных системах, где сюжет формируется алгоритмически в реальном времени на основе правил и состояния игрового мира.",
+    "category": "компьютерный, 2000-е, процедурная генерация в играх"
+  },
+  "en": {
+    "term": "Procedural Narrative",
+    "equivalent": "Процедурный нарратив",
+    "definition": "Dynamically generated narrative in computer systems, where the plot is formed algorithmically in real-time based on rules and game world state.",
+    "category": "computational, 2000s, procedural generation in games"
+  }
+},
+{
+  "ru": {
+    "term": "Сторителлинг как модель познания",
+    "equivalent": "Storytelling as Cognitive Model",
+    "definition": "Эпистемологическая концепция, рассматривающая нарратив как базовую когнитивную схему организации темпорального опыта и каузального понимания действительности.",
+    "category": "философско-когнитивный, 1980-е, нарративная эпистемология"
+  },
+  "en": {
+    "term": "Storytelling as Cognitive Model",
+    "equivalent": "Сторителлинг как модель познания",
+    "definition": "An epistemological concept viewing narrative as a basic cognitive schema for organizing temporal experience and causal understanding of reality.",
+    "category": "philosophical-cognitive, 1980s, narrative epistemology"
+  }
+},
+{
+  "ru": {
+    "term": "Корпусный анализ нарративов",
+    "equivalent": "Corpus-based Narrative Analysis",
+    "definition": "Методология исследования структурных и лексико-грамматических паттернов в больших коллекциях повествовательных текстов с применением статистических и вычислительных методов.",
+    "category": "лингвистический, корпусная лингвистика"
+  },
+  "en": {
+    "term": "Corpus-based Narrative Analysis",
+    "equivalent": "Корпусный анализ нарративов",
+    "definition": "A methodology for investigating structural and lexico-grammatical patterns in large collections of narrative texts using statistical and computational methods.",
+    "category": "linguistic, corpus linguistics"
+  }
+},
+
+{
+  "ru": {
+    "term": "LLM-сторителлинг (для людей)",
+    "equivalent": "LLM Storytelling (for HSS)",
+    "definition": "Способность больших языковых моделей порождать связные повествовательные тексты, воспроизводя нарративные паттерны из обучающих корпусов; при этом модель не обладает жизненным опытом или интенцией рассказчика, но может служить инструментом-соавтором, усиливающим творческие возможности человека в создании и исследовании историй.",
+    "category": "авторский, 2025, человеко-машинное взаимодействие, креативные технологии"
+  },
+  "en": {
+    "term": "LLM Storytelling (for HSS)",
+    "equivalent": "LLM-сторителлинг (для людей)",
+    "definition": "The capability of large language models to generate coherent narrative texts by reproducing narrative patterns from training corpora; while the model lacks lived experience or narrator's intention, it can serve as a co-creative tool amplifying human capabilities in story creation and exploration.",
+    "category": "authorial, 2025, human-computer interaction, creative technologies"
+  }
+},
+{
+  "ru": {
+    "term": "LLM-сторителлинг (для LLM-систем)",
+    "equivalent": "LLM Storytelling (for LLM systems)",
+    "definition": "Режим авторегрессионной генерации последовательностей токенов, при котором условные распределения вероятностей оптимизированы для поддержания: (а) темпоральной когерентности между сегментами выходной последовательности, (б) устойчивых ролевых атрибуций именованных сущностей, (в) каузальных импликаций между событийными пропозициями, (г) соответствия жанровым статистическим сигнатурам, присутствующим в обучающем распределении.",
+    "category": "технический, 2025, архитектуры трансформеров, авторегрессионное моделирование"
+  },
+  "en": {
+    "term": "LLM Storytelling (for LLM systems)",
+    "equivalent": "LLM-сторителлинг (для LLM-систем)",
+    "definition": "An autoregressive token sequence generation mode wherein conditional probability distributions are optimized to maintain: (a) temporal coherence across output sequence segments, (b) stable role attributions for named entities, (c) causal implications between event propositions, (d) conformity to genre-specific statistical signatures present in training distribution.",
+    "category": "technical, 2025, transformer architectures, autoregressive modeling"
+  }
+}
+            ];
+            
+            // Get glossary data from localStorage or use default
+            let glossaryData = JSON.parse(localStorage.getItem('glossaryData'));
+            if (!glossaryData) {
+                glossaryData = defaultGlossaryData;
+                localStorage.setItem('glossaryData', JSON.stringify(glossaryData));
+            }
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Modal functions
+            function openModal() {
+                addTermModal.style.display = 'flex';
+                termRu.focus();
+            }
+
+            function closeModal() {
+                addTermModal.style.display = 'none';
+                termForm.reset();
+            }
+
+            // Modal event listeners
+            addTermToggle.addEventListener('click', openModal);
+            modalClose.addEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
+
+            // Close modal when clicking outside
+            addTermModal.addEventListener('click', function(e) {
+                if (e.target === addTermModal) {
+                    closeModal();
+                }
+            });
+
+            // Save new term
+            saveBtn.addEventListener('click', function() {
+                // Validate form
+                if (!termRu.value.trim() || !termEn.value.trim() || 
+                    !definitionRu.value.trim() || !definitionEn.value.trim() || 
+                    !category.value.trim()) {
+                    showToast('Пожалуйста, заполните все обязательные поля', 'error');
+                    return;
+                }
+
+                // Create new term object
+                const newTerm = {
+                    "ru": {
+                        "term": termRu.value.trim(),
+                        "equivalent": equivalentRu.value.trim() || termEn.value.trim(),
+                        "definition": definitionRu.value.trim(),
+                        "category": category.value.trim()
+                    },
+                    "en": {
+                        "term": termEn.value.trim(),
+                        "equivalent": equivalentEn.value.trim() || termRu.value.trim(),
+                        "definition": definitionEn.value.trim(),
+                        "category": category.value.trim()
+                    },
+                    "isUserAdded": true,
+                    "addedDate": new Date().toISOString()
+                };
+
+                // Add to glossary data
+                glossaryData.push(newTerm);
+                
+                // Save to localStorage
+                localStorage.setItem('glossaryData', JSON.stringify(glossaryData));
+                
+                // Close modal
+                closeModal();
+                
+                // Show success message
+                showToast('Термин успешно добавлен!', 'success');
+                
+                // Re-render glossary
+                const searchTerm = searchInput.value.toLowerCase();
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                } else {
+                    const filteredItems = filterGlossaryItems(searchTerm, currentLang);
+                    renderGlossary(filteredItems, currentLang);
+                }
+            });
+
+            // Show toast notification
+            function showToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            }
+
+            // Function to filter glossary items
+            function filterGlossaryItems(searchTerm, lang) {
+                return glossaryData.filter(item => {
+                    const langData = item[lang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+            }
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                // Sort items: user-added first, then alphabetically
+                items.sort((a, b) => {
+                    if (a.isUserAdded && !b.isUserAdded) return -1;
+                    if (!a.isUserAdded && b.isUserAdded) return 1;
+                    return a[lang].term.localeCompare(b[lang].term);
+                });
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <div>
+                                ${item.isUserAdded ? '<span class="user-term-badge" title="Добавлен пользователем">+</span>' : ''}
+                                <span class="category-badge">${langData.category}</span>
+                            </div>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = filterGlossaryItems(searchTerm, currentLang);
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'МОДЕЛЬ';
+                        document.getElementById('modalTitle').textContent = 'Добавить новый термин';
+                        termRu.placeholder = '';
+                        termEn.placeholder = '';
+                        equivalentRu.placeholder = '';
+                        equivalentEn.placeholder = '';
+                        definitionRu.placeholder = '';
+                        definitionEn.placeholder = '';
+                        category.placeholder = 'Например: экономика, Орлова Ева';
+                        document.getElementById('cancelBtn').textContent = 'Отмена';
+                        document.getElementById('saveBtn').textContent = 'Сохранить термин';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'MODEL';
+                        document.getElementById('modalTitle').textContent = 'Add New Term';
+                        termRu.placeholder = 'Term (russian)';
+                        termEn.placeholder = 'Term (english)';
+                        equivalentRu.placeholder = 'Equivalent (russian)';
+                        equivalentEn.placeholder = 'Equivalent (english)';
+                        definitionRu.placeholder = 'Definition (russian)';
+                        definitionEn.placeholder = 'Definition (english)';
+                        category.placeholder = 'e.g., philosophical, economic, modern';
+                        document.getElementById('cancelBtn').textContent = 'Cancel';
+                        document.getElementById('saveBtn').textContent = 'Save Term';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = filterGlossaryItems(searchTerm, currentLang);
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+Enter or Cmd+Enter to save form
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && addTermModal.style.display === 'flex') {
+                    saveBtn.click();
+                }
+                
+                // Escape to close modal
+                if (e.key === 'Escape' && addTermModal.style.display === 'flex') {
+                    closeModal();
+                }
+                
+                // Ctrl+K or Cmd+K to focus search
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    searchInput.focus();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
