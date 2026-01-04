@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-tertiary: #f1f1f1;
+            --text-primary: #1a1a1a;
+            --text-secondary: #555555;
+            --accent-primary: #325980;
+            --accent-secondary: #3498db;
+            --accent-hover: #2980b9;
+            --border-color: #e0e0e0;
+            --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --text-primary: #e8e8e8;
+            --text-secondary: #b0b0b0;
+            --accent-primary: #4a7fb5;
+            --accent-secondary: #5dade2;
+            --accent-hover: #85c1e9;
+            --border-color: #2a3f5f;
+            --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--accent-primary) 0%, #1e3a5f 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo-section h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-section p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            padding: 0.6rem 1rem 0.6rem 2.5rem;
+            border: none;
+            border-radius: 25px;
+            width: 280px;
+            font-size: 0.95rem;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            transition: all 0.3s ease;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+            width: 320px;
+        }
+
+        .search-box::before {
+            content: '';
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23666' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") no-repeat center;
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(15deg);
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 2rem;
+            position: sticky;
+            top: 88px;
+            z-index: 99;
+            overflow-x: auto;
+        }
+
+        .nav-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: nowrap;
+        }
+
+        .nav-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--accent-secondary);
+            color: white;
+            border-color: var(--accent-secondary);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: var(--bg-primary);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            flex: 1;
+            min-width: 150px;
+            border-left: 4px solid var(--accent-secondary);
+        }
+
+        .stat-card h3 {
+            font-size: 1.8rem;
+            color: var(--accent-primary);
+            font-weight: 700;
+        }
+
+        .stat-card p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* Action Buttons */
+        .action-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: var(--accent-secondary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+        }
+
+        /* Category Section */
+        .category-section {
+            margin-bottom: 2.5rem;
+        }
+
+        .category-header {
+            background: var(--accent-primary);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-header h2 {
+            font-size: 1.15rem;
+            font-weight: 600;
+        }
+
+        .category-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+        }
+
+        .terms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 1rem;
+            background: var(--bg-primary);
+            padding: 1.5rem;
+            border-radius: 0 0 12px 12px;
+            border: 1px solid var(--border-color);
+            border-top: none;
+        }
+
+        /* Term Card */
+        .term-card {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 1.25rem;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            position: relative;
+        }
+
+        .term-card:hover {
+            box-shadow: var(--card-shadow-hover);
+            border-color: var(--accent-secondary);
+            transform: translateY(-2px);
+        }
+
+        .term-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .term-name {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+            word-break: break-word;
+        }
+
+        .term-name-en {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: var(--bg-tertiary);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .term-definition {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.65;
+        }
+
+        .term-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+        }
+
+        .btn-icon:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .btn-icon.delete:hover {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        [data-theme="dark"] .btn-icon.delete:hover {
+            background: #451a1a;
+            color: #f87171;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-primary);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 550px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            background: var(--accent-primary);
+            color: white;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .modal-header h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: white;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+		
+		
+		footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        /* Info Section */
+        .info-section {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .info-section h3 {
+            color: var(--accent-primary);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .info-section p {
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .info-section .author {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--accent-primary);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .header-content {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box input {
+                width: 100%;
+            }
+
+            .search-box input:focus {
+                width: 100%;
+            }
+
+            nav {
+                top: auto;
+                position: relative;
+                padding: 0.75rem 1rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .terms-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-bar {
+                gap: 0.75rem;
+            }
+
+            .stat-card {
+                min-width: 100%;
+            }
+
+            .modal {
+                margin: 0.5rem;
+            }
+
+            .logo-section h1 {
+                font-size: 1.3rem;
+            }
+        }
+
+        /* No results */
+        .no-results {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+            grid-column: 1 / -1;
+        }
+
+        .no-results h3 {
+            margin-bottom: 0.5rem;
+            color: var(--accent-primary);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-secondary);
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo-section">
+                <h1>Глоссарий ИИ-терминов</h1>
+                </div>
+            <div class="header-controls">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Поиск терминов...">
+                </div>
+                <button class="theme-toggle" id="themeToggle" title="Переключить тему">☀️</button>
+            </div>
+        </div>
+    </header>
+
+    <nav>
+        <div class="nav-content" id="navContent">
+            <button class="nav-btn active" data-category="all">Все</button>
+        </div>
+    </nav>
+
+    <main>
+	
+	        <div class="stats-bar">
+            <div class="stat-card">
+                <h3 id="totalTerms">0</h3>
+                <p>Всего терминов</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="totalCategories">0</h3>
+                <p>Категорий</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="displayedTerms">0</h3>
+                <p>Показано</p>
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn-primary" id="addTermBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Добавить термин
+            </button>
+            <button class="btn-secondary" id="exportBtn">Экспорт JSON</button>
+            <button class="btn-secondary" id="resetBtn">Сбросить к исходным</button>
+        </div>
+
+        <div id="termsContainer"></div>
+
+        <div class="info-section">
+            <h3>О приложении</h3>
+            <p>Интерактивный глоссарий терминов в области искусственного интеллекта и больших языковых моделей (LLM). Глоссарий включает неологизмы 2025 года, появившиеся в языке для обозначения новых явлений, технологий или социальных практик в области ИИ, а также слова с семантическим сдвигом (рефреймингом) — слово было в языке раньше, но в 2025 году приобрело новое значение применительно к ИИ.</p>
+            <p><strong>Возможности:</strong> поиск по терминам и определениям, фильтрация по категориям, добавление и удаление пользовательских терминов, экспорт данных в формате JSON. Все изменения сохраняются в локальном хранилище браузера. </p>
+            
+        </div>
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal-overlay" id="termModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Добавить термин</h3>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="termForm">
+                    <div class="form-group">
+                        <label for="termName">Термин *</label>
+                        <input type="text" id="termName" required placeholder="Например: Prompt Engineering">
+                    </div>
+                    <div class="form-group">
+                        <label for="termCategory">Категория *</label>
+                        <select id="termCategory" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="termDefinition">Определение *</label>
+                        <textarea id="termDefinition" required placeholder="Подробное определение термина..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelBtn">Отмена</button>
+                <button class="btn-primary" id="saveTermBtn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для умных</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 10px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    
+    <script>
+        // Initial glossary data
+        const initialGlossary = {
+            "I. Неологизмы: Технологии+": [
+                { name: "Vibe coding", definition: "Итеративное написание кода с опорой на смысл и намерение, а не на строгий синтаксис, при активной помощи LLM." },
+                { name: "Vibe engineering", definition: "Расширение «vibe coding» на проектирование и разработку систем: ориентация на концептуальное воплощение идей через ИИ-ассистентов, а не на детализированную спецификацию." },
+                { name: "Context rot", definition: "Деградация качества ответов LLM при увеличении длины контекста сессии: «размывание» смысла, потеря фокуса и логической связности." },
+                { name: "Context engineering", definition: "Развитие prompt engineering: дизайн и структурирование всего контекста взаимодействия с моделью, включая историю диалога, метаинструкции и знания." },
+                { name: "Slopsquatting", definition: "Злонамеренная регистрация имён пакетов, библиотек или доменов, упоминаемых в галлюцинациях LLM, с целью распространения вредоносного ПО или дезинформации." },
+                { name: "Vibe scraping", definition: "Автоматическое извлечение или генерация проектов, модулей или данных через ИИ-агентов, опирающихся на «атмосферу» или структурные паттерны, а не на формальные API." },
+                { name: "Slop", definition: "Обобщающий термин для низкокачественного, шаблонного, бездумного контента, произведённого ИИ. В 2024–2025 годах номинировался как «слово года»." },
+                { name: "The lethal trifecta", definition: "Метафора, описывающая опасное сочетание: игнорирование рисков ИИ + нормализация отклонений от стандартов + YOLO-ментальность в разработке." },
+                { name: "Transformer", definition: "Архитектура нейронной сети, основанная на механизме внимания (attention), ставшая основой современных LLM. Впервые представлена в статье «Attention Is All You Need» (2017)." },
+                { name: "Token", definition: "Минимальная единица обработки текста в LLM. Может представлять слово, часть слова или символ. Количество токенов определяет размер контекстного окна." },
+                { name: "Embedding", definition: "Векторное представление текста, слов или понятий в многомерном пространстве, позволяющее модели работать с семантическим сходством." },
+                { name: "Inference", definition: "Процесс генерации ответа моделью на основе входных данных. В отличие от обучения, не изменяет параметры модели." }
+            ],
+            "I. Неологизмы: Агенты+": [
+                { name: "LLM Agent", definition: "Автономная ИИ-система на основе LLM, способная планировать, вызывать инструменты, взаимодействовать с другими агентами и адаптироваться к среде." },
+                { name: "Agentic Workflow", definition: "Архитектура решения задач через цепочки или сети агентов с распределёнными ролями: планировщик, исполнитель, критик, рефлектор и др." },
+                { name: "Asynchronous coding agent", definition: "Агент, который принимает задачу и возвращает результат спустя время (например, через создание Pull Request), не требуя синхронного взаимодействия." },
+                { name: "Tool Use / Function Calling", definition: "Способность LLM вызывать внешние инструменты, API и функции для выполнения задач, выходящих за рамки генерации текста." },
+                { name: "ReAct (Reasoning + Acting)", definition: "Архитектура агентов, сочетающая рассуждение (reasoning) и действия (acting) в едином цикле для решения сложных задач." }
+            ],
+            "I. Неологизмы: Модели+": [
+                { name: "Edge LLM", definition: "Компактные языковые модели, оптимизированные для выполнения на периферийных устройствах: смартфоны, IoT, встраиваемые системы." },
+                { name: "Local LLM Stack", definition: "Совокупность моделей, рантаймов и инструментов для локального запуска LLM с акцентом на приватность, безопасность и контроль данных." },
+                { name: "AI Compilers", definition: "Системы, транслирующие и оптимизирующие ИИ-модели под специфическое оборудование (GPU, TPU, NPU)." },
+                { name: "Sparse Attention", definition: "Методы сокращения вычислительной нагрузки в трансформерах за счёт выборочного активирования механизмов внимания." },
+                { name: "MoE (Mixture of Experts)", definition: "Архитектура, где активируются только подмножества параметров модели в зависимости от входа, повышая масштабируемость и эффективность." },
+                { name: "Federated Fine-Tuning", definition: "Донастройка моделей на распределённых данных без их централизованной передачи (сохраняя конфиденциальность)." },
+                { name: "Quantization", definition: "Метод оптимизации модели путём снижения точности представления весов (например, с 32-bit до 4-bit), уменьшающий требования к памяти и ускоряющий inference." },
+                { name: "Model Distillation", definition: "Процесс передачи знаний от большой модели (teacher) к меньшей (student), сохраняя качество при снижении размера." },
+                { name: "LoRA (Low-Rank Adaptation)", definition: "Эффективный метод донастройки LLM, при котором обучаются только небольшие адаптивные матрицы, а не все параметры модели." }
+            ],
+            "I. Неологизмы: Данные+": [
+                { name: "Synthetic Data Generation", definition: "Создание ИИ искусственных, но релевантных обучающих данных для улучшения моделей, тестирования и снижения предвзятости." },
+                { name: "RAG 2.0", definition: "Эволюция Retrieval-Augmented Generation: динамическое, агентное, мультимодальное извлечение и интеграция внешних знаний в реальном времени." },
+                { name: "Neural-Symbolic AI", definition: "Гибридный подход, сочетающий нейросетевую гибкость и символьное логическое рассуждение для повышения интерпретируемости и надёжности." },
+                { name: "Grounding", definition: "Привязка ответов LLM к фактическим, верифицируемым данным из внешних источников для снижения галлюцинаций." },
+                { name: "Chain-of-Thought (CoT)", definition: "Техника промптинга, побуждающая модель генерировать промежуточные шаги рассуждения перед финальным ответом." },
+                { name: "Zero-shot / Few-shot Learning", definition: "Способность модели выполнять задачи без примеров (zero-shot) или с минимальным количеством примеров (few-shot) в промпте." }
+            ],
+            "I. Неологизмы: Оценка+": [
+                { name: "AI Hallucination Audit", definition: "Систематическая проверка генераций на фактические ошибки, вымышленные цитаты, ссылки и утверждения." },
+                { name: "Hallucination", definition: "Генерация моделью ложной, вымышленной или не соответствующей действительности информации, представленной как факт." },
+                { name: "AI Red-Teaming", definition: "Стресс-тестирование ИИ на поиск уязвимостей, неожиданных поведений и возможностей злоупотребления." },
+                { name: "AI Explainability Score", definition: "Количественная или качественная метрика, оценивающая степень интерпретируемости решений модели." },
+                { name: "AI Safety Benchmark", definition: "Стандартизированные наборы тестов для оценки устойчивости, этичности и безопасности ИИ-систем." },
+                { name: "Capability Overhang", definition: "Разрыв между потенциальными возможностями модели и текущими механизмами её контроля и регулирования." },
+                { name: "Evals (Evaluations)", definition: "Системы и методики оценки качества, безопасности и соответствия поведения модели заданным критериям." }
+            ],
+            "II. Семантика+": [
+                { name: "AI First", definition: "Стратегический подход, при котором ИИ становится основой проектирования продуктов, процессов и решений (ранее — просто «цифровой» или «мобильный first»)." },
+                { name: "Copilot", definition: "Не просто помощник, а встроенный ИИ-ассистент, активно участвующий в профессиональной деятельности (кодинг, аналитика, дизайн и др.)." },
+                { name: "Agent", definition: "В контексте ИИ: автономная система, способная к целенаправленному поведению, а не просто «агент» как посредник или представитель." },
+                { name: "Alignment", definition: "Согласование поведения ИИ с человеческими ценностями, намерениями и этическими нормами (ранее — согласование интересов, целей и т.п.)." },
+                { name: "Prompt", definition: "Из простого «запроса» превратился в сложный инструмент управления моделью, включающий инструкции, контекст, шаблоны и ограничения." },
+                { name: "Memory", definition: "У ИИ: долговременное хранение и использование контекста взаимодействий с пользователем (в отличие от кратковременного контекстного окна)." },
+                { name: "Persona", definition: "Настраиваемый стиль общения, роль и поведение ИИ-ассистента, а не только «личина» в социальном смысле." },
+                { name: "Artifact", definition: "В контексте ИИ: любой продукт (текст, изображение, код), созданный моделью (ранее — артефакт как археологическая находка или побочный эффект)." },
+                { name: "Literacy (AI Literacy)", definition: "Способность понимать, критически оценивать и эффективно использовать ИИ (аналогично digital literacy, но с фокусом на ИИ-компетентность)." },
+                { name: "Guardrails", definition: "Программные и архитектурные ограничители, контролирующие поведение модели и предотвращающие нежелательные ответы." },
+                { name: "Temperature", definition: "Параметр, управляющий «креативностью» модели: низкие значения дают более предсказуемые ответы, высокие — более разнообразные." },
+                { name: "Context Window", definition: "Максимальное количество токенов, которое модель может обработать за один запрос (включая входные данные и генерируемый ответ)." }
+            ],
+            "III. Бизнес+": [
+                { name: "AI-as-a-Service (AIaaS)", definition: "Облачные ИИ-сервисы с оплатой по подписке или использованию." },
+                { name: "LLM Fine-Tuning as a Service", definition: "Платформы для донастройки моделей под специфические бизнес-задачи без глубоких технических знаний." },
+                { name: "AI Model Marketplace", definition: "Платформы для покупки, продажи и обмена предобученными или донастроенными моделями." },
+                { name: "AI Audit Trail", definition: "Журнал всех решений, запросов и действий ИИ для обеспечения подотчётности и прозрачности." },
+                { name: "AI ROI Calculator", definition: "Инструменты для оценки экономической отдачи от внедрения ИИ-решений." },
+                { name: "AI-Powered CRM", definition: "CRM-системы с интегрированным ИИ для автоматизации, персонализации и предиктивной аналитики." },
+                { name: "AI-Driven A/B Testing", definition: "Автоматизированное A/B-тестирование с использованием ИИ для оптимизации вариантов и ускорения принятия решений." },
+                { name: "Shadow AI", definition: "Несанкционированное использование ИИ-инструментов сотрудниками внутри организаций (аналог shadow IT)." },
+                { name: "AI SLA", definition: "Формализованные договорённости о качестве, времени отклика, безопасности и надёжности ИИ-сервисов." },
+                { name: "Prompt Library", definition: "Корпоративные или публичные библиотеки эффективных промптов для различных задач и сценариев использования." }
+            ],
+            "IV. Этика+": [
+                { name: "AI Alignment Tax", definition: "Дополнительные затраты (время, ресурсы, ограничения функциональности), связанные с обеспечением этической согласованности ИИ." },
+                { name: "AI Bias Bounty", definition: "Программы вознаграждения за обнаружение и устранение предвзятостей в ИИ-системах." },
+                { name: "AI Ethics Review Board", definition: "Независимые экспертные группы по этическому надзору ИИ-проектов." },
+                { name: "AI Carbon Footprint", definition: "Оценка энергопотребления и экологического воздействия обучения и эксплуатации моделей." },
+                { name: "AI Model Card", definition: "Стандартизированная документация модели, описывающая её возможности, ограничения, обучающие данные и предполагаемое использование." },
+                { name: "AI Watermarking", definition: "Технические методы маркировки ИИ-сгенерированного контента для его идентификации." },
+                { name: "Content Provenance (C2PA)", definition: "Технология подтверждения происхождения цифрового контента, особенно важная для AIGC." },
+                { name: "Post-Authorship", definition: "Культурная концепция, отражающая размывание традиционного авторства в эпоху генеративного ИИ." },
+                { name: "AI-Augmented Creativity", definition: "Совместное творчество человека и ИИ, где ИИ выступает как партнёр, а не просто инструмент." },
+                { name: "Synthetic Media", definition: "Обобщающий термин для всех медиаформатов, созданных ИИ (видео, аудио, текст, изображения)." },
+                { name: "RLHF (Reinforcement Learning from Human Feedback)", definition: "Метод обучения модели с использованием обратной связи от людей для улучшения качества и безопасности ответов." },
+                { name: "Constitutional AI", definition: "Подход к обучению ИИ, при котором модель следует набору принципов («конституции») для самокоррекции поведения." }
+            ],
+            "V. Риски+": [
+                { name: "Model Jailbreaking", definition: "Обход встроенных ограничений модели через специальные промпты или техники для получения запрещённого контента." },
+                { name: "Prompt Injection", definition: "Внедрение вредоносных инструкций в контекст через пользовательский ввод или внешние данные для манипуляции поведением модели." },
+                { name: "Indirect Prompt Injection", definition: "Атака, при которой вредоносные инструкции внедряются через внешние источники данных (веб-страницы, документы), обрабатываемые моделью." },
+                { name: "Psychometric Jailbreaks", definition: "Манипуляции на основе психологических и лингвистических уязвимостей пользователя или модели." },
+                { name: "AI Deepfake Detection", definition: "Технологии идентификации синтетического контента (видео, аудио, изображений)." },
+                { name: "AI Adversarial Attack", definition: "Атаки с использованием специально модифицированных входных данных для ввода модели в заблуждение." },
+                { name: "Data Poisoning", definition: "Намеренное загрязнение обучающих данных для создания уязвимостей или изменения поведения модели." },
+                { name: "Model Extraction Attack", definition: "Попытки реконструировать проприетарную модель через систематические запросы к API." }
+            ],
+            "VI. Опыт+": [
+                { name: "Multimodal Copilot", definition: "ИИ-ассистент, объединяющий текст, речь, изображения и видео в едином интерфейсе." },
+                { name: "AI Avatars", definition: "Визуальные и голосовые воплощения ИИ-персон для взаимодействия с пользователями." },
+                { name: "AI Dungeon Master", definition: "ИИ, генерирующий и ведущий интерактивные нарративы (игры, обучение, симуляции)." },
+                { name: "Conversational UX", definition: "Проектирование интерфейсов, где основной формой взаимодействия становится диалог с ИИ." },
+                { name: "Voice-First Interface", definition: "Интерфейсы, где голосовое взаимодействие с ИИ является основным способом ввода и вывода информации." },
+                { name: "AI Onboarding", definition: "Процесс обучения пользователей эффективному взаимодействию с ИИ-системами." }
+            ],
+            "VII. Культура+": [
+                { name: "AI Influencer", definition: "Виртуальная личность, управляемая ИИ, используемая в маркетинге, медиа и развлечениях." },
+                { name: "AI-Generated Content (AIGC)", definition: "Контент, созданный полностью или частично ИИ (текст, изображения, видео, музыка)." },
+                { name: "Extractive contributions", definition: "В open-source: вклад (часто ИИ-сгенерированный), чья стоимость ревью и интеграции превышает его пользу для проекта." },
+                { name: "AI Companion", definition: "ИИ-система, предназначенная для долгосрочного эмоционального и социального взаимодействия с пользователем." },
+                { name: "Centaur Model", definition: "Модель сотрудничества, где человек и ИИ работают вместе, каждый используя свои сильные стороны." },
+                { name: "Dead Internet Theory", definition: "Концепция, предполагающая, что значительная часть онлайн-контента генерируется ИИ и ботами." }
+            ]
+        };
+
+        // Application state
+        let glossary = {};
+        let currentCategory = 'all';
+        let searchQuery = '';
+        let editingTermId = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGlossary();
+            initTheme();
+            renderNavigation();
+            renderTerms();
+            updateStats();
+            attachEventListeners();
+        });
+
+        // Load glossary from localStorage or use initial data
+        function loadGlossary() {
+            const saved = localStorage.getItem('aiGlossary');
+            if (saved) {
+                glossary = JSON.parse(saved);
+            } else {
+                glossary = JSON.parse(JSON.stringify(initialGlossary));
+                saveGlossary();
+            }
+        }
+
+        // Save glossary to localStorage
+        function saveGlossary() {
+            localStorage.setItem('aiGlossary', JSON.stringify(glossary));
+        }
+
+        // Theme management
+        function initTheme() {
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            setTheme(theme);
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            document.getElementById('themeToggle').textContent = theme === 'dark' ? '☀️' : '🌙';
+            localStorage.setItem('theme', theme);
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            setTheme(current === 'dark' ? 'light' : 'dark');
+        }
+
+        // Render navigation
+        function renderNavigation() {
+            const nav = document.getElementById('navContent');
+            const categories = Object.keys(glossary);
+            
+            nav.innerHTML = `<button class="nav-btn ${currentCategory === 'all' ? 'active' : ''}" data-category="all">Все термины</button>`;
+            
+            categories.forEach(cat => {
+                const shortName = cat.replace(/^[IVX]+\.\s*/, '').replace(/^Неологизмы:\s*/, '');
+                nav.innerHTML += `<button class="nav-btn ${currentCategory === cat ? 'active' : ''}" data-category="${cat}">${shortName}</button>`;
+            });
+
+            // Update category select in modal
+            const select = document.getElementById('termCategory');
+            select.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+        }
+
+        // Render terms
+        function renderTerms() {
+            const container = document.getElementById('termsContainer');
+            container.innerHTML = '';
+
+            const categories = currentCategory === 'all' ? Object.keys(glossary) : [currentCategory];
+            let displayedCount = 0;
+
+            categories.forEach(category => {
+                if (!glossary[category]) return;
+                
+                const terms = glossary[category].filter(term => {
+                    if (!searchQuery) return true;
+                    const q = searchQuery.toLowerCase();
+                    return term.name.toLowerCase().includes(q) || term.definition.toLowerCase().includes(q);
+                });
+
+                if (terms.length === 0) return;
+
+                displayedCount += terms.length;
+
+                const section = document.createElement('div');
+                section.className = 'category-section';
+                section.innerHTML = `
+                    <div class="category-header">
+                        <h2>${category}</h2>
+                        <span class="category-count">${terms.length} терминов</span>
+                    </div>
+                    <div class="terms-grid">
+                        ${terms.map((term, idx) => `
+                            <div class="term-card" data-category="${category}" data-index="${glossary[category].indexOf(term)}">
+                                <div class="term-header">
+                                    <span class="term-name ${/^[a-zA-Z]/.test(term.name) ? 'term-name-en' : ''}">${term.name}</span>
+                                    <div class="term-actions">
+                                        <button class="btn-icon delete" title="Удалить" onclick="deleteTerm('${category}', ${glossary[category].indexOf(term)})">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="term-definition">${term.definition}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(section);
+            });
+
+            if (displayedCount === 0) {
+                container.innerHTML = `
+                    <div class="category-section">
+                        <div class="terms-grid">
+                            <div class="no-results">
+                                <h3>Термины не найдены</h3>
+                                <p>Попробуйте изменить поисковый запрос или выбрать другую категорию</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('displayedTerms').textContent = displayedCount;
+        }
+
+        // Update statistics
+        function updateStats() {
+            let total = 0;
+            Object.values(glossary).forEach(terms => total += terms.length);
+            document.getElementById('totalTerms').textContent = total;
+            document.getElementById('totalCategories').textContent = Object.keys(glossary).length;
+        }
+
+        // Delete term
+        function deleteTerm(category, index) {
+            if (confirm('Удалить этот термин?')) {
+                glossary[category].splice(index, 1);
+                if (glossary[category].length === 0) {
+                    delete glossary[category];
+                    currentCategory = 'all';
+                }
+                saveGlossary();
+                renderNavigation();
+                renderTerms();
+                updateStats();
+                showToast('Термин удалён');
+            }
+        }
+
+        // Show modal
+        function showModal() {
+            document.getElementById('termModal').classList.add('active');
+            document.getElementById('termName').focus();
+        }
+
+        // Hide modal
+        function hideModal() {
+            document.getElementById('termModal').classList.remove('active');
+            document.getElementById('termForm').reset();
+            editingTermId = null;
+        }
+
+        // Save term
+        function saveTerm() {
+            const name = document.getElementById('termName').value.trim();
+            const category = document.getElementById('termCategory').value;
+            const definition = document.getElementById('termDefinition').value.trim();
+
+            if (!name || !category || !definition) {
+                showToast('Заполните все поля');
+                return;
+            }
+
+            if (!glossary[category]) {
+                glossary[category] = [];
+            }
+
+            glossary[category].push({ name, definition });
+            saveGlossary();
+            hideModal();
+            renderNavigation();
+            renderTerms();
+            updateStats();
+            showToast('Термин добавлен');
+        }
+
+        // Export glossary
+        function exportGlossary() {
+            const data = JSON.stringify(glossary, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ai-glossary.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Экспорт завершён');
+        }
+
+        // Reset glossary
+        function resetGlossary() {
+            if (confirm('Сбросить все изменения и вернуть исходные данные?')) {
+                glossary = JSON.parse(JSON.stringify(initialGlossary));
+                saveGlossary();
+                currentCategory = 'all';
+                renderNavigation();
+                renderTerms();
+                updateStats();
+                showToast('Данные сброшены');
+            }
+        }
+
+        // Show toast notification
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Attach event listeners
+        function attachEventListeners() {
+            // Theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+            // Search
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                renderTerms();
+            });
+
+            // Navigation
+            document.getElementById('navContent').addEventListener('click', (e) => {
+                if (e.target.classList.contains('nav-btn')) {
+                    currentCategory = e.target.dataset.category;
+                    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderTerms();
+                }
+            });
+
+            // Add term button
+            document.getElementById('addTermBtn').addEventListener('click', showModal);
+
+            // Modal controls
+            document.getElementById('modalClose').addEventListener('click', hideModal);
+            document.getElementById('cancelBtn').addEventListener('click', hideModal);
+            document.getElementById('saveTermBtn').addEventListener('click', saveTerm);
+
+            // Export & Reset
+            document.getElementById('exportBtn').addEventListener('click', exportGlossary);
+            document.getElementById('resetBtn').addEventListener('click', resetGlossary);
+
+            // Close modal on overlay click
+            document.getElementById('termModal').addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal-overlay')) {
+                    hideModal();
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') hideModal();
+                if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
+                    document.getElementById('searchInput').focus();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
