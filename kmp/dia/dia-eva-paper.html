@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+
+<p><strong>Повод: </strong><a target="blank" href="https://habr.com/ru/articles/983266/" class="link-kmp15"> Почему рынок отвергает «Paper Seniors»</a> <br> <br> 
+
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Здравствуйте! Читаю:  Самая распространённая проблема найма сегодня — это «Paper Seniors». Что это и почему стало проблемой именно сейчас?</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Gemini (Google)</div> <div class="message-content"> <p><strong>«Paper Seniors»</strong> (дословно «бумажные сеньоры») — это специалисты, чей формальный статус значительно превышает их актуальные практические навыки.</p> <p>Термин происходит от выражений <em>«paper qualifications»</em> (бумажная квалификация) и <em>«fake experience»</em> (фиктивный опыт). У такого человека впечатляющее резюме: 10+ лет стажа, сертификаты, громкие названия компаний, титул «Senior» или «Lead». Но при решении реальных задач обнаруживается разрыв между ожиданиями и результатом.</p> <p><strong>Почему проблема обострилась сейчас:</strong></p> <ul> <li>Технологический стек обновляется быстрее, чем когда-либо — знания 3-летней давности могут быть устаревшими</li> <li>AI-инструменты радикально изменили рабочие процессы, и те, кто их не освоил, теряют производительность</li> <li>Компактные команды (особенно в стартапах) не могут «нести» неэффективных специалистов</li> <li>Традиционные методы найма (резюме, сертификаты) уже не выявляют реальные навыки</li> </ul> </div> </div> 
+
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Super Junior может быть понят как противоположность Paper Seniors?</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Gemini (Google)</div> <div class="message-content"> <p>Да, в определённом смысле это <strong>функциональный антоним</strong>.</p> <p><strong>«Super Junior (AI-native)»</strong> — это представитель нового поколения инженеров, для которых взаимодействие с языковыми моделями является <em>базовым навыком</em>, наравне с владением Git или терминалом.</p> <p><strong>Ключевые характеристики:</strong></p> <ul> <li>Небольшой формальный опыт (часто без «сеньорных» сертификатов)</li> <li>Высокая практическая продуктивность благодаря AI-инструментам</li> <li>Умение запускать несколько агентов, распределять задачи между моделями</li> <li>Быстрое прототипирование и интеграция результатов в код</li> <li>Экспоненциальный рост эффективности с каждым новым инструментом</li> </ul> <p><strong>Парадокс:</strong> «Junior» по документам может превосходить «Senior» по реальному выхлопу — именно это делает их «Super».</p> </div> </div>
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Можете показать ключевые различия между этими двумя типами специалистов в структурированном виде?</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Gemini (Google)</div> <div class="message-content"> <p>Конечно. Вот сравнительная таблица по ключевым аспектам:</p> <table border="1" cellpadding="8" cellspacing="0"> <tr style="background-color:#f0f0f0;"> <th>Аспект</th> <th>Paper Seniors</th> <th>Super Junior (AI-native)</th> </tr> <tr> <td><strong>Квалификация</strong></td> <td>Сертификаты, долгий стаж, формальные роли</td> <td>Портфолио проектов, демонстрация результатов</td> </tr> <tr> <td><strong>Работа с LLM/AI</strong></td> <td>Минимальный или отсутствующий опыт</td> <td>Базовый навык; мультиагентные системы</td> </tr> <tr> <td><strong>Инструменты</strong></td> <td>Часто устаревший стек</td> <td>Git, CI/CD, контейнеры, AI-пайплайны</td> </tr> <tr> <td><strong>Скорость</strong></td> <td>Медленная адаптация, длинные ревью</td> <td>Быстрая итерация и прототипирование</td> </tr> <tr> <td><strong>Подход</strong></td> <td>Планирование, консерватизм, контроль</td> <td>Эксперименты, автоматизация, гипотезы</td> </tr> <tr> <td><strong>Сильные стороны</strong></td> <td>Опыт решений, знание процессов</td> <td>Скорость доставки, снижение рутины</td> </tr> <tr> <td><strong>Лучшие роли</strong></td> <td>Регуляторика, долгосрочное планирование</td> <td>Стартапы, продуктовые команды</td> </tr> </table> </div> </div> 
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Звучит так, будто Super Junior — это идеал. Но у них тоже есть слабые стороны?</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Gemini (Google)</div> <div class="message-content"> <p>Абсолютно верно. Super Junior — это <strong>не конечная точка развития</strong>, а стартовая позиция с серьёзными рисками:</p> <p><strong>1. Архитектурная слепота</strong></p> <p>Код, сгенерированный AI, может содержать скрытые проблемы: уязвимости безопасности (security flaws), узкие места производительности (performance bottlenecks), которые проявляются только на масштабе. Без глубокого понимания системной архитектуры эти проблемы остаются невидимыми.</p> <p><strong>2. Тактики без стратегии</strong></p> <p>Super Junior отлично решают <em>«что делать сейчас»</em>, но могут не понимать <em>«как это повлияет на систему через год»</em>. Они быстрые исполнители, но слабые архитекторы — без надзора опытного специалиста это опасно.</p> <p><strong>3. Хрупкость без фундамента</strong></p> <p>Когда AI-инструмент даёт неправильный ответ или задача выходит за рамки обучающих данных модели, Super Junior может оказаться беспомощным. Отсутствие глубокой теоретической базы (алгоритмы, структуры данных, паттерны проектирования) ограничивает способность к самостоятельному решению нестандартных проблем.</p> <p><strong>4. Зависимость от инструментов</strong></p> <p>Если завтра API модели станет недоступен или изменится — что произойдёт с продуктивностью?</p> </div> </div> 
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>А какие проблемы у Paper Seniors помимо устаревших знаний?</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Gemini (Google)</div> <div class="message-content"> <p>Устаревшие знания — это лишь симптом. Более глубокая проблема — <strong>«синдром выученной беспомощности»</strong> (learned helplessness).</p> <p><strong>Что это значит:</strong></p> <ul> <li>Многолетний опыт работы в больших командах со специализацией приводит к атрофии самостоятельности</li> <li>Привычка делегировать: «это делает DevOps», «это на QA», «это архитектор решит»</li> <li>Неспособность закрыть задачу end-to-end без поддержки инфраструктуры</li> </ul> <p><strong>Почему это критично сейчас:</strong></p> <p>В современных компактных AI-командах (3–5 человек) каждый участник должен быть <em>full-stack по ответственности</em>. Paper Senior, привыкший к разделению труда в корпорации из 500 инженеров, становится <strong>балластом</strong> — он требует ресурсов команды, не создавая пропорциональной ценности.</p> <p><strong>Дополнительные проблемы:</strong></p> <ul> <li><em>Title inflation</em> — накопление статуса без накопления навыков</li> <li>Сопротивление новым инструментам («мы так не делали»)</li> <li>Подмена результата процессом («я провёл 20 митингов»)</li> </ul> </div> </div> 
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Итожим: обе крайности — проблемные. Какой тогда идеальный путь развития для студента?</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Gemini (Google)</div> <div class="message-content"> <p>Идеальный вектор — стать <strong>«AI-Augmented Senior»</strong>. Это специалист, который объединяет:</p> <p><strong>От классического Senior:</strong></p> <ul> <li>Глубокое понимание архитектуры, паттернов, trade-offs</li> <li>Способность видеть долгосрочные последствия решений</li> <li>Понимание безопасности, производительности, масштабируемости</li> <li>Навыки коммуникации, менторства, управления сложностью</li> </ul> <p><strong>От Super Junior (AI-native):</strong></p> <ul> <li>Свободное владение LLM как рабочим инструментом</li> <li>Скорость прототипирования и итерации</li> <li>Автоматизация рутины через AI-пайплайны</li> <li>Постоянное освоение новых инструментов</li> </ul> <p><strong>Формула для студента:</strong></p> <p style="text-align:center; font-size:1.1em; padding:10px; background:#f5f5f5; border-radius:5px;"> <code>AI-Augmented Senior = Фундамент × AI-инструменты × Практика</code> </p> <p>Начинать как Super Junior — нормально. <strong>Застрять</strong> в этой роли навсегда — проблема. Цель — наращивать фундамент, не теряя инструментальной эффективности.</p> </div> </div> 
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Экзамены не работают, как отличить реальные навыки от «бумажных»?</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Gemini (Google)</div> <div class="message-content"> <p>Традиционные методы (экзамены, тестирование, проверка резюме, вопросы о прошлом опыте) <strong>систематически переоценивают</strong> Paper Seniors и <strong>недооценивают</strong> Super Juniors.</p> <p><strong>Эффективные методы оценки:</strong></p> <table border="1" cellpadding="8" cellspacing="0"> <tr style="background-color:#f0f0f0;"> <th>Метод</th> <th>Что выявляет</th> </tr> <tr> <td>Live coding с AI-инструментами</td> <td>Реальный рабочий процесс, умение верифицировать результат AI</td> </tr> <tr> <td>Тестовое задание с открытым AI</td> <td>Способность интегрировать AI в решение, эффективность промптов</td> </tr> <tr> <td>Разбор архитектурного кейса</td> <td>Глубина понимания trade-offs, масштабируемость мышления</td> </tr> <tr> <td>Pair programming</td> <td>Коммуникация, адаптивность, реальная скорость</td> </tr> <tr> <td>Портфолио GitHub/проекты</td> <td>Результаты, а не декларации</td> </tr> </table> <p><strong>Ключевой сдвиг:</strong> оценка смещается от «что ты знаешь» к «что ты реально достигаешь с доступными инструментами».</p> </div> </div> 
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Дайте практические рекомендации желающим стать AI-Augmented Senior</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Gemini (Google)</div> <div class="message-content"> <p><strong>Стратегия развития для студента:</strong></p> <p><strong>1. Строй фундамент параллельно с инструментами</strong></p> <ul> <li>Изучай алгоритмы и структуры данных — но используй AI для объяснений и практики</li> <li>Читай код, сгенерированный AI, критически — понимай <em>почему</em> он работает (или нет)</li> </ul> <p><strong>2. Развивай «мета-навык» верификации</strong></p> <ul> <li>AI может ошибаться. Твоя ценность — в способности проверить результат</li> <li>Учись писать тесты, проводить code review, анализировать edge cases</li> </ul> <p><strong>3. Создавай портфолио результатов</strong></p> <ul> <li>Открытые проекты на GitHub важнее сертификатов</li> <li>Документируй процесс: как ты использовал AI, какие решения принимал</li> </ul> <p><strong>4. Практикуй end-to-end ответственность</strong></p> <ul> <li>Доводи проекты до деплоя, не останавливайся на «работает локально»</li> <li>Учись DevOps, CI/CD, мониторингу — это отличает профессионала</li> </ul> <p><strong>5. Изучай архитектуру через анализ реальных систем</strong></p> <ul> <li>Разбирай open-source проекты: как они масштабируются, где trade-offs</li> <li>Спрашивай AI: «какие проблемы возникнут, если этот код будет обрабатывать 1M запросов?»</li> </ul> </div> </div> 
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Итожим: что означает этот сдвиг для профессионального образования в целом?</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>Gemini (Google)</div> <div class="message-content"> <p><strong>Парадигма «AI First» меняет не только IT-найм, но и само образование:</strong></p> <p><strong>Старая модель:</strong></p> <p style="padding-left:20px;"><em>Теория → Сертификат → Практика → Опыт → Статус</em></p> <p><strong>Новая модель:</strong></p> <p style="padding-left:20px;"><em>Практика с AI → Результаты → Фундамент по необходимости → Непрерывная адаптация</em></p> <p><strong>Ключевые сдвиги:</strong></p> <table border="1" cellpadding="8" cellspacing="0"> <tr style="background-color:#f0f0f0;"> <th>Было</th> <th>Стало</th> </tr> <tr> <td>Диплом как пропуск</td> <td>Портфолио как доказательство</td> </tr> <tr> <td>Запоминание фактов</td> <td>Навык поиска и верификации</td> </tr> <tr> <td>Линейная карьера</td> <td>Постоянное переобучение</td> </tr> <tr> <td>Специализация</td> <td>T-shaped skills + AI-усиление</td> </tr> <tr> <td>Стаж = экспертиза</td> <td>Результаты = экспертиза</td> </tr> </table> <p><strong>Вывод:</strong> Цель образования — не создать Paper Senior через 10 лет и не оставить Super Junior без фундамента. Цель — <strong>вырастить AI-Augmented специалиста</strong>, который владеет и глубиной понимания, и современными инструментами усиления продуктивности.</p> </div> </div> </div>
+<div class="conversation-container">
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Спасибо! До новой встречи!</p>
+    </div>
+  </div>
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Gemini (Google)
+    </div>
+    <div class="message-content">
+      <p>Вам спасибо, Ева! Тема действительно актуальная — понимание этих тендеций даёт стратегическое преимущество на старте карьеры.</p>
+    </div>
+  </div>
+</div>
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
