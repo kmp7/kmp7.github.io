@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="Windows-1251">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM-OEA-kmp</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            opacity: 0.7;
+        }
+
+        .tab.active {
+            opacity: 1;
+            border-bottom: 2px solid #007bff;
+            margin-bottom: -2px;
+        }
+
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .info {
+            color: #0056b3;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .copy-btn {
+            background: #6c757d;
+            margin-left: 10px;
+            padding: 5px 10px;
+            font-size: 0.9em;
+        }
+
+        .success {
+            color: #28a745;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('encrypt')">Зашифровать</button>
+            <button class="tab" onclick="switchTab('decrypt')">Расшифровать</button>
+        </div>
+
+        <div id="encrypt" class="content active">
+            <h2>Шифрование текста</h2>
+            <textarea id="encryptText" placeholder="Введите текст для шифрования"></textarea>
+            <input type="password" id="encryptPassword" placeholder="Введите пароль для шифрования">
+            <button onclick="encryptText()">Зашифровать</button>
+            <div id="encryptResult" class="result" style="display: none;">
+                <strong>Зашифрованный текст:</strong>
+                <div id="encryptedContent"></div>
+                <button class="copy-btn" onclick="copyText('encryptedContent')">Копировать</button>
+            </div>
+            <div id="encryptError" class="error"></div>
+            <div id="encryptSuccess" class="success">Текст скопирован в буфер обмена!</div>
+            <div class="info">
+                * Храните пароль в надежном месте. Без него расшифровка будет невозможна.
+            </div>
+        </div>
+
+        <div id="decrypt" class="content">
+            <h2>Расшифровка текста</h2>
+            <textarea id="decryptText" placeholder="Введите зашифрованный текст"></textarea>
+            <input type="password" id="decryptPassword" placeholder="Введите пароль для расшифровки">
+            <button onclick="decryptText()">Расшифровать</button>
+            <div id="decryptResult" class="result" style="display: none;">
+                <strong>Расшифрованный текст:</strong>
+                <div id="decryptedContent"></div>
+                <button class="copy-btn" onclick="copyText('decryptedContent')">Копировать</button>
+            </div>
+            <div id="decryptError" class="error"></div>
+            <div id="decryptSuccess" class="success">Текст скопирован в буфер обмена!</div>
+        </div>
+    </div>
+
+    <script>
+        async function generateKey(password, salt, iterations = 100000) {
+            const encoder = new TextEncoder();
+            const passwordBuffer = encoder.encode(password);
+            const saltBuffer = encoder.encode(salt);
+
+            // Генерация ключа из пароля
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw',
+                passwordBuffer,
+                'PBKDF2',
+                false,
+                ['deriveBits', 'deriveKey']
+            );
+
+            return await crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: saltBuffer,
+                    iterations: iterations,
+                    hash: 'SHA-256'
+                },
+                keyMaterial,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['encrypt', 'decrypt']
+            );
+        }
+
+        async function encryptText() {
+            try {
+                const text = document.getElementById('encryptText').value;
+                const password = document.getElementById('encryptPassword').value;
+
+                if (!text || !password) {
+                    throw new Error('Пожалуйста, заполните все поля');
+                }
+
+                // Генерация случайной соли и IV
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+
+                // Генерация ключа
+                const key = await generateKey(password, salt);
+
+                // Шифрование
+                const encoder = new TextEncoder();
+                const encodedText = encoder.encode(text);
+                const encryptedContent = await crypto.subtle.encrypt(
+                    {
+                        name: 'AES-GCM',
+                        iv: iv
+                    },
+                    key,
+                    encodedText
+                );
+
+                // Объединение соли, IV и зашифрованных данных
+                const encryptedArray = new Uint8Array(salt.length + iv.length + encryptedContent.byteLength);
+                encryptedArray.set(salt, 0);
+                encryptedArray.set(iv, salt.length);
+                encryptedArray.set(new Uint8Array(encryptedContent), salt.length + iv.length);
+
+                // Конвертация в base64
+                const encryptedBase64 = btoa(String.fromCharCode.apply(null, encryptedArray));
+
+                document.getElementById('encryptResult').style.display = 'block';
+                document.getElementById('encryptedContent').textContent = encryptedBase64;
+                document.getElementById('encryptError').style.display = 'none';
+
+            } catch (error) {
+                document.getElementById('encryptError').textContent = error.message;
+                document.getElementById('encryptError').style.display = 'block';
+                document.getElementById('encryptResult').style.display = 'none';
+            }
+        }
+
+        async function decryptText() {
+            try {
+                const encryptedBase64 = document.getElementById('decryptText').value;
+                const password = document.getElementById('decryptPassword').value;
+
+                if (!encryptedBase64 || !password) {
+                    throw new Error('Пожалуйста, заполните все поля');
+                }
+
+                // Декодирование base64
+                const encryptedArray = new Uint8Array(
+                    atob(encryptedBase64).split('').map(char => char.charCodeAt(0))
+                );
+
+                // Извлечение соли, IV и зашифрованных данных
+                const salt = encryptedArray.slice(0, 16);
+                const iv = encryptedArray.slice(16, 28);
+                const encryptedContent = encryptedArray.slice(28);
+
+                // Генерация ключа
+                const key = await generateKey(password, salt);
+
+                // Расшифровка
+                const decryptedContent = await crypto.subtle.decrypt(
+                    {
+                        name: 'AES-GCM',
+                        iv: iv
+                    },
+                    key,
+                    encryptedContent
+                );
+
+                const decoder = new TextDecoder();
+                const decryptedText = decoder.decode(decryptedContent);
+
+                document.getElementById('decryptResult').style.display = 'block';
+                document.getElementById('decryptedContent').textContent = decryptedText;
+                document.getElementById('decryptError').style.display = 'none';
+
+            } catch (error) {
+                document.getElementById('decryptError').textContent = 
+                    'Ошибка расшифровки. Проверьте правильность введенного текста и пароля.';
+                document.getElementById('decryptError').style.display = 'block';
+                document.getElementById('decryptResult').style.display = 'none';
+            }
+        }
+
+        function switchTab(tab) {
+            // Обновление активной вкладки
+            document.querySelectorAll('.tab').forEach(t => {
+                t.classList.remove('active');
+            });
+            document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+
+            // Обновление активного содержимого
+            document.querySelectorAll('.content').forEach(c => {
+                c.classList.remove('active');
+            });
+            document.getElementById(tab).classList.add('active');
+
+            // Сброс результатов и ошибок
+            document.querySelectorAll('.result, .error, .success').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
+
+        async function copyText(elementId) {
+            try {
+                const text = document.getElementById(elementId).textContent;
+                await navigator.clipboard.writeText(text);
+                
+                const successId = elementId.includes('encrypt') ? 'encryptSuccess' : 'decryptSuccess';
+                document.getElementById(successId).style.display = 'block';
+                
+                setTimeout(() => {
+                    document.getElementById(successId).style.display = 'none';
+                }, 2000);
+            } catch (err) {
+                console.error('Ошибка при копировании текста:', err);
+            }
+        }
+    </script>
+</body>
+</html>

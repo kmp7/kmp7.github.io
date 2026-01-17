@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="Windows-1251">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Улучшенная защита контента</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .login-form {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .protected-content {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            user-select: none;
+            position: relative;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 40px;
+            color: rgba(0,0,0,0.1);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .logout-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #dc3545;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .error-message {
+            color: #dc3545;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .session-timer {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .two-factor {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .attempts-left {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-form" id="loginForm">
+        <div class="login-container">
+            <h2>Безопасный вход</h2>
+            <div id="loginStep1">
+                <input type="text" id="usernameInput" placeholder="Имя пользователя">
+                <input type="password" id="passwordInput" placeholder="Пароль">
+                <div class="error-message" id="errorMessage"></div>
+                <div class="attempts-left" id="attemptsLeft"></div>
+                <button onclick="attemptLogin()" id="loginButton">Войти</button>
+            </div>
+            <div class="two-factor" id="twoFactorStep">
+                <h3>Двухфакторная аутентификация</h3>
+                <p>Код отправлен на ваш email</p>
+                <input type="text" id="tfaCode" placeholder="Введите код">
+                <button onclick="verifyTwoFactor()">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="session-timer" id="sessionTimer" style="display: none;"></div>
+    <button class="logout-btn" onclick="logout()" style="display: none;">Выйти</button>
+
+    <div class="protected-content" id="protectedContent">
+        <div class="watermark" id="dynamicWatermark">Конфиденциально</div>
+        <h1>Защищенный контент</h1>
+        <p>Этот контент защищен улучшенной системой безопасности:</p>
+        <ul>
+            <li>Шифрование паролей</li>
+            <li>Двухфакторная аутентификация</li>
+            <li>Ограничение попыток входа</li>
+            <li>Сессии с таймаутом</li>
+            <li>Динамические водяные знаки</li>
+        </ul>
+    </div>
+
+    <script>
+        // Имитация базы данных пользователей (в реальности должно быть на сервере)
+        const users = {
+            'Orlova': {
+                passwordHash: '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8', // "password"
+                email: 'oea@brsu.by'
+            }
+        };
+
+        // Константы безопасности
+        const MAX_LOGIN_ATTEMPTS = 3;
+        const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 минут
+        const TFA_CODE = '123456'; // В реальности должен генерироваться и отправляться по email
+
+        // Состояние приложения
+        let loginAttempts = 0;
+        let sessionTimeout;
+        let sessionInterval;
+        let lastActivity = Date.now();
+
+        // Функция хеширования (в реальности следует использовать более безопасные методы)
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function attemptLogin() {
+            const username = document.getElementById('usernameInput').value;
+            const password = document.getElementById('passwordInput').value;
+            const errorMessage = document.getElementById('errorMessage');
+            
+            if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+                errorMessage.textContent = 'Превышено количество попыток. Попробуйте позже.';
+                errorMessage.style.display = 'block';
+                document.getElementById('loginButton').disabled = true;
+                return;
+            }
+
+            const hashedPassword = await hashPassword(password);
+            
+            if (users[username] && users[username].passwordHash === hashedPassword) {
+                document.getElementById('loginStep1').style.display = 'none';
+                document.getElementById('twoFactorStep').style.display = 'block';
+            } else {
+                loginAttempts++;
+                const attemptsLeft = MAX_LOGIN_ATTEMPTS - loginAttempts;
+                document.getElementById('attemptsLeft').textContent = 
+                    `Осталось попыток: ${attemptsLeft}`;
+                errorMessage.textContent = 'Неверное имя пользователя или пароль';
+                errorMessage.style.display = 'block';
+            }
+        }
+
+        function verifyTwoFactor() {
+            const tfaCode = document.getElementById('tfaCode').value;
+            
+            if (tfaCode === TFA_CODE) {
+                startSession();
+            } else {
+                document.getElementById('errorMessage').textContent = 'Неверный код';
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+
+        function startSession() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('protectedContent').style.display = 'block';
+            document.querySelector('.logout-btn').style.display = 'block';
+            document.getElementById('sessionTimer').style.display = 'block';
+            
+            lastActivity = Date.now();
+            updateSessionTimer();
+            enableProtection();
+            startSessionTimeout();
+            updateDynamicWatermark();
+        }
+
+        function updateSessionTimer() {
+            const timeLeft = Math.max(0, SESSION_TIMEOUT - (Date.now() - lastActivity));
+            const minutes = Math.floor(timeLeft / 60000);
+            const seconds = Math.floor((timeLeft % 60000) / 1000);
+            
+            document.getElementById('sessionTimer').textContent = 
+                `Сессия истечет через: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (timeLeft <= 0) {
+                logout();
+            }
+        }
+
+        function startSessionTimeout() {
+            sessionInterval = setInterval(updateSessionTimer, 1000);
+            
+            // Отслеживание активности пользователя
+            ['mousemove', 'keypress', 'click'].forEach(event => {
+                document.addEventListener(event, () => {
+                    lastActivity = Date.now();
+                });
+            });
+        }
+
+        function updateDynamicWatermark() {
+            setInterval(() => {
+                const watermark = document.getElementById('dynamicWatermark');
+                const date = new Date().toLocaleString();
+                watermark.textContent = `Конфиденциально • ${date}`;
+            }, 1000);
+        }
+
+        function enableProtection() {
+            document.addEventListener('contextmenu', e => e.preventDefault());
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey && ['c','v','a','p','s'].includes(e.key)) || 
+                    e.key === 'F12' || 
+                    e.key === 'PrintScreen') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+            document.addEventListener('selectstart', e => e.preventDefault());
+            document.addEventListener('dragstart', e => e.preventDefault());
+        }
+
+        function logout() {
+            clearInterval(sessionInterval);
+            document.getElementById('loginForm').style.display = 'flex';
+            document.getElementById('loginStep1').style.display = 'block';
+            document.getElementById('twoFactorStep').style.display = 'none';
+            document.getElementById('protectedContent').style.display = 'none';
+            document.querySelector('.logout-btn').style.display = 'none';
+            document.getElementById('sessionTimer').style.display = 'none';
+            document.getElementById('usernameInput').value = '';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('tfaCode').value = '';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        // Обработка нажатия Enter
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                attemptLogin();
+            }
+        });
+
+        document.getElementById('tfaCode').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                verifyTwoFactor();
+            }
+        });
+    </script>
+</body>
+</html>
