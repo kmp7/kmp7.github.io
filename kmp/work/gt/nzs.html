@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --nav-color: #325980;
+            --accent: #3498db;
+            --divider: #f1f1f1;
+            --text-primary: #2c3e50;
+            --text-secondary: #5d6d7e;
+            --shadow: rgba(50, 89, 128, 0.1);
+            --card-bg: #ffffff;
+            --border: #e0e0e0;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --nav-color: #4a7fb5;
+            --accent: #5dade2;
+            --divider: #2d3a4a;
+            --text-primary: #ecf0f1;
+            --text-secondary: #b0bec5;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --card-bg: #1f2940;
+            --border: #3d4f6f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        header {
+            background: var(--nav-color);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-title {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-title h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .header-title span {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            color: var(--nav-color);
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--divider);
+        }
+
+        .user-input {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        input, textarea {
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: var(--nav-color);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--divider);
+            border-color: var(--accent);
+        }
+
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .matrix-container {
+            overflow-x: auto;
+        }
+
+        .payoff-matrix {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .payoff-matrix th, .payoff-matrix td {
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .payoff-matrix th {
+            background: var(--nav-color);
+            color: white;
+            font-weight: 500;
+        }
+
+        .payoff-matrix td {
+            background: var(--bg-primary);
+        }
+
+        .payoff-matrix .highlight {
+            background: rgba(52, 152, 219, 0.15);
+            font-weight: 600;
+        }
+
+        .strategy-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .strategy-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .strategy-btn.cooperate {
+            background: #27ae60;
+        }
+
+        .strategy-btn.cooperate:hover {
+            background: #219a52;
+        }
+
+        .strategy-btn.defect {
+            background: #c0392b;
+        }
+
+        .strategy-btn.defect:hover {
+            background: #a93226;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--nav-color);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--divider);
+            font-size: 0.9rem;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .round-badge {
+            background: var(--nav-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .result-cooperate {
+            color: #27ae60;
+            font-weight: 500;
+        }
+
+        .result-defect {
+            color: #c0392b;
+            font-weight: 500;
+        }
+
+        .info-box {
+            background: rgba(52, 152, 219, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .conclusions-section {
+            margin-top: 2rem;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .teacher-strategy {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .teacher-strategy label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        select {
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            width: 100%;
+            font-size: 1rem;
+        }
+
+          footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+
+        .scenario-description {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .scenario-card {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .scenario-card h4 {
+            color: var(--nav-color);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .scenario-card p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .chart-container {
+            margin-top: 1.5rem;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            height: 150px;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .bar-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .bar {
+            width: 100%;
+            max-width: 60px;
+            background: var(--accent);
+            border-radius: 4px 4px 0 0;
+            transition: height 0.5s ease;
+            min-height: 5px;
+        }
+
+        .bar-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .bar-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--nav-color);
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .header-title h1 {
+                font-size: 1.1rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .game-container {
+                grid-template-columns: 1fr;
+            }
+
+            .user-input {
+                grid-template-columns: 1fr;
+            }
+
+            .strategy-buttons {
+                flex-direction: column;
+            }
+
+            .strategy-btn {
+                min-width: auto;
+            }
+
+            .payoff-matrix th, .payoff-matrix td {
+                padding: 0.5rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        .welcome-overlay {
+            display: none;
+        }
+
+        .game-area.hidden {
+            display: none;
+        }
+
+        .intro-text {
+            line-height: 1.8;
+        }
+
+        .intro-text p {
+            margin-bottom: 1rem;
+        }
+
+        .key-concepts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .concept-item {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .concept-item h4 {
+            color: var(--nav-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .concept-item p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .current-round-display {
+            text-align: center;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, var(--nav-color), var(--accent));
+            border-radius: 8px;
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .current-round-display .round-number {
+            font-size: 3rem;
+            font-weight: 700;
+        }
+
+        .message-box {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .message-success {
+            background: rgba(39, 174, 96, 0.15);
+            color: #27ae60;
+        }
+
+        .message-warning {
+            background: rgba(241, 196, 15, 0.15);
+            color: #d4a106;
+        }
+
+        .message-danger {
+            background: rgba(192, 57, 43, 0.15);
+            color: #c0392b;
+        }
+
+        .message-neutral {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-title">
+            <h1>Образовательное доверие</h1>
+            <span>Интерактивная модель игры с ненулевой суммой</span>
+        </div>
+        <button class="theme-toggle" id="themeToggle" title="Переключить тему">☀️</button>
+    </header>
+
+    <main>
+        <section class="card" id="introSection">
+            <h2 class="card-title">Введение в модель образовательного доверия</h2>
+            <div class="intro-text">
+                <p>Данное приложение моделирует взаимодействие между преподавателем и студентом как <strong>игру с ненулевой суммой</strong>. В отличие от игр с нулевой суммой, здесь выигрыш одного участника не означает обязательный проигрыш другого — обе стороны могут выиграть от сотрудничества или проиграть от взаимного недоверия.</p>
+                <p>Модель основана на классической «Дилемме заключённого» и адаптирована для образовательного контекста, где ключевыми стратегиями являются <strong>Сотрудничество</strong> (честное выполнение обязательств) и <strong>Уклонение</strong> (нарушение договорённостей).</p>
+            </div>
+            <div class="key-concepts">
+                <div class="concept-item">
+                    <h4>Взаимность</h4>
+                    <p>Доверие строится на обоюдном соблюдении договорённостей между преподавателем и студентами.</p>
+                </div>
+                <div class="concept-item">
+                    <h4>Ответственность</h4>
+                    <p>Каждая сторона несёт ответственность: преподаватель — за качество обучения, студент — за честность.</p>
+                </div>
+                <div class="concept-item">
+                    <h4>Общественный контракт</h4>
+                    <p>Образование — это договор между всеми участниками процесса перед обществом.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2 class="card-title">Данные участника</h2>
+            <div class="user-input">
+                <div class="form-group">
+                    <label for="userName">Фамилия Имя</label>
+                    <input type="text" id="userName" placeholder="Введите вашу фамилию и имя" required>
+                </div>
+                <button id="startGameBtn">Начать игру</button>
+            </div>
+        </section>
+
+        <section class="card game-area hidden" id="gameArea">
+            <h2 class="card-title">Матрица выигрышей</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">Значения в ячейках: (очки Преподавателя, очки Студента)</p>
+            
+            <div class="matrix-container">
+                <table class="payoff-matrix">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th colspan="2">Студент</th>
+                        </tr>
+                        <tr>
+                            <th>Преподаватель</th>
+                            <th>Сотрудничает</th>
+                            <th>Уклоняется</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th>Сотрудничает</th>
+                            <td class="highlight" id="cell-cc">(+3, +3)</td>
+                            <td id="cell-cd">(0, +5)</td>
+                        </tr>
+                        <tr>
+                            <th>Уклоняется</th>
+                            <td id="cell-dc">(+5, 0)</td>
+                            <td id="cell-dd">(+1, +1)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="scenario-description">
+                <div class="scenario-card">
+                    <h4>Оба сотрудничают (+3, +3)</h4>
+                    <p>Преподаватель даёт качественный материал, студент честно учится. Идеальный результат.</p>
+                </div>
+                <div class="scenario-card">
+                    <h4>Преподаватель сотрудничает, студент уклоняется (0, +5)</h4>
+                    <p>Студент списывает, получая оценку без усилий. Преподаватель не достигает целей.</p>
+                </div>
+                <div class="scenario-card">
+                    <h4>Преподаватель уклоняется, студент сотрудничает (+5, 0)</h4>
+                    <p>Преподаватель формально подходит к работе, честный студент страдает.</p>
+                </div>
+                <div class="scenario-card">
+                    <h4>Оба уклоняются (+1, +1)</h4>
+                    <p>Взаимное недоверие, минимальные усилия с обеих сторон. Проигрывают все.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="card game-area hidden" id="playArea">
+            <h2 class="card-title">Игровой процесс</h2>
+            
+            <div class="current-round-display">
+                <div>Текущий раунд</div>
+                <div class="round-number" id="currentRound">1</div>
+                <div>из 10</div>
+            </div>
+
+            <div class="teacher-strategy">
+                <label for="teacherStrategy">Стратегия преподавателя (ИИ):</label>
+                <select id="teacherStrategy">
+                    <option value="titForTat">«Око за око» — копирует предыдущий ход студента</option>
+                    <option value="random">Случайная стратегия</option>
+                    <option value="alwaysCooperate">Всегда сотрудничает</option>
+                    <option value="alwaysDefect">Всегда уклоняется</option>
+                    <option value="grudger">«Обиженный» — сотрудничает, пока студент не уклонится</option>
+                </select>
+            </div>
+
+            <div class="info-box">
+                <strong>Ваш выбор как студента:</strong> Выберите стратегию для текущего раунда. Помните, что ваши действия влияют на поведение преподавателя в следующих раундах.
+            </div>
+
+            <div class="strategy-buttons">
+                <button class="strategy-btn cooperate" onclick="makeChoice('cooperate')">Сотрудничать</button>
+                <button class="strategy-btn defect" onclick="makeChoice('defect')">Уклониться</button>
+            </div>
+
+            <div id="roundResult" class="message-box message-neutral" style="display: none;"></div>
+        </section>
+
+        <section class="card game-area hidden" id="statsArea">
+            <h2 class="card-title">Статистика игры</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="studentScore">0</div>
+                    <div class="stat-label">Очки студента</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="teacherScore">0</div>
+                    <div class="stat-label">Очки преподавателя</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="coopRate">0%</div>
+                    <div class="stat-label">Уровень сотрудничества</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="totalRounds">0</div>
+                    <div class="stat-label">Сыграно раундов</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h4 style="color: var(--nav-color); margin-bottom: 1rem;">Распределение исходов</h4>
+                <div class="bar-chart" id="outcomeChart">
+                    <div class="bar-wrapper">
+                        <div class="bar-value" id="ccCount">0</div>
+                        <div class="bar" id="ccBar" style="height: 5px; background: #27ae60;"></div>
+                        <div class="bar-label">Оба сотрудничают</div>
+                    </div>
+                    <div class="bar-wrapper">
+                        <div class="bar-value" id="cdCount">0</div>
+                        <div class="bar" id="cdBar" style="height: 5px; background: #e67e22;"></div>
+                        <div class="bar-label">Студент уклоняется</div>
+                    </div>
+                    <div class="bar-wrapper">
+                        <div class="bar-value" id="dcCount">0</div>
+                        <div class="bar" id="dcBar" style="height: 5px; background: #9b59b6;"></div>
+                        <div class="bar-label">Преподаватель уклоняется</div>
+                    </div>
+                    <div class="bar-wrapper">
+                        <div class="bar-value" id="ddCount">0</div>
+                        <div class="bar" id="ddBar" style="height: 5px; background: #c0392b;"></div>
+                        <div class="bar-label">Оба уклоняются</div>
+                    </div>
+                </div>
+            </div>
+
+            <h4 style="color: var(--nav-color); margin-top: 1.5rem;">История раундов</h4>
+            <div class="history-list" id="historyList">
+                <p style="color: var(--text-secondary); text-align: center; padding: 1rem;">История пуста. Начните игру.</p>
+            </div>
+
+            <div class="button-group">
+                <button onclick="resetGame()" class="btn-secondary">Начать заново</button>
+            </div>
+        </section>
+
+        <section class="card game-area hidden conclusions-section" id="conclusionsArea">
+            <h2 class="card-title">Ваши выводы</h2>
+            
+            <div class="info-box">
+                <p>Проанализируйте результаты игры и сформулируйте выводы о модели образовательного доверия. Рассмотрите:</p>
+                <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                    <li>Какая стратегия оказалась наиболее эффективной?</li>
+                    <li>Как взаимное сотрудничество влияет на общий результат?</li>
+                    <li>Какие параллели вы видите с реальным образовательным процессом?</li>
+                    <li>Как технические меры защиты (правила игры) влияют на доверие?</li>
+                </ul>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label for="userConclusions">Ваши выводы и рефлексия:</label>
+                <textarea id="userConclusions" placeholder="Опишите ваши наблюдения и выводы по результатам симуляции..."></textarea>
+            </div>
+
+            <div class="button-group">
+                <button onclick="exportResults()">Экспортировать в HTML</button>
+                <button onclick="resetGame()" class="btn-secondary">Новая игра</button>
+            </div>
+        </section>
+    </main>
+
+   <footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+    <script>
+        // Состояние игры
+        let gameState = {
+            userName: '',
+            currentRound: 1,
+            maxRounds: 10,
+            studentScore: 0,
+            teacherScore: 0,
+            history: [],
+            outcomes: { cc: 0, cd: 0, dc: 0, dd: 0 },
+            teacherGrudge: false
+        };
+
+        // Матрица выигрышей: [очки преподавателя, очки студента]
+        const payoffMatrix = {
+            'cc': [3, 3],  // Оба сотрудничают
+            'cd': [0, 5],  // Преподаватель сотрудничает, студент уклоняется
+            'dc': [5, 0],  // Преподаватель уклоняется, студент сотрудничает
+            'dd': [1, 1]   // Оба уклоняются
+        };
+
+        // Переключение темы
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.body.hasAttribute('data-theme');
+            if (isDark) {
+                document.body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                document.body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        });
+
+        // Начало игры
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            const userName = document.getElementById('userName').value.trim();
+            if (!userName) {
+                alert('Пожалуйста, введите ваше имя');
+                return;
+            }
+            gameState.userName = userName;
+            document.querySelectorAll('.game-area').forEach(el => el.classList.remove('hidden'));
+            document.getElementById('startGameBtn').textContent = 'Игра начата';
+            document.getElementById('startGameBtn').disabled = true;
+        });
+
+        // Стратегия преподавателя
+        function getTeacherChoice() {
+            const strategy = document.getElementById('teacherStrategy').value;
+            const lastStudentChoice = gameState.history.length > 0 
+                ? gameState.history[gameState.history.length - 1].student 
+                : 'cooperate';
+
+            switch(strategy) {
+                case 'titForTat':
+                    return gameState.history.length === 0 ? 'cooperate' : lastStudentChoice;
+                case 'random':
+                    return Math.random() > 0.5 ? 'cooperate' : 'defect';
+                case 'alwaysCooperate':
+                    return 'cooperate';
+                case 'alwaysDefect':
+                    return 'defect';
+                case 'grudger':
+                    if (gameState.teacherGrudge) return 'defect';
+                    if (lastStudentChoice === 'defect') {
+                        gameState.teacherGrudge = true;
+                        return 'defect';
+                    }
+                    return 'cooperate';
+                default:
+                    return 'cooperate';
+            }
+        }
+
+        // Обработка хода
+        function makeChoice(studentChoice) {
+            if (gameState.currentRound > gameState.maxRounds) return;
+
+            const teacherChoice = getTeacherChoice();
+            const outcomeKey = (teacherChoice === 'cooperate' ? 'c' : 'd') + 
+                              (studentChoice === 'cooperate' ? 'c' : 'd');
+            
+            const [teacherPoints, studentPoints] = payoffMatrix[outcomeKey];
+            
+            gameState.teacherScore += teacherPoints;
+            gameState.studentScore += studentPoints;
+            gameState.outcomes[outcomeKey]++;
+            
+            gameState.history.push({
+                round: gameState.currentRound,
+                student: studentChoice,
+                teacher: teacherChoice,
+                studentPoints,
+                teacherPoints,
+                outcome: outcomeKey
+            });
+
+            // Показать результат раунда
+            showRoundResult(teacherChoice, studentChoice, teacherPoints, studentPoints, outcomeKey);
+            
+            // Обновить статистику
+            updateStats();
+            updateHistory();
+            updateChart();
+            highlightMatrix(outcomeKey);
+
+            gameState.currentRound++;
+            document.getElementById('currentRound').textContent = Math.min(gameState.currentRound, gameState.maxRounds);
+
+            if (gameState.currentRound > gameState.maxRounds) {
+                showGameEnd();
+            }
+        }
+
+        function showRoundResult(teacher, student, tPoints, sPoints, outcome) {
+            const resultDiv = document.getElementById('roundResult');
+            resultDiv.style.display = 'block';
+            
+            const teacherText = teacher === 'cooperate' ? 'сотрудничал' : 'уклонился';
+            const studentText = student === 'cooperate' ? 'сотрудничали' : 'уклонились';
+            
+            let messageClass = 'message-neutral';
+            let resultText = '';
+            
+            if (outcome === 'cc') {
+                messageClass = 'message-success';
+                resultText = `Отлично! Вы оба сотрудничали. Преподаватель ${teacherText}, вы ${studentText}. Вы получили +${sPoints}, преподаватель +${tPoints} очков.`;
+            } else if (outcome === 'cd') {
+                messageClass = 'message-warning';
+                resultText = `Вы уклонились, пока преподаватель сотрудничал. Краткосрочная выгода: +${sPoints} очков, но доверие подорвано.`;
+            } else if (outcome === 'dc') {
+                messageClass = 'message-danger';
+                resultText = `Преподаватель уклонился, хотя вы сотрудничали. Вы получили ${sPoints} очков. Несправедливо!`;
+            } else {
+                messageClass = 'message-danger';
+                resultText = `Взаимное недоверие. Оба уклонились, оба получили минимум: +${sPoints} очков каждому.`;
+            }
+            
+            resultDiv.className = `message-box ${messageClass}`;
+            resultDiv.textContent = resultText;
+        }
+
+        function updateStats() {
+            document.getElementById('studentScore').textContent = gameState.studentScore;
+            document.getElementById('teacherScore').textContent = gameState.teacherScore;
+            document.getElementById('totalRounds').textContent = gameState.history.length;
+            
+            const coopRounds = gameState.history.filter(h => h.student === 'cooperate').length;
+            const rate = gameState.history.length > 0 
+                ? Math.round((coopRounds / gameState.history.length) * 100) 
+                : 0;
+            document.getElementById('coopRate').textContent = rate + '%';
+        }
+
+        function updateHistory() {
+            const historyList = document.getElementById('historyList');
+            if (gameState.history.length === 0) {
+                historyList.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 1rem;">История пуста.</p>';
+                return;
+            }
+
+            historyList.innerHTML = [...gameState.history].reverse().map(h => `
+                <div class="history-item">
+                    <span class="round-badge">Раунд ${h.round}</span>
+                    <span>
+                        Преподаватель: <span class="${h.teacher === 'cooperate' ? 'result-cooperate' : 'result-defect'}">
+                            ${h.teacher === 'cooperate' ? 'сотрудничал' : 'уклонился'}
+                        </span>
+                    </span>
+                    <span>
+                        Студент: <span class="${h.student === 'cooperate' ? 'result-cooperate' : 'result-defect'}">
+                            ${h.student === 'cooperate' ? 'сотрудничал' : 'уклонился'}
+                        </span>
+                    </span>
+                    <span>+${h.studentPoints} / +${h.teacherPoints}</span>
+                </div>
+            `).join('');
+        }
+
+        function updateChart() {
+            const total = Math.max(1, Object.values(gameState.outcomes).reduce((a, b) => a + b, 0));
+            const maxHeight = 120;
+            
+            ['cc', 'cd', 'dc', 'dd'].forEach(key => {
+                const count = gameState.outcomes[key];
+                const height = Math.max(5, (count / Math.max(1, ...Object.values(gameState.outcomes))) * maxHeight);
+                document.getElementById(`${key}Bar`).style.height = height + 'px';
+                document.getElementById(`${key}Count`).textContent = count;
+            });
+        }
+
+        function highlightMatrix(outcome) {
+            document.querySelectorAll('.payoff-matrix td').forEach(td => td.classList.remove('highlight'));
+            document.getElementById(`cell-${outcome}`).classList.add('highlight');
+        }
+
+        function showGameEnd() {
+            const resultDiv = document.getElementById('roundResult');
+            resultDiv.style.display = 'block';
+            
+            let finalMessage = '';
+            if (gameState.studentScore >= gameState.teacherScore && gameState.outcomes.cc >= 5) {
+                finalMessage = `Игра завершена! Превосходный результат. Высокий уровень сотрудничества привёл к взаимной выгоде. Студент: ${gameState.studentScore}, Преподаватель: ${gameState.teacherScore}.`;
+                resultDiv.className = 'message-box message-success';
+            } else if (gameState.outcomes.dd >= 5) {
+                finalMessage = `Игра завершена. Взаимное недоверие привело к низким результатам для обеих сторон. Студент: ${gameState.studentScore}, Преподаватель: ${gameState.teacherScore}.`;
+                resultDiv.className = 'message-box message-danger';
+            } else {
+                finalMessage = `Игра завершена. Смешанные результаты. Студент: ${gameState.studentScore}, Преподаватель: ${gameState.teacherScore}. Проанализируйте стратегии в выводах.`;
+                resultDiv.className = 'message-box message-warning';
+            }
+            
+            resultDiv.textContent = finalMessage;
+            
+            // Отключить кнопки выбора
+            document.querySelectorAll('.strategy-btn').forEach(btn => btn.disabled = true);
+        }
+
+        function resetGame() {
+            gameState = {
+                userName: gameState.userName,
+                currentRound: 1,
+                maxRounds: 10,
+                studentScore: 0,
+                teacherScore: 0,
+                history: [],
+                outcomes: { cc: 0, cd: 0, dc: 0, dd: 0 },
+                teacherGrudge: false
+            };
+            
+            document.getElementById('currentRound').textContent = '1';
+            document.getElementById('roundResult').style.display = 'none';
+            document.querySelectorAll('.strategy-btn').forEach(btn => btn.disabled = false);
+            document.getElementById('userConclusions').value = '';
+            
+            updateStats();
+            updateHistory();
+            updateChart();
+            
+            document.querySelectorAll('.payoff-matrix td').forEach(td => td.classList.remove('highlight'));
+            document.getElementById('cell-cc').classList.add('highlight');
+        }
+
+        function exportResults() {
+            const conclusions = document.getElementById('userConclusions').value;
+            const date = new Date().toLocaleDateString('ru-RU', { 
+                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+            });
+
+            const historyHTML = gameState.history.map(h => `
+                <tr>
+                    <td>${h.round}</td>
+                    <td>${h.teacher === 'cooperate' ? 'Сотрудничал' : 'Уклонился'}</td>
+                    <td>${h.student === 'cooperate' ? 'Сотрудничал' : 'Уклонился'}</td>
+                    <td>+${h.teacherPoints}</td>
+                    <td>+${h.studentPoints}</td>
+                </tr>
+            `).join('');
+
+            const exportHTML = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Результаты симуляции — ${gameState.userName}</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #2c3e50; }
+        h1 { color: #325980; border-bottom: 3px solid #3498db; padding-bottom: 0.5rem; }
+        h2 { color: #325980; margin-top: 2rem; }
+        .meta { background: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 1rem 0; }
+        .stat { background: #325980; color: white; padding: 1rem; border-radius: 8px; text-align: center; }
+        .stat-value { font-size: 2rem; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 0.75rem; border: 1px solid #ddd; text-align: center; }
+        th { background: #325980; color: white; }
+        tr:nth-child(even) { background: #f5f5f5; }
+        .conclusions { background: #e8f4fc; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #3498db; }
+        .footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; color: #666; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <h1>Результаты симуляции образовательного доверия</h1>
+    
+    <div class="meta">
+        <p><strong>Участник:</strong> ${gameState.userName}</p>
+        <p><strong>Дата:</strong> ${date}</p>
+        <p><strong>Стратегия преподавателя:</strong> ${document.getElementById('teacherStrategy').selectedOptions[0].text}</p>
+    </div>
+
+    <h2>Итоговая статистика</h2>
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-value">${gameState.studentScore}</div>
+            <div>Очки студента</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">${gameState.teacherScore}</div>
+            <div>Очки преподавателя</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">${Math.round((gameState.history.filter(h => h.student === 'cooperate').length / gameState.history.length) * 100)}%</div>
+            <div>Сотрудничество</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">${gameState.history.length}</div>
+            <div>Раундов</div>
+        </div>
+    </div>
+
+    <h2>Распределение исходов</h2>
+    <ul>
+        <li>Оба сотрудничали: ${gameState.outcomes.cc} раз(а)</li>
+        <li>Студент уклонился: ${gameState.outcomes.cd} раз(а)</li>
+        <li>Преподаватель уклонился: ${gameState.outcomes.dc} раз(а)</li>
+        <li>Оба уклонились: ${gameState.outcomes.dd} раз(а)</li>
+    </ul>
+
+    <h2>История раундов</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Раунд</th>
+                <th>Преподаватель</th>
+                <th>Студент</th>
+                <th>Очки преп.</th>
+                <th>Очки студ.</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${historyHTML}
+        </tbody>
+    </table>
+
+    <h2>Выводы участника</h2>
+    <div class="conclusions">
+        ${conclusions ? conclusions.replace(/\n/g, '<br>') : '<em>Выводы не были записаны.</em>'}
+    </div>
+
+    <div class="footer">
+        <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+    </div>
+</body>
+</html>`;
+
+            const blob = new Blob([exportHTML], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Результаты_${gameState.userName.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

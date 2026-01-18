@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --header-color: #325980;
+            --accent-color: #3498db;
+            --border-color: #f1f1f1;
+            --card-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --header-color: #4a90c2;
+            --accent-color: #5dade2;
+            --border-color: #2a2a4a;
+            --card-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        header {
+            background-color: var(--header-color);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 0px solid white;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(180deg);
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .card {
+            background-color: var(--bg-primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .card h2 {
+            color: var(--header-color);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .card h3 {
+            color: var(--header-color);
+            margin: 1rem 0 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .user-input-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .input-group input,
+        .input-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus,
+        .input-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .input-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        /* Game Matrix */
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .matrix-wrapper {
+            overflow-x: auto;
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .matrix-table th,
+        .matrix-table td {
+            padding: 1rem;
+            text-align: center;
+            border: 2px solid var(--border-color);
+        }
+
+        .matrix-table th {
+            background-color: var(--header-color);
+            color: white;
+            font-weight: 500;
+        }
+
+        .matrix-table td {
+            background-color: var(--bg-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .matrix-table td.nash-equilibrium {
+            background-color: #27ae60;
+            color: white;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        .matrix-table td.pareto-optimal {
+            border: 3px solid #f39c12;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .payoff {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .payoff-teacher {
+            color: var(--accent-color);
+        }
+
+        .payoff-student {
+            color: #e74c3c;
+        }
+
+        [data-theme="dark"] .payoff-teacher {
+            color: #5dade2;
+        }
+
+        [data-theme="dark"] .payoff-student {
+            color: #f1948a;
+        }
+
+        /* Controls */
+        .controls {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .slider-group {
+            margin-bottom: 1rem;
+        }
+
+        .slider-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .slider-group input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .slider-value {
+            text-align: center;
+            font-weight: bold;
+            color: var(--header-color);
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .legend-nash {
+            background-color: #27ae60;
+        }
+
+        .legend-pareto {
+            border: 3px solid #f39c12;
+            background-color: transparent;
+        }
+
+        /* Analysis */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .analysis-item {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .analysis-item h4 {
+            color: var(--header-color);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--header-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--accent-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Scenario selector */
+        .scenario-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .scenario-btn {
+            padding: 0.5rem 1rem;
+            background-color: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .scenario-btn:hover,
+        .scenario-btn.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+          footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+
+        /* Info block */
+        .info-block {
+            background: linear-gradient(135deg, var(--header-color), var(--accent-color));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-block h2 {
+            color: white;
+            border-bottom-color: rgba(255,255,255,0.3);
+        }
+
+        .info-block ul {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .info-block li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.1rem;
+            }
+
+            .user-input-section,
+            .game-container {
+                grid-template-columns: 1fr;
+            }
+
+            .matrix-table th,
+            .matrix-table td {
+                padding: 0.5rem;
+                font-size: 0.85rem;
+            }
+
+            .legend {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+
+        /* Visualization */
+        .visualization {
+            margin-top: 1rem;
+        }
+
+        .strategy-diagram {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            padding: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .player-box {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 150px;
+            border: 2px solid var(--border-color);
+        }
+
+        .player-box h4 {
+            color: var(--header-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .strategy-choice {
+            padding: 0.5rem;
+            background-color: var(--accent-color);
+            color: white;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+
+        .arrow {
+            font-size: 2rem;
+            color: var(--accent-color);
+        }
+
+        /* Conclusion preview */
+        .conclusion-preview {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px dashed var(--accent-color);
+        }
+
+        .conclusion-preview h4 {
+            color: var(--header-color);
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Равновесие Нэша </h1>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Сменить тему">☀️</button>
+    </header>
+
+    <main>
+        <!-- Info Block -->
+        <div class="info-block">
+            <h2>Приложение</h2>
+            <p>Ддемонстрирует применение теории игр к анализу образовательного доверия. Позволяет исследовать, как различные стратегии преподавателя и студента приводят к равновесию Нэша.</p>
+            <ul>
+                <li><strong>Взаимность:</strong> Доверие должно быть обоюдным между преподавателем и студентом</li>
+                <li><strong>Ответственность:</strong> Каждая сторона несёт ответственность за свои действия</li>
+                <li><strong>Общественный контракт:</strong> Все участники ответственны перед обществом</li>
+            </ul>
+            </div>
+
+        <!-- User Input -->
+        <div class="card">
+            <h2>Данные исследователя</h2>
+            <div class="user-input-section">
+                <div class="input-group">
+                    <label for="userName">Ваши Фамилия Имя</label>
+                    <input type="text" id="userName" placeholder="Например: Орлова Ева">
+                </div>
+                <div class="input-group">
+                    <label for="userGroup">Ваша группы</label>
+                    <input type="text" id="userGroup" placeholder="Например: 500">
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Theory Model -->
+        <div class="card">
+            <h2>Теоретико-игровая модель доверия</h2>
+            
+            <div class="scenario-buttons">
+                <button class="scenario-btn active" onclick="loadScenario('classic')">Классическая модель</button>
+                <button class="scenario-btn" onclick="loadScenario('cooperative')">Кооперативная среда</button>
+                <button class="scenario-btn" onclick="loadScenario('competitive')">Конкурентная среда</button>
+                <button class="scenario-btn" onclick="loadScenario('custom')">Своя модель</button>
+            </div>
+
+            <div class="game-container">
+                <div class="matrix-wrapper">
+                    <h3>Матрица выигрышей</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">
+                        Значения: (Преподаватель, Студент)
+                    </p>
+                    <table class="matrix-table" id="gameMatrix">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Студент: Честность</th>
+                                <th>Студент: Обман</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th>Преподаватель: Доверие</th>
+                                <td id="cell-0-0">
+                                    <span class="payoff payoff-teacher">3</span>, 
+                                    <span class="payoff payoff-student">3</span>
+                                </td>
+                                <td id="cell-0-1">
+                                    <span class="payoff payoff-teacher">0</span>, 
+                                    <span class="payoff payoff-student">4</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Преподаватель: Контроль</th>
+                                <td id="cell-1-0">
+                                    <span class="payoff payoff-teacher">2</span>, 
+                                    <span class="payoff payoff-student">1</span>
+                                </td>
+                                <td id="cell-1-1">
+                                    <span class="payoff payoff-teacher">1</span>, 
+                                    <span class="payoff payoff-student">1</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color legend-nash"></div>
+                            <span>Равновесие Нэша</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color legend-pareto"></div>
+                            <span>Парето-оптимум</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="payoff payoff-teacher">Синий</span>
+                            <span>— выигрыш преподавателя</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="payoff payoff-student">Красный</span>
+                            <span>— выигрыш студента</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls" id="customControls" style="display: none;">
+                    <h3>Настройка выигрышей</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Измените значения для анализа различных сценариев
+                    </p>
+                    
+                    <div class="slider-group">
+                        <label>Доверие + Честность (Преподаватель): <span class="slider-value" id="val-t-00">3</span></label>
+                        <input type="range" min="0" max="5" value="3" id="slider-t-00" onchange="updateMatrix()">
+                    </div>
+                    <div class="slider-group">
+                        <label>Доверие + Честность (Студент): <span class="slider-value" id="val-s-00">3</span></label>
+                        <input type="range" min="0" max="5" value="3" id="slider-s-00" onchange="updateMatrix()">
+                    </div>
+                    <div class="slider-group">
+                        <label>Доверие + Обман (Преподаватель): <span class="slider-value" id="val-t-01">0</span></label>
+                        <input type="range" min="0" max="5" value="0" id="slider-t-01" onchange="updateMatrix()">
+                    </div>
+                    <div class="slider-group">
+                        <label>Доверие + Обман (Студент): <span class="slider-value" id="val-s-01">4</span></label>
+                        <input type="range" min="0" max="5" value="4" id="slider-s-01" onchange="updateMatrix()">
+                    </div>
+                    <div class="slider-group">
+                        <label>Контроль + Честность (Преподаватель): <span class="slider-value" id="val-t-10">2</span></label>
+                        <input type="range" min="0" max="5" value="2" id="slider-t-10" onchange="updateMatrix()">
+                    </div>
+                    <div class="slider-group">
+                        <label>Контроль + Честность (Студент): <span class="slider-value" id="val-s-10">1</span></label>
+                        <input type="range" min="0" max="5" value="1" id="slider-s-10" onchange="updateMatrix()">
+                    </div>
+                    <div class="slider-group">
+                        <label>Контроль + Обман (Преподаватель): <span class="slider-value" id="val-t-11">1</span></label>
+                        <input type="range" min="0" max="5" value="1" id="slider-t-11" onchange="updateMatrix()">
+                    </div>
+                    <div class="slider-group">
+                        <label>Контроль + Обман (Студент): <span class="slider-value" id="val-s-11">1</span></label>
+                        <input type="range" min="0" max="5" value="1" id="slider-s-11" onchange="updateMatrix()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis -->
+        <div class="card">
+            <h2>Анализ равновесия</h2>
+            
+            <div class="visualization">
+                <div class="strategy-diagram" id="strategyDiagram">
+                    <div class="player-box">
+                        <h4>Преподаватель</h4>
+                        <p>Лучший ответ:</p>
+                        <div class="strategy-choice" id="teacherBestResponse">Контроль</div>
+                    </div>
+                    <div class="arrow">⟷</div>
+                    <div class="player-box">
+                        <h4>Студент</h4>
+                        <p>Лучший ответ:</p>
+                        <div class="strategy-choice" id="studentBestResponse">Обман</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-grid">
+                <div class="analysis-item">
+                    <h4>Равновесие Нэша</h4>
+                    <p id="nashDescription">
+                        В классической модели равновесие достигается при стратегии (Контроль, Обман) с выигрышами (1, 1). 
+                        Это неэффективное равновесие, демонстрирующее проблему доверия.
+                    </p>
+                </div>
+                <div class="analysis-item">
+                    <h4>Парето-оптимальность</h4>
+                    <p id="paretoDescription">
+                        Парето-оптимальным является исход (Доверие, Честность) с выигрышами (3, 3). 
+                        Однако он не является равновесием — студент имеет стимул к обману.
+                    </p>
+                </div>
+                <div class="analysis-item">
+                    <h4>Дилемма доверия</h4>
+                    <p id="dilemmaDescription">
+                        Модель показывает классическую социальную дилемму: индивидуально рациональное поведение 
+                        ведёт к коллективно неоптимальному результату.
+                    </p>
+                </div>
+                <div class="analysis-item">
+                    <h4>Пути решения</h4>
+                    <p id="solutionDescription">
+                        Повторяющиеся взаимодействия, репутационные механизмы и институциональные нормы 
+                        могут сдвинуть равновесие к кооперативному исходу.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conclusions -->
+        <div class="card">
+            <h2>Ваши выводы</h2>
+            
+            <div class="input-group">
+                <label for="conclusion1">1. Как равновесие Нэша объясняет проблемы доверия в образовании?</label>
+                <textarea id="conclusion1" placeholder="Опишите ваше понимание связи между теорией игр и образовательным доверием..."></textarea>
+            </div>
+            
+            <div class="input-group">
+                <label for="conclusion2">2. Какие механизмы могут помочь достичь кооперативного равновесия?</label>
+                <textarea id="conclusion2" placeholder="Предложите способы преодоления дилеммы доверия..."></textarea>
+            </div>
+            
+            <div class="input-group">
+                <label for="conclusion3">3. Как эта модель применима к изучению иностранных языков?</label>
+                <textarea id="conclusion3" placeholder="Рассмотрите специфику преподавания языков через призму теории игр..."></textarea>
+            </div>
+
+            <div class="conclusion-preview" id="conclusionPreview" style="display: none;">
+                <h4>Предпросмотр экспорта</h4>
+                <div id="previewContent"></div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="previewExport()">Предпросмотр</button>
+                <button class="btn btn-primary" onclick="exportToHTML()">Экспортировать в HTML</button>
+                <button class="btn btn-secondary" onclick="resetForm()">Очистить форму</button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+    <script>
+        // Game state
+        let gameMatrix = [
+            [{t: 3, s: 3}, {t: 0, s: 4}],
+            [{t: 2, s: 1}, {t: 1, s: 1}]
+        ];
+
+        let currentScenario = 'classic';
+
+        // Scenarios
+        const scenarios = {
+            classic: {
+                name: 'Классическая модель',
+                matrix: [
+                    [{t: 3, s: 3}, {t: 0, s: 4}],
+                    [{t: 2, s: 1}, {t: 1, s: 1}]
+                ],
+                description: {
+                    nash: 'В классической модели равновесие достигается при стратегии (Контроль, Обман) с выигрышами (1, 1). Это неэффективное равновесие, демонстрирующее проблему доверия.',
+                    pareto: 'Парето-оптимальным является исход (Доверие, Честность) с выигрышами (3, 3). Однако он не является равновесием — студент имеет стимул к обману.',
+                    dilemma: 'Модель показывает классическую социальную дилемму: индивидуально рациональное поведение ведёт к коллективно неоптимальному результату.',
+                    solution: 'Повторяющиеся взаимодействия, репутационные механизмы и институциональные нормы могут сдвинуть равновесие к кооперативному исходу.'
+                }
+            },
+            cooperative: {
+                name: 'Кооперативная среда',
+                matrix: [
+                    [{t: 4, s: 4}, {t: 1, s: 2}],
+                    [{t: 2, s: 2}, {t: 1, s: 1}]
+                ],
+                description: {
+                    nash: 'В кооперативной среде равновесие смещается к (Доверие, Честность) с выигрышами (4, 4). Высокие выгоды от сотрудничества снижают стимулы к обману.',
+                    pareto: 'Парето-оптимум совпадает с равновесием Нэша — это идеальная ситуация, когда индивидуальные и коллективные интересы согласованы.',
+                    dilemma: 'Кооперативная культура создаёт условия, при которых честность становится доминирующей стратегией для студента.',
+                    solution: 'Формирование сообщества практики, взаимное обучение и коллективная ответственность поддерживают это равновесие.'
+                }
+            },
+            competitive: {
+                name: 'Конкурентная среда',
+                matrix: [
+                    [{t: 2, s: 2}, {t: 0, s: 5}],
+                    [{t: 3, s: 0}, {t: 1, s: 1}]
+                ],
+                description: {
+                    nash: 'В конкурентной среде равновесие (Контроль, Обман) усиливается. Высокие выгоды от обмана и контроля создают антагонистическую динамику.',
+                    pareto: 'Ни один исход не является одновременно стабильным и эффективным — типичная черта конкурентных сред.',
+                    dilemma: 'Конкуренция за оценки усиливает стимулы к нечестному поведению, разрушая доверие в системе.',
+                    solution: 'Переход к формирующему оцениванию и критериальной системе может смягчить конкурентное давление.'
+                }
+            },
+            custom: {
+                name: 'Своя модель',
+                matrix: [
+                    [{t: 3, s: 3}, {t: 0, s: 4}],
+                    [{t: 2, s: 1}, {t: 1, s: 1}]
+                ],
+                description: {
+                    nash: 'Настройте значения выигрышей с помощью ползунков справа и наблюдайте, как меняется равновесие.',
+                    pareto: 'Исследуйте, при каких условиях Парето-оптимальный исход становится равновесием Нэша.',
+                    dilemma: 'Экспериментируйте с различными структурами выигрышей, чтобы понять динамику доверия.',
+                    solution: 'Попробуйте найти значения, при которых честность становится доминирующей стратегией.'
+                }
+            }
+        };
+
+        // Theme toggle
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                btn.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                btn.textContent = '🌙';
+            }
+        }
+
+        // Load scenario
+        function loadScenario(scenario) {
+            currentScenario = scenario;
+            const buttons = document.querySelectorAll('.scenario-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const customControls = document.getElementById('customControls');
+            if (scenario === 'custom') {
+                customControls.style.display = 'block';
+            } else {
+                customControls.style.display = 'none';
+            }
+
+            gameMatrix = JSON.parse(JSON.stringify(scenarios[scenario].matrix));
+            updateSliders();
+            renderMatrix();
+            findNashEquilibrium();
+            updateDescriptions(scenario);
+        }
+
+        // Update sliders to match matrix
+        function updateSliders() {
+            const positions = ['00', '01', '10', '11'];
+            const coords = [[0,0], [0,1], [1,0], [1,1]];
+            
+            positions.forEach((pos, idx) => {
+                const [i, j] = coords[idx];
+                document.getElementById(`slider-t-${pos}`).value = gameMatrix[i][j].t;
+                document.getElementById(`slider-s-${pos}`).value = gameMatrix[i][j].s;
+                document.getElementById(`val-t-${pos}`).textContent = gameMatrix[i][j].t;
+                document.getElementById(`val-s-${pos}`).textContent = gameMatrix[i][j].s;
+            });
+        }
+
+        // Update matrix from sliders
+        function updateMatrix() {
+            const positions = ['00', '01', '10', '11'];
+            const coords = [[0,0], [0,1], [1,0], [1,1]];
+            
+            positions.forEach((pos, idx) => {
+                const [i, j] = coords[idx];
+                gameMatrix[i][j].t = parseInt(document.getElementById(`slider-t-${pos}`).value);
+                gameMatrix[i][j].s = parseInt(document.getElementById(`slider-s-${pos}`).value);
+                document.getElementById(`val-t-${pos}`).textContent = gameMatrix[i][j].t;
+                document.getElementById(`val-s-${pos}`).textContent = gameMatrix[i][j].s;
+            });
+
+            scenarios.custom.matrix = JSON.parse(JSON.stringify(gameMatrix));
+            renderMatrix();
+            findNashEquilibrium();
+        }
+
+        // Render matrix
+        function renderMatrix() {
+            const positions = [[0,0], [0,1], [1,0], [1,1]];
+            
+            positions.forEach(([i, j]) => {
+                const cell = document.getElementById(`cell-${i}-${j}`);
+                cell.innerHTML = `
+                    <span class="payoff payoff-teacher">${gameMatrix[i][j].t}</span>, 
+                    <span class="payoff payoff-student">${gameMatrix[i][j].s}</span>
+                `;
+                cell.classList.remove('nash-equilibrium', 'pareto-optimal');
+            });
+        }
+
+        // Find Nash Equilibrium
+        function findNashEquilibrium() {
+            const nashCells = [];
+            const paretoCells = [];
+            
+            // Check each cell for Nash equilibrium
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 2; j++) {
+                    let isNash = true;
+                    
+                    // Check if teacher can improve by switching
+                    const otherTeacherRow = 1 - i;
+                    if (gameMatrix[otherTeacherRow][j].t > gameMatrix[i][j].t) {
+                        isNash = false;
+                    }
+                    
+                    // Check if student can improve by switching
+                    const otherStudentCol = 1 - j;
+                    if (gameMatrix[i][otherStudentCol].s > gameMatrix[i][j].s) {
+                        isNash = false;
+                    }
+                    
+                    if (isNash) {
+                        nashCells.push([i, j]);
+                    }
+                }
+            }
+
+            // Find Pareto optimal outcomes
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 2; j++) {
+                    let isPareto = true;
+                    for (let i2 = 0; i2 < 2; i2++) {
+                        for (let j2 = 0; j2 < 2; j2++) {
+                            if (i2 === i && j2 === j) continue;
+                            if (gameMatrix[i2][j2].t >= gameMatrix[i][j].t && 
+                                gameMatrix[i2][j2].s >= gameMatrix[i][j].s &&
+                                (gameMatrix[i2][j2].t > gameMatrix[i][j].t || 
+                                 gameMatrix[i2][j2].s > gameMatrix[i][j].s)) {
+                                isPareto = false;
+                                break;
+                            }
+                        }
+                        if (!isPareto) break;
+                    }
+                    if (isPareto) {
+                        paretoCells.push([i, j]);
+                    }
+                }
+            }
+
+            // Highlight cells
+            paretoCells.forEach(([i, j]) => {
+                document.getElementById(`cell-${i}-${j}`).classList.add('pareto-optimal');
+            });
+
+            nashCells.forEach(([i, j]) => {
+                document.getElementById(`cell-${i}-${j}`).classList.add('nash-equilibrium');
+            });
+
+            // Update strategy diagram
+            updateStrategyDiagram(nashCells);
+        }
+
+        // Update strategy diagram
+        function updateStrategyDiagram(nashCells) {
+            const teacherResponse = document.getElementById('teacherBestResponse');
+            const studentResponse = document.getElementById('studentBestResponse');
+
+            if (nashCells.length > 0) {
+                const [i, j] = nashCells[0];
+                teacherResponse.textContent = i === 0 ? 'Доверие' : 'Контроль';
+                studentResponse.textContent = j === 0 ? 'Честность' : 'Обман';
+            } else {
+                teacherResponse.textContent = 'Нет чистого равновесия';
+                studentResponse.textContent = 'Нет чистого равновесия';
+            }
+        }
+
+        // Update descriptions
+        function updateDescriptions(scenario) {
+            const desc = scenarios[scenario].description;
+            document.getElementById('nashDescription').textContent = desc.nash;
+            document.getElementById('paretoDescription').textContent = desc.pareto;
+            document.getElementById('dilemmaDescription').textContent = desc.dilemma;
+            document.getElementById('solutionDescription').textContent = desc.solution;
+        }
+
+        // Preview export
+        function previewExport() {
+            const preview = document.getElementById('conclusionPreview');
+            const content = document.getElementById('previewContent');
+            
+            const userName = document.getElementById('userName').value || 'Не указано';
+            const userGroup = document.getElementById('userGroup').value || 'Не указано';
+            const conclusion1 = document.getElementById('conclusion1').value || 'Не заполнено';
+            const conclusion2 = document.getElementById('conclusion2').value || 'Не заполнено';
+            const conclusion3 = document.getElementById('conclusion3').value || 'Не заполнено';
+
+            content.innerHTML = `
+                <p><strong>Исследователь:</strong> ${userName}</p>
+                <p><strong>Группа:</strong> ${userGroup}</p>
+                <p><strong>Сценарий:</strong> ${scenarios[currentScenario].name}</p>
+                <hr style="margin: 0.5rem 0; border-color: var(--border-color);">
+                <p><strong>Вывод 1:</strong> ${conclusion1.substring(0, 100)}...</p>
+            `;
+
+            preview.style.display = 'block';
+        }
+
+        // Export to HTML
+        function exportToHTML() {
+            const userName = document.getElementById('userName').value || 'Не указано';
+            const userGroup = document.getElementById('userGroup').value || 'Не указано';
+            const conclusion1 = document.getElementById('conclusion1').value || 'Не заполнено';
+            const conclusion2 = document.getElementById('conclusion2').value || 'Не заполнено';
+            const conclusion3 = document.getElementById('conclusion3').value || 'Не заполнено';
+            const date = new Date().toLocaleDateString('ru-RU');
+
+            const htmlContent = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализ равновесия Нэша - ${userName}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1 { color: #325980; border-bottom: 3px solid #3498db; padding-bottom: 0.5rem; }
+        h2 { color: #325980; margin-top: 1.5rem; }
+        .meta { background: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; }
+        .meta p { margin: 0.25rem 0; }
+        .matrix { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+        .matrix th, .matrix td { border: 2px solid #ddd; padding: 0.75rem; text-align: center; }
+        .matrix th { background: #325980; color: white; }
+        .matrix .nash { background: #27ae60; color: white; }
+        .conclusion { background: #f5f5f5; padding: 1rem; border-radius: 8px; margin: 1rem 0; border-left: 4px solid #3498db; }
+        .conclusion h3 { color: #325980; margin-top: 0; }
+        footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; text-align: center; color: #666; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <h1>Анализ равновесия Нэша</h1>
+    <h3>в модели образовательного доверия</h3>
+    <div class="meta">
+        <p><strong>Исследователь:</strong> ${userName}</p>
+        <p><strong>Группа/Курс:</strong> ${userGroup}</p>
+        <p><strong>Дата:</strong> ${date}</p>
+        <p><strong>Исследуемый сценарий:</strong> ${scenarios[currentScenario].name}</p>
+    </div>
+
+    <h2>Матрица выигрышей</h2>
+    <table class="matrix">
+        <tr>
+            <th></th>
+            <th>Студент: Честность</th>
+            <th>Студент: Обман</th>
+        </tr>
+        <tr>
+            <th>Преподаватель: Доверие</th>
+            <td>(${gameMatrix[0][0].t}, ${gameMatrix[0][0].s})</td>
+            <td>(${gameMatrix[0][1].t}, ${gameMatrix[0][1].s})</td>
+        </tr>
+        <tr>
+            <th>Преподаватель: Контроль</th>
+            <td>(${gameMatrix[1][0].t}, ${gameMatrix[1][0].s})</td>
+            <td class="nash">(${gameMatrix[1][1].t}, ${gameMatrix[1][1].s})</td>
+        </tr>
+    </table>
+    <p><em>Значения в скобках: (Выигрыш преподавателя, Выигрыш студента)</em></p>
+
+    <h2>Выводы исследователя</h2>
+    
+    <div class="conclusion">
+        <h3>1. Связь равновесия Нэша и проблем доверия в образовании</h3>
+        <p>${conclusion1}</p>
+    </div>
+    
+    <div class="conclusion">
+        <h3>2. Механизмы достижения кооперативного равновесия</h3>
+        <p>${conclusion2}</p>
+    </div>
+    
+    <div class="conclusion">
+        <h3>3. Применимость модели к изучению иностранных языков</h3>
+        <p>${conclusion3}</p>
+    </div>
+
+    <footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+</body>
+</html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `nash_analysis_${userName.replace(/\s+/g, '_')}_${date.replace(/\./g, '-')}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Reset form
+        function resetForm() {
+            document.getElementById('userName').value = '';
+            document.getElementById('userGroup').value = '';
+            document.getElementById('conclusion1').value = '';
+            document.getElementById('conclusion2').value = '';
+            document.getElementById('conclusion3').value = '';
+            document.getElementById('conclusionPreview').style.display = 'none';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderMatrix();
+            findNashEquilibrium();
+        });
+    </script>
+</body>
+</html>

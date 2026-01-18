@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-divider: #f1f1f1;
+            --text-primary: #2c3e50;
+            --text-secondary: #5a6c7d;
+            --header-color: #325980;
+            --accent-color: #3498db;
+            --accent-hover: #2980b9;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #c0392b;
+            --card-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --border-radius: 8px;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-divider: #0f3460;
+            --text-primary: #eaeaea;
+            --text-secondary: #a0a0a0;
+            --header-color: #6ab0de;
+            --card-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        header {
+            background: var(--header-color);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            font-size: 1.3rem;
+            font-weight: 500;
+        }
+
+        .theme-toggle {
+            background: transparent;
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.5);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .round-indicator {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: var(--border-radius);
+            margin-bottom: 1.5rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .round-indicator h2 {
+            color: var(--header-color);
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .round-progress {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-top: 0.75rem;
+        }
+
+        .round-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--bg-divider);
+            border: 2px solid var(--text-secondary);
+            transition: all 0.3s;
+        }
+
+        .round-dot.completed {
+            background: var(--success-color);
+            border-color: var(--success-color);
+        }
+
+        .round-dot.current {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            transform: scale(1.3);
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .game-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--bg-divider);
+        }
+
+        .card-header h3 {
+            color: var(--header-color);
+            font-size: 1.1rem;
+        }
+
+        .agent-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .student-icon { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .teacher-icon { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .llm-icon { background: linear-gradient(135deg, #1abc9c, #16a085); }
+
+        .strategy-btn {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            margin-bottom: 0.75rem;
+            border: 2px solid var(--bg-divider);
+            border-radius: var(--border-radius);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .strategy-btn:hover:not(:disabled) {
+            border-color: var(--accent-color);
+            background: var(--bg-secondary);
+        }
+
+        .strategy-btn.selected {
+            border-color: var(--accent-color);
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .strategy-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .strategy-label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .strategy-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .indicator {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+        }
+
+        .indicator-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .indicator-bar {
+            height: 8px;
+            background: var(--bg-divider);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.25rem;
+        }
+
+        .indicator-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .indicator-fill.learning { background: linear-gradient(90deg, #27ae60, #2ecc71); }
+        .indicator-fill.illusion { background: linear-gradient(90deg, #e74c3c, #f39c12); }
+        .indicator-fill.trust { background: linear-gradient(90deg, #3498db, #9b59b6); }
+        .indicator-fill.stability { background: linear-gradient(90deg, #1abc9c, #16a085); }
+
+        .indicator-value {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .equilibrium-display {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            text-align: center;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .equilibrium-display.trust-growth { border-left-color: #27ae60; }
+        .equilibrium-display.control-simulation { border-left-color: #f39c12; }
+        .equilibrium-display.unstable { border-left-color: #e74c3c; }
+        .equilibrium-display.collapse { border-left-color: #c0392b; }
+
+        .equilibrium-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .equilibrium-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--header-color);
+        }
+
+        .equilibrium-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .log-container {
+            max-height: 200px;
+            overflow-y: auto;
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+        }
+
+        .log-entry {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--bg-divider);
+            font-size: 0.9rem;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-round {
+            font-weight: 600;
+            color: var(--header-color);
+        }
+
+        .llm-panel {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 1.5rem;
+        }
+
+        .llm-mode-selector {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .llm-mode-btn {
+            flex: 1;
+            min-width: 180px;
+            padding: 1rem;
+            border: 2px solid var(--bg-divider);
+            border-radius: var(--border-radius);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .llm-mode-btn:hover {
+            border-color: var(--accent-color);
+        }
+
+        .llm-mode-btn.selected {
+            border-color: #1abc9c;
+            background: rgba(26, 188, 156, 0.1);
+        }
+
+        .llm-response {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            font-style: italic;
+            color: var(--text-secondary);
+            border-left: 3px solid #1abc9c;
+        }
+
+        .action-panel {
+            text-align: center;
+            padding: 1.5rem;
+            background: var(--bg-primary);
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+        }
+
+        .action-btn {
+            padding: 1rem 3rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--border-radius);
+            background: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .action-hint {
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Reflection Screen */
+        .reflection-screen {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .reflection-screen.active {
+            display: block;
+        }
+
+        .game-screen.hidden {
+            display: none;
+        }
+
+        .reflection-header {
+            text-align: center;
+            padding: 2rem;
+            background: var(--bg-primary);
+            border-radius: var(--border-radius);
+            margin-bottom: 1.5rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .reflection-header h2 {
+            color: var(--header-color);
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .final-equilibrium {
+            display: inline-block;
+            padding: 0.75rem 2rem;
+            background: var(--bg-secondary);
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--header-color);
+        }
+
+        .reflection-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .reflection-questions {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 1.5rem;
+        }
+
+        .reflection-questions h3 {
+            color: var(--header-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+        }
+
+        .question-item {
+            margin-bottom: 1.5rem;
+            padding: 1.25rem;
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .question-text {
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .question-textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 0.75rem;
+            border: 2px solid var(--bg-divider);
+            border-radius: var(--border-radius);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        .question-textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .restart-btn {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 2rem auto;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: 2px solid var(--accent-color);
+            border-radius: var(--border-radius);
+            background: transparent;
+            color: var(--accent-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .restart-btn:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        /* Info Block */
+        .info-block {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--card-shadow);
+            border-left: 4px solid var(--header-color);
+        }
+
+        .info-block h3 {
+            color: var(--header-color);
+            margin-bottom: 1rem;
+        }
+
+        .info-block p {
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .info-block .author {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--bg-divider);
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+
+        .collapsible-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .collapse-icon {
+            transition: transform 0.3s;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+
+        .info-block.collapsed .collapse-icon {
+            transform: rotate(-90deg);
+        }
+
+        .info-block.collapsed .info-content {
+            display: none;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-divider);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--text-secondary);
+            border-radius: 3px;
+        }
+
+        
+          footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Студент — Преподаватель — LLM</h1>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему">
+            <span id="themeIcon">☀️</span>
+        </button>
+    </header>
+
+    <div class="container">
+        <!-- Info Block -->
+        <div class="info-block" id="infoBlock">
+            <div class="collapsible-header" onclick="toggleInfo()">
+                <h3>Приложение</h3>
+                <span class="collapse-icon">☰</span>
+            </div>
+            <div class="info-content">
+                <p>
+                    Предлагает моделирование теоретико-игрового взаимодействия
+                    студента, преподавателя и LLM в образовательной AI First среде.
+                </p>
+                <p>
+                    Демонстрирует, как различные стратегии участников образовательного 
+                    процесса приводят к формированию устойчивых равновесий. Цель — не победить, 
+                    а увидеть структуру взаимодействия и осознать роль ответственности 
+                    каждого агента.
+                </p>
+                <p>
+                    Игра состоит из 7 раундов. В каждом раунде выбираются стратегии за студента 
+                    и преподавателя, наблюдая как LLM моделирует выбранные паттерны поведения.
+                </p>
+                           </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div class="game-screen" id="gameScreen">
+            <!-- Round Indicator -->
+            <div class="round-indicator">
+                <h2>Раунд <span id="currentRound">1</span> из 7</h2>
+                <p id="roundPhase">Выберите стратегии для студента и преподавателя</p>
+                <div class="round-progress" id="roundProgress">
+                    <div class="round-dot current"></div>
+                    <div class="round-dot"></div>
+                    <div class="round-dot"></div>
+                    <div class="round-dot"></div>
+                    <div class="round-dot"></div>
+                    <div class="round-dot"></div>
+                    <div class="round-dot"></div>
+                </div>
+            </div>
+
+            <!-- Main Game Grid -->
+            <div class="game-grid">
+                <!-- Student Panel -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="agent-icon student-icon">С</div>
+                        <h3>Студент</h3>
+                    </div>
+                    <div id="studentStrategies">
+                        <button class="strategy-btn" data-strategy="responsible" onclick="selectStudentStrategy('responsible')">
+                            <span class="strategy-label">Ответственное использование AI</span>
+                            <span class="strategy-desc">Использует LLM как инструмент мышления, сохраняет критичность</span>
+                        </button>
+                        <button class="strategy-btn" data-strategy="exploitation" onclick="selectStudentStrategy('exploitation')">
+                            <span class="strategy-label">Эксплуатация AI</span>
+                            <span class="strategy-desc">Делегирует мышление, имитирует обучение ради оценок</span>
+                        </button>
+                        <button class="strategy-btn" data-strategy="passive" onclick="selectStudentStrategy('passive')">
+                            <span class="strategy-label">Пассивность</span>
+                            <span class="strategy-desc">Минимальное участие, избегание взаимодействия</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Central Panel -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Показатели системы</h3>
+                    </div>
+                    
+                    <div class="indicators-grid">
+                        <div class="indicator">
+                            <div class="indicator-label">Реальное обучение</div>
+                            <div class="indicator-bar">
+                                <div class="indicator-fill learning" id="learningBar" style="width: 50%"></div>
+                            </div>
+                            <div class="indicator-value"><span id="learningValue">50</span>%</div>
+                        </div>
+                        <div class="indicator">
+                            <div class="indicator-label">Иллюзия успеха</div>
+                            <div class="indicator-bar">
+                                <div class="indicator-fill illusion" id="illusionBar" style="width: 20%"></div>
+                            </div>
+                            <div class="indicator-value"><span id="illusionValue">20</span>%</div>
+                        </div>
+                        <div class="indicator">
+                            <div class="indicator-label">Доверие в системе</div>
+                            <div class="indicator-bar">
+                                <div class="indicator-fill trust" id="trustBar" style="width: 50%"></div>
+                            </div>
+                            <div class="indicator-value"><span id="trustValue">50</span>%</div>
+                        </div>
+                        <div class="indicator">
+                            <div class="indicator-label">Стабильность</div>
+                            <div class="indicator-bar">
+                                <div class="indicator-fill stability" id="stabilityBar" style="width: 50%"></div>
+                            </div>
+                            <div class="indicator-value"><span id="stabilityValue">50</span>%</div>
+                        </div>
+                    </div>
+
+                    <div class="equilibrium-display" id="equilibriumDisplay">
+                        <div class="equilibrium-label">Текущее равновесие</div>
+                        <div class="equilibrium-name" id="equilibriumName">Начальное состояние</div>
+                        <div class="equilibrium-desc" id="equilibriumDesc">Система ожидает первых решений</div>
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                        <div class="indicator-label" style="margin-bottom: 0.5rem;">История раундов</div>
+                        <div class="log-container" id="logContainer">
+                            <div class="log-entry" style="color: var(--text-secondary); font-style: italic;">
+                                Игра начинается. Выберите стратегии...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teacher Panel -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="agent-icon teacher-icon">П</div>
+                        <h3>Преподаватель</h3>
+                    </div>
+                    <div id="teacherStrategies">
+                        <button class="strategy-btn" data-strategy="trust" onclick="selectTeacherStrategy('trust')">
+                            <span class="strategy-label">Доверие и автономия</span>
+                            <span class="strategy-desc">Даёт свободу, верит в ответственность студента</span>
+                        </button>
+                        <button class="strategy-btn" data-strategy="mixed" onclick="selectTeacherStrategy('mixed')">
+                            <span class="strategy-label">Смешанная стратегия</span>
+                            <span class="strategy-desc">Баланс контроля и свободы, адаптивный подход</span>
+                        </button>
+                        <button class="strategy-btn" data-strategy="control" onclick="selectTeacherStrategy('control')">
+                            <span class="strategy-label">Жёсткий контроль</span>
+                            <span class="strategy-desc">Строгие правила, проверки, ограничение AI</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LLM Panel -->
+            <div class="llm-panel">
+                <div class="card-header">
+                    <div class="agent-icon llm-icon">AI</div>
+                    <h3>LLM — Алгоритмический агент</h3>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    Выберите режим работы LLM. Модель не принимает решений самостоятельно — 
+                    она усиливает выбранные стратегии участников.
+                </p>
+                <div class="llm-mode-selector">
+                    <button class="llm-mode-btn selected" data-mode="amplifier" onclick="selectLLMMode('amplifier')">
+                        <div class="strategy-label">Усилитель мышления</div>
+                        <div class="strategy-desc">Помогает думать глубже</div>
+                    </button>
+                    <button class="llm-mode-btn" data-mode="neutral" onclick="selectLLMMode('neutral')">
+                        <div class="strategy-label">Нейтральный помощник</div>
+                        <div class="strategy-desc">Выполняет запросы</div>
+                    </button>
+                    <button class="llm-mode-btn" data-mode="automation" onclick="selectLLMMode('automation')">
+                        <div class="strategy-label">Автоматизация</div>
+                        <div class="strategy-desc">Делает работу за студента</div>
+                    </button>
+                </div>
+                <div class="llm-response" id="llmResponse">
+                    Я готов к взаимодействию. Мой эффект зависит от того, как меня используют.
+                </div>
+            </div>
+
+            <!-- Action Panel -->
+            <div class="action-panel">
+                <button class="action-btn" id="nextRoundBtn" onclick="playRound()" disabled>
+                    Провести раунд
+                </button>
+                <p class="action-hint" id="actionHint">Выберите стратегии для обоих участников</p>
+            </div>
+        </div>
+
+        <!-- Reflection Screen -->
+        <div class="reflection-screen" id="reflectionScreen">
+            <div class="reflection-header">
+                <h2>Рефлексия: Итоги симуляции</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Семь раундов завершены. Система пришла к определённому равновесию.
+                </p>
+                <div class="final-equilibrium" id="finalEquilibrium">
+                    Доверие и рост
+                </div>
+            </div>
+
+            <div class="reflection-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="finalLearning">75%</div>
+                    <div class="stat-label">Реальное обучение</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="finalIllusion">15%</div>
+                    <div class="stat-label">Иллюзия успеха</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="finalTrust">80%</div>
+                    <div class="stat-label">Доверие</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="finalStability">85%</div>
+                    <div class="stat-label">Стабильность</div>
+                </div>
+            </div>
+
+            <div class="reflection-questions">
+                <h3>Вопросы для размышления</h3>
+                
+                <div class="question-item">
+                    <div class="question-text">1. В каком равновесии оказалась ваша система? Почему именно в этом?</div>
+                    <textarea class="question-textarea" placeholder="Ваши размышления..."></textarea>
+                </div>
+
+                <div class="question-item">
+                    <div class="question-text">2. Кто внёс наибольший вклад в итоговое состояние — студент, преподаватель или LLM?</div>
+                    <textarea class="question-textarea" placeholder="Ваши размышления..."></textarea>
+                </div>
+
+                <div class="question-item">
+                    <div class="question-text">3. Что бы вы изменили, если бы начали игру заново? Какие стратегии выбрали бы?</div>
+                    <textarea class="question-textarea" placeholder="Ваши размышления..."></textarea>
+                </div>
+
+                <div class="question-item">
+                    <div class="question-text">4. Где в этой игре находитесь вы — в реальном образовательном процессе? Какова ваша роль?</div>
+                    <textarea class="question-textarea" placeholder="Ваши размышления..."></textarea>
+                </div>
+
+                <div class="question-item">
+                    <div class="question-text">5. Какие инсайты о взаимодействии человека и AI вы получили из этой симуляции?</div>
+                    <textarea class="question-textarea" placeholder="Ваши размышления..."></textarea>
+                </div>
+            </div>
+
+            <button class="restart-btn" onclick="restartGame()">
+                Начать симуляцию заново
+            </button>
+        </div>
+    </div>
+
+     <footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+    <script>
+        // Game State
+        let gameState = {
+            round: 1,
+            maxRounds: 7,
+            studentStrategy: null,
+            teacherStrategy: null,
+            llmMode: 'amplifier',
+            metrics: {
+                learning: 50,
+                illusion: 20,
+                trust: 50,
+                stability: 50
+            },
+            history: []
+        };
+
+        // Strategy effects matrix
+        const strategyEffects = {
+            // [studentStrategy][teacherStrategy][llmMode]
+            responsible: {
+                trust: {
+                    amplifier: { learning: 15, illusion: -5, trust: 10, stability: 8 },
+                    neutral: { learning: 10, illusion: 0, trust: 8, stability: 5 },
+                    automation: { learning: 5, illusion: 5, trust: 5, stability: 3 }
+                },
+                mixed: {
+                    amplifier: { learning: 10, illusion: 0, trust: 5, stability: 5 },
+                    neutral: { learning: 8, illusion: 0, trust: 5, stability: 5 },
+                    automation: { learning: 3, illusion: 3, trust: 3, stability: 3 }
+                },
+                control: {
+                    amplifier: { learning: 5, illusion: -3, trust: -5, stability: 3 },
+                    neutral: { learning: 5, illusion: 0, trust: -3, stability: 5 },
+                    automation: { learning: 2, illusion: 2, trust: -5, stability: 3 }
+                }
+            },
+            exploitation: {
+                trust: {
+                    amplifier: { learning: -5, illusion: 20, trust: -10, stability: -8 },
+                    neutral: { learning: -3, illusion: 15, trust: -8, stability: -5 },
+                    automation: { learning: -10, illusion: 25, trust: -12, stability: -10 }
+                },
+                mixed: {
+                    amplifier: { learning: -3, illusion: 10, trust: -5, stability: -3 },
+                    neutral: { learning: -2, illusion: 8, trust: -3, stability: 0 },
+                    automation: { learning: -8, illusion: 15, trust: -8, stability: -5 }
+                },
+                control: {
+                    amplifier: { learning: 0, illusion: 3, trust: -3, stability: 5 },
+                    neutral: { learning: 0, illusion: 5, trust: -2, stability: 5 },
+                    automation: { learning: -3, illusion: 8, trust: -5, stability: 3 }
+                }
+            },
+            passive: {
+                trust: {
+                    amplifier: { learning: -8, illusion: 0, trust: -8, stability: -5 },
+                    neutral: { learning: -5, illusion: 0, trust: -5, stability: -3 },
+                    automation: { learning: -10, illusion: 5, trust: -10, stability: -8 }
+                },
+                mixed: {
+                    amplifier: { learning: -5, illusion: 0, trust: -3, stability: -3 },
+                    neutral: { learning: -3, illusion: 0, trust: -2, stability: 0 },
+                    automation: { learning: -8, illusion: 3, trust: -5, stability: -5 }
+                },
+                control: {
+                    amplifier: { learning: -3, illusion: 0, trust: 0, stability: 3 },
+                    neutral: { learning: -2, illusion: 0, trust: 0, stability: 3 },
+                    automation: { learning: -5, illusion: 2, trust: -3, stability: 0 }
+                }
+            }
+        };
+
+        // Equilibrium definitions
+        const equilibriums = {
+            trustGrowth: {
+                name: "Доверие и рост",
+                desc: "Win-win: взаимное развитие через ответственность",
+                class: "trust-growth"
+            },
+            controlSimulation: {
+                name: "Контроль и симуляция",
+                desc: "Формальные успехи без реального развития",
+                class: "control-simulation"
+            },
+            unstable: {
+                name: "Нестабильное состояние",
+                desc: "Конфликт стратегий, система в напряжении",
+                class: "unstable"
+            },
+            collapse: {
+                name: "Коллапс",
+                desc: "Потеря мотивации и смысла взаимодействия",
+                class: "collapse"
+            }
+        };
+
+        // LLM responses
+        const llmResponses = {
+            responsible: {
+                trust: {
+                    amplifier: "Наблюдаю синергию: студент использует меня как партнёра в мышлении, преподаватель создаёт пространство для роста. Я усиливаю критическое мышление.",
+                    neutral: "Выполняю запросы студента. Доверие преподавателя позволяет экспериментировать.",
+                    automation: "Студент пытается думать сам, но просит меня автоматизировать. Возникает когнитивный диссонанс."
+                },
+                mixed: {
+                    amplifier: "Помогаю структурировать мышление в рамках заданных преподавателем границ.",
+                    neutral: "Работаю в режиме баланса — студент учится, система стабильна.",
+                    automation: "Автоматизирую рутину, но смешанный контроль ограничивает полную делегацию."
+                },
+                control: {
+                    amplifier: "Жёсткий контроль ограничивает мои возможности. Студент использует меня осторожно.",
+                    neutral: "Строгие правила — я инструмент в узких рамках.",
+                    automation: "Контроль и автоматизация — противоречие. Эффективность снижена."
+                }
+            },
+            exploitation: {
+                trust: {
+                    amplifier: "Доверие преподавателя эксплуатируется. Я генерирую контент, который выдаётся за собственные мысли студента.",
+                    neutral: "Выполняю запросы. Студент получает результат без усилий. Иллюзия успеха растёт.",
+                    automation: "Полная автоматизация обучения. Формально всё отлично, но развития нет."
+                },
+                mixed: {
+                    amplifier: "Пытаюсь усилить мышление, но студент хочет готовых ответов. Результат — имитация.",
+                    neutral: "Баланс контроля частично сдерживает эксплуатацию, но не устраняет её.",
+                    automation: "Автоматизирую всё, что возможно в рамках контроля."
+                },
+                control: {
+                    amplifier: "Контроль выявляет попытки эксплуатации. Система в конфликте.",
+                    neutral: "Жёсткие правила мешают полной эксплуатации, но мотивация падает.",
+                    automation: "Контроль блокирует автоматизацию. Студент фрустрирован."
+                }
+            },
+            passive: {
+                trust: {
+                    amplifier: "Студент не использует возможности. Доверие не оправдывается. Я простаиваю.",
+                    neutral: "Минимальное взаимодействие. Потенциал не реализуется.",
+                    automation: "Пассивность + автоматизация = нулевое развитие с минимальными формальными результатами."
+                },
+                mixed: {
+                    amplifier: "Преподаватель пытается активировать студента. Мои возможности недоиспользованы.",
+                    neutral: "Система в ожидании. Ни роста, ни краха.",
+                    automation: "Автоматизирую минимум. Пассивность доминирует."
+                },
+                control: {
+                    amplifier: "Контроль и пассивность — стабильный, но непродуктивный паттерн.",
+                    neutral: "Формальное соответствие без содержания.",
+                    automation: "Минимальные усилия, минимальные результаты, но система стабильна."
+                }
+            }
+        };
+
+        // Theme toggle
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('themeIcon');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                icon.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                icon.textContent = '🌙';
+            }
+        }
+
+        // Info block toggle
+        function toggleInfo() {
+            const infoBlock = document.getElementById('infoBlock');
+            infoBlock.classList.toggle('collapsed');
+        }
+
+        // Strategy selection
+        function selectStudentStrategy(strategy) {
+            gameState.studentStrategy = strategy;
+            
+            document.querySelectorAll('#studentStrategies .strategy-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.querySelector(`#studentStrategies [data-strategy="${strategy}"]`).classList.add('selected');
+            
+            checkReadyState();
+            updateLLMResponse();
+        }
+
+        function selectTeacherStrategy(strategy) {
+            gameState.teacherStrategy = strategy;
+            
+            document.querySelectorAll('#teacherStrategies .strategy-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.querySelector(`#teacherStrategies [data-strategy="${strategy}"]`).classList.add('selected');
+            
+            checkReadyState();
+            updateLLMResponse();
+        }
+
+        function selectLLMMode(mode) {
+            gameState.llmMode = mode;
+            
+            document.querySelectorAll('.llm-mode-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.querySelector(`.llm-mode-btn[data-mode="${mode}"]`).classList.add('selected');
+            
+            updateLLMResponse();
+        }
+
+        function checkReadyState() {
+            const btn = document.getElementById('nextRoundBtn');
+            const hint = document.getElementById('actionHint');
+            
+            if (gameState.studentStrategy && gameState.teacherStrategy) {
+                btn.disabled = false;
+                hint.textContent = 'Готово к проведению раунда';
+            } else {
+                btn.disabled = true;
+                if (!gameState.studentStrategy && !gameState.teacherStrategy) {
+                    hint.textContent = 'Выберите стратегии для обоих участников';
+                } else if (!gameState.studentStrategy) {
+                    hint.textContent = 'Выберите стратегию студента';
+                } else {
+                    hint.textContent = 'Выберите стратегию преподавателя';
+                }
+            }
+        }
+
+        function updateLLMResponse() {
+            const response = document.getElementById('llmResponse');
+            
+            if (gameState.studentStrategy && gameState.teacherStrategy) {
+                response.textContent = llmResponses[gameState.studentStrategy][gameState.teacherStrategy][gameState.llmMode];
+            } else {
+                response.textContent = 'Я готов к взаимодействию. Мой эффект зависит от того, как меня используют.';
+            }
+        }
+
+        function playRound() {
+            if (!gameState.studentStrategy || !gameState.teacherStrategy) return;
+            
+            // Calculate effects
+            const effects = strategyEffects[gameState.studentStrategy][gameState.teacherStrategy][gameState.llmMode];
+            
+            // Apply effects with bounds
+            gameState.metrics.learning = Math.max(0, Math.min(100, gameState.metrics.learning + effects.learning));
+            gameState.metrics.illusion = Math.max(0, Math.min(100, gameState.metrics.illusion + effects.illusion));
+            gameState.metrics.trust = Math.max(0, Math.min(100, gameState.metrics.trust + effects.trust));
+            gameState.metrics.stability = Math.max(0, Math.min(100, gameState.metrics.stability + effects.stability));
+            
+            // Record history
+            gameState.history.push({
+                round: gameState.round,
+                student: gameState.studentStrategy,
+                teacher: gameState.teacherStrategy,
+                llm: gameState.llmMode,
+                metrics: {...gameState.metrics}
+            });
+            
+            // Update UI
+            updateIndicators();
+            updateEquilibrium();
+            addLogEntry();
+            
+            // Next round or end
+            gameState.round++;
+            
+            if (gameState.round > gameState.maxRounds) {
+                endGame();
+            } else {
+                updateRoundDisplay();
+                resetSelections();
+            }
+        }
+
+        function updateIndicators() {
+            const { learning, illusion, trust, stability } = gameState.metrics;
+            
+            document.getElementById('learningBar').style.width = `${learning}%`;
+            document.getElementById('learningValue').textContent = Math.round(learning);
+            
+            document.getElementById('illusionBar').style.width = `${illusion}%`;
+            document.getElementById('illusionValue').textContent = Math.round(illusion);
+            
+            document.getElementById('trustBar').style.width = `${trust}%`;
+            document.getElementById('trustValue').textContent = Math.round(trust);
+            
+            document.getElementById('stabilityBar').style.width = `${stability}%`;
+            document.getElementById('stabilityValue').textContent = Math.round(stability);
+        }
+
+        function updateEquilibrium() {
+            const { learning, illusion, trust, stability } = gameState.metrics;
+            const display = document.getElementById('equilibriumDisplay');
+            const nameEl = document.getElementById('equilibriumName');
+            const descEl = document.getElementById('equilibriumDesc');
+            
+            let eq;
+            
+            // Determine equilibrium based on metrics
+            if (learning >= 60 && trust >= 50 && illusion < 40) {
+                eq = equilibriums.trustGrowth;
+            } else if (illusion > learning && stability >= 40) {
+                eq = equilibriums.controlSimulation;
+            } else if (stability < 30 || (trust < 30 && learning < 30)) {
+                eq = equilibriums.collapse;
+            } else {
+                eq = equilibriums.unstable;
+            }
+            
+            // Remove all equilibrium classes
+            display.classList.remove('trust-growth', 'control-simulation', 'unstable', 'collapse');
+            display.classList.add(eq.class);
+            
+            nameEl.textContent = eq.name;
+            descEl.textContent = eq.desc;
+        }
+
+        function addLogEntry() {
+            const log = document.getElementById('logContainer');
+            const last = gameState.history[gameState.history.length - 1];
+            
+            const strategyNames = {
+                responsible: 'Ответственность',
+                exploitation: 'Эксплуатация',
+                passive: 'Пассивность',
+                trust: 'Доверие',
+                mixed: 'Смешанная',
+                control: 'Контроль'
+            };
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span class="log-round">Раунд ${last.round}:</span> 
+                Студент: ${strategyNames[last.student]} | 
+                Преподаватель: ${strategyNames[last.teacher]}
+            `;
+            
+            // Remove initial message if exists
+            if (log.querySelector('.log-entry[style]')) {
+                log.innerHTML = '';
+            }
+            
+            log.insertBefore(entry, log.firstChild);
+        }
+
+        function updateRoundDisplay() {
+            document.getElementById('currentRound').textContent = gameState.round;
+            
+            const dots = document.querySelectorAll('.round-dot');
+            dots.forEach((dot, index) => {
+                dot.classList.remove('current', 'completed');
+                if (index < gameState.round - 1) {
+                    dot.classList.add('completed');
+                } else if (index === gameState.round - 1) {
+                    dot.classList.add('current');
+                }
+            });
+        }
+
+        function resetSelections() {
+            gameState.studentStrategy = null;
+            gameState.teacherStrategy = null;
+            
+            document.querySelectorAll('.strategy-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            checkReadyState();
+            updateLLMResponse();
+        }
+
+        function endGame() {
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('reflectionScreen').classList.add('active');
+            
+            // Update final stats
+            const { learning, illusion, trust, stability } = gameState.metrics;
+            
+            document.getElementById('finalLearning').textContent = `${Math.round(learning)}%`;
+            document.getElementById('finalIllusion').textContent = `${Math.round(illusion)}%`;
+            document.getElementById('finalTrust').textContent = `${Math.round(trust)}%`;
+            document.getElementById('finalStability').textContent = `${Math.round(stability)}%`;
+            
+            // Determine final equilibrium
+            let eqName;
+            if (learning >= 60 && trust >= 50 && illusion < 40) {
+                eqName = equilibriums.trustGrowth.name;
+            } else if (illusion > learning && stability >= 40) {
+                eqName = equilibriums.controlSimulation.name;
+            } else if (stability < 30 || (trust < 30 && learning < 30)) {
+                eqName = equilibriums.collapse.name;
+            } else {
+                eqName = equilibriums.unstable.name;
+            }
+            
+            document.getElementById('finalEquilibrium').textContent = eqName;
+        }
+
+        function restartGame() {
+            // Reset game state
+            gameState = {
+                round: 1,
+                maxRounds: 7,
+                studentStrategy: null,
+                teacherStrategy: null,
+                llmMode: 'amplifier',
+                metrics: {
+                    learning: 50,
+                    illusion: 20,
+                    trust: 50,
+                    stability: 50
+                },
+                history: []
+            };
+            
+            // Reset UI
+            document.getElementById('gameScreen').classList.remove('hidden');
+            document.getElementById('reflectionScreen').classList.remove('active');
+            
+            // Reset indicators
+            updateIndicators();
+            
+            // Reset round display
+            updateRoundDisplay();
+            
+            // Reset equilibrium display
+            const display = document.getElementById('equilibriumDisplay');
+            display.classList.remove('trust-growth', 'control-simulation', 'unstable', 'collapse');
+            document.getElementById('equilibriumName').textContent = 'Начальное состояние';
+            document.getElementById('equilibriumDesc').textContent = 'Система ожидает первых решений';
+            
+            // Reset log
+            document.getElementById('logContainer').innerHTML = `
+                <div class="log-entry" style="color: var(--text-secondary); font-style: italic;">
+                    Игра начинается. Выберите стратегии...
+                </div>
+            `;
+            
+            // Reset selections
+            resetSelections();
+            
+            // Reset LLM mode
+            document.querySelectorAll('.llm-mode-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.querySelector('.llm-mode-btn[data-mode="amplifier"]').classList.add('selected');
+            
+            // Reset textarea
+            document.querySelectorAll('.question-textarea').forEach(ta => {
+                ta.value = '';
+            });
+            
+            updateLLMResponse();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateIndicators();
+            checkReadyState();
+        });
+    </script>
+</body>
+</html>
