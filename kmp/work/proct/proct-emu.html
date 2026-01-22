@@ -1,0 +1,2062 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --header-color: #325980;
+            --interactive: #3498db;
+            --divider: #f1f1f1;
+            --text-primary: #2c3e50;
+            --text-secondary: #666666;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --shadow: rgba(0,0,0,0.1);
+            --card-bg: #ffffff;
+            --border-color: #e0e0e0;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --header-color: #4a7ab0;
+            --interactive: #5dade2;
+            --divider: #2d3a4f;
+            --text-primary: #ecf0f1;
+            --text-secondary: #b0b0b0;
+            --shadow: rgba(0,0,0,0.3);
+            --card-bg: #1f2940;
+            --border-color: #3d4f6f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--header-color), #4a7ab0);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .logo h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .logo span {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--divider);
+            padding: 0 1rem;
+            display: flex;
+            overflow-x: auto;
+        }
+
+        nav button {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        nav button:hover {
+            color: var(--interactive);
+            background: var(--bg-secondary);
+        }
+
+        nav button.active {
+            color: var(--interactive);
+            border-bottom-color: var(--interactive);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        /* Section */
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px var(--shadow);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--divider);
+        }
+
+        .card-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--interactive), var(--header-color));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--header-color);
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--interactive);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--interactive), var(--header-color));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #229954);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #c0392b);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        /* Status Indicators */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+
+        .status-item {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .status-item.active {
+            border-color: var(--success);
+            background: rgba(39, 174, 96, 0.1);
+        }
+
+        .status-item.warning {
+            border-color: var(--warning);
+            background: rgba(243, 156, 18, 0.1);
+        }
+
+        .status-item.danger {
+            border-color: var(--danger);
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin: 0 auto 0.5rem;
+            background: var(--text-secondary);
+        }
+
+        .status-item.active .status-indicator {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .status-item.warning .status-indicator {
+            background: var(--warning);
+            animation: blink 1s infinite;
+        }
+
+        .status-item.danger .status-indicator {
+            background: var(--danger);
+            animation: blink 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .status-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Timer */
+        .timer-display {
+            font-size: 3rem;
+            font-weight: 700;
+            text-align: center;
+            color: var(--header-color);
+            font-family: 'Courier New', monospace;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+        }
+
+        .timer-display.warning {
+            color: var(--warning);
+            animation: pulse 1s infinite;
+        }
+
+        .timer-display.danger {
+            color: var(--danger);
+            animation: blink 0.5s infinite;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 8px;
+            background: var(--divider);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--interactive), var(--success));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Questions */
+        .question-container {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .question-number {
+            font-size: 0.85rem;
+            color: var(--interactive);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .question-text {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .options-list {
+            list-style: none;
+        }
+
+        .option-item {
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .option-item:hover {
+            border-color: var(--interactive);
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .option-item.selected {
+            border-color: var(--interactive);
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .option-radio {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .option-item.selected .option-radio {
+            border-color: var(--interactive);
+            background: var(--interactive);
+        }
+
+        .option-item.selected .option-radio::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        /* Event Log */
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 0.5rem;
+        }
+
+        .log-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            border-left: 4px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .log-entry.info {
+            border-left-color: var(--interactive);
+        }
+
+        .log-entry.warning {
+            border-left-color: var(--warning);
+            background: rgba(243, 156, 18, 0.05);
+        }
+
+        .log-entry.danger {
+            border-left-color: var(--danger);
+            background: rgba(231, 76, 60, 0.05);
+        }
+
+        .log-entry.success {
+            border-left-color: var(--success);
+            background: rgba(39, 174, 96, 0.05);
+        }
+
+        .log-time {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .log-message {
+            flex: 1;
+        }
+
+        .log-type {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .log-entry.info .log-type {
+            background: rgba(52, 152, 219, 0.2);
+            color: var(--interactive);
+        }
+
+        .log-entry.warning .log-type {
+            background: rgba(243, 156, 18, 0.2);
+            color: var(--warning);
+        }
+
+        .log-entry.danger .log-type {
+            background: rgba(231, 76, 60, 0.2);
+            color: var(--danger);
+        }
+
+        .log-entry.success .log-type {
+            background: rgba(39, 174, 96, 0.2);
+            color: var(--success);
+        }
+
+        /* Risk Score */
+        .risk-meter {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .risk-score {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .risk-score.low {
+            color: var(--success);
+        }
+
+        .risk-score.medium {
+            color: var(--warning);
+        }
+
+        .risk-score.high {
+            color: var(--danger);
+        }
+
+        .risk-label {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .risk-bar {
+            height: 12px;
+            background: var(--divider);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .risk-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: all 0.5s ease;
+        }
+
+        .risk-fill.low {
+            background: linear-gradient(90deg, var(--success), #58d68d);
+        }
+
+        .risk-fill.medium {
+            background: linear-gradient(90deg, var(--warning), #f5b041);
+        }
+
+        .risk-fill.high {
+            background: linear-gradient(90deg, var(--danger), #e74c3c);
+        }
+
+        /* Stats Cards */
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid var(--border-color);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--header-color);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Student List */
+        .student-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            margin-bottom: 0.75rem;
+            border: 2px solid var(--border-color);
+        }
+
+        .student-avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--interactive), var(--header-color));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .student-info {
+            flex: 1;
+        }
+
+        .student-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .student-email {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .student-status {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .student-status.active {
+            background: rgba(39, 174, 96, 0.2);
+            color: var(--success);
+        }
+
+        .student-status.completed {
+            background: rgba(52, 152, 219, 0.2);
+            color: var(--interactive);
+        }
+
+        /* Info Section */
+        .info-block {
+            background: linear-gradient(135deg, rgba(50, 89, 128, 0.05), rgba(52, 152, 219, 0.05));
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tech-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .tech-tag {
+            background: var(--bg-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        /* Feature List */
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--divider);
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--interactive);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        /* Exam Complete */
+        .exam-complete {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .complete-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, var(--success), #58d68d);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 3rem;
+            color: white;
+        }
+
+        .complete-title {
+            font-size: 1.8rem;
+            color: var(--success);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .alert-warning {
+            background: rgba(243, 156, 18, 0.1);
+            border: 2px solid var(--warning);
+            color: var(--warning);
+        }
+
+        .alert-info {
+            background: rgba(52, 152, 219, 0.1);
+            border: 2px solid var(--interactive);
+            color: var(--interactive);
+        }
+
+        .alert-icon {
+            font-size: 1.2rem;
+        }
+
+        /* Camera Preview (Emulated) */
+        .camera-preview {
+            background: linear-gradient(135deg, #1a1a2e, #2d3a4f);
+            border-radius: 12px;
+            aspect-ratio: 4/3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .camera-placeholder {
+            text-align: center;
+        }
+
+        .camera-icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.7;
+        }
+
+        .camera-label {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        .recording-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(231, 76, 60, 0.9);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .recording-dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        /* Privacy Notice */
+        .privacy-notice {
+            background: rgba(52, 152, 219, 0.05);
+            border: 1px solid var(--interactive);
+            border-radius: 10px;
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .privacy-notice h4 {
+            color: var(--interactive);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Buttons Group */
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* Exam Controls */
+        .exam-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .question-nav {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .question-nav button {
+            width: 36px;
+            height: 36px;
+            border: 2px solid var(--border-color);
+            background: var(--card-bg);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .question-nav button:hover {
+            border-color: var(--interactive);
+            color: var(--interactive);
+        }
+
+        .question-nav button.active {
+            background: var(--interactive);
+            color: white;
+            border-color: var(--interactive);
+        }
+
+        .question-nav button.answered {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .logo h1 {
+                font-size: 1.1rem;
+            }
+
+            .logo span {
+                display: none;
+            }
+
+            nav button {
+                padding: 0.75rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .timer-display {
+                font-size: 2rem;
+            }
+
+            .risk-score {
+                font-size: 3rem;
+            }
+
+            .student-row {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .btn-group .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+		
+			  footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="logo">
+            <div class="logo-icon">P</div>
+            <div>
+                <h1>ProctorSim</h1>
+                 </div>
+        </div>
+        <button class="theme-toggle" id="themeToggle" title="Сменить тему">☀️</button>
+    </header>
+
+    <!-- Navigation -->
+    <nav>
+        <button class="nav-btn active" data-section="student">Интерфейс студента</button>
+        <button class="nav-btn" data-section="examiner">Интерфейс экзаменатора</button>
+        <button class="nav-btn" data-section="about">О системе</button>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        
+        <!-- Student Section -->
+        <section id="student" class="section active">
+            
+            <!-- Registration Phase -->
+            <div id="registrationPhase">
+                <div class="grid grid-2">
+                    <div>
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon">1</div>
+                                <h2 class="card-title">Регистрация на экзамен</h2>
+                            </div>
+                            <form id="registrationForm">
+                                <div class="form-group">
+                                    <label for="studentName">ФИО студента</label>
+                                    <input type="text" id="studentName" required placeholder="Иванов Иван Иванович">
+                                </div>
+                                <div class="form-group">
+                                    <label for="studentEmail">Email</label>
+                                    <input type="email" id="studentEmail" required placeholder="student@university.edu">
+                                </div>
+                                <div class="form-group">
+                                    <label for="examId">Код экзамена</label>
+                                    <input type="text" id="examId" required placeholder="LING-2024-001">
+                                </div>
+                                <div class="form-group">
+                                    <label for="examDuration">Длительность (минуты)</label>
+                                    <select id="examDuration">
+                                        <option value="1">1 минута (демо)</option>
+                                        <option value="5">5 минут</option>
+                                        <option value="15" selected>15 минут</option>
+                                        <option value="30">30 минут</option>
+                                        <option value="60">60 минут</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <span>Начать экзамен</span>
+                                    <span>&rarr;</span>
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div class="privacy-notice">
+                            <h4>Уведомление о конфиденциальности</h4>
+                            <p>Это учебный симулятор ProctorSim. Реальное видео/аудио не записывается. Все данные хранятся только в вашем браузере и не передаются на сервер.</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon">i</div>
+                                <h2 class="card-title">Проверка оборудования</h2>
+                            </div>
+                            <div class="camera-preview">
+                                <div class="camera-placeholder">
+                                    <div class="camera-icon">[CAM]</div>
+                                    <div class="camera-label">Эмуляция веб-камеры</div>
+                                </div>
+                            </div>
+                            <div class="status-grid" style="margin-top: 1rem;">
+                                <div class="status-item" id="cameraCheck">
+                                    <div class="status-indicator"></div>
+                                    <div class="status-label">Камера</div>
+                                </div>
+                                <div class="status-item" id="micCheck">
+                                    <div class="status-indicator"></div>
+                                    <div class="status-label">Микрофон</div>
+                                </div>
+                                <div class="status-item" id="browserCheck">
+                                    <div class="status-indicator"></div>
+                                    <div class="status-label">Браузер</div>
+                                </div>
+                                <div class="status-item" id="networkCheck">
+                                    <div class="status-indicator"></div>
+                                    <div class="status-label">Сеть</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary" id="checkEquipment" style="width: 100%; margin-top: 1rem;">
+                                Проверить оборудование
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Exam Phase -->
+            <div id="examPhase" class="hidden">
+                <div class="grid grid-2">
+                    <div style="grid-column: 1 / -1;">
+                        <div class="alert alert-warning">
+                            <span class="alert-icon">[!]</span>
+                            <span>Внимание: переключение вкладок, копирование текста и другие действия отслеживаются системой прокторинга.</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon">T</div>
+                                <h2 class="card-title">Оставшееся время</h2>
+                            </div>
+                            <div class="timer-display" id="timerDisplay">00:00:00</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressBar" style="width: 100%;"></div>
+                            </div>
+                            <div style="text-align: center; color: var(--text-secondary); font-size: 0.9rem;">
+                                Студент: <strong id="currentStudent">-</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon">M</div>
+                                <h2 class="card-title">Статус мониторинга</h2>
+                            </div>
+                            <div class="status-grid">
+                                <div class="status-item active" id="statusCamera">
+                                    <div class="status-indicator"></div>
+                                    <div class="status-label">Камера</div>
+                                </div>
+                                <div class="status-item active" id="statusMic">
+                                    <div class="status-indicator"></div>
+                                    <div class="status-label">Микрофон</div>
+                                </div>
+                                <div class="status-item active" id="statusTab">
+                                    <div class="status-indicator"></div>
+                                    <div class="status-label">Вкладка</div>
+                                </div>
+                                <div class="status-item active" id="statusMouse">
+                                    <div class="status-indicator"></div>
+                                    <div class="status-label">Активность</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon">E</div>
+                                <h2 class="card-title">Эмуляция событий</h2>
+                            </div>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                                Для демонстрации нажмите кнопки:
+                            </p>
+                            <div class="btn-group">
+                                <button class="btn btn-secondary" id="emulateMicOff">Выкл. микрофон</button>
+                                <button class="btn btn-secondary" id="emulateCamOff">Выкл. камеру</button>
+                                <button class="btn btn-secondary" id="emulateNoise">Посторонний звук</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon">Q</div>
+                                <h2 class="card-title">Экзаменационные вопросы</h2>
+                            </div>
+                            
+                            <div class="exam-controls">
+                                <span>Вопрос <strong id="currentQ">1</strong> из <strong id="totalQ">5</strong></span>
+                                <div class="question-nav" id="questionNav"></div>
+                            </div>
+                            
+                            <div id="questionContainer">
+                                <!-- Questions will be inserted here -->
+                            </div>
+                            
+                            <div class="btn-group" style="margin-top: 1rem;">
+                                <button class="btn btn-secondary" id="prevQuestion" disabled>&larr; Назад</button>
+                                <button class="btn btn-primary" id="nextQuestion">Далее &rarr;</button>
+                                <button class="btn btn-success hidden" id="submitExam">Завершить экзамен</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Complete Phase -->
+            <div id="completePhase" class="hidden">
+                <div class="card">
+                    <div class="exam-complete">
+                        <div class="complete-icon">[OK]</div>
+                        <h2 class="complete-title">Экзамен завершён</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                            Ваши ответы сохранены. Результаты будут доступны после проверки экзаменатором.
+                        </p>
+                        <div class="grid grid-3" style="max-width: 600px; margin: 0 auto 1.5rem;">
+                            <div class="stat-card">
+                                <div class="stat-value" id="answeredCount">0</div>
+                                <div class="stat-label">Отвечено</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="timeSpent">00:00</div>
+                                <div class="stat-label">Затрачено</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="eventsCount">0</div>
+                                <div class="stat-label">Событий</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="newExam">Начать новый экзамен</button>
+                    </div>
+                </div>
+            </div>
+            
+        </section>
+        
+        <!-- Examiner Section -->
+        <section id="examiner" class="section">
+            <div class="grid grid-2">
+                <div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon">S</div>
+                            <h2 class="card-title">Активные студенты</h2>
+                        </div>
+                        <div id="studentsList">
+                            <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">
+                                Нет активных студентов. Зарегистрируйте студента во вкладке "Интерфейс студента".
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon">R</div>
+                            <h2 class="card-title">Оценка риска</h2>
+                        </div>
+                        <div class="risk-meter">
+                            <div class="risk-score low" id="riskScore">0</div>
+                            <div class="risk-label" id="riskLabel">Низкий риск</div>
+                            <div class="risk-bar">
+                                <div class="risk-fill low" id="riskFill" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <div class="grid grid-3" style="margin-top: 1rem;">
+                            <div class="stat-card">
+                                <div class="stat-value" id="tabSwitches">0</div>
+                                <div class="stat-label">Смена вкладок</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="copyAttempts">0</div>
+                                <div class="stat-label">Попытки копирования</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="suspiciousEvents">0</div>
+                                <div class="stat-label">Подозрительных</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon">L</div>
+                            <h2 class="card-title">Журнал событий</h2>
+                        </div>
+                        <div class="btn-group" style="margin-bottom: 1rem;">
+                            <button class="btn btn-secondary" id="clearLogs">Очистить лог</button>
+                            <button class="btn btn-primary" id="exportLogs">Экспорт JSON</button>
+                        </div>
+                        <div class="log-container" id="logContainer">
+                            <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">
+                                Журнал событий пуст
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- About Section -->
+        <section id="about" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">i</div>
+                    <h2 class="card-title">О системе ProctorSim</h2>
+                </div>
+                <div class="info-block">
+                    <h3 style="color: var(--header-color); margin-bottom: 0.75rem;">Описание</h3>
+                    <p>ProctorSim — учебный симулятор системы прокторинга, разработанный для студентов-лингвистов и будущих преподавателей иностранных языков в рамках курса "Компьютерное моделирование".</p>
+                    <p style="margin-top: 0.5rem;">Система демонстрирует основные принципы работы прокторинга: регистрацию студента, проведение экзамена с таймером, мониторинг активности и логирование событий.</p>
+                </div>
+                
+                <div class="grid grid-2">
+                    <div class="info-block">
+                        <h3 style="color: var(--header-color); margin-bottom: 0.75rem;">Ключевые компоненты</h3>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="feature-icon">1</span>
+                                <span>Регистрация и старт экзамена с валидацией данных</span>
+                            </li>
+                            <li>
+                                <span class="feature-icon">2</span>
+                                <span>Таймер экзамена с визуальной индикацией</span>
+                            </li>
+                            <li>
+                                <span class="feature-icon">3</span>
+                                <span>Обнаружение переключения вкладок (Page Visibility API)</span>
+                            </li>
+                            <li>
+                                <span class="feature-icon">4</span>
+                                <span>Отслеживание попыток копирования текста</span>
+                            </li>
+                            <li>
+                                <span class="feature-icon">5</span>
+                                <span>Мониторинг активности мыши и клавиатуры</span>
+                            </li>
+                            <li>
+                                <span class="feature-icon">6</span>
+                                <span>Эмуляция камеры/микрофона для демонстрации</span>
+                            </li>
+                            <li>
+                                <span class="feature-icon">7</span>
+                                <span>Эвристическая оценка риска нарушений</span>
+                            </li>
+                            <li>
+                                <span class="feature-icon">8</span>
+                                <span>Экспорт логов в формате JSON</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="info-block">
+                        <h3 style="color: var(--header-color); margin-bottom: 0.75rem;">Вопросы приватности</h3>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="feature-icon">!</span>
+                                <span>Все данные обрабатываются только на стороне клиента</span>
+                            </li>
+                            <li>
+                                <span class="feature-icon">!</span>
+                                <span>Нет передачи данных на внешние серверы</span>
+                            </li>
+                            <li>
+                                <span class="feature-icon">!</span>
+                                <span>Реальные видео/аудио потоки не используются</span>
+                            </li>
+                            <li>
+                                <span class="feature-icon">!</span>
+                                <span>Данные не сохраняются между сессиями</span>
+                            </li>
+                        </ul>
+                        <h3 style="color: var(--header-color); margin: 1rem 0 0.75rem;">Ограничения веб-технологий</h3>
+                        <ul class="feature-list">
+                            <li>
+                                <span class="feature-icon">X</span>
+                                <span>Невозможность блокировки переключения вкладок</span>
+                            </li>
+                            <li>
+                                <span class="feature-icon">X</span>
+                                <span>Ограниченный доступ к системным событиям</span>
+                            </li>
+                            <li>
+                                <span class="feature-icon">X</span>
+                                <span>Обход возможен через виртуальные машины</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="info-block">
+                    <h3 style="color: var(--header-color); margin-bottom: 0.75rem;">Используемые технологии</h3>
+                    <div class="tech-list">
+                        <span class="tech-tag">HTML5</span>
+                        <span class="tech-tag">CSS3</span>
+                        <span class="tech-tag">JavaScript ES6+</span>
+                        <span class="tech-tag">Page Visibility API</span>
+                        <span class="tech-tag">Clipboard API</span>
+                        <span class="tech-tag">LocalStorage</span>
+                        <span class="tech-tag">CSS Grid</span>
+                        <span class="tech-tag">CSS Flexbox</span>
+                        <span class="tech-tag">CSS Custom Properties</span>
+                        <span class="tech-tag">CSS Animations</span>
+                        <span class="tech-tag">Responsive Design</span>
+                        <span class="tech-tag">JSON</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    
+    <script>
+        // =====================================================
+        // PROCTORING SIMULATOR - MAIN APPLICATION
+        // =====================================================
+
+        class ProctoringSimulator {
+            constructor() {
+                // State
+                this.state = {
+                    currentSection: 'student',
+                    examPhase: 'registration', // registration, exam, complete
+                    student: null,
+                    examDuration: 0,
+                    timeRemaining: 0,
+                    timerInterval: null,
+                    currentQuestion: 0,
+                    answers: {},
+                    examStartTime: null,
+                    isDarkTheme: false,
+                    
+                    // Monitoring
+                    tabSwitches: 0,
+                    copyAttempts: 0,
+                    suspiciousEvents: 0,
+                    lastMouseMove: Date.now(),
+                    mouseIdleWarnings: 0,
+                    
+                    // Equipment status
+                    cameraOn: true,
+                    micOn: true,
+                    
+                    // Logs
+                    eventLogs: []
+                };
+
+                // Questions for demo
+                this.questions = [
+                    {
+                        id: 1,
+                        text: "Какой из следующих языков является аналитическим?",
+                        options: ["Русский", "Английский", "Латинский", "Финский"]
+                    },
+                    {
+                        id: 2,
+                        text: "Что изучает фонетика?",
+                        options: ["Значение слов", "Звуковой строй языка", "Строение предложений", "Происхождение слов"]
+                    },
+                    {
+                        id: 3,
+                        text: "Какой метод обучения основан на погружении в языковую среду?",
+                        options: ["Грамматико-переводной", "Коммуникативный", "Иммерсивный", "Аудиолингвальный"]
+                    },
+                    {
+                        id: 4,
+                        text: "Что такое морфема?",
+                        options: ["Предложение", "Минимальная значимая единица языка", "Часть речи", "Интонационная единица"]
+                    },
+                    {
+                        id: 5,
+                        text: "Какая технология используется для машинного перевода?",
+                        options: ["Блокчейн", "Нейронные сети", "Виртуальная реальность", "Квантовые вычисления"]
+                    }
+                ];
+
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.checkEquipmentStatus();
+                this.setupMonitoring();
+                this.renderQuestionNav();
+                this.loadTheme();
+            }
+
+            // =====================================================
+            // EVENT BINDING
+            // =====================================================
+
+            bindEvents() {
+                // Theme toggle
+                document.getElementById('themeToggle').addEventListener('click', () => this.toggleTheme());
+
+                // Navigation
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.switchSection(e.target.dataset.section));
+                });
+
+                // Registration form
+                document.getElementById('registrationForm').addEventListener('submit', (e) => this.startExam(e));
+
+                // Equipment check
+                document.getElementById('checkEquipment').addEventListener('click', () => this.checkEquipmentStatus());
+
+                // Question navigation
+                document.getElementById('prevQuestion').addEventListener('click', () => this.navigateQuestion(-1));
+                document.getElementById('nextQuestion').addEventListener('click', () => this.navigateQuestion(1));
+                document.getElementById('submitExam').addEventListener('click', () => this.submitExam());
+
+                // Emulation buttons
+                document.getElementById('emulateMicOff').addEventListener('click', () => this.toggleMic());
+                document.getElementById('emulateCamOff').addEventListener('click', () => this.toggleCamera());
+                document.getElementById('emulateNoise').addEventListener('click', () => this.emulateNoise());
+
+                // Examiner controls
+                document.getElementById('clearLogs').addEventListener('click', () => this.clearLogs());
+                document.getElementById('exportLogs').addEventListener('click', () => this.exportLogs());
+
+                // New exam
+                document.getElementById('newExam').addEventListener('click', () => this.resetExam());
+            }
+
+            // =====================================================
+            // THEME MANAGEMENT
+            // =====================================================
+
+            toggleTheme() {
+                this.state.isDarkTheme = !this.state.isDarkTheme;
+                document.documentElement.setAttribute('data-theme', this.state.isDarkTheme ? 'dark' : 'light');
+                document.getElementById('themeToggle').textContent = this.state.isDarkTheme ? '🌙' : '☀️';
+                localStorage.setItem('proctorTheme', this.state.isDarkTheme ? 'dark' : 'light');
+            }
+
+            loadTheme() {
+                const savedTheme = localStorage.getItem('proctorTheme');
+                if (savedTheme === 'dark') {
+                    this.state.isDarkTheme = true;
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                    document.getElementById('themeToggle').textContent = '🌙';
+                }
+            }
+
+            // =====================================================
+            // NAVIGATION
+            // =====================================================
+
+            switchSection(section) {
+                this.state.currentSection = section;
+                
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.section === section);
+                });
+                
+                document.querySelectorAll('.section').forEach(sec => {
+                    sec.classList.toggle('active', sec.id === section);
+                });
+            }
+
+            // =====================================================
+            // EQUIPMENT CHECK (EMULATED)
+            // =====================================================
+
+            checkEquipmentStatus() {
+                const checks = ['cameraCheck', 'micCheck', 'browserCheck', 'networkCheck'];
+                
+                checks.forEach((check, index) => {
+                    const element = document.getElementById(check);
+                    element.className = 'status-item';
+                    
+                    setTimeout(() => {
+                        element.classList.add('active');
+                    }, (index + 1) * 500);
+                });
+                
+                this.addLog('info', 'Проверка оборудования завершена успешно');
+            }
+
+            // =====================================================
+            // EXAM MANAGEMENT
+            // =====================================================
+
+            startExam(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('studentName').value.trim();
+                const email = document.getElementById('studentEmail').value.trim();
+                const examId = document.getElementById('examId').value.trim();
+                const duration = parseInt(document.getElementById('examDuration').value);
+                
+                if (!name || !email || !examId) {
+                    alert('Пожалуйста, заполните все поля');
+                    return;
+                }
+                
+                this.state.student = { name, email, examId };
+                this.state.examDuration = duration * 60; // Convert to seconds
+                this.state.timeRemaining = this.state.examDuration;
+                this.state.examStartTime = new Date();
+                this.state.examPhase = 'exam';
+                this.state.currentQuestion = 0;
+                this.state.answers = {};
+                
+                // Reset monitoring stats
+                this.state.tabSwitches = 0;
+                this.state.copyAttempts = 0;
+                this.state.suspiciousEvents = 0;
+                this.state.mouseIdleWarnings = 0;
+                
+                // Update UI
+                document.getElementById('registrationPhase').classList.add('hidden');
+                document.getElementById('examPhase').classList.remove('hidden');
+                document.getElementById('currentStudent').textContent = name;
+                
+                // Render first question
+                this.renderQuestion();
+                this.updateQuestionNav();
+                
+                // Start timer
+                this.startTimer();
+                
+                // Update examiner view
+                this.updateStudentsList();
+                
+                // Log event
+                this.addLog('success', `Студент ${name} начал экзамен "${examId}"`);
+            }
+
+            startTimer() {
+                this.updateTimerDisplay();
+                
+                this.state.timerInterval = setInterval(() => {
+                    this.state.timeRemaining--;
+                    this.updateTimerDisplay();
+                    
+                    if (this.state.timeRemaining <= 0) {
+                        this.submitExam();
+                    }
+                }, 1000);
+            }
+
+            updateTimerDisplay() {
+                const hours = Math.floor(this.state.timeRemaining / 3600);
+                const minutes = Math.floor((this.state.timeRemaining % 3600) / 60);
+                const seconds = this.state.timeRemaining % 60;
+                
+                const display = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                const timerEl = document.getElementById('timerDisplay');
+                timerEl.textContent = display;
+                
+                // Update timer styling based on time remaining
+                const percentage = (this.state.timeRemaining / this.state.examDuration) * 100;
+                document.getElementById('progressBar').style.width = percentage + '%';
+                
+                timerEl.classList.remove('warning', 'danger');
+                if (percentage < 10) {
+                    timerEl.classList.add('danger');
+                } else if (percentage < 25) {
+                    timerEl.classList.add('warning');
+                }
+            }
+
+            submitExam() {
+                clearInterval(this.state.timerInterval);
+                
+                const timeSpent = this.state.examDuration - this.state.timeRemaining;
+                const minutes = Math.floor(timeSpent / 60);
+                const seconds = timeSpent % 60;
+                
+                document.getElementById('examPhase').classList.add('hidden');
+                document.getElementById('completePhase').classList.remove('hidden');
+                
+                document.getElementById('answeredCount').textContent = Object.keys(this.state.answers).length;
+                document.getElementById('timeSpent').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                document.getElementById('eventsCount').textContent = this.state.eventLogs.length;
+                
+                this.state.examPhase = 'complete';
+                
+                this.addLog('success', `Студент ${this.state.student.name} завершил экзамен`);
+                this.updateStudentsList();
+            }
+
+            resetExam() {
+                this.state.examPhase = 'registration';
+                this.state.student = null;
+                this.state.answers = {};
+                this.state.currentQuestion = 0;
+                
+                document.getElementById('registrationPhase').classList.remove('hidden');
+                document.getElementById('examPhase').classList.add('hidden');
+                document.getElementById('completePhase').classList.add('hidden');
+                
+                document.getElementById('registrationForm').reset();
+                
+                this.updateStudentsList();
+            }
+
+            // =====================================================
+            // QUESTION MANAGEMENT
+            // =====================================================
+
+            renderQuestionNav() {
+                const nav = document.getElementById('questionNav');
+                nav.innerHTML = '';
+                
+                document.getElementById('totalQ').textContent = this.questions.length;
+                
+                this.questions.forEach((q, i) => {
+                    const btn = document.createElement('button');
+                    btn.textContent = i + 1;
+                    btn.addEventListener('click', () => {
+                        this.state.currentQuestion = i;
+                        this.renderQuestion();
+                        this.updateQuestionNav();
+                    });
+                    nav.appendChild(btn);
+                });
+            }
+
+            updateQuestionNav() {
+                const buttons = document.querySelectorAll('#questionNav button');
+                buttons.forEach((btn, i) => {
+                    btn.classList.remove('active', 'answered');
+                    if (i === this.state.currentQuestion) {
+                        btn.classList.add('active');
+                    }
+                    if (this.state.answers[i] !== undefined) {
+                        btn.classList.add('answered');
+                    }
+                });
+                
+                document.getElementById('currentQ').textContent = this.state.currentQuestion + 1;
+                
+                // Update navigation buttons
+                document.getElementById('prevQuestion').disabled = this.state.currentQuestion === 0;
+                
+                const isLast = this.state.currentQuestion === this.questions.length - 1;
+                document.getElementById('nextQuestion').classList.toggle('hidden', isLast);
+                document.getElementById('submitExam').classList.toggle('hidden', !isLast);
+            }
+
+            renderQuestion() {
+                const container = document.getElementById('questionContainer');
+                const q = this.questions[this.state.currentQuestion];
+                
+                container.innerHTML = `
+                    <div class="question-container fade-in">
+                        <div class="question-number">Вопрос ${q.id}</div>
+                        <div class="question-text">${q.text}</div>
+                        <ul class="options-list">
+                            ${q.options.map((opt, i) => `
+                                <li class="option-item ${this.state.answers[this.state.currentQuestion] === i ? 'selected' : ''}" 
+                                    data-index="${i}">
+                                    <div class="option-radio"></div>
+                                    <span>${opt}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+                
+                // Bind option clicks
+                container.querySelectorAll('.option-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const index = parseInt(item.dataset.index);
+                        this.selectAnswer(index);
+                    });
+                });
+            }
+
+            selectAnswer(index) {
+                this.state.answers[this.state.currentQuestion] = index;
+                this.renderQuestion();
+                this.updateQuestionNav();
+            }
+
+            navigateQuestion(direction) {
+                const newIndex = this.state.currentQuestion + direction;
+                if (newIndex >= 0 && newIndex < this.questions.length) {
+                    this.state.currentQuestion = newIndex;
+                    this.renderQuestion();
+                    this.updateQuestionNav();
+                }
+            }
+
+            // =====================================================
+            // MONITORING
+            // =====================================================
+
+            setupMonitoring() {
+                // Tab visibility
+                document.addEventListener('visibilitychange', () => {
+                    if (this.state.examPhase !== 'exam') return;
+                    
+                    if (document.hidden) {
+                        this.state.tabSwitches++;
+                        this.state.suspiciousEvents++;
+                        this.addLog('danger', 'Обнаружено переключение вкладки');
+                        this.updateStatus('statusTab', 'danger');
+                        this.updateRiskScore();
+                    } else {
+                        setTimeout(() => this.updateStatus('statusTab', 'active'), 2000);
+                    }
+                });
+
+                // Copy attempt
+                document.addEventListener('copy', (e) => {
+                    if (this.state.examPhase !== 'exam') return;
+                    
+                    this.state.copyAttempts++;
+                    this.state.suspiciousEvents++;
+                    this.addLog('warning', 'Попытка копирования текста');
+                    this.updateRiskScore();
+                });
+
+                // Right-click
+                document.addEventListener('contextmenu', (e) => {
+                    if (this.state.examPhase !== 'exam') return;
+                    
+                    e.preventDefault();
+                    this.addLog('info', 'Попытка вызова контекстного меню заблокирована');
+                });
+
+                // Mouse activity
+                document.addEventListener('mousemove', () => {
+                    if (this.state.examPhase !== 'exam') return;
+                    this.state.lastMouseMove = Date.now();
+                    this.updateStatus('statusMouse', 'active');
+                });
+
+                // Check for mouse inactivity
+                setInterval(() => {
+                    if (this.state.examPhase !== 'exam') return;
+                    
+                    const idleTime = Date.now() - this.state.lastMouseMove;
+                    if (idleTime > 30000) { // 30 seconds
+                        this.updateStatus('statusMouse', 'warning');
+                        if (idleTime > 60000 && this.state.mouseIdleWarnings < 3) { // 60 seconds
+                            this.state.mouseIdleWarnings++;
+                            this.addLog('warning', 'Отсутствие активности мыши более 60 секунд');
+                        }
+                    }
+                }, 10000);
+
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (this.state.examPhase !== 'exam') return;
+                    
+                    // Detect common cheat shortcuts
+                    if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'a', 'f'].includes(e.key.toLowerCase())) {
+                        this.addLog('warning', `Использование комбинации клавиш: Ctrl+${e.key.toUpperCase()}`);
+                    }
+                });
+            }
+
+            updateStatus(elementId, status) {
+                const element = document.getElementById(elementId);
+                element.classList.remove('active', 'warning', 'danger');
+                element.classList.add(status);
+            }
+
+            // =====================================================
+            // EMULATION CONTROLS
+            // =====================================================
+
+            toggleMic() {
+                this.state.micOn = !this.state.micOn;
+                const btn = document.getElementById('emulateMicOff');
+                
+                if (this.state.micOn) {
+                    btn.textContent = 'Выкл. микрофон';
+                    this.updateStatus('statusMic', 'active');
+                    this.addLog('info', 'Микрофон включен');
+                } else {
+                    btn.textContent = 'Вкл. микрофон';
+                    this.updateStatus('statusMic', 'danger');
+                    this.state.suspiciousEvents++;
+                    this.addLog('danger', 'Микрофон отключен!');
+                    this.updateRiskScore();
+                }
+            }
+
+            toggleCamera() {
+                this.state.cameraOn = !this.state.cameraOn;
+                const btn = document.getElementById('emulateCamOff');
+                
+                if (this.state.cameraOn) {
+                    btn.textContent = 'Выкл. камеру';
+                    this.updateStatus('statusCamera', 'active');
+                    this.addLog('info', 'Камера включена');
+                } else {
+                    btn.textContent = 'Вкл. камеру';
+                    this.updateStatus('statusCamera', 'danger');
+                    this.state.suspiciousEvents += 2;
+                    this.addLog('danger', 'Камера отключена!');
+                    this.updateRiskScore();
+                }
+            }
+
+            emulateNoise() {
+                this.addLog('warning', 'Обнаружен посторонний звук/голоса');
+                this.state.suspiciousEvents++;
+                this.updateStatus('statusMic', 'warning');
+                this.updateRiskScore();
+                
+                setTimeout(() => {
+                    if (this.state.micOn) {
+                        this.updateStatus('statusMic', 'active');
+                    }
+                }, 3000);
+            }
+
+            // =====================================================
+            // RISK SCORE
+            // =====================================================
+
+            updateRiskScore() {
+                // Calculate risk score (0-100)
+                let score = 0;
+                score += this.state.tabSwitches * 15;
+                score += this.state.copyAttempts * 10;
+                score += this.state.suspiciousEvents * 5;
+                
+                if (!this.state.cameraOn) score += 30;
+                if (!this.state.micOn) score += 20;
+                
+                score = Math.min(100, score);
+                
+                // Update UI
+                const scoreEl = document.getElementById('riskScore');
+                const labelEl = document.getElementById('riskLabel');
+                const fillEl = document.getElementById('riskFill');
+                
+                scoreEl.textContent = score;
+                fillEl.style.width = score + '%';
+                
+                // Update stats
+                document.getElementById('tabSwitches').textContent = this.state.tabSwitches;
+                document.getElementById('copyAttempts').textContent = this.state.copyAttempts;
+                document.getElementById('suspiciousEvents').textContent = this.state.suspiciousEvents;
+                
+                // Update risk level
+                scoreEl.classList.remove('low', 'medium', 'high');
+                fillEl.classList.remove('low', 'medium', 'high');
+                
+                if (score < 30) {
+                    scoreEl.classList.add('low');
+                    fillEl.classList.add('low');
+                    labelEl.textContent = 'Низкий риск';
+                } else if (score < 60) {
+                    scoreEl.classList.add('medium');
+                    fillEl.classList.add('medium');
+                    labelEl.textContent = 'Средний риск';
+                } else {
+                    scoreEl.classList.add('high');
+                    fillEl.classList.add('high');
+                    labelEl.textContent = 'Высокий риск';
+                }
+            }
+
+            // =====================================================
+            // LOGGING
+            // =====================================================
+
+            addLog(type, message) {
+                const timestamp = new Date().toLocaleTimeString('ru-RU');
+                const log = { timestamp, type, message, fullTime: new Date().toISOString() };
+                
+                this.state.eventLogs.unshift(log);
+                this.renderLogs();
+            }
+
+            renderLogs() {
+                const container = document.getElementById('logContainer');
+                
+                if (this.state.eventLogs.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Журнал событий пуст</p>';
+                    return;
+                }
+                
+                container.innerHTML = this.state.eventLogs.map(log => `
+                    <div class="log-entry ${log.type}">
+                        <span class="log-time">${log.timestamp}</span>
+                        <span class="log-message">${log.message}</span>
+                        <span class="log-type">${this.getLogTypeLabel(log.type)}</span>
+                    </div>
+                `).join('');
+            }
+
+            getLogTypeLabel(type) {
+                const labels = {
+                    info: 'Инфо',
+                    warning: 'Внимание',
+                    danger: 'Опасно',
+                    success: 'Успех'
+                };
+                return labels[type] || type;
+            }
+
+            clearLogs() {
+                this.state.eventLogs = [];
+                this.state.tabSwitches = 0;
+                this.state.copyAttempts = 0;
+                this.state.suspiciousEvents = 0;
+                this.renderLogs();
+                this.updateRiskScore();
+            }
+
+            exportLogs() {
+                const exportData = {
+                    exportDate: new Date().toISOString(),
+                    student: this.state.student,
+                    examDuration: this.state.examDuration,
+                    statistics: {
+                        tabSwitches: this.state.tabSwitches,
+                        copyAttempts: this.state.copyAttempts,
+                        suspiciousEvents: this.state.suspiciousEvents
+                    },
+                    events: this.state.eventLogs
+                };
+                
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `proctoring-log-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                this.addLog('info', 'Логи экспортированы в JSON');
+            }
+
+            // =====================================================
+            // STUDENT LIST (EXAMINER VIEW)
+            // =====================================================
+
+            updateStudentsList() {
+                const container = document.getElementById('studentsList');
+                
+                if (!this.state.student) {
+                    container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Нет активных студентов. Зарегистрируйте студента во вкладке "Интерфейс студента".</p>';
+                    return;
+                }
+                
+                const initials = this.state.student.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                const status = this.state.examPhase === 'exam' ? 'active' : 'completed';
+                const statusLabel = this.state.examPhase === 'exam' ? 'Сдаёт экзамен' : 'Завершил';
+                
+                container.innerHTML = `
+                    <div class="student-row">
+                        <div class="student-avatar">${initials}</div>
+                        <div class="student-info">
+                            <div class="student-name">${this.state.student.name}</div>
+                            <div class="student-email">${this.state.student.email} | ${this.state.student.examId}</div>
+                        </div>
+                        <span class="student-status ${status}">${statusLabel}</span>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize application
+        const app = new ProctoringSimulator();
+    </script>
+</body>
+</html>
