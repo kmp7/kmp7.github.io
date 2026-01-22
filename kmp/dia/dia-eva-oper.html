@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+
+<p><strong>Повод:</strong> книга Перси Бриджмена (основателя операционализма) <a target="blank" href="https://www.gutenberg.org/ebooks/70620" class="link-kmp15"> The logic of modern physics (1927)</a>  <br> <br>
+
+<div class="conversation-container">
+
+  <!-- Вопрос 1 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Мы изучаем прокторинг как модель. Будем изучать операционализм как метамодель прокторинга.  Что такое операционализм и почему преподаватель называет его <em>метамоделью</em> прокторинга?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 1 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p><strong>Операционализм</strong> — это методологический принцип, требующий определять любые абстрактные понятия через <em>конкретные измеряемые операции</em>.</p>
+      <p>Почему <strong>мета</strong>модель? Потому что операционализм — это не сама модель прокторинга, а <em>когнитивная рамка</em>, которая задаёт <strong>правила построения</strong> любых моделей прокторинга. Он отвечает на вопрос: «Как вообще можно определять и измерять такие понятия, как "списывание" или "внимание"?»</p>
+    </div>
+  </div>
+
+  <!-- Вопрос 2 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Можете показать на примере, как операционализм работает в прокторинге?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 2 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Конечно. Возьмём абстрактное понятие «подозрительное поведение». Операционализм требует превратить его в набор измеримых индикаторов:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Компонент</th>
+            <th>Пример в прокторинге</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Компонент">Операциональная дефиниция</td>
+            <td data-label="Пример">«Взгляд в сторону второго экрана более 3 раз за минуту»</td>
+          </tr>
+          <tr>
+            <td data-label="Компонент">Метрика</td>
+            <td data-label="Пример">Частота (раз/мин), длительность (сек)</td>
+          </tr>
+          <tr>
+            <td data-label="Компонент">Пороговое значение</td>
+            <td data-label="Пример">>3 раз/мин → алерт</td>
+          </tr>
+          <tr>
+            <td data-label="Компонент">Процедура валидации</td>
+            <td data-label="Пример">Человеческая верификация записи</td>
+          </tr>
+          <tr>
+            <td data-label="Компонент">Учёт ошибок</td>
+            <td data-label="Пример">Допустимый уровень ложноположительных срабатываний</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Таким образом, абстракция «подозрительное поведение» становится <em>вычислимой</em>.</p>
+    </div>
+  </div>
+
+  <!-- Вопрос 3 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Преподаватель говорит, что у операционализма есть ограничения, это «карта, а не территория». Он прав?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 3 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Да, Ева. Именно так! Ваш преподаватель в этом прав. Ключевые ограничения:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Ограничение</th>
+            <th>Суть проблемы</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Ограничение">Сужение реальности</td>
+            <td data-label="Суть">Измеряется только то, что <em>можно</em> измерить, а не то, что <em>важно</em></td>
+          </tr>
+          <tr>
+            <td data-label="Ограничение">Ригидность определений</td>
+            <td data-label="Суть">Теряются нюансы и контекст</td>
+          </tr>
+          <tr>
+            <td data-label="Ограничение">Ложные срабатывания</td>
+            <td data-label="Суть">Система «видит» нарушение там, где его нет</td>
+          </tr>
+          <tr>
+            <td data-label="Ограничение">Адаптация участников</td>
+            <td data-label="Суть">Люди учатся обходить индикаторы</td>
+          </tr>
+          <tr>
+            <td data-label="Ограничение">Корреляция ≠ причинность</td>
+            <td data-label="Суть">Индикатор может коррелировать с нарушением, но не быть его причиной</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Вопрос 4 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>«Сужение реальности до измеряемого» — это опасно для образования! Ведь самое главное в обучении как раз неизмеримо?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 4 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Абсолютно верно, Ева! Многое важное в образовании либо <strong>трудно измерить</strong>, либо <strong>принципиально не сводимо к числам</strong>:</p>
+      <ul>
+        <li><strong>Глубокое понимание</strong> — проявляется в редких, контекстуальных моментах</li>
+        <li><strong>Мотивация и любознательность</strong> — внутренние состояния, недоступные внешнему наблюдению</li>
+        <li><strong>Критическое мышление</strong> — зависит от личного опыта и культуры</li>
+        <li><strong>Творческое воображение</strong> — по определению выходит за рамки шаблонов</li>
+      </ul>
+      <p><strong>Практический вывод:</strong> метрики — это <em>сигнал</em>, а не полнота картины. Дополняйте их качественной обратной связью, портфолио, проектами, устными экзаменами.</p>
+    </div>
+  </div>
+
+  <!-- Вопрос 5 — ключевой -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>А теперь самое геобычное и непривычное. Преподаватель говорит, что <strong>измерения — это не часть объективной реальности, а тоже модель</strong>. Он сумасшедший? Разве в физической реальности нет чисел, нет измерений?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 5 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Нет, ваш преподаватель не сумасшедший — он <strong>абсолютно корректен</strong>. Это одна из ключевых идей слвременной философии науки, еще с XX века.</p>
+      <p><strong>Главный тезис:</strong> числа и измерения не существуют в природе, ожидая, пока мы их найдём. Это наши <em>когнитивно-социальные инструменты</em>, которые мы <em>накладываем</em> на мир.</p>
+    </div>
+  </div>
+
+  <!-- Вопрос 6 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Но подождите! Если я вижу три яблока — разве «три» не существует объективно?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 6 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Отличный вопрос! Давайте разберём по уровням:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Уровень анализа</th>
+            <th>Что происходит</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Уровень">Онтологический</td>
+            <td data-label="Что происходит">Мир «как он есть» не обязан иметь числовую структуру. Есть яблоки, есть их различимость — но «три» добавляет <em>наблюдатель</em></td>
+          </tr>
+          <tr>
+            <td data-label="Уровень">Эпистемологический</td>
+            <td data-label="Что происходит">Чтобы посчитать, нужны <em>критерии выделения единицы</em>: что считать «одним яблоком»? Целое? Половинка? Гнилое?</td>
+          </tr>
+          <tr>
+            <td data-label="Уровень">Семиотический</td>
+            <td data-label="Что происходит">«Три» — это <em>знак</em>, имеющий смысл только в системе счёта, языка и практики</td>
+          </tr>
+          <tr>
+            <td data-label="Уровень">Социально-практический</td>
+            <td data-label="Что происходит"><em>Что</em> и <em>как</em> мы считаем — отражает наши цели, интересы, культуру</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Яблоки существуют. Но «три» — это наша <em>модель</em> для их упорядочивания.</p>
+    </div>
+  </div>
+
+    <!-- Вопрос 7 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Получается, измерения — это <em>метамодель</em>? Рамка, через которую мы воспринимаем мир?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 7 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Да, это так! <strong>Измерение — это метамодель</strong>, потому что:</p>
+      <ol>
+        <li>Оно задаёт <em>правила</em>, по которым строятся конкретные модели (физические, экономические, образовательные)</li>
+        <li>Оно определяет, <em>что вообще может быть познано</em> в рамках научного метода</li>
+        <li>Оно формирует нашу <em>когнитивную рамку</em> — мы начинаем верить, что «реально» только измеримое</li>
+      </ol>
+      <p><strong>Опасность:</strong> если метамодель становится невидимой, мы принимаем её за саму реальность.</p>
+    </div>
+  </div>
+
+  
+
+<div class="conversation-container">
+
+  <!-- Вопрос 8 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Но тогда и слова, из которых состоит язык, тоже могут быть нашим когнитивным конструктом, моделью понимания языка?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 8 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p><strong>Именно так, Ева!</strong> Вы только что сделали важнейший шаг в лингвистическом мышлении.</p>
+      <p>«Слово» — это не природная данность, а <em>аналитический конструкт</em>, который мы накладываем на речевой поток. Это одна из базовых метамоделей лингвистики, настолько привычная, что кажется очевидной.</p>
+    </div>
+  </div>
+
+  <!-- Вопрос 9 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Подождите, но слова же реально существуют! Мы их слышим, пишем, видим пробелы между ними...</p>
+    </div>
+  </div>
+
+  <!-- Ответ 9 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>А вот здесь начинается самое интересное. Давайте проверим каждый аргумент:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Аргумент</th>
+            <th>Проблема</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Аргумент">«Мы слышим слова»</td>
+            <td data-label="Проблема">Речевой поток <em>непрерывен</em>. Между словами нет пауз — мы их <em>воспринимаем</em>, потому что уже знаем язык</td>
+          </tr>
+          <tr>
+            <td data-label="Аргумент">«Мы видим пробелы»</td>
+            <td data-label="Проблема">Пробел — изобретение. Древние тексты писались <em>scriptio continua</em> (сплошным письмом)</td>
+          </tr>
+          <tr>
+            <td data-label="Аргумент">«Слова в словаре»</td>
+            <td data-label="Проблема">Словарь — это <em>модель</em> языка, созданная лингвистами по определённым правилам</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Вопрос 10 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Scriptio continua? Можете показать пример?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 10 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Конечно! Вот как выглядел текст до изобретения пробелов:</p>
+      <p><strong>Современное письмо:</strong><br>
+      <code>Это пример текста с пробелами между словами</code></p>
+      <p><strong>Scriptio continua (до VII–VIII века):</strong><br>
+      <code>ЭТОПРИМЕРТЕКСТАСПРОБЕЛАМИМЕЖДУСЛОВАМИ</code></p>
+      <p>Пробелы между словами в европейских языках ввели ирландские монахи около VII века — для облегчения чтения латыни как <em>иностранного</em> языка. До этого читатели сами «находили» слова в потоке букв.</p>
+      <p><strong>Вывод:</strong> пробел — это <em>технология визуализации модели</em>, а не отражение «естественных» границ.</p>
+    </div>
+  </div>
+
+  <!-- Вопрос 11 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>А в других языках? Везде ли понятие «слово» работает одинаково?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 11 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Нет! И это ключевое доказательство того, что «слово» — конструкт. Сравните:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Язык/система</th>
+            <th>Особенность</th>
+            <th>Проблема с понятием «слово»</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Язык">Китайский</td>
+            <td data-label="Особенность">Нет пробелов, иероглифы</td>
+            <td data-label="Проблема">Где граница слова? 中国 — одно слово или два?</td>
+          </tr>
+          <tr>
+            <td data-label="Язык">Немецкий</td>
+            <td data-label="Особенность">Композиты</td>
+            <td data-label="Проблема">Donaudampfschifffahrt — одно «слово» из 6 корней</td>
+          </tr>
+          <tr>
+            <td data-label="Язык">Турецкий</td>
+            <td data-label="Особенность">Агглютинация</td>
+            <td data-label="Проблема">Evlerinizden («из ваших домов») — слово или предложение?</td>
+          </tr>
+          <tr>
+            <td data-label="Язык">Английский</td>
+            <td data-label="Особенность">Аналитизм</td>
+            <td data-label="Проблема">«Ice cream» — одно слово или два? А «gonna»?</td>
+          </tr>
+          <tr>
+            <td data-label="Язык">Полисинтетические языки</td>
+            <td data-label="Особенность">Инкорпорация</td>
+            <td data-label="Проблема">Одно «слово» может быть целым предложением</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Лингвисты до сих пор не имеют универсального определения слова, которое работало бы для всех языков.</p>
+    </div>
+  </div>
+
+  <!-- Вопрос 12 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Но дети же как-то учатся выделять слова? Значит, это естественно?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 12 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Дети учатся <em>сегментировать</em> речевой поток — и это <strong>когнитивный навык</strong>, приобретаемое в процессе социализации умение.</p>
+      <p><strong>Как это происходит:</strong></p>
+      <ul>
+        <li>Младенцы используют <em>статистическое обучение</em> — отслеживают, какие слоги чаще встречаются вместе</li>
+        <li>Они опираются на <em>просодические подсказки</em> (ударение, интонация)</li>
+        <li>Они учатся <em>культурной модели</em> сегментации своего языка</li>
+      </ul>
+      <p><strong>Доказательство:</strong> дети делают ошибки сегментации! Классический пример: ребёнок слышит «другой» как «другое» + «й» или «I scream» вместо «ice cream».</p>
+      <p>«Естественность» границ слов — это результат обучения, а не свойство речи.</p>
+    </div>
+  </div>
+
+  <!-- Вопрос 13 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Если слово — конструкт, какие ещё единицы анализа в лингвистике тоже конструкты?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 13 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p><strong>Все</strong> единицы лингвистического анализа — конструкты. Это инструменты, которые мы выбираем в зависимости от задачи:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Единица</th>
+            <th>Что моделирует</th>
+            <th>Почему конструкт</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Единица">Фонема</td>
+            <td data-label="Моделирует">Смыслоразличительный звук</td>
+            <td data-label="Почему конструкт">Границы фонем различны в разных языках</td>
+          </tr>
+          <tr>
+            <td data-label="Единица">Морфема</td>
+            <td data-label="Моделирует">Минимальная значимая единица</td>
+            <td data-label="Почему конструкт">Не всегда чётко выделима (см. «внять»)</td>
+          </tr>
+          <tr>
+            <td data-label="Единица">Слово</td>
+            <td data-label="Моделирует">Автономная единица</td>
+            <td data-label="Почему конструкт">Нет универсального определения</td>
+          </tr>
+          <tr>
+            <td data-label="Единица">Предложение</td>
+            <td data-label="Моделирует">Законченная мысль</td>
+            <td data-label="Почему конструкт">В устной речи границы размыты</td>
+          </tr>
+          <tr>
+            <td data-label="Единица">Текст</td>
+            <td data-label="Моделирует">Связное целое</td>
+            <td data-label="Почему конструкт">Границы зависят от жанра и культуры</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Лингвистика — это <em>набор моделей</em> для описания языка, а не «открытие» его «истинной структуры».</p>
+    </div>
+  </div>
+
+  <!-- Вопрос 14 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Это как с измерениями! Мы говорили, что единица измерения (например, метр) — конвенция, и «слово» — тоже конвенция?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 14 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p><strong>Точно!</strong> Параллель полная:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Аспект</th>
+            <th>Физика: метр</th>
+            <th>Лингвистика: слово</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Аспект">Что есть в реальности</td>
+            <td data-label="Физика">Протяжённость, расстояния</td>
+            <td data-label="Лингвистика">Речевой поток, звуки</td>
+          </tr>
+          <tr>
+            <td data-label="Аспект">Что добавляет наблюдатель</td>
+            <td data-label="Физика">Единицу измерения (метр)</td>
+            <td data-label="Лингвистика">Единицу сегментации (слово)</td>
+          </tr>
+          <tr>
+            <td data-label="Аспект">Основа</td>
+            <td data-label="Физика">Конвенция (договор)</td>
+            <td data-label="Лингвистика">Конвенция (традиция анализа)</td>
+          </tr>
+          <tr>
+            <td data-label="Аспект">Полезность</td>
+            <td data-label="Физика">Позволяет строить и проектировать</td>
+            <td data-label="Лингвистика">Позволяет описывать и обучать</td>
+          </tr>
+          <tr>
+            <td data-label="Аспект">Опасность</td>
+            <td data-label="Физика">Принять за «саму реальность»</td>
+            <td data-label="Лингвистика">Принять за «саму реальность»</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>И метр, и слово — это <strong>модели</strong>, ставшие настолько привычными, что мы забыли об их условности.</p>
+    </div>
+  </div>
+
+  <!-- Вопрос 15 -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Какой практический вывод из этого для нас, студентов-лингвистов?</p>
+    </div>
+  </div>
+
+  <!-- Ответ 8 -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p><strong>Три практических вывода:</strong></p>
+      <ol>
+        <li><strong>Осознавайте инструменты.</strong> «Слово», «предложение», «часть речи» — это не факты о языке, а <em>инструменты описания</em>. Разные теории используют разные инструменты.</li>
+        <li><strong>Выбирайте модель под задачу.</strong> Для машинного перевода удобны одни единицы (токены), для обучения грамоте — другие (слоги, слова), для поэтики — третьи (ритмические группы).</li>
+        <li><strong>Не путайте карту с территорией.</strong> Язык богаче любой модели. Когда модель не работает — меняйте модель, а не обвиняйте язык в «неправильности».</li>
+      </ol>
+      <p><strong>Главный навык лингвиста:</strong> видеть метамодели, которые другие принимают за реальность, — и выбирать подходящую модель осознанно.</p>
+    </div>
+  </div>
+
+
+<div class="conversation-container">
+
+  <!-- Заключительная реплика Евы -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Великолепно! Спасибо вам за этот умный разговор! До новой встречи!</p>
+    </div>
+  </div>
+
+  <!-- Заключительный ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+    </div>
+    <div class="message-content">
+      <p>Спасибо вам, Ева! Это был настоящий <em>метаразговор</em> — мы не просто обсуждали модели, а наблюдали, как они работают прямо в процессе нашего диалога.</p>
+      <p><strong>Краткое резюме пути, который мы прошли:</strong></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Шаг</th>
+            <th>Открытие</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Шаг">1</td>
+            <td data-label="Открытие">Прокторинг — модель, построенная по правилам операционализма</td>
+          </tr>
+          <tr>
+            <td data-label="Шаг">2</td>
+            <td data-label="Открытие">Операционализм — метамодель (когнитивная рамка)</td>
+          </tr>
+          <tr>
+            <td data-label="Шаг">3</td>
+            <td data-label="Открытие">Измерения и числа — тоже модели, а не «сама реальность»</td>
+          </tr>
+          <tr>
+            <td data-label="Шаг">4</td>
+            <td data-label="Открытие">Слово — конструкт, единица сегментации речевого потока</td>
+          </tr>
+          <tr>
+            <td data-label="Шаг">5</td>
+            <td data-label="Открытие">Все лингвистические единицы — инструменты, не факты</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Главный вывод:</strong> критическое мышление — это способность видеть метамодели там, где другие видят «очевидную реальность».</p>
+      <p>До новой встречи, Ева! Буду рад продолжить исследование моделей — в языке, в науке, в технологиях.<p>
+    </div>
+  </div>
+
+</div>
+
+
+
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
