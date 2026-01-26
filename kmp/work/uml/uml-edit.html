@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --primary: #4a6fa5;
+            --secondary: #6b8cae;
+            --accent: #e07a5f;
+            --success: #81b29a;
+            --warning: #f2cc8f;
+            --danger: #e63946;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #2d3748;
+            --text-light: #718096;
+            --border: #e2e8f0;
+            --shadow: 0 4px 20px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 40px rgba(0,0,0,0.15);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 20px 30px;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+            min-height: calc(100vh - 100px);
+        }
+
+        /* Panels */
+        .panel {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-content {
+            padding: 20px;
+        }
+
+        /* Left Panel - Toolbar */
+        .toolbar-section {
+            margin-bottom: 25px;
+        }
+
+        .toolbar-section h3 {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(74, 111, 165, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #6a9e87);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(129, 178, 154, 0.4);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning), #e0b87a);
+            color: var(--text);
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(242, 204, 143, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #c1121f);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(230, 57, 70, 0.4);
+        }
+
+        .btn-outline {
+            background: white;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-icon {
+            font-size: 1.2rem;
+        }
+
+        /* Selection info */
+        .selection-info {
+            background: #f0f7ff;
+            border: 2px dashed var(--primary);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            font-size: 0.85rem;
+            color: var(--primary);
+        }
+
+        .selection-info .count {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        /* Center Panel - Canvas */
+        .canvas-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .canvas-container {
+            flex: 1;
+            background: white;
+            background-image: 
+                radial-gradient(circle, #ddd 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-radius: 0 0 var(--radius) var(--radius);
+            min-height: 500px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #umlCanvas {
+            width: 100%;
+            height: 100%;
+            min-height: 500px;
+        }
+
+        /* UML Class Element */
+        .uml-class {
+            cursor: move;
+            user-select: none;
+        }
+
+        .uml-class:hover .class-border {
+            stroke: var(--accent);
+            stroke-width: 3;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+        }
+
+        .uml-class.selected .class-border {
+            stroke: var(--accent);
+            stroke-width: 3;
+            stroke-dasharray: 8 4;
+            animation: dash 0.5s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -12;
+            }
+        }
+
+        .class-header {
+            fill: var(--primary);
+        }
+
+        .class-body {
+            fill: #f8fafc;
+        }
+
+        .class-name {
+            font-weight: bold;
+            font-size: 14px;
+            fill: white;
+        }
+
+        .class-section-title {
+            font-size: 10px;
+            fill: var(--text-light);
+            font-style: italic;
+        }
+
+        .class-item {
+            font-size: 11px;
+            fill: var(--text);
+        }
+
+        /* Connection Arrow */
+        .connection-line {
+            stroke: var(--text);
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+
+        .connection-line:hover {
+            stroke: var(--accent);
+            stroke-width: 3;
+        }
+
+        /* Right Panel - Reference */
+        .reference-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .reference-table th,
+        .reference-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .reference-table th {
+            background: linear-gradient(135deg, #f0f7ff, #e8f4f8);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .reference-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .reference-table .uml-col {
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .reference-table .ling-col {
+            color: var(--success);
+        }
+
+        .analogy-icon {
+            display: inline-block;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Task Section */
+        .task-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, #fff9e6, #fff3cd);
+            border-radius: var(--radius-sm);
+            border-left: 4px solid var(--warning);
+        }
+
+        .task-section h4 {
+            color: #856404;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .task-section p {
+            color: #664d03;
+            font-size: 0.9rem;
+        }
+
+        /* Tips */
+        .tips-section {
+            margin-top: 20px;
+        }
+
+        .tip-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .tip-icon {
+            font-size: 1.1rem;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            width: 90%;
+            max-width: 450px;
+            transform: translateY(-20px);
+            transition: var(--transition);
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 20px;
+            border-radius: var(--radius) var(--radius) 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.2rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            opacity: 1;
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .form-group label .required {
+            color: var(--danger);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.1);
+        }
+
+        .form-group .hint {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 5px;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-footer {
+            padding: 15px 25px 25px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-footer .btn {
+            width: auto;
+            padding: 10px 25px;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--text);
+            color: white;
+            padding: 15px 30px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            z-index: 1001;
+            opacity: 0;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            background: linear-gradient(135deg, var(--success), #6a9e87);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, var(--danger), #c1121f);
+        }
+
+        .toast.info {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 15px;
+            padding: 12px 20px;
+            background: #f8fafc;
+            border-top: 1px solid var(--border);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        /* Context Menu */
+        .context-menu {
+            position: fixed;
+            background: white;
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            min-width: 160px;
+            display: none;
+        }
+
+        .context-menu.show {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .context-menu-item:hover {
+            background: #f0f7ff;
+            color: var(--primary);
+        }
+
+        .context-menu-item.danger:hover {
+            background: #fee;
+            color: var(--danger);
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 5px 0;
+        }
+
+        /* Empty State */
+        .empty-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-light);
+            pointer-events: none;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 250px 1fr;
+            }
+            
+            .right-panel {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .left-panel {
+                order: 2;
+            }
+            
+            .canvas-panel {
+                order: 1;
+            }
+        }
+
+        /* Delete button on classes */
+        .delete-btn {
+            cursor: pointer;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .uml-class:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover circle {
+            fill: var(--danger);
+        }
+		
+		.footer {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>Редактор UML</h1>
+        <p>Создавайте диаграммы классов, проводя аналогии между UML и языковыми структурами</p>
+    </header>
+
+    <main class="main-container">
+        <!-- Left Panel - Toolbar -->
+        <aside class="panel left-panel">
+            <div class="panel-header">
+                <span></span> Инструменты
+            </div>
+            <div class="panel-content">
+                <div class="toolbar-section">
+                    <h3>Элементы</h3>
+                    <button class="btn btn-primary" id="btnAddClass">
+                        <span class="btn-icon"></span>
+                        Добавить класс
+                    </button>
+                    <button class="btn btn-success" id="btnConnect" disabled>
+                        <span class="btn-icon"></span>
+                        Связать элементы
+                    </button>
+                </div>
+
+                <div class="toolbar-section">
+                    <h3>Выделение</h3>
+                    <div class="selection-info">
+                        <p>Выбрано классов: <span class="count" id="selectedCount">0</span></p>
+                        <p style="font-size: 0.8rem; margin-top: 5px;">
+                            Ctrl+клик для множественного выбора
+                        </p>
+                    </div>
+                    <button class="btn btn-outline" id="btnClearSelection" style="margin-top: 10px;">
+                        <span class="btn-icon"></span>
+                        Снять выделение
+                    </button>
+                </div>
+
+                <div class="toolbar-section">
+                    <h3>Управление</h3>
+                    <button class="btn btn-warning" id="btnClear">
+                        <span class="btn-icon"></span>
+                        Очистить холст
+                    </button>
+                    <button class="btn btn-outline" id="btnExport">
+                        <span class="btn-icon"></span>
+                        Сохранить как SVG
+                    </button>
+                </div>
+
+                <div class="toolbar-section">
+                    <h3>Проверка задания</h3>
+                    <button class="btn btn-success" id="btnCheck">
+                        <span class="btn-icon"></span>
+                        Проверить модель
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Panel - Canvas -->
+        <section class="panel canvas-panel">
+            <div class="panel-header">
+                <span></span> Холст диаграммы
+            </div>
+            <div class="canvas-container" id="canvasContainer">
+                <svg id="umlCanvas" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                                refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#2d3748"/>
+                        </marker>
+                        <marker id="arrowhead-hover" markerWidth="10" markerHeight="7" 
+                                refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#e07a5f"/>
+                        </marker>
+                    </defs>
+                    <!-- Elements will be added here -->
+                </svg>
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-state-icon"></div>
+                    <h3>Холст пуст</h3>
+                    <p>Нажмите «Добавить класс», чтобы начать</p>
+                </div>
+            </div>
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <span></span>
+                    Классов: <span class="stat-value" id="classCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span></span>
+                    Связей: <span class="stat-value" id="connectionCount">0</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel - Reference -->
+        <aside class="panel right-panel">
+            <div class="panel-header">
+                <span></span> Справочник
+            </div>
+            <div class="panel-content">
+                <table class="reference-table">
+                    <thead>
+                        <tr>
+                            <th><span class="analogy-icon"></span> UML</th>
+                            <th><span class="analogy-icon"></span> Лингвистика</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="uml-col">Класс</td>
+                            <td class="ling-col">Лексема / грамм. категория</td>
+                        </tr>
+                        <tr>
+                            <td class="uml-col">Атрибут</td>
+                            <td class="ling-col">Семантический признак</td>
+                        </tr>
+                        <tr>
+                            <td class="uml-col">Метод</td>
+                            <td class="ling-col">Речевой акт</td>
+                        </tr>
+                        <tr>
+                            <td class="uml-col">Связь</td>
+                            <td class="ling-col">Синтакс. зависимость</td>
+                        </tr>
+                        <tr>
+                            <td class="uml-col">Наследование</td>
+                            <td class="ling-col">Гипоним — гипероним</td>
+                        </tr>
+                        <tr>
+                            <td class="uml-col">Ассоциация</td>
+                            <td class="ling-col">Валентность глагола</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="task-section">
+                    <h4>Здания</h4>
+                    <p>Создайте 3 разных модели модели урока (с добавлением классов<strong>«Фамилия»</strong> и <strong>«Ученик»</strong>, описанием их атрибутов (напр., <em>имя, предмет</em>) и методы (напр., <em>объяснять(), спрашивать()</em>), связыванием.</p>
+                </div>
+
+                <div class="tips-section">
+                    <h4 style="margin-bottom: 12px; color: var(--text-light); font-size: 0.9rem;">Подсказки</h4>
+                    <div class="tip-item">
+                        <span class="tip-icon"></span>
+                        <span>Перетаскивайте классы, удерживая левую кнопку мыши</span>
+                    </div>
+                    <div class="tip-item">
+                        <span class="tip-icon"></span>
+                        <span>Ctrl+клик — выбрать несколько классов для связывания</span>
+                    </div>
+                    <div class="tip-item">
+                        <span class="tip-icon"></span>
+                        <span>Выберите 2 класса, затем нажмите «Связать»</span>
+                    </div>
+                    <div class="tip-item">
+                        <span class="tip-icon"></span>
+                        <span>Правый клик по классу — контекстное меню</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Modal for adding class -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Новый класс</h3>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="classForm">
+                    <div class="form-group">
+                        <label>Имя класса <span class="required">*</span></label>
+                        <input type="text" id="className" placeholder="Например: Учитель" required>
+                        <p class="hint">Имя в стиле CamelCase (Учитель, ИмяСобственное)</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Атрибуты</label>
+                        <textarea id="classAttributes" placeholder="имя, предмет, стаж"></textarea>
+                        <p class="hint">Через запятую — семантические признаки сущности</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Методы</label>
+                        <textarea id="classMethods" placeholder="объяснять(), спрашивать()"></textarea>
+                        <p class="hint">Через запятую — речевые акты / действия</p>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="btnCancel">Отмена</button>
+                <button class="btn btn-primary" id="btnSaveClass">
+                    <span class="btn-icon">✓</span> Создать
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" id="ctxEdit">
+            <span></span> Редактировать
+        </div>
+        <div class="context-menu-item" id="ctxDuplicate">
+            <span></span> Дублировать
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item danger" id="ctxDelete">
+            <span></span> Удалить
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <span class="toast-icon">✓</span>
+        <span class="toast-message">Сообщение</span>
+    </div>
+	
+	
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+
+    <script>
+        // ============ STATE ============
+        const state = {
+            classes: [],
+            connections: [],
+            selectedClasses: [],
+            nextId: 1,
+            draggedElement: null,
+            dragOffset: { x: 0, y: 0 },
+            editingClass: null
+        };
+
+        // ============ DOM ELEMENTS ============
+        const canvas = document.getElementById('umlCanvas');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const classForm = document.getElementById('classForm');
+        const contextMenu = document.getElementById('contextMenu');
+        const emptyState = document.getElementById('emptyState');
+        const toast = document.getElementById('toast');
+
+        // ============ UTILITIES ============
+        function showToast(message, type = 'info') {
+            toast.className = `toast ${type} show`;
+            toast.querySelector('.toast-message').textContent = message;
+            toast.querySelector('.toast-icon').textContent = 
+                type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function updateStats() {
+            document.getElementById('classCount').textContent = state.classes.length;
+            document.getElementById('connectionCount').textContent = state.connections.length;
+            document.getElementById('selectedCount').textContent = state.selectedClasses.length;
+            
+            // Toggle connect button
+            document.getElementById('btnConnect').disabled = state.selectedClasses.length !== 2;
+            
+            // Toggle empty state
+            emptyState.style.display = state.classes.length === 0 ? 'block' : 'none';
+        }
+
+        function getCanvasPoint(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        // ============ CLASS MANAGEMENT ============
+        function createClassElement(classData) {
+            const { id, name, attributes, methods, x, y } = classData;
+            
+            const attrList = attributes.filter(a => a.trim());
+            const methodList = methods.filter(m => m.trim());
+            
+            const headerHeight = 30;
+            const attrHeight = Math.max(attrList.length * 18 + 20, 40);
+            const methodHeight = Math.max(methodList.length * 18 + 20, 40);
+            const totalHeight = headerHeight + attrHeight + methodHeight;
+            const width = Math.max(150, name.length * 10 + 40);
+            
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('class', 'uml-class');
+            g.setAttribute('data-id', id);
+            g.setAttribute('transform', `translate(${x}, ${y})`);
+            
+            // Store dimensions
+            classData.width = width;
+            classData.height = totalHeight;
+            
+            g.innerHTML = `
+                <!-- Main border -->
+                <rect class="class-border" x="0" y="0" width="${width}" height="${totalHeight}" 
+                      fill="white" stroke="#4a6fa5" stroke-width="2" rx="4"/>
+                
+                <!-- Header -->
+                <rect class="class-header" x="0" y="0" width="${width}" height="${headerHeight}" 
+                      fill="#4a6fa5" rx="4"/>
+                <rect x="0" y="${headerHeight - 4}" width="${width}" height="4" fill="#4a6fa5"/>
+                <text class="class-name" x="${width/2}" y="20" text-anchor="middle">${name}</text>
+                
+                <!-- Attributes section -->
+                <line x1="0" y1="${headerHeight}" x2="${width}" y2="${headerHeight}" stroke="#4a6fa5"/>
+                <text class="class-section-title" x="5" y="${headerHeight + 14}">атрибуты:</text>
+                ${attrList.map((attr, i) => 
+                    `<text class="class-item" x="10" y="${headerHeight + 28 + i * 18}">• ${attr.trim()}</text>`
+                ).join('')}
+                
+                <!-- Methods section -->
+                <line x1="0" y1="${headerHeight + attrHeight}" x2="${width}" y2="${headerHeight + attrHeight}" stroke="#4a6fa5"/>
+                <text class="class-section-title" x="5" y="${headerHeight + attrHeight + 14}">методы:</text>
+                ${methodList.map((method, i) => {
+                    const m = method.trim();
+                    const formatted = m.includes('(') ? m : m + '()';
+                    return `<text class="class-item" x="10" y="${headerHeight + attrHeight + 28 + i * 18}">• ${formatted}</text>`;
+                }).join('')}
+                
+                <!-- Delete button -->
+                <g class="delete-btn" transform="translate(${width - 12}, -8)">
+                    <circle cx="0" cy="0" r="10" fill="#f0f0f0" stroke="#ccc"/>
+                    <text x="0" y="4" text-anchor="middle" font-size="12" fill="#666">×</text>
+                </g>
+            `;
+            
+            return g;
+        }
+
+        function addClass(name, attributes, methods) {
+            const canvasRect = canvasContainer.getBoundingClientRect();
+            const classData = {
+                id: state.nextId++,
+                name: name,
+                attributes: attributes,
+                methods: methods,
+                x: 50 + (state.classes.length % 4) * 180,
+                y: 50 + Math.floor(state.classes.length / 4) * 180,
+                width: 150,
+                height: 100
+            };
+            
+            state.classes.push(classData);
+            const element = createClassElement(classData);
+            canvas.appendChild(element);
+            
+            setupClassEvents(element);
+            updateStats();
+            
+            return classData;
+        }
+
+        function deleteClass(id) {
+            // Remove from state
+            state.classes = state.classes.filter(c => c.id !== id);
+            state.selectedClasses = state.selectedClasses.filter(sid => sid !== id);
+            
+            // Remove connections
+            state.connections = state.connections.filter(conn => 
+                conn.from !== id && conn.to !== id
+            );
+            
+            // Remove from DOM
+            const element = canvas.querySelector(`[data-id="${id}"]`);
+            if (element) element.remove();
+            
+            // Re-render connections
+            renderConnections();
+            updateStats();
+            
+            showToast('Класс удалён', 'info');
+        }
+
+        function updateClass(id, name, attributes, methods) {
+            const classData = state.classes.find(c => c.id === id);
+            if (!classData) return;
+            
+            classData.name = name;
+            classData.attributes = attributes;
+            classData.methods = methods;
+            
+            // Remove old element
+            const oldElement = canvas.querySelector(`[data-id="${id}"]`);
+            if (oldElement) oldElement.remove();
+            
+            // Create new element
+            const newElement = createClassElement(classData);
+            canvas.appendChild(newElement);
+            setupClassEvents(newElement);
+            
+            // Update connections
+            renderConnections();
+            
+            showToast('Класс обновлён', 'success');
+        }
+
+        // ============ CONNECTION MANAGEMENT ============
+        function addConnection(fromId, toId) {
+            // Check if connection already exists
+            const exists = state.connections.some(c => 
+                (c.from === fromId && c.to === toId) ||
+                (c.from === toId && c.to === fromId)
+            );
+            
+            if (exists) {
+                showToast('Связь уже существует', 'error');
+                return;
+            }
+            
+            state.connections.push({ from: fromId, to: toId });
+            renderConnections();
+            updateStats();
+            
+            showToast('Связь создана', 'success');
+        }
+
+        function renderConnections() {
+            // Remove existing connection lines
+            canvas.querySelectorAll('.connection-line').forEach(el => el.remove());
+            
+            state.connections.forEach(conn => {
+                const fromClass = state.classes.find(c => c.id === conn.from);
+                const toClass = state.classes.find(c => c.id === conn.to);
+                
+                if (!fromClass || !toClass) return;
+                
+                // Calculate connection points
+                const fromCenter = {
+                    x: fromClass.x + fromClass.width / 2,
+                    y: fromClass.y + fromClass.height / 2
+                };
+                const toCenter = {
+                    x: toClass.x + toClass.width / 2,
+                    y: toClass.y + toClass.height / 2
+                };
+                
+                // Find edge intersection points
+                const fromPoint = getEdgePoint(fromClass, toCenter);
+                const toPoint = getEdgePoint(toClass, fromCenter);
+                
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('class', 'connection-line');
+                line.setAttribute('x1', fromPoint.x);
+                line.setAttribute('y1', fromPoint.y);
+                line.setAttribute('x2', toPoint.x);
+                line.setAttribute('y2', toPoint.y);
+                line.setAttribute('data-from', conn.from);
+                line.setAttribute('data-to', conn.to);
+                
+                // Insert before class elements so they appear below
+                canvas.insertBefore(line, canvas.querySelector('.uml-class'));
+            });
+        }
+
+        function getEdgePoint(classData, targetPoint) {
+            const cx = classData.x + classData.width / 2;
+            const cy = classData.y + classData.height / 2;
+            const w = classData.width / 2;
+            const h = classData.height / 2;
+            
+            const dx = targetPoint.x - cx;
+            const dy = targetPoint.y - cy;
+            
+            // Calculate intersection with rectangle edges
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+            
+            let scale;
+            if (absDx / w > absDy / h) {
+                scale = w / absDx;
+            } else {
+                scale = h / absDy;
+            }
+            
+            return {
+                x: cx + dx * scale,
+                y: cy + dy * scale
+            };
+        }
+
+        // ============ EVENT HANDLERS ============
+        function setupClassEvents(element) {
+            const id = parseInt(element.getAttribute('data-id'));
+            
+            // Drag handling
+            element.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.delete-btn')) {
+                    e.stopPropagation();
+                    deleteClass(id);
+                    return;
+                }
+                
+                if (e.button === 2) return; // Right click
+                
+                // Handle selection
+                if (e.ctrlKey || e.metaKey) {
+                    toggleSelection(id);
+                } else {
+                    // Start dragging
+                    const classData = state.classes.find(c => c.id === id);
+                    if (!classData) return;
+                    
+                    const point = getCanvasPoint(e);
+                    state.draggedElement = element;
+                    state.dragOffset = {
+                        x: point.x - classData.x,
+                        y: point.y - classData.y
+                    };
+                    
+                    element.style.cursor = 'grabbing';
+                }
+            });
+            
+            // Right-click context menu
+            element.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                state.editingClass = id;
+                showContextMenu(e.clientX, e.clientY);
+            });
+        }
+
+        function toggleSelection(id) {
+            const index = state.selectedClasses.indexOf(id);
+            const element = canvas.querySelector(`[data-id="${id}"]`);
+            
+            if (index === -1) {
+                state.selectedClasses.push(id);
+                element.classList.add('selected');
+            } else {
+                state.selectedClasses.splice(index, 1);
+                element.classList.remove('selected');
+            }
+            
+            updateStats();
+        }
+
+        function clearSelection() {
+            state.selectedClasses.forEach(id => {
+                const element = canvas.querySelector(`[data-id="${id}"]`);
+                if (element) element.classList.remove('selected');
+            });
+            state.selectedClasses = [];
+            updateStats();
+        }
+
+        // Mouse move for dragging
+        document.addEventListener('mousemove', (e) => {
+            if (!state.draggedElement) return;
+            
+            const point = getCanvasPoint(e);
+            const id = parseInt(state.draggedElement.getAttribute('data-id'));
+            const classData = state.classes.find(c => c.id === id);
+            
+            if (!classData) return;
+            
+            // Update position
+            classData.x = Math.max(0, point.x - state.dragOffset.x);
+            classData.y = Math.max(0, point.y - state.dragOffset.y);
+            
+            state.draggedElement.setAttribute('transform', 
+                `translate(${classData.x}, ${classData.y})`);
+            
+            renderConnections();
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (state.draggedElement) {
+                state.draggedElement.style.cursor = 'move';
+                state.draggedElement = null;
+            }
+        });
+
+        // Hide context menu on click elsewhere
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.context-menu')) {
+                contextMenu.classList.remove('show');
+            }
+        });
+
+        function showContextMenu(x, y) {
+            contextMenu.style.left = x + 'px';
+            contextMenu.style.top = y + 'px';
+            contextMenu.classList.add('show');
+        }
+
+        // ============ MODAL HANDLING ============
+        function openModal(editId = null) {
+            state.editingClass = editId;
+            
+            if (editId) {
+                const classData = state.classes.find(c => c.id === editId);
+                if (classData) {
+                    document.getElementById('className').value = classData.name;
+                    document.getElementById('classAttributes').value = classData.attributes.join(', ');
+                    document.getElementById('classMethods').value = classData.methods.join(', ');
+                    document.querySelector('.modal-header h3').textContent = '✏️ Редактировать класс';
+                    document.getElementById('btnSaveClass').innerHTML = '<span class="btn-icon">✓</span> Сохранить';
+                }
+            } else {
+                classForm.reset();
+                document.querySelector('.modal-header h3').textContent = '➕ Новый класс';
+                document.getElementById('btnSaveClass').innerHTML = '<span class="btn-icon">✓</span> Создать';
+            }
+            
+            modalOverlay.classList.add('active');
+            document.getElementById('className').focus();
+        }
+
+        function closeModal() {
+            modalOverlay.classList.remove('active');
+            state.editingClass = null;
+        }
+
+        function saveClass() {
+            const name = document.getElementById('className').value.trim();
+            const attributes = document.getElementById('classAttributes').value
+                .split(',')
+                .map(a => a.trim())
+                .filter(a => a);
+            const methods = document.getElementById('classMethods').value
+                .split(',')
+                .map(m => m.trim())
+                .filter(m => m);
+            
+            if (!name) {
+                showToast('Введите имя класса', 'error');
+                return;
+            }
+            
+            if (state.editingClass) {
+                updateClass(state.editingClass, name, attributes, methods);
+            } else {
+                addClass(name, attributes, methods);
+                showToast(`Класс "${name}" создан`, 'success');
+            }
+            
+            closeModal();
+        }
+
+        // ============ BUTTON HANDLERS ============
+        document.getElementById('btnAddClass').addEventListener('click', () => {
+            openModal();
+        });
+
+        document.getElementById('btnConnect').addEventListener('click', () => {
+            if (state.selectedClasses.length === 2) {
+                addConnection(state.selectedClasses[0], state.selectedClasses[1]);
+                clearSelection();
+            }
+        });
+
+        document.getElementById('btnClear').addEventListener('click', () => {
+            if (state.classes.length === 0) return;
+            
+            if (confirm('Очистить холст? Все элементы будут удалены.')) {
+                state.classes = [];
+                state.connections = [];
+                state.selectedClasses = [];
+                canvas.querySelectorAll('.uml-class, .connection-line').forEach(el => el.remove());
+                updateStats();
+                showToast('Холст очищен', 'info');
+            }
+        });
+
+        document.getElementById('btnClearSelection').addEventListener('click', clearSelection);
+
+        document.getElementById('btnCheck').addEventListener('click', () => {
+            if (state.classes.length >= 2 && state.connections.length >= 1) {
+                showToast('Отлично! Вы смоделировали коммуникативную структуру урока!', 'success');
+            } else {
+                let message = 'Для завершения задания нужно: ';
+                const missing = [];
+                if (state.classes.length < 2) missing.push(`ещё ${2 - state.classes.length} класс(ов)`);
+                if (state.connections.length < 1) missing.push('хотя бы 1 связь');
+                showToast(message + missing.join(' и '), 'error');
+            }
+        });
+
+        document.getElementById('btnExport').addEventListener('click', () => {
+            if (state.classes.length === 0) {
+                showToast('Нечего экспортировать', 'error');
+                return;
+            }
+            
+            // Clone SVG
+            const svgClone = canvas.cloneNode(true);
+            
+            // Set proper dimensions
+            let maxX = 0, maxY = 0;
+            state.classes.forEach(c => {
+                maxX = Math.max(maxX, c.x + c.width + 20);
+                maxY = Math.max(maxY, c.y + c.height + 20);
+            });
+            
+            svgClone.setAttribute('width', maxX);
+            svgClone.setAttribute('height', maxY);
+            svgClone.setAttribute('viewBox', `0 0 ${maxX} ${maxY}`);
+            
+            // Add white background
+            const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bg.setAttribute('width', '100%');
+            bg.setAttribute('height', '100%');
+            bg.setAttribute('fill', 'white');
+            svgClone.insertBefore(bg, svgClone.firstChild);
+            
+            // Serialize and download
+            const serializer = new XMLSerializer();
+            const svgString = serializer.serializeToString(svgClone);
+            const blob = new Blob([svgString], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'uml-diagram.svg';
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            showToast('SVG сохранён', 'success');
+        });
+
+        // Modal buttons
+        document.getElementById('modalClose').addEventListener('click', closeModal);
+        document.getElementById('btnCancel').addEventListener('click', closeModal);
+        document.getElementById('btnSaveClass').addEventListener('click', saveClass);
+
+        // Form submit
+        classForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveClass();
+        });
+
+        // Escape to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                contextMenu.classList.remove('show');
+            }
+        });
+
+        // Context menu actions
+        document.getElementById('ctxEdit').addEventListener('click', () => {
+            if (state.editingClass) {
+                openModal(state.editingClass);
+            }
+            contextMenu.classList.remove('show');
+        });
+
+        document.getElementById('ctxDuplicate').addEventListener('click', () => {
+            if (state.editingClass) {
+                const original = state.classes.find(c => c.id === state.editingClass);
+                if (original) {
+                    const classData = {
+                        id: state.nextId++,
+                        name: original.name + '_копия',
+                        attributes: [...original.attributes],
+                        methods: [...original.methods],
+                        x: original.x + 30,
+                        y: original.y + 30,
+                        width: original.width,
+                        height: original.height
+                    };
+                    
+                    state.classes.push(classData);
+                    const element = createClassElement(classData);
+                    canvas.appendChild(element);
+                    setupClassEvents(element);
+                    updateStats();
+                    
+                    showToast('Класс дублирован', 'success');
+                }
+            }
+            contextMenu.classList.remove('show');
+        });
+
+        document.getElementById('ctxDelete').addEventListener('click', () => {
+            if (state.editingClass) {
+                deleteClass(state.editingClass);
+            }
+            contextMenu.classList.remove('show');
+        });
+
+        // ============ INITIALIZATION ============
+        function init() {
+            updateStats();
+            
+            // Add sample classes for demo (optional)
+            // Uncomment to show example on load:
+            /*
+            addClass('Учитель', ['имя', 'предмет', 'стаж'], ['объяснять', 'спрашивать', 'оценивать']);
+            addClass('Ученик', ['имя', 'класс', 'уровень'], ['отвечать', 'задавать_вопрос', 'выполнять_задание']);
+            */
+        }
+
+        init();
+    </script>
+</body>
+</html>
