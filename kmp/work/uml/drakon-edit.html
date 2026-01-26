@@ -1,0 +1,2093 @@
+.<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #1a252f;
+            --panel-bg: #f8f9fa;
+            --border: #dee2e6;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Ubuntu', sans-serif;
+        min-height: 100vh;
+            color: var(--primary);
+        }
+
+        /* Шапка приложения */
+        .app-header {
+            background: var(--dark);
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+        }
+
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .app-title h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .app-title .subtitle {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            border-left: 1px solid rgba(255,255,255,0.3);
+            padding-left: 12px;
+        }
+
+        .logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--secondary), var(--success));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #219a52;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Основной контейнер */
+        .main-container {
+            display: grid;
+            grid-template-columns: 260px 1fr 300px;
+            height: calc(100vh - 60px);
+            gap: 0;
+        }
+
+        /* Панели */
+        .panel {
+            background: var(--panel-bg);
+            overflow-y: auto;
+        }
+
+        .panel-header {
+            background: var(--primary);
+            color: white;
+            padding: 14px 16px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .panel-content {
+            padding: 16px;
+        }
+
+        /* Левая панель - Инструменты */
+        .tools-panel {
+            border-right: 1px solid var(--border);
+        }
+
+        .tool-section {
+            margin-bottom: 20px;
+        }
+
+        .tool-section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .tool-btn {
+            width: 100%;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        .tool-btn:hover {
+            border-color: var(--secondary);
+            background: #e8f4fc;
+            transform: translateX(4px);
+        }
+
+        .tool-btn.active {
+            border-color: var(--secondary);
+            background: var(--secondary);
+            color: white;
+        }
+
+        .tool-btn.active .tool-icon {
+            background: white;
+            color: var(--secondary);
+        }
+
+        .tool-icon {
+            width: 36px;
+            height: 28px;
+            background: var(--light);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .tool-icon.icon-start {
+            border-radius: 14px;
+            background: var(--success);
+            color: white;
+        }
+
+        .tool-icon.icon-end {
+            border-radius: 14px;
+            background: var(--accent);
+            color: white;
+        }
+
+        .tool-icon.icon-action {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .tool-icon.icon-question {
+            background: var(--warning);
+            color: white;
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            width: 32px;
+            height: 32px;
+        }
+
+        .tool-icon.icon-input {
+            background: #9b59b6;
+            color: white;
+            transform: skewX(-10deg);
+        }
+
+        .tool-icon.icon-output {
+            background: #1abc9c;
+            color: white;
+            transform: skewX(10deg);
+        }
+
+        .tool-icon.icon-comment {
+            background: #95a5a6;
+            color: white;
+            border-left: 3px solid var(--primary);
+        }
+
+        .tool-icon.icon-insert {
+            background: #e67e22;
+            color: white;
+            border-left: 3px double white;
+            border-right: 3px double white;
+        }
+
+        .tool-info {
+            flex: 1;
+        }
+
+        .tool-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+
+        .tool-desc {
+            font-size: 0.75rem;
+            color: #7f8c8d;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Центральная область - Холст */
+        .canvas-area {
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .canvas-toolbar {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .canvas-toolbar > * {
+            pointer-events: all;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 4px;
+            background: white;
+            padding: 4px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--light);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .zoom-btn:hover {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .zoom-level {
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--primary);
+        }
+
+        .canvas-info {
+            background: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            font-size: 0.85rem;
+            color: var(--primary);
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background: 
+                linear-gradient(90deg, #f0f0f0 1px, transparent 1px),
+                linear-gradient(#f0f0f0 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: -1px -1px;
+        }
+
+        #main-canvas {
+            min-width: 2000px;
+            min-height: 1500px;
+            cursor: crosshair;
+        }
+
+        /* Элементы ДРАКОН на холсте */
+        .drakon-element {
+            cursor: move;
+            user-select: none;
+        }
+
+        .drakon-element:hover .element-shape {
+            filter: brightness(1.05);
+        }
+
+        .drakon-element.selected .element-shape {
+            stroke: var(--secondary);
+            stroke-width: 3;
+            filter: drop-shadow(0 0 8px rgba(52, 152, 219, 0.5));
+        }
+
+        .element-text {
+            pointer-events: none;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 13px;
+            fill: var(--primary);
+        }
+
+        .connection-line {
+            stroke: var(--primary);
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+
+        .connection-line:hover {
+            stroke: var(--accent);
+            stroke-width: 3;
+        }
+
+        .connection-label {
+            font-size: 11px;
+            fill: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Правая панель - Справка */
+        .help-panel {
+            border-left: 1px solid var(--border);
+        }
+
+        .help-section {
+            margin-bottom: 24px;
+        }
+
+        .help-section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--secondary);
+        }
+
+        .help-text {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .help-list {
+            list-style: none;
+            font-size: 0.85rem;
+        }
+
+        .help-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .help-list li:last-child {
+            border-bottom: none;
+        }
+
+        .help-key {
+            background: var(--light);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        .task-box {
+            background: linear-gradient(135deg, #e8f4fc, #f0e6fa);
+            border: 2px solid var(--secondary);
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .task-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .task-badge {
+            background: var(--secondary);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+
+        .task-description {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .task-steps {
+            margin-top: 12px;
+            padding-left: 20px;
+        }
+
+        .task-steps li {
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+            color: #555;
+        }
+
+        .linguistic-note {
+            background: #fff3cd;
+            border-left: 4px solid var(--warning);
+            padding: 12px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 16px;
+        }
+
+        .linguistic-note-title {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #856404;
+            margin-bottom: 6px;
+        }
+
+        .linguistic-note-text {
+            font-size: 0.8rem;
+            color: #856404;
+            line-height: 1.5;
+        }
+
+        /* Модальное окно */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            width: 400px;
+            max-width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--accent);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--secondary);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* Контекстное меню */
+        .context-menu {
+            position: fixed;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-width: 180px;
+            z-index: 1000;
+            display: none;
+            overflow: hidden;
+        }
+
+        .context-menu.active {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            transition: background 0.15s;
+        }
+
+        .context-menu-item:hover {
+            background: var(--light);
+        }
+
+        .context-menu-item.danger {
+            color: var(--accent);
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 4px 0;
+        }
+
+        /* Статусная строка */
+        .status-bar {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        /* Анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .drakon-element {
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* Режим связывания */
+        .canvas-area.connecting-mode {
+            cursor: crosshair;
+        }
+
+        .canvas-area.connecting-mode #main-canvas {
+            cursor: crosshair;
+        }
+
+        .connection-preview {
+            stroke: var(--secondary);
+            stroke-width: 2;
+            stroke-dasharray: 5,5;
+            fill: none;
+            pointer-events: none;
+        }
+
+        /* Подсказки */
+        .tooltip {
+            position: fixed;
+            background: var(--dark);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .tooltip.active {
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 220px 1fr 260px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .main-container {
+                grid-template-columns: 200px 1fr;
+            }
+            .help-panel {
+                display: none;
+            }
+        }
+		.footer {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Шапка -->
+    <header class="app-header">
+        <div class="app-title">
+        <h1>Редактор ДРАКОН</h1>
+            <span class="subtitle">Визуальное алгоритмическое моделирование</span>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-outline" onclick="showHelp()">
+                <span></span> Справка
+            </button>
+            <button class="btn btn-success" onclick="exportSVG()">
+                <span></span> Экспорт SVG
+            </button>
+            <button class="btn btn-primary" onclick="exportPNG()">
+                <span></span> Экспорт PNG
+            </button>
+        </div>
+    </header>
+
+    <!-- Основной контейнер -->
+    <div class="main-container">
+        <!-- Левая панель - Инструменты -->
+        <aside class="panel tools-panel">
+            <div class="panel-header">Инструменты ДРАКОН</div>
+            <div class="panel-content">
+                <div class="tool-section">
+                    <div class="tool-section-title">Базовые иконы</div>
+                    
+                    <button class="tool-btn" data-type="start" onclick="selectTool('start')">
+                        <div class="tool-icon icon-start">▶</div>
+                        <div class="tool-info">
+                            <div class="tool-name">Заголовок</div>
+                            <div class="tool-desc">Начало алгоритма</div>
+                        </div>
+                    </button>
+
+                    <button class="tool-btn" data-type="end" onclick="selectTool('end')">
+                        <div class="tool-icon icon-end">■</div>
+                        <div class="tool-info">
+                            <div class="tool-name">Конец</div>
+                            <div class="tool-desc">Завершение алгоритма</div>
+                        </div>
+                    </button>
+
+                    <button class="tool-btn" data-type="action" onclick="selectTool('action')">
+                        <div class="tool-icon icon-action"></div>
+                        <div class="tool-info">
+                            <div class="tool-name">Действие</div>
+                            <div class="tool-desc">Операция, команда</div>
+                        </div>
+                    </button>
+
+                    <button class="tool-btn" data-type="question" onclick="selectTool('question')">
+                        <div class="tool-icon icon-question">?</div>
+                        <div class="tool-info">
+                            <div class="tool-name">Вопрос</div>
+                            <div class="tool-desc">Условие (Да/Нет)</div>
+                        </div>
+                    </button>
+
+                    <button class="tool-btn" data-type="input" onclick="selectTool('input')">
+                        <div class="tool-icon icon-input">→</div>
+                        <div class="tool-info">
+                            <div class="tool-name">Ввод</div>
+                            <div class="tool-desc">Получение данных</div>
+                        </div>
+                    </button>
+
+                    <button class="tool-btn" data-type="output" onclick="selectTool('output')">
+                        <div class="tool-icon icon-output">←</div>
+                        <div class="tool-info">
+                            <div class="tool-name">Вывод</div>
+                            <div class="tool-desc">Выдача результата</div>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="tool-section">
+                    <div class="tool-section-title">Дополнительные</div>
+
+                    <button class="tool-btn" data-type="insert" onclick="selectTool('insert')">
+                        <div class="tool-icon icon-insert"></div>
+                        <div class="tool-info">
+                            <div class="tool-name">Вставка</div>
+                            <div class="tool-desc">Вызов подпрограммы</div>
+                        </div>
+                    </button>
+
+                    <button class="tool-btn" data-type="comment" onclick="selectTool('comment')">
+                        <div class="tool-icon icon-comment"></div>
+                        <div class="tool-info">
+                            <div class="tool-name">Комментарий</div>
+                            <div class="tool-desc">Пояснение</div>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="startConnecting()">
+                        <span>🔗</span> Связать элементы
+                    </button>
+                    <button class="btn btn-warning" onclick="clearCanvas()">
+                        <span>🗑️</span> Очистить холст
+                    </button>
+                    <button class="btn btn-outline" style="background: var(--light); color: var(--primary);" onclick="loadExample()">
+                        <span>📋</span> Загрузить пример
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Центральная область - Холст -->
+        <main class="canvas-area" id="canvas-area">
+            <div class="canvas-toolbar">
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomOut()">−</button>
+                    <span class="zoom-level" id="zoom-level">100%</span>
+                    <button class="zoom-btn" onclick="zoomIn()">+</button>
+                    <button class="zoom-btn" onclick="resetZoom()">↺</button>
+                </div>
+                <div class="canvas-info" id="canvas-info">
+                    Выберите инструмент и кликните на холст
+                </div>
+            </div>
+
+            <div id="canvas-container">
+                <svg id="main-canvas" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <!-- Стрелка для соединительных линий -->
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                                refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#2c3e50"/>
+                        </marker>
+                        <marker id="arrowhead-hover" markerWidth="10" markerHeight="7" 
+                                refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c"/>
+                        </marker>
+                        <!-- Градиенты для элементов -->
+                        <linearGradient id="grad-start" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#2ecc71;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#27ae60;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="grad-end" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#e74c3c;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#c0392b;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="grad-action" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#2980b9;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="grad-question" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#f39c12;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#e67e22;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="grad-input" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#9b59b6;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#8e44ad;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="grad-output" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#1abc9c;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#16a085;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="grad-insert" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#e67e22;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#d35400;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- Группа для соединений (рисуется под элементами) -->
+                    <g id="connections-layer"></g>
+                    
+                    <!-- Группа для элементов -->
+                    <g id="elements-layer"></g>
+                    
+                    <!-- Превью соединения -->
+                    <path id="connection-preview" class="connection-preview" d="" style="display:none;"/>
+                </svg>
+            </div>
+
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-dot"></span>
+                    <span>Готов к работе</span>
+                </div>
+                <div class="status-item" id="element-count">
+                    Элементов: 0
+                </div>
+                <div class="status-item" id="connection-count">
+                    Связей: 0
+                </div>
+            </div>
+        </main>
+
+        <!-- Правая панель - Справка -->
+        <aside class="panel help-panel">
+            <div class="panel-header">Справка и задания</div>
+            <div class="panel-content">
+                <div class="help-section">
+                    <div class="task-box">
+                        <div class="task-title">
+                            <span>Учебное задание</span>
+                                                   </div>
+                        <div class="task-description">
+                            Создайте ДРАКОН-схему алгоритма приветствия на иностранном языке:
+                        </div>
+                        <ol class="task-steps">
+                            <li>Добавьте блок «Заголовок» с названием</li>
+                            <li>Создайте блок «Ввод» для выбора языка</li>
+                            <li>Добавьте «Вопрос» для проверки языка</li>
+                            <li>Создайте блоки «Вывод» для приветствий</li>
+                            <li>Завершите блоком «Конец»</li>
+                            <li>Соедините все элементы стрелками</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <div class="help-section-title">Управление</div>
+                    <ul class="help-list">
+                        <li>
+                            <span class="help-key">Клик</span>
+                            <span>Добавить элемент / Выбрать</span>
+                        </li>
+                        <li>
+                            <span class="help-key">Двойной клик</span>
+                            <span>Редактировать текст</span>
+                        </li>
+                        <li>
+                            <span class="help-key">Перетаскивание</span>
+                            <span>Переместить элемент</span>
+                        </li>
+                        <li>
+                            <span class="help-key">Delete</span>
+                            <span>Удалить выбранное</span>
+                        </li>
+                        <li>
+                            <span class="help-key">Esc</span>
+                            <span>Отменить действие</span>
+                        </li>
+                        <li>
+                            <span class="help-key">ПКМ</span>
+                            <span>Контекстное меню</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <div class="help-section-title">Элементы ДРАКОН</div>
+                    <p class="help-text">
+                        <strong>Заголовок</strong> — имя алгоритма (как название текста).<br><br>
+                        <strong>Действие</strong> — конкретная операция (как предложение-инструкция).<br><br>
+                        <strong>Вопрос</strong> — точка ветвления (как выбор в диалоге).<br><br>
+                        <strong>Ввод/Вывод</strong> — обмен информацией (как рецепция и продукция речи).
+                    </p>
+                </div>
+
+                <div class="linguistic-note">
+                    <div class="linguistic-note-title">💡 Связь с лингвистикой</div>
+                    <div class="linguistic-note-text">
+                        ДРАКОН-схемы подобны синтаксическим деревьям: элементы — это «узлы», 
+                        а связи — «ветви». Алгоритм читается сверху вниз, как текст, 
+                        следуя принципу «чем правее — тем хуже» для исключений.
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Модальное окно редактирования -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title" id="modal-title">Редактирование элемента</span>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Текст элемента</label>
+                    <textarea class="form-input form-textarea" id="element-text" placeholder="Введите текст..."></textarea>
+                </div>
+                <div class="form-group" id="yes-label-group" style="display:none;">
+                    <label class="form-label">Надпись «Да» (опционально)</label>
+                    <input type="text" class="form-input" id="yes-label" placeholder="Да">
+                </div>
+                <div class="form-group" id="no-label-group" style="display:none;">
+                    <label class="form-label">Надпись «Нет» (опционально)</label>
+                    <input type="text" class="form-input" id="no-label" placeholder="Нет">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" style="background:#eee;color:#333;" onclick="closeModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveElement()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Контекстное меню -->
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-item" onclick="editSelectedElement()">
+            <span>✏️</span> Редактировать
+        </div>
+        <div class="context-menu-item" onclick="duplicateElement()">
+            <span>📋</span> Дублировать
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" onclick="bringToFront()">
+            <span>⬆️</span> На передний план
+        </div>
+        <div class="context-menu-item" onclick="sendToBack()">
+            <span>⬇️</span> На задний план
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item danger" onclick="deleteSelected()">
+            <span>🗑️</span> Удалить
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <!-- Подсказка -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // ==================== СОСТОЯНИЕ ПРИЛОЖЕНИЯ ====================
+        const state = {
+            elements: [],           // Массив элементов диаграммы
+            connections: [],        // Массив связей
+            selectedTool: null,     // Текущий выбранный инструмент
+            selectedElement: null,  // Текущий выбранный элемент
+            editingElement: null,   // Редактируемый элемент
+            isConnecting: false,    // Режим создания связи
+            connectionStart: null,  // Начальный элемент связи
+            isDragging: false,      // Флаг перетаскивания
+            dragOffset: { x: 0, y: 0 },
+            zoom: 1,
+            nextId: 1
+        };
+
+        // ==================== КОНФИГУРАЦИЯ ЭЛЕМЕНТОВ ====================
+        const elementConfig = {
+            start: {
+                width: 140,
+                height: 50,
+                defaultText: 'Алгоритм',
+                shape: 'rounded-rect',
+                gradient: 'url(#grad-start)',
+                textColor: 'white'
+            },
+            end: {
+                width: 140,
+                height: 50,
+                defaultText: 'Конец',
+                shape: 'rounded-rect',
+                gradient: 'url(#grad-end)',
+                textColor: 'white'
+            },
+            action: {
+                width: 160,
+                height: 50,
+                defaultText: 'Действие',
+                shape: 'rect',
+                gradient: 'url(#grad-action)',
+                textColor: 'white'
+            },
+            question: {
+                width: 140,
+                height: 80,
+                defaultText: 'Условие?',
+                shape: 'diamond',
+                gradient: 'url(#grad-question)',
+                textColor: 'white',
+                hasYesNo: true
+            },
+            input: {
+                width: 160,
+                height: 50,
+                defaultText: 'Ввод данных',
+                shape: 'parallelogram-right',
+                gradient: 'url(#grad-input)',
+                textColor: 'white'
+            },
+            output: {
+                width: 160,
+                height: 50,
+                defaultText: 'Вывод данных',
+                shape: 'parallelogram-left',
+                gradient: 'url(#grad-output)',
+                textColor: 'white'
+            },
+            insert: {
+                width: 160,
+                height: 50,
+                defaultText: 'Подпрограмма',
+                shape: 'insert-rect',
+                gradient: 'url(#grad-insert)',
+                textColor: 'white'
+            },
+            comment: {
+                width: 160,
+                height: 60,
+                defaultText: 'Комментарий',
+                shape: 'comment',
+                gradient: '#f8f9fa',
+                textColor: '#2c3e50',
+                stroke: '#95a5a6'
+            }
+        };
+
+        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+        const canvas = document.getElementById('main-canvas');
+        const elementsLayer = document.getElementById('elements-layer');
+        const connectionsLayer = document.getElementById('connections-layer');
+        const canvasContainer = document.getElementById('canvas-container');
+        const canvasArea = document.getElementById('canvas-area');
+
+        // Обработчики событий холста
+        canvas.addEventListener('click', handleCanvasClick);
+        canvas.addEventListener('mousemove', handleCanvasMouseMove);
+        canvas.addEventListener('contextmenu', handleContextMenu);
+
+        // Клавиатура
+        document.addEventListener('keydown', handleKeyDown);
+
+        // Закрытие контекстного меню при клике вне его
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.context-menu')) {
+                document.getElementById('context-menu').classList.remove('active');
+            }
+        });
+
+        // ==================== ФУНКЦИИ ИНСТРУМЕНТОВ ====================
+        function selectTool(type) {
+            state.selectedTool = type;
+            state.isConnecting = false;
+            state.connectionStart = null;
+            
+            // Обновляем UI кнопок
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.type === type) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Обновляем подсказку
+            const config = elementConfig[type];
+            updateCanvasInfo(`Кликните на холст, чтобы добавить: ${config.defaultText}`);
+            
+            canvasArea.classList.remove('connecting-mode');
+        }
+
+        function startConnecting() {
+            state.isConnecting = true;
+            state.connectionStart = null;
+            state.selectedTool = null;
+            
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            updateCanvasInfo('Кликните на первый элемент для создания связи');
+            canvasArea.classList.add('connecting-mode');
+        }
+
+        // ==================== ОБРАБОТКА ХОЛСТА ====================
+        function handleCanvasClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left + canvasContainer.scrollLeft) / state.zoom;
+            const y = (e.clientY - rect.top + canvasContainer.scrollTop) / state.zoom;
+
+            // Проверяем, кликнули ли на элемент
+            const clickedElement = getElementAtPosition(x, y);
+
+            if (state.isConnecting) {
+                handleConnectionClick(clickedElement);
+            } else if (state.selectedTool && !clickedElement) {
+                // Добавляем новый элемент
+                addElement(state.selectedTool, x, y);
+            } else if (clickedElement) {
+                selectElement(clickedElement);
+            } else {
+                deselectAll();
+            }
+        }
+
+        function handleCanvasMouseMove(e) {
+            if (state.isConnecting && state.connectionStart) {
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left + canvasContainer.scrollLeft) / state.zoom;
+                const y = (e.clientY - rect.top + canvasContainer.scrollTop) / state.zoom;
+                
+                updateConnectionPreview(x, y);
+            }
+        }
+
+        function handleContextMenu(e) {
+            e.preventDefault();
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left + canvasContainer.scrollLeft) / state.zoom;
+            const y = (e.clientY - rect.top + canvasContainer.scrollTop) / state.zoom;
+            
+            const clickedElement = getElementAtPosition(x, y);
+            
+            if (clickedElement) {
+                selectElement(clickedElement);
+                showContextMenu(e.clientX, e.clientY);
+            }
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (state.selectedElement && document.activeElement.tagName !== 'INPUT' && 
+                    document.activeElement.tagName !== 'TEXTAREA') {
+                    deleteSelected();
+                }
+            } else if (e.key === 'Escape') {
+                state.isConnecting = false;
+                state.connectionStart = null;
+                state.selectedTool = null;
+                document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById('connection-preview').style.display = 'none';
+                canvasArea.classList.remove('connecting-mode');
+                updateCanvasInfo('Выберите инструмент и кликните на холст');
+                closeModal();
+            }
+        }
+
+        // ==================== РАБОТА С ЭЛЕМЕНТАМИ ====================
+        function addElement(type, x, y) {
+            const config = elementConfig[type];
+            const element = {
+                id: state.nextId++,
+                type: type,
+                x: x - config.width / 2,
+                y: y - config.height / 2,
+                width: config.width,
+                height: config.height,
+                text: config.defaultText,
+                yesLabel: type === 'question' ? 'Да' : null,
+                noLabel: type === 'question' ? 'Нет' : null
+            };
+
+            state.elements.push(element);
+            renderElement(element);
+            updateStatus();
+            
+            // Выбираем созданный элемент
+            selectElement(element);
+        }
+
+        function renderElement(element) {
+            const config = elementConfig[element.type];
+            const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            group.setAttribute('class', 'drakon-element');
+            group.setAttribute('data-id', element.id);
+            group.setAttribute('transform', `translate(${element.x}, ${element.y})`);
+
+            // Создаём форму элемента
+            const shape = createShape(element.type, element.width, element.height, config);
+            shape.setAttribute('class', 'element-shape');
+            group.appendChild(shape);
+
+            // Добавляем текст
+            const text = createTextElement(element.text, element.width, element.height, config.textColor);
+            group.appendChild(text);
+
+            // Обработчики событий
+            group.addEventListener('mousedown', (e) => handleElementMouseDown(e, element));
+            group.addEventListener('dblclick', () => openEditModal(element));
+
+            elementsLayer.appendChild(group);
+        }
+
+        function createShape(type, width, height, config) {
+            let shape;
+            const fill = config.gradient;
+            const stroke = config.stroke || 'none';
+            const strokeWidth = stroke !== 'none' ? 2 : 0;
+
+            switch (config.shape) {
+                case 'rounded-rect':
+                    shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    shape.setAttribute('width', width);
+                    shape.setAttribute('height', height);
+                    shape.setAttribute('rx', height / 2);
+                    shape.setAttribute('ry', height / 2);
+                    break;
+
+                case 'rect':
+                    shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    shape.setAttribute('width', width);
+                    shape.setAttribute('height', height);
+                    shape.setAttribute('rx', 4);
+                    break;
+
+                case 'diamond':
+                    shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    const hw = width / 2;
+                    const hh = height / 2;
+                    shape.setAttribute('points', `${hw},0 ${width},${hh} ${hw},${height} 0,${hh}`);
+                    break;
+
+                case 'parallelogram-right':
+                    shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    const skew = 15;
+                    shape.setAttribute('points', `${skew},0 ${width},0 ${width-skew},${height} 0,${height}`);
+                    break;
+
+                case 'parallelogram-left':
+                    shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    const sk = 15;
+                    shape.setAttribute('points', `0,0 ${width-sk},0 ${width},${height} ${sk},${height}`);
+                    break;
+
+                case 'insert-rect':
+                    shape = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    const mainRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    mainRect.setAttribute('width', width);
+                    mainRect.setAttribute('height', height);
+                    mainRect.setAttribute('rx', 4);
+                    mainRect.setAttribute('fill', fill);
+                    shape.appendChild(mainRect);
+                    
+                    // Вертикальные линии по бокам
+                    const leftLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    leftLine.setAttribute('x1', 10);
+                    leftLine.setAttribute('y1', 5);
+                    leftLine.setAttribute('x2', 10);
+                    leftLine.setAttribute('y2', height - 5);
+                    leftLine.setAttribute('stroke', 'white');
+                    leftLine.setAttribute('stroke-width', 2);
+                    shape.appendChild(leftLine);
+                    
+                    const rightLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    rightLine.setAttribute('x1', width - 10);
+                    rightLine.setAttribute('y1', 5);
+                    rightLine.setAttribute('x2', width - 10);
+                    rightLine.setAttribute('y2', height - 5);
+                    rightLine.setAttribute('stroke', 'white');
+                    rightLine.setAttribute('stroke-width', 2);
+                    shape.appendChild(rightLine);
+                    return shape;
+
+                case 'comment':
+                    shape = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    const commentRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    commentRect.setAttribute('width', width);
+                    commentRect.setAttribute('height', height);
+                    commentRect.setAttribute('rx', 4);
+                    commentRect.setAttribute('fill', fill);
+                    commentRect.setAttribute('stroke', stroke);
+                    commentRect.setAttribute('stroke-width', strokeWidth);
+                    shape.appendChild(commentRect);
+                    
+                    const bracketLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    bracketLine.setAttribute('x1', 0);
+                    bracketLine.setAttribute('y1', 10);
+                    bracketLine.setAttribute('x2', 0);
+                    bracketLine.setAttribute('y2', height - 10);
+                    bracketLine.setAttribute('stroke', '#2c3e50');
+                    bracketLine.setAttribute('stroke-width', 3);
+                    shape.appendChild(bracketLine);
+                    return shape;
+
+                default:
+                    shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    shape.setAttribute('width', width);
+                    shape.setAttribute('height', height);
+            }
+
+            shape.setAttribute('fill', fill);
+            if (stroke !== 'none') {
+                shape.setAttribute('stroke', stroke);
+                shape.setAttribute('stroke-width', strokeWidth);
+            }
+
+            return shape;
+        }
+
+        function createTextElement(text, width, height, color) {
+            const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            textEl.setAttribute('x', width / 2);
+            textEl.setAttribute('y', height / 2);
+            textEl.setAttribute('text-anchor', 'middle');
+            textEl.setAttribute('dominant-baseline', 'middle');
+            textEl.setAttribute('fill', color);
+            textEl.setAttribute('class', 'element-text');
+            
+            // Разбиваем текст на строки
+            const lines = text.split('\n');
+            const lineHeight = 16;
+            const startY = height / 2 - ((lines.length - 1) * lineHeight) / 2;
+            
+            lines.forEach((line, i) => {
+                const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+                tspan.setAttribute('x', width / 2);
+                tspan.setAttribute('dy', i === 0 ? 0 : lineHeight);
+                tspan.textContent = line;
+                textEl.appendChild(tspan);
+            });
+            
+            // Корректируем позицию для многострочного текста
+            if (lines.length > 1) {
+                textEl.setAttribute('y', startY);
+            }
+            
+            return textEl;
+        }
+
+        function updateElement(element) {
+            const group = document.querySelector(`g[data-id="${element.id}"]`);
+            if (group) {
+                group.remove();
+                renderElement(element);
+                if (state.selectedElement && state.selectedElement.id === element.id) {
+                    const newGroup = document.querySelector(`g[data-id="${element.id}"]`);
+                    newGroup.classList.add('selected');
+                }
+            }
+        }
+
+        function getElementAtPosition(x, y) {
+            for (let i = state.elements.length - 1; i >= 0; i--) {
+                const el = state.elements[i];
+                if (x >= el.x && x <= el.x + el.width &&
+                    y >= el.y && y <= el.y + el.height) {
+                    return el;
+                }
+            }
+            return null;
+        }
+
+        function selectElement(element) {
+            deselectAll();
+            state.selectedElement = element;
+            const group = document.querySelector(`g[data-id="${element.id}"]`);
+            if (group) {
+                group.classList.add('selected');
+            }
+            updateCanvasInfo(`Выбран: ${elementConfig[element.type].defaultText} (ID: ${element.id})`);
+        }
+
+        function deselectAll() {
+            state.selectedElement = null;
+            document.querySelectorAll('.drakon-element.selected').forEach(el => {
+                el.classList.remove('selected');
+            });
+        }
+
+        // ==================== ПЕРЕТАСКИВАНИЕ ====================
+        function handleElementMouseDown(e, element) {
+            if (state.isConnecting) return;
+            
+            e.stopPropagation();
+            state.isDragging = true;
+            state.selectedElement = element;
+            
+            const rect = canvas.getBoundingClientRect();
+            state.dragOffset = {
+                x: (e.clientX - rect.left + canvasContainer.scrollLeft) / state.zoom - element.x,
+                y: (e.clientY - rect.top + canvasContainer.scrollTop) / state.zoom - element.y
+            };
+
+            selectElement(element);
+
+            const handleMouseMove = (e) => {
+                if (!state.isDragging) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left + canvasContainer.scrollLeft) / state.zoom - state.dragOffset.x;
+                const y = (e.clientY - rect.top + canvasContainer.scrollTop) / state.zoom - state.dragOffset.y;
+                
+                element.x = Math.max(0, x);
+                element.y = Math.max(0, y);
+                
+                const group = document.querySelector(`g[data-id="${element.id}"]`);
+                if (group) {
+                    group.setAttribute('transform', `translate(${element.x}, ${element.y})`);
+                }
+                
+                // Обновляем связи
+                updateConnectionsForElement(element.id);
+            };
+
+            const handleMouseUp = () => {
+                state.isDragging = false;
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        }
+
+        // ==================== СВЯЗИ ====================
+        function handleConnectionClick(element) {
+            if (!element) {
+                updateCanvasInfo('Кликните на элемент для создания связи');
+                return;
+            }
+
+            if (!state.connectionStart) {
+                state.connectionStart = element;
+                updateCanvasInfo(`Начало связи: ${element.text}. Кликните на конечный элемент.`);
+            } else if (state.connectionStart.id !== element.id) {
+                // Создаём связь
+                createConnection(state.connectionStart, element);
+                state.connectionStart = null;
+                document.getElementById('connection-preview').style.display = 'none';
+                updateCanvasInfo('Связь создана! Кликните для новой связи или нажмите Esc.');
+            }
+        }
+
+        function createConnection(from, to, label = '') {
+            const connection = {
+                id: state.nextId++,
+                fromId: from.id,
+                toId: to.id,
+                label: label
+            };
+            
+            state.connections.push(connection);
+            renderConnection(connection);
+            updateStatus();
+        }
+
+        function renderConnection(connection) {
+            const fromEl = state.elements.find(e => e.id === connection.fromId);
+            const toEl = state.elements.find(e => e.id === connection.toId);
+            
+            if (!fromEl || !toEl) return;
+
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('class', 'connection-line');
+            path.setAttribute('data-connection-id', connection.id);
+            
+            const d = calculateConnectionPath(fromEl, toEl);
+            path.setAttribute('d', d);
+            
+            path.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (confirm('Удалить эту связь?')) {
+                    deleteConnection(connection.id);
+                }
+            });
+
+            connectionsLayer.appendChild(path);
+
+            // Добавляем метку, если есть
+            if (connection.label) {
+                const midPoint = getPathMidpoint(fromEl, toEl);
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', midPoint.x);
+                label.setAttribute('y', midPoint.y - 5);
+                label.setAttribute('class', 'connection-label');
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('data-connection-id', connection.id);
+                label.textContent = connection.label;
+                connectionsLayer.appendChild(label);
+            }
+        }
+
+        function calculateConnectionPath(from, to) {
+            // Находим центры элементов
+            const fromCenter = {
+                x: from.x + from.width / 2,
+                y: from.y + from.height / 2
+            };
+            const toCenter = {
+                x: to.x + to.width / 2,
+                y: to.y + to.height / 2
+            };
+
+            // Определяем точки подключения
+            const fromPoint = getConnectionPoint(from, toCenter);
+            const toPoint = getConnectionPoint(to, fromCenter);
+
+            // Создаём путь с изгибом
+            const dx = toPoint.x - fromPoint.x;
+            const dy = toPoint.y - fromPoint.y;
+            
+            if (Math.abs(dy) > Math.abs(dx)) {
+                // Вертикальное соединение
+                const midY = fromPoint.y + dy / 2;
+                return `M ${fromPoint.x} ${fromPoint.y} 
+                        L ${fromPoint.x} ${midY} 
+                        L ${toPoint.x} ${midY} 
+                        L ${toPoint.x} ${toPoint.y}`;
+            } else {
+                // Горизонтальное соединение
+                const midX = fromPoint.x + dx / 2;
+                return `M ${fromPoint.x} ${fromPoint.y} 
+                        L ${midX} ${fromPoint.y} 
+                        L ${midX} ${toPoint.y} 
+                        L ${toPoint.x} ${toPoint.y}`;
+            }
+        }
+
+        function getConnectionPoint(element, targetCenter) {
+            const center = {
+                x: element.x + element.width / 2,
+                y: element.y + element.height / 2
+            };
+            
+            const dx = targetCenter.x - center.x;
+            const dy = targetCenter.y - center.y;
+            
+            // Определяем сторону выхода
+            if (Math.abs(dx) > Math.abs(dy)) {
+                // Горизонтальное направление
+                return {
+                    x: dx > 0 ? element.x + element.width : element.x,
+                    y: center.y
+                };
+            } else {
+                // Вертикальное направление
+                return {
+                    x: center.x,
+                    y: dy > 0 ? element.y + element.height : element.y
+                };
+            }
+        }
+
+        function getPathMidpoint(from, to) {
+            return {
+                x: (from.x + from.width / 2 + to.x + to.width / 2) / 2,
+                y: (from.y + from.height / 2 + to.y + to.height / 2) / 2
+            };
+        }
+
+        function updateConnectionPreview(x, y) {
+            if (!state.connectionStart) return;
+            
+            const preview = document.getElementById('connection-preview');
+            const from = state.connectionStart;
+            const fromCenter = {
+                x: from.x + from.width / 2,
+                y: from.y + from.height / 2
+            };
+            
+            preview.setAttribute('d', `M ${fromCenter.x} ${fromCenter.y} L ${x} ${y}`);
+            preview.style.display = 'block';
+        }
+
+        function updateConnectionsForElement(elementId) {
+            state.connections.forEach(conn => {
+                if (conn.fromId === elementId || conn.toId === elementId) {
+                    // Удаляем старую линию
+                    const oldPath = document.querySelector(`path[data-connection-id="${conn.id}"]`);
+                    const oldLabel = document.querySelector(`text[data-connection-id="${conn.id}"]`);
+                    if (oldPath) oldPath.remove();
+                    if (oldLabel) oldLabel.remove();
+                    // Рисуем новую
+                    renderConnection(conn);
+                }
+            });
+        }
+
+        function deleteConnection(id) {
+            state.connections = state.connections.filter(c => c.id !== id);
+            const path = document.querySelector(`path[data-connection-id="${id}"]`);
+            const label = document.querySelector(`text[data-connection-id="${id}"]`);
+            if (path) path.remove();
+            if (label) label.remove();
+            updateStatus();
+        }
+
+        // ==================== МОДАЛЬНОЕ ОКНО ====================
+        function openEditModal(element) {
+            state.editingElement = element;
+            document.getElementById('element-text').value = element.text;
+            document.getElementById('modal-title').textContent = 
+                `Редактирование: ${elementConfig[element.type].defaultText}`;
+            
+            // Показываем/скрываем поля для вопроса
+            const isQuestion = element.type === 'question';
+            document.getElementById('yes-label-group').style.display = isQuestion ? 'block' : 'none';
+            document.getElementById('no-label-group').style.display = isQuestion ? 'block' : 'none';
+            
+            if (isQuestion) {
+                document.getElementById('yes-label').value = element.yesLabel || 'Да';
+                document.getElementById('no-label').value = element.noLabel || 'Нет';
+            }
+            
+            document.getElementById('modal-overlay').classList.add('active');
+            document.getElementById('element-text').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.remove('active');
+            state.editingElement = null;
+        }
+
+        function saveElement() {
+            if (!state.editingElement) return;
+            
+            state.editingElement.text = document.getElementById('element-text').value || 
+                                        elementConfig[state.editingElement.type].defaultText;
+            
+            if (state.editingElement.type === 'question') {
+                state.editingElement.yesLabel = document.getElementById('yes-label').value || 'Да';
+                state.editingElement.noLabel = document.getElementById('no-label').value || 'Нет';
+            }
+            
+            updateElement(state.editingElement);
+            closeModal();
+        }
+
+        // ==================== КОНТЕКСТНОЕ МЕНЮ ====================
+        function showContextMenu(x, y) {
+            const menu = document.getElementById('context-menu');
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+            menu.classList.add('active');
+        }
+
+        function editSelectedElement() {
+            if (state.selectedElement) {
+                openEditModal(state.selectedElement);
+            }
+            document.getElementById('context-menu').classList.remove('active');
+        }
+
+        function duplicateElement() {
+            if (!state.selectedElement) return;
+            
+            const original = state.selectedElement;
+            const newElement = {
+                ...original,
+                id: state.nextId++,
+                x: original.x + 30,
+                y: original.y + 30
+            };
+            
+            state.elements.push(newElement);
+            renderElement(newElement);
+            selectElement(newElement);
+            updateStatus();
+            
+            document.getElementById('context-menu').classList.remove('active');
+        }
+
+        function bringToFront() {
+            if (!state.selectedElement) return;
+            
+            const index = state.elements.findIndex(e => e.id === state.selectedElement.id);
+            if (index > -1) {
+                const [element] = state.elements.splice(index, 1);
+                state.elements.push(element);
+                
+                const group = document.querySelector(`g[data-id="${element.id}"]`);
+                elementsLayer.appendChild(group);
+            }
+            
+            document.getElementById('context-menu').classList.remove('active');
+        }
+
+        function sendToBack() {
+            if (!state.selectedElement) return;
+            
+            const index = state.elements.findIndex(e => e.id === state.selectedElement.id);
+            if (index > -1) {
+                const [element] = state.elements.splice(index, 1);
+                state.elements.unshift(element);
+                
+                const group = document.querySelector(`g[data-id="${element.id}"]`);
+                elementsLayer.insertBefore(group, elementsLayer.firstChild);
+            }
+            
+            document.getElementById('context-menu').classList.remove('active');
+        }
+
+        function deleteSelected() {
+            if (!state.selectedElement) return;
+            
+            const id = state.selectedElement.id;
+            
+            // Удаляем элемент
+            state.elements = state.elements.filter(e => e.id !== id);
+            
+            // Удаляем связанные соединения
+            const connectionsToRemove = state.connections.filter(
+                c => c.fromId === id || c.toId === id
+            );
+            connectionsToRemove.forEach(c => {
+                const path = document.querySelector(`path[data-connection-id="${c.id}"]`);
+                const label = document.querySelector(`text[data-connection-id="${c.id}"]`);
+                if (path) path.remove();
+                if (label) label.remove();
+            });
+            state.connections = state.connections.filter(
+                c => c.fromId !== id && c.toId !== id
+            );
+            
+            // Удаляем DOM-элемент
+            const group = document.querySelector(`g[data-id="${id}"]`);
+            if (group) group.remove();
+            
+            state.selectedElement = null;
+            updateStatus();
+            
+            document.getElementById('context-menu').classList.remove('active');
+        }
+
+        // ==================== МАСШТАБИРОВАНИЕ ====================
+        function zoomIn() {
+            state.zoom = Math.min(2, state.zoom + 0.1);
+            applyZoom();
+        }
+
+        function zoomOut() {
+            state.zoom = Math.max(0.5, state.zoom - 0.1);
+            applyZoom();
+        }
+
+        function resetZoom() {
+            state.zoom = 1;
+            applyZoom();
+        }
+
+        function applyZoom() {
+            canvas.style.transform = `scale(${state.zoom})`;
+            canvas.style.transformOrigin = '0 0';
+            document.getElementById('zoom-level').textContent = Math.round(state.zoom * 100) + '%';
+        }
+
+        // ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+        function updateCanvasInfo(text) {
+            document.getElementById('canvas-info').textContent = text;
+        }
+
+        function updateStatus() {
+            document.getElementById('element-count').textContent = `Элементов: ${state.elements.length}`;
+            document.getElementById('connection-count').textContent = `Связей: ${state.connections.length}`;
+        }
+
+        function clearCanvas() {
+            if (state.elements.length === 0 && state.connections.length === 0) return;
+            
+            if (confirm('Очистить холст? Все элементы будут удалены.')) {
+                state.elements = [];
+                state.connections = [];
+                state.selectedElement = null;
+                elementsLayer.innerHTML = '';
+                connectionsLayer.innerHTML = '';
+                updateStatus();
+                updateCanvasInfo('Холст очищен. Выберите инструмент.');
+            }
+        }
+
+        function loadExample() {
+            clearCanvasWithoutConfirm();
+            
+            // Создаём пример алгоритма приветствия
+            const elements = [
+                { type: 'start', x: 400, y: 50, text: 'Приветствие' },
+                { type: 'input', x: 400, y: 140, text: 'Выбрать язык' },
+                { type: 'question', x: 400, y: 240, text: 'Русский?' },
+                { type: 'output', x: 250, y: 360, text: 'Привет!' },
+                { type: 'output', x: 550, y: 360, text: 'Hello!' },
+                { type: 'end', x: 400, y: 480, text: 'Конец' }
+            ];
+
+            elements.forEach(el => {
+                const config = elementConfig[el.type];
+                const element = {
+                    id: state.nextId++,
+                    type: el.type,
+                    x: el.x - config.width / 2,
+                    y: el.y - config.height / 2,
+                    width: config.width,
+                    height: config.height,
+                    text: el.text,
+                    yesLabel: el.type === 'question' ? 'Да' : null,
+                    noLabel: el.type === 'question' ? 'Нет' : null
+                };
+                state.elements.push(element);
+                renderElement(element);
+            });
+
+            // Создаём связи
+            const connections = [
+                { from: 0, to: 1 },
+                { from: 1, to: 2 },
+                { from: 2, to: 3, label: 'Да' },
+                { from: 2, to: 4, label: 'Нет' },
+                { from: 3, to: 5 },
+                { from: 4, to: 5 }
+            ];
+
+            connections.forEach(conn => {
+                const fromEl = state.elements[conn.from];
+                const toEl = state.elements[conn.to];
+                createConnection(fromEl, toEl, conn.label || '');
+            });
+
+            updateStatus();
+            updateCanvasInfo('Загружен пример алгоритма приветствия');
+        }
+
+        function clearCanvasWithoutConfirm() {
+            state.elements = [];
+            state.connections = [];
+            state.selectedElement = null;
+            state.nextId = 1;
+            elementsLayer.innerHTML = '';
+            connectionsLayer.innerHTML = '';
+        }
+
+        // ==================== ЭКСПОРТ ====================
+        function exportSVG() {
+            const svgClone = canvas.cloneNode(true);
+            
+            // Добавляем стили в SVG
+            const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+            style.textContent = `
+                .element-text { font-family: 'Segoe UI', sans-serif; font-size: 13px; }
+                .connection-line { stroke: #2c3e50; stroke-width: 2; fill: none; }
+                .connection-label { font-size: 11px; fill: #2c3e50; font-weight: 600; }
+            `;
+            svgClone.insertBefore(style, svgClone.firstChild);
+            
+            // Вычисляем границы
+            const bounds = calculateBounds();
+            svgClone.setAttribute('viewBox', `${bounds.minX - 20} ${bounds.minY - 20} ${bounds.width + 40} ${bounds.height + 40}`);
+            svgClone.setAttribute('width', bounds.width + 40);
+            svgClone.setAttribute('height', bounds.height + 40);
+            
+            const svgData = new XMLSerializer().serializeToString(svgClone);
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            downloadFile(blob, 'drakon-diagram.svg');
+        }
+
+        function exportPNG() {
+            const bounds = calculateBounds();
+            const canvas2d = document.createElement('canvas');
+            const scale = 2; // Для лучшего качества
+            canvas2d.width = (bounds.width + 40) * scale;
+            canvas2d.height = (bounds.height + 40) * scale;
+            
+            const ctx = canvas2d.getContext('2d');
+            ctx.scale(scale, scale);
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, bounds.width + 40, bounds.height + 40);
+            
+            const svgClone = canvas.cloneNode(true);
+            svgClone.setAttribute('viewBox', `${bounds.minX - 20} ${bounds.minY - 20} ${bounds.width + 40} ${bounds.height + 40}`);
+            
+            const svgData = new XMLSerializer().serializeToString(svgClone);
+            const img = new Image();
+            
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0);
+                canvas2d.toBlob(function(blob) {
+                    downloadFile(blob, 'drakon-diagram.png');
+                });
+            };
+            
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+        }
+
+        function calculateBounds() {
+            if (state.elements.length === 0) {
+                return { minX: 0, minY: 0, width: 400, height: 300 };
+            }
+            
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            
+            state.elements.forEach(el => {
+                minX = Math.min(minX, el.x);
+                minY = Math.min(minY, el.y);
+                maxX = Math.max(maxX, el.x + el.width);
+                maxY = Math.max(maxY, el.y + el.height);
+            });
+            
+            return {
+                minX,
+                minY,
+                width: maxX - minX,
+                height: maxY - minY
+            };
+        }
+
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function showHelp() {
+            alert(`ДРАКОН-редактор — Справка
+
+ДРАКОН (Дружелюбный Русский Алгоритмический язык, Который Обеспечивает Наглядность) — визуальный язык для создания алгоритмов.
+
+Основные принципы:
+• Чтение сверху вниз — как обычный текст
+• «Чем правее — тем хуже» — исключения справа
+• Один вход, один выход — для каждого блока
+
+Связь с лингвистикой:
+• Алгоритм = текст с чёткой структурой
+• Блоки = предложения-инструкции
+• Вопросы = точки выбора в диалоге
+• Связи = логическая когезия
+
+Используйте редактор для моделирования:
+• Алгоритмов анализа текста
+• Сценариев диалога
+• Правил грамматики
+• Методик обучения`);
+        }
+
+        // Инициализация
+        updateStatus();
+    </script>
+</body>
+</html>
