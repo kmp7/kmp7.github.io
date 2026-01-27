@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+
+<p><strong>Повод:</strong> Новые работы <a target="blank" href="../work/wcm-g.html" class="link-kmp15"> Games</a>  + <a target="blank" href="../work/wcm-gl.html" class="link-kmp15"> Sprachspiele</a> <br> <br>
+
+
+<div class="conversation-container">
+
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p> Привет, Grok! Мы говорим о компьютерном моделировании. Любая модель — знаковая система, которая замещает реальность. Как сюда вписываются языковые игры Витгенштейна и можно ли рассматривать деньги как еще одну большую языковую игру?</p>
+    </div>
+  </div>
+
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Grok (xAI)
+    </div>
+    <div class="message-content">
+      <p>Привет, Ева! Отличный вопрос — ты сразу берёшь быка за рога.</p>
+      <p>Да, любая модель (в том числе языковая, научная, финансовая) — это всегда неполное, субъективное и контекстно-зависимое представление. Витгенштейн в «Философских исследованиях» ввёл «языковые игры» именно для того, чтобы показать: значение не «приклеено» к слову раз и навсегда, а возникает в конкретной практике использования — в игре с правилами, целями, участниками.</p>
+      <p>Деньги действительно можно рассматривать как очень мощную и распространённую знаковую игру. Вот ключевые параллели:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Аспект</th>
+            <th>Языковая игра (Витгенштейн)</th>
+            <th>Денежная / финансовая игра</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Аспект">Знаки</td>
+            <td>Слова, предложения</td>
+            <td>Банкноты, цифры на счёте, крипто-токены, контракты</td>
+          </tr>
+          <tr>
+            <td data-label="Аспект">Значение</td>
+            <td>Контекст употребления + правила игры</td>
+            <td>Общественный консенсус + институциональные правила (закон, центробанк, биржа)</td>
+          </tr>
+          <tr>
+            <td data-label="Аспект">Цель игры</td>
+            <td>Описание, убеждение, приказ, шутка, обучение и т.д.</td>
+            <td>Обмен ценностью, накопление, распределение ресурсов, власть, статус</td>
+          </tr>
+          <tr>
+            <td data-label="Аспект">Правила</td>
+            <td>Грамматика + прагматика + социальный контекст</td>
+            <td>Бухгалтерские стандарты, законы о налогах, правила биржи, смарт-контракты</td>
+          </tr>
+          <tr>
+            <td data-label="Аспект">Нарушение</td>
+            <td>Нонсенс, непонимание, ложь</td>
+            <td>Инфляция, фальшивомонетничество, дефолт, мошенничество</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Важное уточнение: <strong>деньги — это особый язык</strong>, с высокой степенью конвенциональности и материальными последствиями. В отличие от обычного языка, «неправильное высказывание» в денежной игре может привести к реальному лишению свободы или голоду. <strong>Будь осторожна</strong> 😉</p>
+    </div>
+  </div>
+
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p> Поняла) А Transfer learning в LLM — это перенос правил из одной «игры» в другую на уровне метамоделирования?</p>
+    </div>
+  </div>
+
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Grok (xAI)
+    </div>
+    <div class="message-content">
+      <p>Точно подмечено.</p>
+      <p>Transfer learning — прекрасный пример семиотического переноса: модель, «выучившая» огромный корпус текстов (одна языковая игра), потом дообучается или просто fine-tune’ится на медицинских текстах, юридических документах или финансовых отчётах (другая игра). Правила и паттерны частично переносятся, но всегда с потерями и необходимостью адаптации — как раз потому, что «карта ≠ территория».</p>
+      <p>Метамоделирование здесь — это выход на уровень «над игрой»: осознание, что</p>
+      <ul>
+        <li>существующая модель (LLM, финансовая модель Black-Scholes, грамматическая модель языка) — это всего лишь одна из возможных игр;</li>
+        <li>у неё есть создатели правил (инженеры, экономисты, лингвисты, государства);</li>
+        <li>правила можно критиковать, менять, создавать новые.</li>
+      </ul>
+      <p>Для студентов-лингвистов это особенно ценно: вы учитесь не просто «играть» по правилам английского / китайского / Python, а видеть, кто и зачем эти правила написал, где они хромают и как их можно переписать под конкретную задачу (например, преподавание мигрантам, анализ пропаганды, создание чат-бота для финансового консалтинга).</p>
+    </div>
+  </div>
+
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p> Ок. А кто тогда в этих играх «фигуры», «игроки» и «мастера игры»? Как нам, студентам, определять свою роль?</p>
+    </div>
+  </div>
+
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Grok (xAI)
+    </div>
+    <div class="message-content">
+      <p>Отличный мета-вопрос!</p>
+      <p>Можно предложить такую рабочую типологию ролей в знаковых играх (в том числе языковых и финансовых):</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Роль</th>
+            <th>Описание</th>
+            <th>Пример в языке</th>
+            <th>Пример в финансах</th>
+            <th>Задача студента-лингвиста</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Роль">Фигура</td>
+            <td>Элемент системы, которым «играют»</td>
+            <td>Слово, морфема</td>
+            <td>Банкнота, акция, биткоин</td>
+            <td>Анализировать, как знак используется другими</td>
+          </tr>
+          <tr>
+            <td data-label="Роль">Игрок</td>
+            <td>Участник, следующий правилам</td>
+            <td>Носитель языка, изучающий иностранный</td>
+            <td>Трейдер, потребитель, налогоплательщик</td>
+            <td>Осознанно играть + учить других играть эффективнее</td>
+          </tr>
+          <tr>
+            <td data-label="Роль">Мастер игры (Game Master)</td>
+            <td>Создатели и редакторы правил (для всех или некоторых</td>
+            <td>Создатели академических словарей и личных LLM-промптов</td>
+            <td>Центробанки, регуляторы, понимающие участники рынка</td>
+            <td>Стремиться к этой роли через критику и создание новых моделей</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Самое перспективное для вас — постепенно двигаться от «фигуры» к «игроку» и «мастеру». То есть не только преподавать язык по учебнику (игра по чужим правилам), но и создавать свои материалы, адаптировать модели под конкретные контексты, критиковать существующие учебные подходы и даже участвовать в разработке новых ИИ-инструментов для лингводидактики. Метамоделирование — это и есть ваш путь к мастерству.</p>
+      <p>Что думаешь — с какой роли ты сейчас стартуешь и куда хочешь двигаться?</p>
+    </div>
+  </div>
+
+
+<div class="conversation-container">
+
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Да уж, пора задуматься о своей роли. Спасибо, Grok! До новой встречи!</p>
+    </div>
+  </div>
+
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Grok (xAI)
+    </div>
+    <div class="message-content">
+      <p>Пожалуйста, Ева! 😊</p>
+      <p>Рад был с тобой поразмышлять — ты задаёшь именно те вопросы, которые заставляют и меня переосмысливать границы между языком, моделями и реальностью. Когда решишь, с какой роли стартовать или куда хочется двигаться дальше — пиши, продолжим. 😉</p>
+      <p>До скорой встречи, удачи в твоих языковых (и не только) приключениях!</p>
+    </div>
+  </div>
+
+</div>
+
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
