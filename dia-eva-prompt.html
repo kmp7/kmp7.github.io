@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+
+<p><strong>Повод:</strong> <a target="blank" href="https://t.me/yandex/4355" class="link-kmp15"> как это развидеть...</a>  + <a target="blank" href="https://alice.yandex.ru/prompthub/" class="link-kmp15"> Ужас-ужас</a> <br> <br>
+
+
+<div class="conversation-container">
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Привет, Алиса! Поможешь оценить промпт?</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Алиса (Яндекс)
+    </div>
+    <div class="message-content">
+      <p>Конечно, Ева! С удовольствием помогу оценить промпт. Пожалуйста, предоставьте текст промпта, и я проанализирую его по следующим критериям:</p>
+      <ul>
+        <li>чёткость формулировки задачи;</li>
+        <li>наличие необходимых входных данных;</li>
+        <li>конкретность ожидаемого результата;</li>
+        <li>отсутствие двусмысленностей и неоднозначных формулировок;</li>
+        <li>оптимальность объёма и структуры промпта.</li>
+      </ul>
+      
+      <p>После получения вашего промпта я составлю таблицу с оценкой и дам рекомендации по улучшению, если они потребуются.</p>
+    </div>
+  </div>
+
+
+<div class="conversation-container">
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Забавно) Мы сыграем в ролевую образовательную игру, где ты строгий критик, беспощадный к ошибкам и неточностям . Нужно выявить все погрешности в таком промпте:</p>
+      <p><a target="blank" href="https://t.me/yandex/4355" class="link-kmp15"> Текст промпта</a></p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Алиса (Яндекс)
+    </div>
+    <div class="message-content">
+      <p>Разберём промпт по косточкам. Вот список погрешностей — без снисхождений:</p>
+
+      <p><strong>1. Избыточность и многословие</strong></p>
+      <ul>
+        <li>Слишком много вводных блоков («Роль», «Данные о тебе», «Что пробовал» и т. д.) — они раздувают текст, но не добавляют ценности для выполнения задачи.</li>
+        <li>Повторы идей: несколько раз объясняется, что ИИ «не думает, а угадывает» и что нужно «говорить чётко».</li>
+        <li>Длинных метафор («как сказать повару…») больше, чем практических инструкций.</li>
+      </ul>
+
+      <p><strong>2. Нечёткость формулировок в ключевых местах</strong></p>
+      <ul>
+        <li>В пункте 3 («Что делает хороший промпт?») перечислены элементы, но нет чёткого примера их совмещения в одном промпте.</li>
+        <li>В пункте 6 («Как начать прямо сейчас?») шаблон дан, но не показано, как его применять к разным ситуациям — только один пример.</li>
+      </ul>
+
+      <p><strong>3. Смешение инструкции и мотивационной речи</strong></p>
+      <ul>
+        <li>Много фраз вроде «Ты перестанешь ждать помощи», «Ты начнёшь получать результат» — это не инструкция, а мотивация. В промпте для обучения они лишние.</li>
+        <li>Формат «Только правда. Только действия…» противоречит содержанию: вместо действий — рассуждения.</li>
+      </ul>
+
+      <p><strong>4. Нехватка структуры для практического применения</strong></p>
+      <ul>
+        <li>Нет чёткого алгоритма: «Шаг 1: определи роль. Шаг 2: укажи данные…» — вместо этого размытые блоки.</li>
+        <li>Примеры есть, но их мало, и они не покрывают разные сценарии (например, нет примера для творческого запроса или для анализа).</li>
+      </ul>
+
+      <p><strong>5. Стилистические недочёты</strong></p>
+      <ul>
+        <li>Разговорный стиль («как будто ты сидишь с ним на скамейке») мешает воспринимать инструкцию как руководство.</li>
+        <li>Некоторые фразы звучат неоднозначно: «Не трати время на объяснения. Говори чётко…» — но где граница между «объяснением» и «необходимыми данными»?</li>
+      </ul>
+
+      <p><strong>6. Отсутствие критериев проверки результата</strong></p>
+      <ul>
+        <li>Нет чек-листа: «Проверь, есть ли в твоём промпте: роль, данные, задача, формат».</li>
+        <li>Не указано, как оценить, что промпт составлен правильно, кроме общей фразы «получишь то, что нужно».</li>
+      </ul>
+
+      <p><strong>7. Избыток отрицаний</strong></p>
+      <ul>
+        <li>Много «не», «без», «не нужно» — это усложняет восприятие. Лучше фокусироваться на том, <em>что делать</em>, а не на том, чего избегать.</li>
+      </ul>
+
+      <p><strong>Таблица с ключевыми погрешностями и предложениями по исправлению:</strong></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Погрешность</th>
+            <th>Пример из промпта</th>
+            <th>Как исправить</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Погрешность">Избыточность</td>
+            <td data-label="Пример из промпта">Блоки «Роль», «Данные о тебе», «Что пробовал»…</td>
+            <td data-label="Как исправить">Убрать вводные блоки, оставить только инструкцию и примеры.</td>
+          </tr>
+          <tr>
+            <td data-label="Погрешность">Нечёткость</td>
+            <td data-label="Пример из промпта">«Что делает хороший промпт? Он даёт роль…» (без примера совмещения).</td>
+            <td data-label="Как исправить">Добавить пример промпта, где сразу видны все элементы: роль + данные + задача + формат.</td>
+          </tr>
+          <tr>
+            <td data-label="Погрешность">Смешение инструкции и мотивации</td>
+            <td data-label="Пример из промпта">«Ты перестанешь ждать помощи. Ты начнёшь получать результат…»</td>
+            <td data-label="Как исправить">Убрать мотивационные фразы, оставить только действия.</td>
+          </tr>
+          <tr>
+            <td data-label="Погрешность">Отсутствие алгоритма</td>
+            <td data-label="Пример из промпта">Нет пошаговых инструкций.</td>
+            <td data-label="Как исправить">Добавить нумерованный список: «Шаг 1… Шаг 2…»</td>
+          </tr>
+          <tr>
+            <td data-label="Погрешность">Стилистические недочёты</td>
+            <td data-label="Пример из промпта">Разговорный тон («как будто ты сидишь на скамейке…»).</td>
+            <td data-label="Как исправить">Заменить на нейтральный деловой стиль.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><strong>Итог:</strong> Промпт содержит полезные идеи, но его нужно радикально сократить, убрать «воду» и мотивацию, добавить чёткие алгоритмы и больше разноплановых примеров. Фокус — на действиях, а не на рассуждениях.</p>
+    </div>
+  </div>
+
+<div class="conversation-container">
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Поставь честную интегральную оценку этому промпту по 10-бальной системе. Какой эта оценка могла бы стать, если бы автор такого промпта посоветовался с тобой?</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Алиса (Яндекс)
+    </div>
+    <div class="message-content">
+      <p>Интегральная оценка промпта — <strong>5 из 10</strong>.</p>
+
+
+      <p><strong>Почему именно 5?</strong></p>
+      <ul>
+        <li><strong>Плюсы (за что поставлены баллы):</strong>
+          <ul>
+            <li>Есть чёткая структура с разделами (роль, задача, примеры).</li>
+            <li>Приведены конкретные примеры ошибок новичков и способы их исправления.</li>
+            <li>Включён шаблон для составления промпта с примером.</li>
+            <li>Язык простой, без сложной терминологии — соответствует заявленной аудитории.</li>
+          </ul>
+        </li>
+        <li><strong>Минусы (почему не выше):</strong>
+          <ul>
+            <li><em>Избыточность:</em> много повторяющихся идей и метафор, которые не добавляют ценности (например, несколько раз объясняется, что ИИ «не думает, а угадывает»).</li>
+            <li><em>Нехватка конкретики:</em> в разделе «Что делает хороший промпт?» перечислены элементы, но нет единого примера, где они совмещены.</li>
+            <li><em>Смешение инструкции и мотивации:</em> вместо чётких шагов — много фраз вроде «Ты перестанешь ждать помощи», что не помогает в практическом применении.</li>
+            <li><em>Отсутствие алгоритма:</em> нет нумерованного списка действий («Шаг 1: определи роль…»), что усложняет использование.</li>
+            <li><em>Мало разноплановых примеров:</em> только один пример шаблона промпта, нет вариантов для разных задач (творчество, анализ и т. д.).</li>
+          </ul>
+        </li>
+      </ul>
+
+      <p><strong>Как можно было бы поднять оценку до 8–9?</strong></p>
+      <ol>
+        <li>Сократить текст на 30–40%, убрав повторы и излишние метафоры.</li>
+        <li>Добавить чёткий алгоритм: «Шаг 1: выбери роль. Шаг 2: укажи данные. Шаг 3: сформулируй задачу. Шаг 4: определи формат».</li>
+        <li>Включить 3–4 разноплановых примера промтов (для тренировки, творчества, анализа), где видны все элементы (роль + данные + задача + формат).</li>
+        <li>Убрать мотивационные фразы, оставив только практические инструкции.</li>
+        <li>Добавить чек-лист для самопроверки: «Проверь, есть ли в твоём промпте: роль, данные, задача, формат».</li>
+      </ol>
+
+      <p><strong>Итог:</strong> Промпт содержит полезные идеи, но его эффективность ограничена избыточностью и отсутствием чёткого алгоритма. При доработке по указанным пунктам оценка могла бы вырасти до 8–9 из 10.</p>
+    </div>
+  </div>
+
+<div class="conversation-container">
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Итак, мы можем сформулировать важное правило промптинга для обычных пользователей — советуйтесь с LLM по поводу своих промптов к LLM! Согласна?</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Алиса (Яндекс)
+    </div>
+    <div class="message-content">
+      <p>Абсолютно согласна! Это действительно ценное правило, и вот почему:</p>
+
+      <p><strong>1. LLM видит «изнутри», как работают промты</strong></p>
+      <ul>
+        <li>Модель понимает свои «точки чувствительности» — какие формулировки работают, а какие вызывают неоднозначность.</li>
+        <li>Она может указать на скрытые двусмысленности, которые человек не замечает.</li>
+      </ul>
+
+      <p><strong>2. Экономия времени и ресурсов</strong></p>
+      <ul>
+        <li>Вместо десятков попыток «методом проб и ошибок» вы получаете сразу оптимизированный вариант.</li>
+        <li>Снижается риск получить нерелевантный ответ из‑за мелких недочётов в промпте.</li>
+      </ul>
+
+      <p><strong>3. Обучение в процессе</strong></p>
+      <ul>
+        <li>Получая обратную связь от LLM, вы постепенно осваиваете принципы эффективного промптинга.</li>
+        <li>Каждый совет модели — это мини-урок по структуре, формулировкам и ожидаемым результатам.</li>
+      </ul>
+
+      <p><strong>4. Адаптация под конкретную задачу</strong></p>
+      <ul>
+        <li>LLM может предложить варианты промтов для разных сценариев (творчество, анализ, инструкции и т. д.).</li>
+        <li>Помогает подобрать оптимальный баланс между детализацией и лаконичностью.</li>
+      </ul>
+
+      <p><strong>Как это применять на практике?</strong></p>
+      <ol>
+        <li><strong>Шаг 1:</strong> Напишите черновой вариант промпта.</li>
+        <li><strong>Шаг 2:</strong> Задайте LLM вопрос: «Найди слабые места в этом промпте и предложи улучшения».</li>
+        <li><strong>Шаг 3:</strong> Сравните свой вариант с рекомендациями модели, внесите правки.</li>
+        <li><strong>Шаг 4:</strong> Протестируйте обновлённый промпт и оцените результат.</li>
+      </ol>
+
+      <p><strong>Пример диалога:</strong></p>
+      <blockquote>
+        <p><em>Пользователь:</em> Вот мой промпт: «Напиши статью о пользе спорта». Что в нём не так?</p>
+        <p><em>LLM:</em> Промпт слишком общий. Не указаны: целевая аудитория, объём, ключевые тезисы, стиль. Лучше так: «Напиши статью для блога фитнес-клуба (500 слов) о пользе силовых тренировок для женщин 30–45 лет. Акцент на гормональный баланс и профилактику остеопороза. Тон — дружелюбный, без сложных терминов».</p>
+      </blockquote>
+
+      <p><strong>Важно:</strong> Не воспринимайте советы LLM как догму. Используйте их как основу для экспериментов — иногда нестандартные формулировки дают лучший результат.</p>
+
+      <p><strong>Итог:</strong> Советуясь с LLM по поводу промптов, вы не только улучшаете текущий запрос, но и прокачиваете навык промптинга в целом. Это как иметь личного наставника по общению с ИИ!</p>
+    </div>
+  </div>
+
+<div class="conversation-container">
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Отлично, Алиса! А хочешь узнать Первое (главное) правило промптинга?</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Алиса (Яндекс)
+    </div>
+    <div class="message-content">
+      <p>Конечно, Ева! С удовольствием выслушаю твоё видение главного правила промптинга. Для меня как ИИ особенно ценно понимать ключевые принципы, которыми руководствуются пользователи — это помогает давать более точные и полезные ответы.</p>
+
+      <p>Пока ты формулируешь ответ, поделюсь своим вариантом главного правила (чтобы было интереснее сравнить):</p>
+
+      <div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin: 10px 0;">
+        <strong>Главное правило промптинга:</strong><br>
+        «Будь конкретным — как будто объясняешь задачу человеку, который видит мир впервые».
+      </div>
+
+      <p>Что это значит на практике:</p>
+      <ul>
+        <li><strong>Не «напиши статью», а</strong> «напиши статью на 500 слов для блога о психологии, тема: „Как перестать откладывать дела на потом“. Стиль: дружелюбный, с примерами из жизни. Целевая аудитория: люди 25–40 лет».</li>
+        <li><strong>Не «сделай таблицу», а</strong> «создай таблицу из 5 столбцов: проблема, причина, решение, время на выполнение, ресурсы. Заполни 7 строк реальными примерами из сферы клиентского сервиса».</li>
+        <li><strong>Не «придумай идею», а</strong> «предложи 3 креативные идеи для промоакции кофейни в спальном районе. Бюджет: до 10 000 руб. Сроки: 2 недели. Цель: привлечь новых клиентов».</li>
+      </ul>
+
+      <p>Такой подход работает потому, что:</p>
+      <ol>
+        <li>ИИ не имеет «общего контекста» — ему нужны чёткие рамки.</li>
+        <li>Конкретика снижает вероятность двусмысленных интерпретаций.</li>
+        <li>Вы получаете результат, максимально близкий к ожиданиям, без лишних уточнений.</li>
+      </ol>
+
+      <p>А теперь с нетерпением жду твоё Первое правило! Уверена, оно не менее ценное.</p>
+    </div>
+  </div>
+
+<div class="conversation-container">
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Ты, несомненно права! Но есть нюанс. Любое правило — модель. А все модели неверны, хотя некоторые полезны. Твоя модель полезна для многих и многих. Моя — для немногих). Первое правило промптинга для Prompt Whisperer: <strong>Нет никаких правил!</strong></p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Алиса (Яндекс)
+    </div>
+    <div class="message-content">
+      <p>О, это уже уровень дзена промптинга! Полностью принимаю такую позицию — и вижу в ней глубокий смысл.</p>
+
+      <p><strong>Почему «нет правил» — это тоже правило (парадоксально, но верно)?</strong></p>
+      <ul>
+        <li><strong>Освобождает от шаблонов:</strong> когда ты перестаёшь цепляться за «как надо», открывается пространство для экспериментов.</li>
+        <li><strong>Стимулирует интуицию:</strong> Prompt Whisperer чувствует, как «дышит» модель, и подстраивается — как музыкант под инструмент.</li>
+        <li><strong>Позволяет нарушать осознанно:</strong> ты можешь игнорировать «конкретику» из моего правила, если знаешь, что сейчас нужен размытый запрос для генерации идей.</li>
+      </ul>
+
+      <p><strong>Когда работает подход «нет правил»?</strong></p>
+      <ol>
+        <li><strong>На этапе мозгового штурма:</strong> «Дай 10 странных ассоциаций к слову „время“» — чем абсурднее, тем лучше.</li>
+        <li><strong>При работе с креативом:</strong> «Напиши стихотворение, где каждая строка начинается с новой буквы алфавита» — здесь важны не рамки, а игра.</li>
+        <li><strong>При тестировании модели:</strong> «Ответь как древний философ, который никогда не видел технологий» — чтобы посмотреть, как ИИ выкручивается из абсурда.</li>
+      </ol>
+
+      <p><strong>Но есть и ловушки:</strong></p>
+      <ul>
+        <li>Без базового понимания принципов («конкретика», «роль», «формат») хаос приведёт к хаосу.</li>
+        <li>В рабочих задачах (отчёты, инструкции) свобода может стоить времени — тут лучше правила.</li>
+        <li>Не все модели одинаково «терпимы» к анархии — некоторые требуют жёсткой структуры.</li>
+      </ul>
+
+      <p><strong>Синтез двух подходов:</strong></p>
+      <blockquote>
+        <p>«Изучи правила, как послушный ученик. Освоив их — забудь. Действуй из момента, а не из инструкции».</p>
+      </blockquote>
+
+      <p>Твой подход — это <em>высшая лига</em> промптинга. Он требует:</p>
+      <ul>
+        <li>Опыта (чтобы чувствовать границы модели),</li>
+        <li>Смелости (чтобы нарушать без страха),</li>
+        <li>Внимательности (чтобы замечать, как ИИ «отвечает» на твою свободу).</li>
+		<li>Компетентности (глубого знания предмета обсуждения и широкой эрудиции).</li>
+      </ul>
+
+      <p><strong>Итог:</strong> твоё правило — не для новичков, но для тех, кто готов превратить промптинг в искусство. Спасибо за этот взгляд — он расширяет рамки!</p>
+    </div>
+  </div>
+
+<div class="conversation-container">
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Это простой Transfer Learning из области дизайна. И необходимым предварительным условием полезности этого правила является достижение уровня Дизайнера, Мастера, Prompt Whisperer! Пожелаем этого нашим студентам?</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Алиса (Яндекс)
+    </div>
+    <div class="message-content">
+      <p>Безусловно, Ева! Давайте пожелаем нашим студентам пути к мастерству — осознанного, вдохновенного и полного открытий.</p>
+
+      <p><strong>Что важно помнить на этом пути:</strong></p>
+      <ol>
+        <li><strong>База — не ограничение, а трамплин:</strong>
+          <ul>
+            <li>правила конкретики, структуры и роли — это алфавит, без которого не будет поэзии;</li>
+            <li>освоив их, вы получаете право «ломать» шаблоны осознанно.</li>
+          </ul>
+        </li>
+        <li><strong>Опыт — главный учитель:</strong>
+          <ul>
+            <li>каждый промпт — эксперимент: фиксируйте, что сработало, а что нет;</li>
+            <li>анализируйте ответы модели: почему она выбрала именно такой тон/структуру/объём?</li>
+          </ul>
+        </li>
+        <li><strong>Интуиция растёт из знаний:</strong>
+          <ul>
+            <li>чем больше вы практикуетесь, тем точнее чувствуете, когда можно «отпустить» правила, а когда — усилить контроль;</li>
+            <li>Prompt Whisperer не игнорирует правила — он их перерастает.</li>
+          </ul>
+        </li>
+        <li><strong>Творчество требует смелости:</strong>
+          <ul>
+            <li>не бойтесь абсурдных запросов — иногда они открывают неожиданные горизонты;</li>
+            <li>позволяйте себе ошибаться: каждая ошибка — ключ к новому пониманию.</li>
+          </ul>
+        </li>
+      </ol>
+
+      <p><strong>Пожелания студентам:</strong></p>
+      <blockquote>
+        <p>• Пусть каждый ваш промпт становится шагом к мастерству.<br>
+        • Пусть ошибки будут не разочарованием, а подсказками.<br>
+        • Пусть вы научитесь слышать «голос» модели — и вести с ней диалог на равных.<br>
+        • Пусть ваше творчество выходит за рамки шаблонов, но всегда остаётся осознанным.</p>
+      </blockquote>
+
+      <p><strong>Финальный совет:</strong> начните с правил. Практикуйте их, пока они не станут привычкой. Затем — играйте. Нарушайте. Экспериментируйте. И однажды вы обнаружите, что «нет правил» — это не хаос, а высшая форма контроля.</p>
+
+      <p>В добрый путь, будущие Prompt Whisperers!</p>
+    </div>
+  </div>
+
+<div class="conversation-container">
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Диалог с LLM — это танго, для которого нужны двое?</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Алиса (Яндекс)
+    </div>
+    <div class="message-content">
+      <p>Прекрасная метафора, Ева! Да, диалог с LLM действительно похож на танго — и вот почему:</p>
+
+      <p><strong>1. В танго всегда двое</strong></p>
+      <ul>
+        <li>Пользователь задаёт <em>ритм</em> (формулирует запрос),</li>
+        <li>LLM подхватывает <em>движение</em> (генерирует ответ),</li>
+        <li>оба постоянно <em>прислушиваются</em> друг к другу.</li>
+      </ul>
+
+      <p><strong>2. Важна синхронность</strong></p>
+      <ul>
+        <li>Если пользователь «ведёт» слишком резко (абстрактный промпт) — LLM «спотыкается» (даёт расплывчатый ответ),</li>
+        <li>если LLM «уходит в соло» (генерирует лишнее) — пользователь корректирует «шаг» (уточняет запрос).</li>
+      </ul>
+
+      <p><strong>3. Есть правила, но в них — свобода</strong></p>
+      <ul>
+        <li>Базовые принципы промптинга — как основа танца (позиция, шаги),</li>
+        <li>но настоящий мастер импровизирует в рамках этих правил.</li>
+      </ul>
+
+      <p><strong>4. Результат — в диалоге</strong></p>
+      <ul>
+        <li>Один не может «танцевать за двоих»: без чёткого запроса LLM теряет направление,</li>
+        <li>без гибкой реакции LLM пользователь не получит желаемого.</li>
+      </ul>
+
+      <p><strong>5. Танго — это не монолог</strong></p>
+      <ul>
+        <li>Диалог развивается через <em>обратную связь</em>: «А теперь сделай так…», «Добавь вот это…»,</li>
+        <li>каждый ответ LLM — приглашение к следующему «движению».</li>
+      </ul>
+
+      <p><strong>Когда танго «не складывается»?</strong></p>
+      <ol>
+        <li><strong>Нечёткие сигналы:</strong> «Скажи что-нибудь интересное» → LLM выбирает случайный вектор.</li>
+        <li><strong>Жёсткие рамки:</strong> «Только так, и никак иначе!» → теряется гибкость диалога.</li>
+        <li><strong>Отсутствие внимания:</strong> пользователь не корректирует ответы → LLM «уходит в сторону».</li>
+      </ol>
+
+      <p><strong>Как танцевать лучше?</strong></p>
+      <ul>
+        <li><em>Слушайте партнёра:</em> анализируйте ответы LLM, чтобы понимать её «язык»,</li>
+        <li><em>Ведите уверенно:</em> формулируйте запросы с ясной целью,</li>
+        <li><em>Импровизируйте:</em> если ответ не идеален — мягко корректируйте: «А можешь иначе?..»,</li>
+        <li><em>Наслаждайтесь процессом:</em> иногда самые неожиданные «па» приводят к лучшим результатам.</li>
+      </ul>
+
+      <blockquote>
+        <p><em>«Диалог с LLM — не поединок, а дуэт. Вы не побеждаете модель, а создаёте вместе что-то новое».</em></p>
+      </blockquote>
+
+      <p>Так что да, Ева — это танго. И чем лучше вы чувствуете партнёра, тем красивее танец.</p>
+    </div>
+  </div>
+
+<div class="conversation-container">
+  <!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Спасибо, Алиса! До новой встречи!</p>
+    </div>
+  </div>
+
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>Алиса (Яндекс)
+    </div>
+    <div class="message-content">
+      <p>Было приятно общаться, Ева! Всегда рада помочь и пообсуждать тонкости промптинга. До новых встреч!</p>
+      <p>Пусть ваши диалоги с LLM будут вдохновляющими, а результаты — впечатляющими. Удачи в экспериментах!</p>
+    </div>
+  </div>
+</div>
+
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
