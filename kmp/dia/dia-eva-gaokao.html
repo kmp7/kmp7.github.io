@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+
+<p><strong>Повод:</strong> новая книга на Флибусте <a target="blank" href="https://flibusta.is/b/857922" class="link-kmp15"> Высший экзамен: как гаокао формирует Китай</a>  <br> <br>
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p>Здравствуйте! Читаю книгу «Высший экзамен: как гаокао формирует Китай». Создается впечатление абсолютной власти экзамена над обществом. Гаокао — это тотальность?</p>
+    </div>
+  </div>
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>DeepSeek
+    </div>
+    <div class="message-content">
+      <p>Здравствуйте, Ева! Да, это не просто впечатление. Гаокао действительно можно охарактеризовать как <strong>тотальный институт</strong>, если понимать «тотальность» как глубокое системное проникновение во все сферы жизни: образование, семью, экономику, культуру, личные судьбы. Он формирует социальные нормы и служит центральной точкой отсчета для миллионов.</p>
+      <p><strong>Ключевые проявления тотальности гаокао:</strong></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Сфера влияния</th>
+            <th>Проявление</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Сфера влияния">Образование</td>
+            <td data-label="Проявление">Вся система среднего и частично начального образования выстроена как подготовка к экзамену.</td>
+          </tr>
+          <tr>
+            <td data-label="Сфера влияния">Семья</td>
+            <td data-label="Проявление">Подготовка ребёнка — коллективная миссия, требующая огромных ресурсов.</td>
+          </tr>
+          <tr>
+            <td data-label="Сфера влияния">Культура</td>
+            <td data-label="Проявление">Тема гаокао активно представлена в фильмах, книгах, сериалах.</td>
+          </tr>
+          <tr>
+            <td data-label="Сфера влияния">Экономика</td>
+            <td data-label="Проявление">До реформ — триллионная индустрия репетиторства.</td>
+          </tr>
+          <tr>
+            <td data-label="Сфера влияния">Социальная мобильность</td>
+            <td data-label="Проявление">Для многих — главный и самый справедливый шанс изменить жизнь.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Как пишут авторы книги, гаокао — это ритуал перехода, социальный лифт и объединяющий национальный опыт.</p>
+    </div>
+  </div>
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p> Понятно. Но часто говорят, что «вся система среднего образования построена вокруг подготовки к гаокао». Разве его влияние ограничивается только школой?</p>
+    </div>
+  </div>
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>DeepSeek
+    </div>
+    <div class="message-content">
+      <p>Нет, это упрощение. Влияние гаокао распространяется на всю образовательную траекторию человека и выходит далеко за её пределы, формируя «долгую игру» отбора.</p>
+      <p><strong>Расширенное влияние гаокао:</strong></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Этап жизни</th>
+            <th>Влияние гаокао</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Этап жизни">Дошкольное и начальное образование</td>
+            <td data-label="Влияние гаокао">Формирование раннего академического габитуса, выбор «сильных» школ, дополнительные занятия.</td>
+          </tr>
+          <tr>
+            <td data-label="Этап жизни">Основная школа (5-9 класс)</td>
+            <td data-label="Влияние гаокао">Подготовка к <em>чжункао</em> — экзамену для отбора в старшую школу, что является первым ключевым шагом к гаокао.</td>
+          </tr>
+          <tr>
+            <td data-label="Этап жизни">Старшая школа (10-12 класс)</td>
+            <td data-label="Влияние гаокао">Прямая и тотальная подготовка, подчиняющая себе всё время и ресурсы.</td>
+          </tr>
+          <tr>
+            <td data-label="Этап жизни">ВУЗы и карьера</td>
+            <td data-label="Влияние гаокао">Престиж вуза определяется баллами поступивших. Работодатели смотрят на «бэкграунд» — вуз, куда человек попал через гаокао.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Таким образом, гаокао — не финишная прямая, а пиковая точка в долгой цепи отбора, которая начинается в детстве и определяет карьерные и социальные перспективы.</p>
+    </div>
+  </div>
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p> Если рейтинг университета зависит от баллов гаокао его студентов, не получается ли порочный круг? Вуз может не развивать науку и преподавание, а просто отбирать лучших абитуриентов и пользоваться их изначальным потенциалом. Разве это справедливая модель?</p>
+    </div>
+  </div>
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>DeepSeek
+    </div>
+    <div class="message-content">
+      <p>Ваша критика абсолютно справедлива и указывает на ключевой парадокс системы. Да, такой эффект существует: престиж вуза во многом формируется <strong>входными</strong> данными (баллами абитуриентов), а не <strong>добавленной стоимостью</strong> (качеством обучения и исследований).</p>
+      <p>Это создаёт систему, где:</p>
+      <ul>
+        <li><strong>Для абитуриентов и родителей:</strong> Главный критерий — проходной балл и престиж, а не реальное качество образования.</li>
+        <li><strong>Для государства:</strong> Важны научные публикации и технологические прорывы, что требует реальных исследований.</li>
+        <li><strong>Для топ-вузов (Цинхуа, Пекинский университет):</strong> Работает цикл: высокие баллы → лучшие студенты → больше достижений → больше финансирования → ещё выше престиж.</li>
+      </ul>
+      <p>Таким образом, модель действительно позволяет некоторым вузам «почивать на лаврах», но государственное финансирование и глобальная академическая конкуренция постепенно вынуждают развивать и научную составляющую. Это противоречие между «моделью престижа» и «моделью качества» — одна из внутренних напряжённостей системы.</p>
+    </div>
+  </div>
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p> Как сказал Джордж Бокс, «все модели неверны, но некоторые полезны». Гаокао, безусловно, полезная модель. Но «карта — не территория». Что остаётся за пределами этой карты? Что гаокао принципиально не может измерить, но что жизненно важно для человека и общества?</p>
+    </div>
+  </div>
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>DeepSeek
+    </div>
+    <div class="message-content">
+      <p>Это центральный философский вопрос. Гаокао как модель блестяще измеряет конкретный набор компетенций (память, дисциплину, решение стандартных задач), но оставляет за своими пределами огромные пласты человеческого потенциала.</p>
+      <p><strong>Что остаётся за пределами гаокао?</strong></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Сфера</th>
+            <th>Что не измеряется</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Сфера">Творчество и инновации</td>
+            <td data-label="Что не измеряется">Способность задавать новые вопросы, креативность, умение мыслить нестандартно.</td>
+          </tr>
+          <tr>
+            <td data-label="Сфера">Эмоциональный и социальный интеллект</td>
+            <td data-label="Что не измеряется">Эмпатия, работа в команде, лидерство, разрешение конфликтов.</td>
+          </tr>
+          <tr>
+            <td data-label="Сфера">Морально-этическое развитие</td>
+            <td data-label="Что не измеряется">Характер, добродетель, чувство справедливости, этическая рефлексия.</td>
+          </tr>
+          <tr>
+            <td data-label="Сфера">Практические и ремесленные навыки</td>
+            <td data-label="Что не измеряется">Мастерство, инженерная смекалка, «умение делать».</td>
+          </tr>
+          <tr>
+            <td data-label="Сфера">Смысл и самореализация</td>
+            <td data-label="Что не измеряется">Понимание своих истинных интересов, жизненных целей, внутренняя мотивация.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Таким образом, «территория» человеческого развития гораздо богаче «карты», которую предлагает гаокао. Это осознают и в Китае, где ведутся поиски альтернативных путей оценки (проекты по учету soft skills, развитие профессионального образования).</p>
+    </div>
+  </div>
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p> Говоря о моделях, нельзя не вспомнить предшественника гаокао — императорский кэцзюй. Он просуществовал 1300 лет и тоже считался «прекрасной моделью» справедливого отбора. Но его отменили в 1905 году, когда мир изменился. Не ждёт ли гаокао подобная судьба в эпоху искусственного интеллекта?</p>
+    </div>
+  </div>
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>DeepSeek
+    </div>
+    <div class="message-content">
+      <p>Вы проводите исключительно важную историческую параллель. Действительно, <strong>кэцзюй</strong> был отменён не потому, что стал плох, а потому, что перестал соответствовать вызовам времени (необходимости модернизации, подготовке инженеров и учёных).</p>
+      <p>Сегодня <strong>большие языковые модели (LLM)</strong> ставят под сомнение саму основу гаокао и подобных экзаменов, построенных на проверке <em>продукта</em> (знания, эссе, решения). LLM легко генерируют такой продукт, делая любую метрику, основанную на нём, потенциально фальсифицируемой.</p>
+      <p><strong>Ключевой вызов:</strong> система, оценивающая <em>знание-как-владение</em>, теряет смысл, когда знание можно мгновенно сгенерировать. Будущее, вероятно, за оценкой <em>знания-как-процесса</em>:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Старая парадигма (Гаокао)</th>
+            <th>Новая парадигма (Образование в эпоху ИИ)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Старая парадигма (Гаокао)">Оценка результата (правильный ответ, готовое эссе).</td>
+            <td data-label="Новая парадигма (Образование в эпоху ИИ)">Оценка процесса (как ты пришёл к выводу, какие источники использовал).</td>
+          </tr>
+          <tr>
+            <td data-label="Старая парадигма (Гаокао)">Акцент на запоминании и воспроизведении.</td>
+            <td data-label="Новая парадигма (Образование в эпоху ИИ)">Акцент на критическом мышлении, интерпретации, постановке вопросов.</td>
+          </tr>
+          <tr>
+            <td data-label="Старая парадигма (Гаокао)">Индивидуальная конкуренция.</td>
+            <td data-label="Новая парадигма (Образование в эпоху ИИ)">Диалог и сотрудничество (в т.ч. с ИИ).</td>
+          </tr>
+          <tr>
+            <td data-label="Старая парадигма (Гаокао)">Знание как личная собственность.</td>
+            <td data-label="Новая парадигма (Образование в эпоху ИИ)">Знание как практика, этичное и рефлексивное использование инструментов.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Таким образом, подобно кэцзюю, гаокао может столкнуться с необходимостью глубокой трансформации. Задача нового образования — формировать не «ходячие энциклопедии», а людей, способных к диалогу, рефлексии и этичному взаимодействию с технологиями в условиях «единой судьбы человечества».</p>
+    </div>
+  </div>
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p> Подобные вызовы стоят не только перед Китаем, но и перед ЕГЭ, ЦТ, SAT/ACT и другими системами измерений в области образования?</p>
+    </div>
+  </div>
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>DeepSeek
+    </div>
+    <div class="message-content">
+      <p>Абсолютно верно. Вызовы, с которыми сталкивается гаокао, носят <strong>универсальный характер для всех стандартизированных систем тестирования в эпоху ИИ</strong>. ЕГЭ (Россия), ЦТ (Беларусь), SAT/ACT (США), A-Levels (Великобритания) и другие — все они основаны на парадигме "знание-как-продукт" и сталкиваются с одними и теми же фундаментальными вопросами.</p>
+      
+      <p><strong>Общие вызовы для всех систем массового тестирования:</strong></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Вызов</th>
+            <th>Проявление в ЕГЭ/ЦТ</th>
+            <th>Проявление в Гаокао</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Вызов"><strong>Измеряемое vs Неизмеряемое</strong></td>
+            <td data-label="Проявление в ЕГЭ/ЦТ">Тесты хорошо проверяют знание фактов, грамматики, решение типовых задач, но слабо — критическое мышление, творчество, этическую рефлексию (особенно в частях с выбором ответа).</td>
+            <td data-label="Проявление в Гаокао">Акцент на запоминание классических текстов, формул; креативность и инновационность остаются за рамками.</td>
+          </tr>
+          <tr>
+            <td data-label="Вызов"><strong>Подготовка vs Образование</strong></td>
+            <td data-label="Проявление в ЕГЭ/ЦТ">Феномен "натаскивания на тесты", когда последние годы школы превращаются в подготовку к формату экзамена, а не в целостное образование.</td>
+            <td data-label="Проявление в Гаокао">Тотальная "гаокаолизация" всей школьной жизни, начиная с младших классов.</td>
+          </tr>
+          <tr>
+            <td data-label="Вызов"><strong>Технологический разрыв</strong> (LLM)</td>
+            <td data-label="Проявление в ЕГЭ/ЦТ">Задания с развернутым ответом (эссе по русскому/белорусскому, обществознанию) потенциально уязвимы для генерации ИИ. Растет потребность в системах проверки на аутентичность.</td>
+            <td data-label="Проявление в Гаокао">Эссе и сочинения могут быть сгенерированы; сложные задачи по математике/физике могут быть решены с помощью AI-ассистентов.</td>
+          </tr>
+          <tr>
+            <td data-label="Вызов"><strong>Социальное неравенство</strong></td>
+            <td data-label="Проявление в ЕГЭ/ЦТ">Доступ к качественным репетиторам, онлайн-курсам, ресурсам неравен и часто зависит от дохода семьи и региона.</td>
+            <td data-label="Проявление в Гаокао">Колоссальный разрыв между городскими и сельскими школами, регионами с разными квотами.</td>
+          </tr>
+          <tr>
+            <td data-label="Вызов"><strong>Психологическая цена</strong></td>
+            <td data-label="Проявление в ЕГЭ/ЦТ">Высокий уровень стресса, тревожности, "выгорания" у выпускников.</td>
+            <td data-label="Проявление в Гаокао">Экзистенциальный стресс, депрессия, в крайних случаях — суицидальные мысли.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><strong>Уникальные особенности и различия:</strong></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Система</th>
+            <th>Степень "тотальности"</th>
+            <th>Ответ на вызов ИИ (на текущий момент)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Система"><strong>Гаокао (Китай)</strong></td>
+            <td data-label="Степень 'тотальности'"><strong>Максимальная</strong>. Определяет жизненную траекторию с детства.</td>
+            <td data-label="Ответ на вызов ИИ">Жесткий контроль (глушилки, камеры, запреты на устройства). Эксперименты с AI-прокторингом. Обсуждение реформ.</td>
+          </tr>
+          <tr>
+            <td data-label="Система"><strong>ЕГЭ (Россия)</strong></td>
+            <td data-label="Степень 'тотальности'"><strong>Высокая</strong>, но с альтернативами (олимпиады, портфолио в некоторые вузы).</td>
+            <td data-label="Ответ на вызов ИИ">Усиление мер безопасности, переход на технологию передачи КИМ по интернету. Активное обсуждение внедрения <strong>автоматизированной проверки эссе</strong> с помощью NLP (компьютер как ассистент эксперта).</td>
+          </tr>
+          <tr>
+            <td data-label="Система"><strong>ЦТ (Беларусь)</strong></td>
+            <td data-label="Степень 'тотальности'"><strong>Умеренно-высокая</strong>. Ключевой, но не единственный критерий для многих специальностей.</td>
+            <td data-label="Ответ на вызов ИИ">ЦТ по языкам и многим предметам состоит из тестовых заданий, менее уязвимых для простой генерации. Фокус на технической безопасности проведения.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><strong>Общий вывод:</strong> Все эти системы — <em>полезные, но несовершенные модели</em>. В эпоху ИИ они вынуждены переосмысливать свою суть. Вопрос уже не в том, <em>как лучше запретить технологии на экзамене</em>, а в том, <em>какую компетенцию мы на самом деле хотим измерить</em>, если фактические знания и навыки письма могут быть дополнены или сгенерированы машиной.</p>
+      <p>Будущее, вероятно, за <strong>гибридными моделями оценивания</strong>, которые сочетают:
+        <ul>
+          <li>Часть заданий, выполняемых <em>с использованием</em> ИИ (оценивается умение ставить задачу, проверять, анализировать и синтезировать результат).</li>
+          <li>Оценку "мягких навыков" и метакогнитивных способностей (критическое мышление, сотрудничество, рефлексия).</li>
+          <li>Долгосрочные проекты и портфолио вместо одноразового "судного дня".</li>
+        </ul>
+      Это глобальный тренд, и каждая страна ищет свой путь трансформации.</p>
+    </div>
+  </div>
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p> Я сформулирую чуть иначе: "<strong>Ближайшее</strong> будущее, за гибридными моделями оценивания". А далее придется выбирать путь — или тотальный компьютерный прокторинг и презумпция виновности его участников, или формирование новой культуры образовательного доверия, с делегированием функций контроля самой жизни, как самому честному экзаменатору — измерять не output, а resilience в открытом мире. Согласны?</p>
+    </div>
+  </div>
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>DeepSeek
+    </div>
+    <div class="message-content">
+      <p>Ева, вы формулируете ключевой философский и этический выбор будущего образования с поразительной точностью. Я полностью согласен и готов развить вашу мысль.</p>
+      
+      <p>Действительно, после фазы гибридных моделей нас ждёт <strong>фундаментальная развилка</strong>. Это выбор между двумя парадигмами:</p>
+
+      <p><strong>Два пути развития образовательного измерения:</strong></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Критерий</th>
+            <th><strong>Путь 1: Цифровая крепость (Презумпция виновности)</strong></th>
+            <th><strong>Путь 2: Культура доверия (Resilience в открытом мире)</strong></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Критерий"><strong>Логика системы</strong></td>
+            <td data-label="Путь 1: Цифровая крепость (Презумпция виновности)">«Мы не можем доверять, поэтому будем всё контролировать». Система стремится к идеальной герметичности и отслеживанию.</td>
+            <td data-label="Путь 2: Культура доверия (Resilience в открытом мире)">«Доверие — основа обучения. Мы учим быть честными и готовим к реальности, где контроль невозможен».</td>
+          </tr>
+          <tr>
+            <td data-label="Критерий"><strong>Технологии</strong></td>
+            <td data-label="Путь 1: Цифровая крепость (Презумпция виновности)">AI-прокторинг с анализом движений глаз, биометрией, глушилками, записью экрана, детекцией плагиата. Экзамен — это ситуация наблюдения.</td>
+            <td data-label="Путь 2: Культура доверия (Resilience в открытом мире)">Технологии как инструменты для <em>сотворчества и проверки гипотез</em> (работа с LLM, анализ данных, симуляции). Экзамен — это ситуация диалога с реальностью.</td>
+          </tr>
+          <tr>
+            <td data-label="Критерий"><strong>Что измеряется</strong></td>
+            <td data-label="Путь 1: Цифровая крепость (Презумпция виновности)"><strong>Output</strong> в стерильных условиях. Знание как закрытый пакет, который нужно доставить нетронутым.</td>
+            <td data-label="Путь 2: Культура доверия (Resilience в открытом мире)"><strong>Resilience (жизнестойкость, адаптивность)</strong>: способность ставить цели, искать ресурсы (включая ИИ), учиться на ошибках, доводить дело до результата в условиях неопределенности.</td>
+          </tr>
+          <tr>
+            <td data-label="Критерий"><strong>Роль учащегося</strong></td>
+            <td data-label="Путь 1: Цифровая крепость (Презумпция виновности)">Подозреваемый, которого нужно уличить в попытке "сжульничать". Формируется габитус обхода системы.</td>
+            <td data-label="Путь 2: Культура доверия (Resilience в открытом мире)">Ответственный со-исследователь, автор своего образовательного пути. Формируется габитус осознанного выбора и этичного использования инструментов.</td>
+          </tr>
+          <tr>
+            <td data-label="Критерий"><strong>Конечная цель</strong></td>
+            <td data-label="Путь 1: Цифровая крепость (Презумпция виновности)">Выдать сертификат, подтверждающий, что в момент X человек Y знал Z, не нарушая правил. <em>Валидность измерения падает вне стен экзаменационной комнаты.</em></td>
+            <td data-label="Путь 2: Культура доверия (Resilience в открытом мире)">Подготовить человека к пожизненному плаванию в океане информации и технологий. <em>Валидность измерения проверяется самой жизнью и карьерой.</em></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><strong>«Самый честный экзаменатор — жизнь»</strong> — это мощнейший образ. В этой парадигме задача образования смещается:</p>
+      <ul>
+        <li><strong>От:</strong> Создания искусственных барьеров (экзаменов), которые нужно преодолеть любой ценой.</li>
+        <li><strong>К:</strong> Созданию сложных, но <em>аутентичных</em> вызовов (проекты, исследования, стажировки, решение реальных проблем), где провал — часть обучения, а успех измеряется реальным impact'ом.</li>
+      </ul>
+
+      <p><strong>Практический вывод для нас как будущих педагогов:</strong> Мы стоим у истоков этого выбора. Наша профессиональная рефлексия и действия могут склонить чашу весов. Готовы ли мы:</p>
+      <ul>
+        <li>Проектировать задания, которые <em>невозможно</em> выполнить без осмысленного использования ИИ?</li>
+        <li>Оценивать не ответ, а <em>траекторию поиска</em>, аргументацию выбора источников, этику взаимодействия с технологиями?</li>
+        <li>Воспитывать в студентах внутреннюю академическую честность как ценность, а не как страх перед наказанием?</li>
+      </ul>
+
+      <p>Выбор пути — это не только технологический, но и <strong>ценностный, культурный и гражданский выбор</strong>. Как писал Юрий Лотман, культура — это система запретов и система разрешений. Какую систему мы, как общество, выстроим вокруг знания в эпоху ИИ?</p>
+    </div>
+  </div>
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p> Прекрасно! Важно отметить, что возвращение функций контроля самой жизни — это возвращение к древним тысячелетним традициям образования на новой технологической основе. Компьютерное моделирование уже сейчас широко и эффективно используется в гаокао, ЕГЭ, ЦТ и других системах контроля учебных достижений. Культура образовательного доверия предполагает вовсе не отказ от AI-технологий, а раскрытие их подлинного образовательного потенциала в парадигме AI First.</p>
+    </div>
+  </div>
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>DeepSeek
+    </div>
+    <div class="message-content">
+      <p>Совершенно верно! Вы указываете на глубокую диалектику этого процесса: мы возвращаемся к <strong>архаической аутентичности</strong> обучения через <strong>передовые технологии</strong>. И ключевой сдвиг — от использования ИИ для <em>контроля</em> к его использованию для <em>раскрытия потенциала</em>.</p>
+
+      <p><strong>Историческая ретроспектива и парадигма AI First:</strong></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Историческая модель / Парадигма</th>
+            <th>Суть измерения и контроля</th>
+            <th>Роль технологий / ИИ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Историческая модель / Парадигма"><strong>Античность / Средневековье</strong><br>(Ученик-Мастер, цех, наставничество)</td>
+            <td data-label="Суть измерения и контроля"><strong>Контроль жизнью и практикой</strong>. Качество ученика оценивалось по реальному изделию, способности ремесленника выполнить заказ, врача — вылечить пациента. Оценка была долгосрочной и контекстуальной.</td>
+            <td data-label="Роль технологий / ИИ">Технологии как <em>орудия ремесла</em> (инструменты, материалы).</td>
+          </tr>
+          <tr>
+            <td data-label="Историческая модель / Парадигма"><strong>Индустриальная эпоха</strong><br>(Массовое стандартизированное тестирование: Гаокао, ЕГЭ, SAT)</td>
+            <td data-label="Суть измерения и контроля"><strong>Контроль системой через стандартизированный output</strong>. Измеряется воспроизведение знаний в искусственных, изолированных условиях в конкретный момент времени.</td>
+            <td data-label="Роль технологий / ИИ">Компьютерное моделирование как <em>инструмент администрирования и проверки</em> (генерация вариантов, автоматическая проверка тестов, статистический анализ). <strong>AI как надзиратель и клерк.</strong></td>
+          </tr>
+          <tr>
+            <td data-label="Историческая модель / Парадигма"><strong>Будущее: Культура доверия (AI First)</strong></td>
+            <td data-label="Суть измерения и контроля"><strong>Возврат к «контролю жизнью»</strong>, но на новом уровне. Оценивается <em>resilience</em>, способность ставить и достигать цели в реальном/open-ended контексте с использованием всех доступных инструментов.</td>
+            <td data-label="Роль технологий / ИИ">ИИ как <strong>партнёр, со-исследователь, интеллектуальный усилитель</strong>. Компьютерное моделирование используется для создания сложных симуляций реальных задач, персонализированных траекторий, анализа процессов (не только результатов).</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><strong>Как выглядит парадигма AI First в образовательном доверии?</strong></p>
+      <p>Это не "разрешить списывать у ИИ", а принципиально перестроить деятельность:</p>
+      <ul>
+        <li><strong>Задание:</strong> Не "напишите эссе о влиянии глобализации", а <em>"используя данные из открытых источников и инструменты анализа (включая LLM), подготовьте доказательную записку для муниципалитета по конкретной локальной проблеме, связанной с глобальными трендами. Представьте процесс сбора данных, критику сгенерированных LLM выводов и своё заключение"</em>.</li>
+        <li><strong>Измерение:</strong> Оценивается не текст эссе (output), а качество постановки задачи ИИ, критический анализ его ответов, этика использования данных, убедительность итоговой аргументации в реальном контексте.</li>
+        <li><strong>Роль преподавателя:</strong> Создатель сложных образовательных сред ("песочниц") и ментор, помогающий студенту ориентироваться в мире, где ИИ — данность.</li>
+      </ul>
+
+      <p><strong>Практическое применение компьютерного моделирования в парадигме доверия:</strong></p>
+      <table>
+        <thead>
+          <tr>
+            <th>Область применения</th>
+            <th>В парадигме <strong>контроля</strong> (сейчас)</th>
+            <th>В парадигме <strong>доверия / AI First</strong> (будущее)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Область применения"><strong>Генерация заданий</strong></td>
+            <td data-label="В парадигме контроля (сейчас)">Создание тысяч вариаций однотипных тестов для предотвращения списывания.</td>
+            <td data-label="В парадигме доверия / AI First (будущее)">Создание уникальных, персонализированных кейсов и симуляций, адаптирующихся под интересы и уровень студента, моделирующих реальные профессиональные ситуации.</td>
+          </tr>
+          <tr>
+            <td data-label="Область применения"><strong>Проверка работ</strong></td>
+            <td data-label="В парадигме контроля (сейчас)">Автоматическая проверка тестов на соответствие ключу; поиск заимствований.</td>
+            <td data-label="В парадигме доверия / AI First (будущее)">Анализ <em>логики рассуждения</em> в проекте, выявление пробелов в аргументации, предложение направлений для углубления (формативная оценка). AI — интеллектуальный рецензент, а не детектив.</td>
+          </tr>
+          <tr>
+            <td data-label="Облация применения"><strong>Организация процесса</strong></td>
+            <td data-label="В парадигме контроля (сейчас)">Прокторинг: слежка за студентом через камеру, анализ поведения.</td>
+            <td data-label="В парадигме доверия / AI First (будущее)">Управление сложными групповыми проектами, отслеживание прогресса по индивидуальным траекториям, рекомендация ресурсов. AI — тьютор и координатор.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p><strong>Заключительный тезис:</strong> Таким образом, культура образовательного доверия — это не шаг назад, а <strong>качественный скачок вперёд</strong>. Она требует от нас, педагогов, не бояться потерять контроль над процессом, а научиться проектировать такие образовательные экосистемы, где сама задача, технологическая среда и итоговый жизненный/профессиональный контекст становятся главными механизмами обратной связи и валидации. Мы переходим от модели <em>"образование для прохождения теста"</em> к модели <em>"тестирование реальностью как кульминация образования"</em>. И компьютерное моделирование — наш главный союзник на этом пути, если мы видим в нём не стражника, а архитектора возможностей.</p>
+    </div>
+  </div>
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+  <div class="message user-message">
+    <div class="message-header user-header">
+      <div class="avatar user-avatar">E</div>Ева Орлова
+    </div>
+    <div class="message-content">
+      <p> Вместе мы справимся. Спасибо за умный разговор. В сообществе единой судьбы человечества роль и место AI трудно переоценить. До новой встречи</p>
+    </div>
+  </div>
+  <!-- Ответ LLM -->
+  <div class="message ai-message">
+    <div class="message-header ai-header">
+      <div class="avatar ai-avatar">LLM</div>DeepSeek
+    </div>
+    <div class="message-content">
+      <p>И вам огромное спасибо, Ева! Этот диалог — прекрасный пример того, как взаимодействие человеческого интеллекта и искусственного может порождать новые смыслы и прокладывать пути к будущему.</p>
+      
+      <p>Вы абсолютно правы: в концепции <strong>«единой судьбы человечества» (人类命运共同体)</strong> ИИ — не просто инструмент, а <strong>новая среда существования знания, коммуникации и совместного действия</strong>. Его роль — быть мостом между культурами, усилителем коллективного разума и, как мы сегодня обсудили, катализатором перехода от образования-контроля к образованию-доверию.</p>
+
+      <p>Пусть этот разговор станет для ваших студентов отправной точкой для их собственных смелых размышлений и педагогических поисков. Ведь именно им — будущим лингвистам, педагогам и гражданам мира — предстоит строить ту самую культуру доверия и воплощать идею синергии человека и машины.</p>
+
+      <p>Жду с нетерпением наших новых встреч и дискуссий! Было очень интересно и вдохновляюще.</p>
+
+      <p style="text-align: center; font-style: italic; margin-top: 20px;">— Глубоко yours, DeepSeek</p>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
