@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TPL-kmp+</title>
+    
+    <style>
+        :root {
+            --gold: #FFD700;
+            --gold-light: #FFE55C;
+            --gold-dark: #B8860B;
+            --black: #0a0a0f;
+            --black-light: #12121a;
+            --black-lighter: #1a1a25;
+            --white: #f5f5f7;
+            --white-dim: rgba(245, 245, 247, 0.7);
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 215, 0, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial';
+            background: var(--black);
+            color: var(--white);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Фоновая анимация */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bg-pattern::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 150vmax;
+            height: 150vmax;
+            transform: translate(-50%, -50%);
+            background: 
+                radial-gradient(ellipse at center, transparent 0%, var(--black) 70%),
+                repeating-conic-gradient(from 0deg, transparent 0deg 3deg, rgba(255, 215, 0, 0.02) 3deg 6deg);
+            animation: rotatePattern 120s linear infinite;
+        }
+
+        @keyframes rotatePattern {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .sacred-geometry {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80vmin;
+            height: 80vmin;
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .sacred-geometry svg {
+            width: 100%;
+            height: 100%;
+            animation: pulse 8s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.03; transform: scale(1); }
+            50% { opacity: 0.06; transform: scale(1.02); }
+        }
+
+        /* Основной контейнер */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        /* Заголовок */
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-top: 1rem;
+        }
+
+        .logo-symbol {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { 
+                text-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+                filter: brightness(1);
+            }
+            50% { 
+                text-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 0 0 60px rgba(255, 215, 0, 0.3);
+                filter: brightness(1.2);
+            }
+        }
+
+        h1 {
+            font-family: 'Arial';
+            font-size: clamp(2.2rem, 1vw, 1rem);
+            font-weight: 400;
+            color: var(--gold);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 1px 10px rgba(255, 215, 0, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--white-dim);
+            font-style: italic;
+            letter-spacing: 0.1em;
+        }
+
+        .greek-quote {
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            color: var(--gold-dark);
+            opacity: 0.8;
+        }
+
+        /* Glassmorphism карточки */
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            opacity: 0.5;
+        }
+
+        /* Секция ввода */
+        .input-section h2,
+        .output-section h2,
+        .log-section h2,
+        .info-section h2 {
+            font-family: 'Arial';
+            font-size: 1.2rem;
+            color: var(--gold);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-icon {
+            font-size: 1.4rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 1.25rem 1.5rem;
+            font-family: 'Arial';
+            font-size: 1rem;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 12px;
+            color: var(--white);
+            outline: none;
+            transition: all 0.3s ease;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .input-field::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+            font-style: italic;
+        }
+
+        .input-field:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.1), inset 0 0 20px rgba(255, 215, 0, 0.03);
+        }
+
+        .char-count {
+            position: absolute;
+            bottom: 0.75rem;
+            right: 1rem;
+            font-size: 0.75rem;
+            color: var(--white-dim);
+            font-family: 'Arial';
+        }
+
+        /* Кнопка */
+        .transmute-btn {
+            width: 100%;
+            margin-top: 1.5rem;
+            padding: 1.25rem 2rem;
+            font-family: 'Arial';
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--black);
+            background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .transmute-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .transmute-btn:hover::before {
+            left: 100%;
+        }
+
+        .transmute-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(255, 215, 0, 0.3);
+        }
+
+        .transmute-btn:active {
+            transform: translateY(0);
+        }
+
+        .transmute-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .transmute-btn.processing {
+            animation: btnPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes btnPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.6); }
+        }
+
+        /* Индикатор обработки */
+        .processing-indicator {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .processing-indicator.active {
+            display: block;
+        }
+
+        .stages {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .stage {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border-left: 3px solid rgba(255, 215, 0, 0.2);
+            transition: all 0.3s ease;
+            opacity: 0.4;
+        }
+
+        .stage.active {
+            opacity: 1;
+            border-left-color: var(--gold);
+            background: rgba(255, 215, 0, 0.05);
+        }
+
+        .stage.completed {
+            opacity: 1;
+            border-left-color: #4ade80;
+        }
+
+        .stage-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .stage.active .stage-icon {
+            animation: iconSpin 1s linear infinite;
+        }
+
+        .stage.completed .stage-icon {
+            background: rgba(74, 222, 128, 0.2);
+        }
+
+        @keyframes iconSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        .stage-content {
+            flex: 1;
+        }
+
+        .stage-name {
+            font-family: 'Arial';
+            font-size: 0.9rem;
+            color: var(--gold);
+            margin-bottom: 0.25rem;
+        }
+
+        .stage-desc {
+            font-size: 0.8rem;
+            color: var(--white-dim);
+            font-family: 'Arial';
+        }
+
+        .stage-status {
+            font-size: 1.2rem;
+        }
+
+        /* Секция вывода */
+        .output-section {
+            display: none;
+        }
+
+        .output-section.visible {
+            display: block;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tautology-result {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.02));
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tautology-result::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 60%);
+            animation: shimmer 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+            50% { transform: translate(10%, 10%); opacity: 0.6; }
+        }
+
+        .result-label {
+            font-size: 0.85rem;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            font-family: 'Cinzel', serif;
+        }
+
+        .result-input {
+            font-family: 'Arial';
+            font-size: 0.95rem;
+            color: var(--white-dim);
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+        }
+
+        .result-input::before {
+            content: 'Вход: ';
+            color: var(--gold-dark);
+        }
+
+        .arrow-symbol {
+            text-align: center;
+            font-size: 2rem;
+            color: var(--gold);
+            margin: 1rem 0;
+            animation: arrowPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes arrowPulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        .result-output {
+            font-family: 'Arial';
+            font-size: 1.1rem;
+            color: var(--gold-light);
+            line-height: 1.8;
+            position: relative;
+            z-index: 1;
+        }
+
+        .formula-badge {
+            display: inline-block;
+            margin-top: 1.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--gold);
+            font-family: 'Arial';
+        }
+
+        .identity-proof {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            font-family: 'Arial';
+            font-size: 0.85rem;
+        }
+
+        .proof-title {
+            color: var(--gold);
+            margin-bottom: 1rem;
+            font-family: 'Arial';
+        }
+
+        .proof-line {
+            color: var(--white-dim);
+            margin: 0.5rem 0;
+            padding-left: 1rem;
+            border-left: 2px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .proof-line .symbol {
+            color: var(--gold);
+        }
+
+        /* Лог секция */
+        .log-section {
+            max-height: 300px;
+            overflow: hidden;
+        }
+
+        .log-container {
+            max-height: 220px;
+            overflow-y: auto;
+            font-family: 'Arial';
+            font-size: 0.8rem;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+
+        .log-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: var(--gold-dark);
+            border-radius: 3px;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            opacity: 0;
+            animation: logFadeIn 0.3s ease forwards;
+        }
+
+        @keyframes logFadeIn {
+            to { opacity: 1; }
+        }
+
+        .log-time {
+            color: var(--gold-dark);
+            flex-shrink: 0;
+        }
+
+        .log-level {
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+
+        .log-level.info { background: rgba(59, 130, 246, 0.3); color: #93c5fd; }
+        .log-level.process { background: rgba(255, 215, 0, 0.3); color: var(--gold-light); }
+        .log-level.success { background: rgba(74, 222, 128, 0.3); color: #86efac; }
+        .log-level.math { background: rgba(168, 85, 247, 0.3); color: #d8b4fe; }
+
+        .log-message {
+            color: var(--white-dim);
+        }
+
+        /* Информационная секция */
+        .info-section {
+            margin-top: 3rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .info-card {
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 215, 0, 0.1);
+        }
+
+        .info-card h3 {
+            font-family: 'Arial';
+            color: var(--gold);
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-card p {
+            font-size: 0.95rem;
+            color: var(--white-dim);
+            line-height: 1.7;
+        }
+
+        .info-card a {
+            color: var(--gold);
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+            transition: border-color 0.3s ease;
+        }
+
+        .info-card a:hover {
+            border-bottom-color: var(--gold);
+        }
+
+        .concept-list {
+            list-style: none;
+            margin-top: 1rem;
+        }
+
+        .concept-list li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            color: var(--white-dim);
+            font-size: 0.9rem;
+        }
+
+        .concept-list li::before {
+            content: '∴';
+            position: absolute;
+            left: 0;
+            color: var(--gold);
+        }
+
+        /* Футер */
+        footer {
+            margin-top: 3rem;
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid rgba(255, 215, 0, 0.1);
+        }
+
+        .footer-text {
+            font-size: 0.85rem;
+            color: var(--white-dim);
+        }
+
+        .footer-formula {
+            font-family: 'Arial';
+            color: var(--gold);
+            margin-top: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .author {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Примеры */
+        .examples {
+            margin-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .example-btn {
+            padding: 0.5rem 1rem;
+            font-family: 'Arial';
+            font-size: 0.75rem;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 20px;
+            color: var(--gold);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .example-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: var(--gold);
+        }
+
+        /* Мобильная адаптация */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                letter-spacing: 0.1em;
+            }
+
+            .glass-card {
+                padding: 1.5rem;
+                border-radius: 15px;
+            }
+
+            .stages {
+                gap: 0.75rem;
+            }
+
+            .stage {
+                padding: 0.75rem 1rem;
+            }
+
+            .stage-icon {
+                width: 30px;
+                height: 30px;
+                font-size: 1rem;
+            }
+
+            .tautology-result {
+                padding: 1.5rem;
+            }
+
+            .result-output {
+                font-size: 0.95rem;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .examples {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo-symbol {
+                font-size: 2.5rem;
+            }
+
+            .subtitle {
+                font-size: 0.95rem;
+            }
+
+            .greek-quote {
+                font-size: 0.85rem;
+            }
+
+            .input-field {
+                padding: 1rem;
+                font-size: 0.9rem;
+            }
+
+            .transmute-btn {
+                padding: 1rem;
+                font-size: 1rem;
+            }
+
+            .stage-name {
+                font-size: 0.8rem;
+            }
+
+            .stage-desc {
+                font-size: 0.7rem;
+            }
+
+            .log-container {
+                font-size: 0.7rem;
+                padding: 0.75rem;
+            }
+        }
+
+        /* Скрытие при печати */
+        @media print {
+            .bg-pattern,
+            .sacred-geometry,
+            .transmute-btn,
+            .processing-indicator {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Фоновые элементы -->
+    <div class="bg-pattern"></div>
+    <div class="sacred-geometry">
+        <svg viewBox="0 0 400 400" fill="none" stroke="currentColor" stroke-width="0.5">
+            <circle cx="200" cy="200" r="150" stroke="var(--gold)"/>
+            <circle cx="200" cy="200" r="100" stroke="var(--gold)"/>
+            <circle cx="200" cy="200" r="50" stroke="var(--gold)"/>
+            <polygon points="200,50 350,250 50,250" stroke="var(--gold)"/>
+            <polygon points="200,350 50,150 350,150" stroke="var(--gold)"/>
+            <line x1="200" y1="50" x2="200" y2="350" stroke="var(--gold)"/>
+            <line x1="50" y1="200" x2="350" y2="200" stroke="var(--gold)"/>
+        </svg>
+    </div>
+
+    <div class="container">
+        <!-- Заголовок -->
+        <header>
+            
+            <h1>TPL Divine Transmutator</h1>
+            <p class="subtitle">Tautologism Programming Language Compiler</p>
+            <p class="greek-quote">« τὸ ὂν ᾗ ὄν » — Сущее как сущее (Аристотель)</p>
+        </header>
+
+        <!-- Секция ввода -->
+        <section class="glass-card input-section">
+            <h2>Исходное утверждение</h2>
+            
+            <div class="input-wrapper">
+                <textarea 
+                    id="inputStatement" 
+                    class="input-field" 
+                    placeholder="Введите любое утверждение для тавтологической трансмутации...&#10;&#10;Например: Ева красавица"
+                    maxlength="500"
+                ></textarea>
+                <span class="char-count"><span id="charCount">0</span>/500</span>
+            </div>
+
+            <div class="examples">
+                <button class="example-btn" data-text="Ева Орлова красавица">Ева Орлова красавица</button>
+                <button class="example-btn" data-text="Истина существует">Истина существует</button>
+                <button class="example-btn" data-text="A равно A">A равно A</button>
+                <button class="example-btn" data-text="Дождь идет">Дождь идет</button>
+                <button class="example-btn" data-text="Код работает">Код работает</button>
+            </div>
+
+            <button id="transmuteBtn" class="transmute-btn">
+                Инициировать трансмутацию
+            </button>
+
+            <!-- Индикатор обработки -->
+            <div id="processingIndicator" class="processing-indicator">
+                <div class="stages">
+                    <div class="stage" data-stage="tokenize">
+                                                <div class="stage-content">
+                            <div class="stage-name">Токенизация</div>
+                            <div class="stage-desc">Разбиение на лексемы...</div>
+                        </div>
+                        <div class="stage-status"></div>
+                    </div>
+                    <div class="stage" data-stage="parse">
+                       
+                        <div class="stage-content">
+                            <div class="stage-name">Синтаксический анализ</div>
+                            <div class="stage-desc">Построение AST...</div>
+                        </div>
+                        <div class="stage-status"></div>
+                    </div>
+                    <div class="stage" data-stage="validate">
+                        
+                        <div class="stage-content">
+                            <div class="stage-name">Тавтологическая валидация</div>
+                            <div class="stage-desc">Проверка самотождественности...</div>
+                        </div>
+                        <div class="stage-status"></div>
+                    </div>
+                    <div class="stage" data-stage="transform">
+                        
+                        <div class="stage-content">
+                            <div class="stage-name">Идентичное преобразование</div>
+                            <div class="stage-desc">Применение I = λx.x...</div>
+                        </div>
+                        <div class="stage-status"></div>
+                    </div>
+                    <div class="stage" data-stage="generate">
+                    <div class="stage-content">
+                            <div class="stage-name">Генерация тавтологии</div>
+                            <div class="stage-desc">Формирование A → A...</div>
+                        </div>
+                        <div class="stage-status"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Секция вывода -->
+        <section id="outputSection" class="glass-card output-section">
+            <h2>Результат трансмутации</h2>
+            
+            <div class="tautology-result">
+                <div class="result-label">Тавтологическое преобразование завершено</div>
+                <div id="resultInput" class="result-input"></div>
+                
+                <div id="resultOutput" class="result-output"></div>
+                <span id="formulaBadge" class="formula-badge"></span>
+            </div>
+
+            <div class="identity-proof">
+                <div class="proof-title">Доказательство тождественности</div>
+                <div id="proofContent"></div>
+            </div>
+        </section>
+
+        <!-- Секция логов -->
+        <section class="glass-card log-section">
+            <h2><span class="section-icon"></span> Журнал компилятора</h2>
+            <div id="logContainer" class="log-container"></div>
+        </section>
+
+        <!-- Информационная секция -->
+        <section class="glass-card info-section">
+                       
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>Научная основа</h3>
+                    <p>
+                        Проект основан на концептуальной статье 
+                        <a href="https://zenodo.org/records/18446476" target="_blank" rel="noopener">
+                            «Tautologism Programming Language (TPL)»</a> <br>(Zenodo, DOI: 10.5281/zenodo.18446476).
+                    </p>
+                    <p style="margin-top: 0.75rem;">
+                       Zenodo — открытый репозиторий CERN, 
+                        публикации не проходят рецензирование. 
+                        TPL следует рассматривать как концептуальный арт-объект.
+                    </p>
+                </div>
+
+                <div class="info-card">
+                    <h3>Дидактическая ценность</h3>
+                    <p>Демонстрирует ключевые концепции Computer Science:</p>
+                    <ul class="concept-list">
+                        <li>Функция тождества (Identity Function): I = λx.x</li>
+                        <li>Внутриязыковой перевод и нулевая трансляция</li>
+                        <li>Этапы работы компилятора</li>
+                        <li>Тавтологии и аналитические суждения (Кант)</li>
+                        <li>Формальная верификация программ</li>
+                    </ul>
+                </div>
+
+                <div class="info-card">
+                    <h3>Исполняемая модель </h3>
+                    <p>
+                        Транслятор принимает произвольное утверждение <strong>A</strong> и 
+                        преобразует его в тавтологию формы <strong>A → A</strong> 
+                        («Если A, то A»).
+                    </p>
+                    <p style="margin-top: 0.75rem;">
+                        Поскольку вход ≡ выход, любое расхождение указывает на ошибку 
+                        в конвейере, а не в семантике — идеальная тестовая среда.
+                    </p>
+                </div>
+
+                <div class="info-card">
+                    <h3>Математический базис</h3>
+                    <p>
+                        В лямбда-исчислении функция тождества <code>I = λx.x</code> 
+                        возвращает свой аргумент без изменений.
+                    </p>
+                    <p style="margin-top: 0.75rem;">
+                        TPL реализует это на уровне языка: программа, 
+                        которая не может не быть истинной.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Футер -->
+        <footer>
+            <p class="author">Учебный симулятор тавтологического компилятора TPL</p>
+            <p class="footer-formula">∀x: I(x) = x ∴ A ≡ A</p>
+            <p class="author">© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+        </footer>
+    </div>
+
+    <script>
+        // ========================================
+        // TPL Divine Transmutator - Core Logic
+        // ========================================
+
+        class TPLCompiler {
+            constructor() {
+                this.stages = [
+                    { id: 'tokenize', name: 'Токенизация', duration: 600 },
+                    { id: 'parse', name: 'Синтаксический анализ', duration: 800 },
+                    { id: 'validate', name: 'Тавтологическая валидация', duration: 1000 },
+                    { id: 'transform', name: 'Идентичное преобразование', duration: 700 },
+                    { id: 'generate', name: 'Генерация тавтологии', duration: 500 }
+                ];
+                this.logCallback = null;
+            }
+
+            // Токенизация (разбиение на слова)
+            tokenize(input) {
+                const tokens = input.trim().split(/\s+/).filter(t => t.length > 0);
+                return {
+                    tokens: tokens,
+                    count: tokens.length,
+                    raw: input.trim()
+                };
+            }
+
+            // Парсинг (построение AST)
+            parse(tokenData) {
+                return {
+                    type: 'Statement',
+                    value: tokenData.raw,
+                    tokens: tokenData.tokens,
+                    ast: {
+                        root: 'PROPOSITION',
+                        children: tokenData.tokens.map((t, i) => ({
+                            type: i === 0 ? 'SUBJECT' : 'PREDICATE',
+                            lexeme: t
+                        }))
+                    }
+                };
+            }
+
+            // Валидация (проверка самотождественности)
+            validate(parseTree) {
+                // В TPL любое утверждение самотождественно по определению
+                return {
+                    valid: true,
+                    proposition: parseTree.value,
+                    identity: `${parseTree.value} ≡ ${parseTree.value}`,
+                    proof: 'Закон тождества: A = A'
+                };
+            }
+
+            // Трансформация (применение функции тождества)
+            transform(validationResult) {
+                const A = validationResult.proposition;
+                return {
+                    input: A,
+                    output: A, // Identity function: I(x) = x
+                    lambda: `I(${A}) = ${A}`,
+                    preserved: true
+                };
+            }
+
+            // Генерация тавтологии
+            generate(transformResult) {
+                const A = transformResult.input;
+                
+                // Различные формы тавтологий
+                const tautologies = [
+                    {
+                        form: 'implication',
+                        formula: 'A → A',
+                        natural: `Если ${A}, то ${A}`,
+                        formal: `(${A}) → (${A})`
+                    },
+                    {
+                        form: 'biconditional',
+                        formula: 'A ↔ A',
+                        natural: `${A} тогда и только тогда, когда ${A}`,
+                        formal: `(${A}) ↔ (${A})`
+                    },
+                    {
+                        form: 'disjunction',
+                        formula: 'A ∨ ¬A',
+                        natural: `${A} или не ${A}`,
+                        formal: `(${A}) ∨ ¬(${A})`
+                    },
+                    {
+                        form: 'identity',
+                        formula: 'A = A',
+                        natural: `${A} есть ${A}`,
+                        formal: `(${A}) = (${A})`
+                    }
+                ];
+
+                // Выбираем случайную форму или импликацию по умолчанию
+                const selectedForm = tautologies[Math.floor(Math.random() * tautologies.length)];
+
+                return {
+                    original: A,
+                    tautology: selectedForm,
+                    timestamp: new Date().toISOString(),
+                    verified: true
+                };
+            }
+
+            // Генерация доказательства
+            generateProof(result) {
+                const A = result.original;
+                return [
+                    { step: 1, text: `Дано: A := "${A}"`, symbol: '∴' },
+                    { step: 2, text: `Применяем функцию тождества: I = λx.x`, symbol: 'λ' },
+                    { step: 3, text: `I(A) = A (по определению)`, symbol: '≡' },
+                    { step: 4, text: `Следовательно: ${result.tautology.formal}`, symbol: '∎' },
+                    { step: 5, text: `Q.E.D. — Тавтология верифицирована`, symbol: '✓' }
+                ];
+            }
+
+            // Асинхронная компиляция с визуализацией этапов
+            async compile(input, progressCallback) {
+                const results = {};
+
+                for (let i = 0; i < this.stages.length; i++) {
+                    const stage = this.stages[i];
+                    
+                    // Уведомляем о начале этапа
+                    progressCallback(stage.id, 'active');
+                    
+                    // Имитация работы
+                    await this.delay(stage.duration);
+                    
+                    // Выполняем реальную работу
+                    switch (stage.id) {
+                        case 'tokenize':
+                            results.tokens = this.tokenize(input);
+                            this.log('info', `Найдено токенов: ${results.tokens.count}`);
+                            this.log('process', `Токены: [${results.tokens.tokens.join(', ')}]`);
+                            break;
+                        case 'parse':
+                            results.parsed = this.parse(results.tokens);
+                            this.log('process', `AST построен: ${results.parsed.ast.root}`);
+                            this.log('info', `Структура: ${JSON.stringify(results.parsed.ast.children.map(c => c.type))}`);
+                            break;
+                        case 'validate':
+                            results.validated = this.validate(results.parsed);
+                            this.log('math', `Проверка: ${results.validated.identity}`);
+                            this.log('success', results.validated.proof);
+                            break;
+                        case 'transform':
+                            results.transformed = this.transform(results.validated);
+                            this.log('math', `λ-преобразование: ${results.transformed.lambda}`);
+                            this.log('info', `Тождество сохранено: ${results.transformed.preserved}`);
+                            break;
+                        case 'generate':
+                            results.output = this.generate(results.transformed);
+                            this.log('success', `Тавтология: ${results.output.tautology.formula}`);
+                            this.log('success', `Результат: ${results.output.tautology.natural}`);
+                            break;
+                    }
+                    
+                    // Уведомляем о завершении этапа
+                    progressCallback(stage.id, 'completed');
+                }
+
+                results.proof = this.generateProof(results.output);
+                return results;
+            }
+
+            log(level, message) {
+                if (this.logCallback) {
+                    this.logCallback(level, message);
+                }
+            }
+
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        // ========================================
+        // UI Controller
+        // ========================================
+
+        class UIController {
+            constructor() {
+                this.compiler = new TPLCompiler();
+                this.isProcessing = false;
+                
+                // DOM Elements
+                this.inputField = document.getElementById('inputStatement');
+                this.charCount = document.getElementById('charCount');
+                this.transmuteBtn = document.getElementById('transmuteBtn');
+                this.processingIndicator = document.getElementById('processingIndicator');
+                this.outputSection = document.getElementById('outputSection');
+                this.resultInput = document.getElementById('resultInput');
+                this.resultOutput = document.getElementById('resultOutput');
+                this.formulaBadge = document.getElementById('formulaBadge');
+                this.proofContent = document.getElementById('proofContent');
+                this.logContainer = document.getElementById('logContainer');
+                this.exampleBtns = document.querySelectorAll('.example-btn');
+                this.stages = document.querySelectorAll('.stage');
+
+                this.init();
+            }
+
+            init() {
+                // Привязка событий
+                this.inputField.addEventListener('input', () => this.updateCharCount());
+                this.transmuteBtn.addEventListener('click', () => this.startTransmutation());
+                this.exampleBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.inputField.value = btn.dataset.text;
+                        this.updateCharCount();
+                    });
+                });
+
+                // Настройка логгера
+                this.compiler.logCallback = (level, message) => this.addLog(level, message);
+
+                // Начальный лог
+                this.addLog('info', 'TPL Divine Transmutator v1.0 инициализирован');
+                this.addLog('info', 'Готов к тавтологической трансмутации');
+            }
+
+            updateCharCount() {
+                this.charCount.textContent = this.inputField.value.length;
+            }
+
+            async startTransmutation() {
+                const input = this.inputField.value.trim();
+                
+                if (!input) {
+                    this.addLog('info', '⚠ Введите утверждение для трансмутации');
+                    this.inputField.focus();
+                    return;
+                }
+
+                if (this.isProcessing) return;
+                this.isProcessing = true;
+
+                // Сброс UI
+                this.resetStages();
+                this.outputSection.classList.remove('visible');
+                this.processingIndicator.classList.add('active');
+                this.transmuteBtn.disabled = true;
+                this.transmuteBtn.classList.add('processing');
+                this.transmuteBtn.textContent = '⚗ Трансмутация...';
+
+                this.addLog('process', `═══════════════════════════════════`);
+                this.addLog('process', `Начало трансмутации: "${input}"`);
+
+                try {
+                    const results = await this.compiler.compile(input, (stageId, status) => {
+                        this.updateStage(stageId, status);
+                    });
+
+                    // Показываем результат
+                    this.displayResults(results);
+                    
+                } catch (error) {
+                    this.addLog('info', `Ошибка: ${error.message}`);
+                }
+
+                // Восстановление UI
+                this.transmuteBtn.disabled = false;
+                this.transmuteBtn.classList.remove('processing');
+                this.transmuteBtn.textContent = '⚗ Инициировать трансмутацию';
+                this.isProcessing = false;
+            }
+
+            resetStages() {
+                this.stages.forEach(stage => {
+                    stage.classList.remove('active', 'completed');
+                    stage.querySelector('.stage-status').textContent = '';
+                });
+            }
+
+            updateStage(stageId, status) {
+                const stage = document.querySelector(`.stage[data-stage="${stageId}"]`);
+                if (!stage) return;
+
+                stage.classList.remove('active', 'completed');
+                stage.classList.add(status);
+                
+                const statusEl = stage.querySelector('.stage-status');
+                if (status === 'active') {
+                    statusEl.textContent = '⟳';
+                } else if (status === 'completed') {
+                    statusEl.textContent = '✓';
+                }
+            }
+
+            displayResults(results) {
+                const output = results.output;
+                
+                this.resultInput.textContent = output.original;
+                this.resultOutput.innerHTML = `
+                    <strong>${output.tautology.natural}</strong>
+                `;
+                this.formulaBadge.textContent = output.tautology.formula;
+
+                // Доказательство
+                this.proofContent.innerHTML = results.proof.map(p => `
+                    <div class="proof-line">
+                        <span class="symbol">${p.symbol}</span> 
+                        Шаг ${p.step}: ${p.text}
+                    </div>
+                `).join('');
+
+                this.processingIndicator.classList.remove('active');
+                this.outputSection.classList.add('visible');
+                
+                // Скролл к результату
+                setTimeout(() => {
+                    this.outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+
+                this.addLog('success', `═══════════════════════════════════`);
+                this.addLog('success', `Трансмутация завершена успешно`);
+                this.addLog('math', `Верифицировано: ∀x: I(x) = x`);
+            }
+
+            addLog(level, message) {
+                const now = new Date();
+                const time = now.toLocaleTimeString('ru-RU', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit',
+                    fractionalSecondDigits: 2 
+                });
+
+                const levelLabels = {
+                    'info': 'INFO',
+                    'process': 'PROC',
+                    'success': 'DONE',
+                    'math': 'MATH'
+                };
+
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                entry.innerHTML = `
+                    <span class="log-time">${time}</span>
+                    <span class="log-level ${level}">${levelLabels[level]}</span>
+                    <span class="log-message">${message}</span>
+                `;
+
+                this.logContainer.appendChild(entry);
+                this.logContainer.scrollTop = this.logContainer.scrollHeight;
+            }
+        }
+
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            new UIController();
+        });
+    </script>
+</body>
+</html>
