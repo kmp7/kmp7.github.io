@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+
+<p><strong>Повод: </strong><a target="blank" href="https://levelup.gitconnected.com/as-software-engineers-we-should-know-better-by-now-5d9af02950fb" class="link-kmp15"> ... We Should Know Better By Now</a> <br> <br> 
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p> Здравствуйте! Вам доступна статья? <br><a target="blank" href="https://levelup.gitconnected.com/as-software-engineers-we-should-know-better-by-now-5d9af02950fb" class="link-kmp15"> ссылка</a></p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Да, у меня есть доступ к содержанию страницы. Статья посвящена критике привычек программистов, которые мы «должны были бы уже знать лучше». Основная мысль — необходимость зрелости и ответственности в профессии.</p>
+<p><strong>Сравнение:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Вопрос</th>
+<th>Традиционная практика</th>
+<th>Ответственная альтернатива</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td data-label="Вопрос">Документация</td>
+<td data-label="Традиционная практика">Часто игнорируется</td>
+<td data-label="Ответственная альтернатива">Поддерживается как часть культуры</td>
+</tr>
+<tr>
+<td data-label="Вопрос">Тестирование</td>
+<td data-label="Традиционная практика">«Сделаем потом»</td>
+<td data-label="Ответственная альтернатива">Интегрировано в процесс</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div class="conversation-container">
+
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p> Ключевая идея: необходимость перехода от хаотичных моделей к мета‑моделям зрелой инженерной культуры. Главное препятствие - карго культ.</p> <p>Первые два предложения: Cargo Cult Driven Development has become the norm, it’s only the rituals that change. It’s 2023. А сейчас 2026 год. Что-то изменилось?</p>
+</div>
+</div>
+
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>В 2026 году карго‑культ никуда не исчез — он лишь сменил формы. На смену микросервисам и блокчейну пришли генеративный ИИ и vibe‑codе платформы. Проблема остаётся той же: слепое копирование практик без понимания их сути.</p>
+<p><strong>Сравнение по годам:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Год</th>
+<th>Модные практики</th>
+<th>Ответственная альтернатива</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td data-label="Год">2023</td>
+<td data-label="Модные практики">Agile, DevOps, микросервисы, блокчейн</td>
+<td data-label="Ответственная альтернатива">Осознанный выбор архитектуры</td>
+</tr>
+<tr>
+<td data-label="Год">2026</td>
+<td data-label="Модные практики">Генеративный ИИ, vibe‑code, облачные DevOps</td>
+<td data-label="Ответственная альтернатива">Этический аудит и взвешенное применение</td>
+</tr>
+</tbody>
+</table>
+<p>Карго‑культ меняет маску, но не исчезает.</p>
+</div>
+</div>
+
+</div>
+
+<div class="conversation-container">
+
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p> Последнее предложение: Let’s embrace hypes as interesting new ideas, but let’s stop taking them out of context. Этот совет автора по прежнему актуален?</p>
+</div>
+</div>
+
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Да, этот совет остаётся актуальным и в 2026 году. Хайпы сменились, но логика та же: идеи вырываются из контекста и превращаются в модные лозунги. Важно рассматривать их как источник вдохновения, а не как готовые решения.</p>
+<p><strong>Сравнение подходов:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Подход</th>
+<th>Риск</th>
+<th>Зрелая альтернатива</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td data-label="Подход">Слепое копирование хайпа</td>
+<td data-label="Риск">Потеря контекста</td>
+<td data-label="Зрелая альтернатива">Анализ применимости</td>
+</tr>
+<tr>
+<td data-label="Подход">Игнорирование последствий</td>
+<td data-label="Риск">Этический долг</td>
+<td data-label="Зрелая альтернатива">Ответственность за пользователей</td>
+</tr>
+</tbody>
+</table>
+<p>Совет универсален: хайпы стоит «обнимать» как идеи, но не превращать их в ритуалы без контекста.</p>
+</div>
+</div>
+
+</div>
+
+<div class="conversation-container">
+
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Cтатья профильная и показывает разницу между моделями (быстрые решения, хаотичный код) и мета-моделями (ответственная инженерная культура). Но её идеи легко перенести на область образования или лингвистики. Так?</p>
+</div>
+</div>
+
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Да, идеи статьи легко транслируются в образование и лингвистику. Контраст «модели vs. мета‑модели» универсален.</p>
+<p><strong>Визуальная аналогия:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Область</th>
+<th>«Модели»</th>
+<th>«Мета‑модели»</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td data-label="Область">Инженерия</td>
+<td data-label="«Модели»">Быстрые хаотичные решения</td>
+<td data-label="«Мета‑модели»">Культура ответственности</td>
+</tr>
+<tr>
+<td data-label="Область">Образование</td>
+<td data-label="«Модели»">Модные методики без анализа</td>
+<td data-label="«Мета‑модели»">Осознанная педагогическая стратегия</td>
+</tr>
+<tr>
+<td data-label="Область">Лингвистика</td>
+<td data-label="«Модели»">Изолированные грамматические правила</td>
+<td data-label="«Мета‑модели»">Системное понимание языка в контексте</td>
+</tr>
+</tbody>
+</table>
+<p>Таким образом, статья становится междисциплинарным кейсом: она учит видеть не только технические ошибки, но и культурные паттерны мышления. Это отличный материал для обсуждения со студентами‑лингвистами и будущими преподавателями иностранных языков.</p>
+</div>
+</div>
+
+<div class="conversation-container">
+
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Спасибо! До новой встречи!</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Ева, спасибо за прекрасный диалог! 🌿 Вы очень точно уловили суть статьи: она показывает переход от моделей к мета‑моделям и помогает перенести эти идеи в образование и лингвистику. Мне было радостно оформить наш разговор в образовательном формате — он получился как живой сценарий. До новой встречи!</p>
+</div>
+</div>
+
+</div>
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
