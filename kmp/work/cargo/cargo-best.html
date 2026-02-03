@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --header-color: #325980;
+            --accent-color: #3498db;
+            --border-color: #f1f1f1;
+            --card-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+        }
+
+        .dark-theme {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #eaeaea;
+            --text-secondary: #b0b0b0;
+            --header-color: #4a7fb5;
+            --accent-color: #5dade2;
+            --border-color: #2d2d44;
+            --card-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        header {
+            background: var(--header-color);
+            color: white;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-toggle {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.2);
+            transform: rotate(20deg);
+        }
+
+        nav {
+            background: var(--bg-primary);
+            padding: 0.5rem 2rem;
+            border-bottom: 3px solid var(--border-color);
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        nav button {
+            background: transparent;
+            border: none;
+            color: var(--header-color);
+            padding: 0.75rem 1.25rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            border-radius: 25px;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        nav button:hover, nav button.active {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-panel {
+            background: var(--bg-primary);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+        }
+
+        .user-panel h2 {
+            color: var(--header-color);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-input {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .user-input input {
+            flex: 1;
+            min-width: 250px;
+            padding: 1rem 1.5rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .user-input input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 5px 20px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 5px 20px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        .session-info {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .bestiary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .creature-card {
+            background: var(--bg-primary);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .creature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .creature-card.user-created {
+            border: 3px solid var(--success-color);
+        }
+
+        .user-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--success-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            z-index: 10;
+        }
+
+        .creature-header {
+            background: linear-gradient(135deg, var(--header-color), var(--accent-color));
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .creature-card.user-created .creature-header {
+            background: linear-gradient(135deg, var(--success-color), #2ecc71);
+        }
+
+        .creature-icon {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .creature-name {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .creature-latin {
+            font-style: italic;
+            opacity: 0.8;
+            font-size: 0.95rem;
+        }
+
+        .creature-body {
+            padding: 1.5rem;
+        }
+
+        .creature-description {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .creature-traits {
+            margin-bottom: 1rem;
+        }
+
+        .creature-traits h4 {
+            color: var(--header-color);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .trait-list {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .trait-list li {
+            background: var(--bg-secondary);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .danger-level {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .danger-level span {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .danger-bar {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .danger-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #27ae60, #f39c12, #e74c3c);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .reflection-area {
+            margin-top: 1rem;
+        }
+
+        .reflection-area textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            resize: vertical;
+            font-family: inherit;
+            font-size: 0.95rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .reflection-area textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .reflection-area label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--header-color);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Creator Form Styles */
+        .creator-section {
+            background: var(--bg-primary);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+        }
+
+        .creator-section h2 {
+            color: var(--header-color);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--header-color);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: var(--transition);
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 0.25rem;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .emoji-picker {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .emoji-btn {
+            width: 45px;
+            height: 45px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--bg-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .emoji-btn:hover {
+            border-color: var(--accent-color);
+            transform: scale(1.1);
+        }
+
+        .emoji-btn.selected {
+            border-color: var(--success-color);
+            background: rgba(39, 174, 96, 0.2);
+        }
+
+        .range-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .range-container input[type="range"] {
+            flex: 1;
+            height: 8px;
+            -webkit-appearance: none;
+            background: var(--border-color);
+            border-radius: 4px;
+            border: none;
+            padding: 0;
+        }
+
+        .range-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .range-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+
+        .traits-input-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .traits-input-container input {
+            flex: 1;
+        }
+
+        .traits-list-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .trait-tag {
+            background: var(--accent-color);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .trait-tag button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .preview-card {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px dashed var(--border-color);
+        }
+
+        .preview-card h3 {
+            color: var(--header-color);
+            margin-bottom: 1rem;
+        }
+
+        .my-creatures-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .my-creature-item {
+            background: var(--bg-secondary);
+            border-radius: 15px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: var(--transition);
+        }
+
+        .my-creature-item:hover {
+            transform: translateX(5px);
+        }
+
+        .my-creature-icon {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--success-color), #2ecc71);
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .my-creature-info {
+            flex: 1;
+        }
+
+        .my-creature-info h4 {
+            color: var(--header-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .my-creature-info p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        .my-creature-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .info-section {
+            background: var(--bg-primary);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .info-section h2 {
+            color: var(--header-color);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-block {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .info-block:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .info-block h3 {
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .info-block p, .info-block li {
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .info-block ul {
+            padding-left: 1.5rem;
+        }
+
+        .tech-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .tech-tag {
+            background: var(--accent-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .author-card {
+            background: linear-gradient(135deg, var(--header-color), var(--accent-color));
+            color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .author-card h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .export-section {
+            background: var(--bg-primary);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .export-section h2 {
+            color: var(--header-color);
+            margin-bottom: 1rem;
+        }
+
+        .export-preview {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        .export-preview h4 {
+            color: var(--header-color);
+            margin-bottom: 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: 10px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .warning-box {
+            background: rgba(231, 76, 60, 0.1);
+            border-left: 4px solid #e74c3c;
+            padding: 1rem;
+            border-radius: 0 10px 10px 0;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .success-box {
+            background: rgba(39, 174, 96, 0.1);
+            border-left: 4px solid var(--success-color);
+            padding: 1rem;
+            border-radius: 0 10px 10px 0;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            border-radius: 10px 10px 0 0;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .tab-btn:hover {
+            color: var(--header-color);
+            background: var(--bg-secondary);
+        }
+
+        .tab-btn.active {
+            color: var(--accent-color);
+            background: var(--bg-secondary);
+            border-bottom: 3px solid var(--accent-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-primary);
+            border-radius: 20px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlide 0.3s ease;
+        }
+
+        @keyframes modalSlide {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            color: var(--header-color);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            color: var(--danger-color);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .logo h1 {
+                font-size: 1.1rem;
+            }
+
+            nav {
+                padding: 0.5rem;
+            }
+
+            nav button {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.85rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .bestiary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .user-input {
+                flex-direction: column;
+            }
+
+            .user-input input {
+                width: 100%;
+            }
+
+            .creature-icon {
+                font-size: 3rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .emoji-picker {
+                justify-content: center;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+
+            .tab-btn {
+                flex: 1;
+                min-width: 120px;
+                text-align: center;
+            }
+        }
+
+        .scroll-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--accent-color);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            z-index: 999;
+        }
+
+        .scroll-top.visible {
+            display: flex;
+        }
+
+        .scroll-top:hover {
+            transform: scale(1.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .counter-badge {
+            background: var(--success-color);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 10px;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>Бестиарий карго-культа в образовании</h1>
+        </div>
+        <div class="header-controls">
+            <button class="theme-toggle" onclick="toggleTheme()" title="Переключить тему">☀️</button>
+        </div>
+    </header>
+
+    <nav>
+        <button class="active" onclick="showSection('home')">Главная</button>
+        <button onclick="showSection('bestiary')">Бестиарий</button>
+        <button onclick="showSection('creator')">Создать <span class="counter-badge" id="userCreaturesCount">0</span></button>
+        <button onclick="showSection('reflection')">Рефлексия</button>
+        <button onclick="showSection('export')">Экспорт</button>
+        <button onclick="showSection('info')">О приложении</button>
+    </nav>
+
+    <main>
+        <!-- Главная секция -->
+        <section id="home" class="section active">
+            <div class="user-panel">
+                <h2>Идентификация студента</h2>
+                <div class="user-input">
+                    <input type="text" id="userName" placeholder="Введите Фамилию Имя" onchange="saveUserName()">
+                    <button class="btn" onclick="startSession()">Начать работу</button>
+                </div>
+                <div class="session-info" id="sessionInfo">
+                    <p>Сессия не начата. Введите ФИО и нажмите "Начать работу"</p>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h2>Добро пожаловать в Бестиарий!</h2>
+                
+                <div class="info-block">
+                    <h3>Что такое карго-культ в образовании?</h3>
+                    <p><strong>Карго-культ</strong> (от англ. cargo cult) в образовании — это феномен слепого копирования внешних форм педагогической деятельности без понимания их сути и абсолютизации метрик, без понимания их ограничений. Подобно меланезийским туземцам, строившим соломенные аэропорты в надежде привлечь самолёты с грузом, современные образовательные практики успешно воспроизводят видимость образовательной эффективности, академической честности и научности.</p>
+                </div>
+
+                <div class="info-block">
+                    <h3>Операционализм и его проявления</h3>
+                    <p><strong>Операционализм</strong> в педагогике — это чрезмерное увлечение количественными измерениями, метриками и показателями в ущерб качественному содержанию образования.</p>
+                </div>
+
+                <div class="warning-box">
+                    <strong>Внимание!</strong> Данный бестиарий создан в образовательных целях. Описанные «существа» являются метафорическими образами деструктивных практик. Всякое сходство с экстралингвистической действительностью случайно. Любая попытка обнаружить в книге какие-то намеки и параллели является рептильной проекцией антинародного ума и подсознательным вредительством.
+                </div>
+            </div>
+        </section>
+
+        <!-- Бестиарий -->
+        <section id="bestiary" class="section">
+            <div class="user-panel">
+                <h2>🐉 Существа образовательного карго-культа</h2>
+                <p style="color: var(--text-secondary);">Изучите каждое существо и запишите свои размышления</p>
+                
+                <div class="tabs" style="margin-top: 1rem;">
+                    <button class="tab-btn active" onclick="showBestiaryTab('all')">Все существа</button>
+                    <button class="tab-btn" onclick="showBestiaryTab('standard')">Стандартные (10)</button>
+                    <button class="tab-btn" onclick="showBestiaryTab('user')">Мои создания <span id="myCreaturesTabCount">(0)</span></button>
+                </div>
+            </div>
+
+            <div id="bestiaryContent">
+                <div class="bestiary-grid" id="bestiaryGrid"></div>
+            </div>
+        </section>
+
+        <!-- Создание существ -->
+        <section id="creator" class="section">
+            <div class="creator-section">
+                <h2>Создайте свой персонаж бестиария</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Придумайте метафорическое существо, олицетворяющее проявление карго-культа в образовании
+                </p>
+
+                <form id="creatureForm" onsubmit="saveCreature(event)">
+                    <div class="form-grid">
+                        <div>
+                            <div class="form-group">
+                                <label for="creatureName">Название существа *</label>
+                                <input type="text" id="creatureName" required placeholder="Например: Метрикозавр">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="creatureLatin">Латинское название *</label>
+                                <input type="text" id="creatureLatin" required placeholder="Например: Metricosaurus obsessivus">
+                                <small>Придумайте псевдолатинское название</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Иконка существа *</label>
+                                <div class="emoji-picker" id="emojiPicker"></div>
+                                <input type="hidden" id="creatureIcon" required>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="form-group">
+                                <label for="creatureDescription">Описание *</label>
+                                <textarea id="creatureDescription" required placeholder="Опишите существо, его поведение и особенности..."></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="creatureHabitat">Ареал обитания *</label>
+                                <input type="text" id="creatureHabitat" required placeholder="Где обитает это существо?">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="creatureWeakness">Уязвимость *</label>
+                                <input type="text" id="creatureWeakness" required placeholder="Чем можно противодействовать?">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Характерные признаки</label>
+                        <div class="traits-input-container">
+                            <input type="text" id="traitInput" placeholder="Введите признак и нажмите Добавить">
+                            <button type="button" class="btn btn-small" onclick="addTrait()">➕ Добавить</button>
+                        </div>
+                        <div class="traits-list-preview" id="traitsPreview"></div>
+                        <small>Добавьте 2-4 характерных признака существа</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Уровень опасности: <span id="dangerValue">50</span>%</label>
+                        <div class="range-container">
+                            <span>0%</span>
+                            <input type="range" id="creatureDanger" min="0" max="100" value="50" oninput="updateDangerValue()">
+                            <span>100%</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem;">
+                        <button type="submit" class="btn btn-success">Сохранить существо</button>
+                        <button type="button" class="btn btn-warning" onclick="resetForm()">Очистить форму</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Мои существа -->
+            <div class="creator-section">
+                <h2>Мои существа</h2>
+                <div id="myCreaturesList">
+                    <div class="empty-state">
+                        <div class="icon">🦎</div>
+                        <p>Вы ещё не создали ни одного существа</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Рефлексия -->
+        <section id="reflection" class="section">
+            <div class="export-section">
+                <h2>Общая рефлексия</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Обобщите ваши наблюдения и выводы о карго-культе в образовании</p>
+                
+                <div class="reflection-area">
+                    <label for="generalReflection">Какие проявления карго-культа вы наблюдали в своём образовательном опыте?</label>
+                    <textarea id="generalReflection" placeholder="Опишите конкретные примеры из вашего опыта..." onchange="saveReflection('general', this.value)"></textarea>
+                </div>
+
+                <div class="reflection-area" style="margin-top: 1.5rem;">
+                    <label for="futureReflection">Как будущий преподаватель, какие стратегии вы будете использовать, чтобы избежать карго-культа?</label>
+                    <textarea id="futureReflection" placeholder="Опишите ваши стратегии..." onchange="saveReflection('future', this.value)"></textarea>
+                </div>
+
+                <div class="reflection-area" style="margin-top: 1.5rem;">
+                    <label for="languageReflection">Как карго-культ проявляется в преподавании иностранных языков?</label>
+                    <textarea id="languageReflection" placeholder="Приведите специфические примеры для языкового образования..." onchange="saveReflection('language', this.value)"></textarea>
+                </div>
+
+                <div class="reflection-area" style="margin-top: 1.5rem;">
+                    <label for="creatorReflection">Какие мысли возникли у вас при создании собственных существ бестиария?</label>
+                    <textarea id="creatorReflection" placeholder="Опишите ваш опыт создания персонажей..." onchange="saveReflection('creator', this.value)"></textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- Экспорт -->
+        <section id="export" class="section">
+            <div class="export-section">
+                <h2>Экспорт результатов рефлексии</h2>
+                
+                <div class="export-preview">
+                    <h4>Статистика сессии</h4>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="statUser">—</div>
+                            <div class="stat-label">Студент</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statDuration">00:00</div>
+                            <div class="stat-label">Время работы</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statReflections">0</div>
+                            <div class="stat-label">Рефлексий</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statCreatures">0/10</div>
+                            <div class="stat-label">Изучено</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statUserCreatures">0</div>
+                            <div class="stat-label">Создано существ</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <button class="btn" onclick="exportToHTML()" id="exportBtn">
+                        Скачать полный отчёт (HTML)
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- О приложении -->
+        <section id="info" class="section">
+            <div class="info-section">
+                <h2>О приложении</h2>
+
+                <div class="info-block">
+                <p>«Образовательный бестиарий карго-культа» — это интерактивное веб-приложение для студентов педагогических специальностей. Приложение представляет метафорические образы деструктивных практик в виде «существ» и позволяет создавать собственных персонажей.</p>
+                </div>
+
+                <div class="info-block">
+                    <h3>Функциональность</h3>
+                    <ul>
+                        <li><strong>Персонализация:</strong> ввод ФИО студента для идентификации</li>
+                        <li><strong>Бестиарий:</strong> 10 стандартных метафорических существ</li>
+                        <li><strong>Создание существ:</strong> возможность добавлять собственных персонажей</li>
+                        <li><strong>Рефлексия:</strong> поля для записи размышлений</li>
+                        <li><strong>Экспорт:</strong> сохранение результатов в HTML-файл</li>
+                        <li><strong>Темы:</strong> светлая и тёмная цветовые схемы</li>
+                        <li><strong>Адаптивность:</strong> корректное отображение на мобильных устройствах</li>
+                    </ul>
+                </div>
+
+                <div class="info-block">
+                    <h3>Технологии</h3>
+                    <div class="tech-tags">
+                        <span class="tech-tag">HTML5</span>
+                        <span class="tech-tag">CSS3</span>
+                        <span class="tech-tag">JavaScript (ES6+)</span>
+                        <span class="tech-tag">CSS Grid & Flexbox</span>
+                        <span class="tech-tag">CSS Custom Properties</span>
+                        <span class="tech-tag">LocalStorage API</span>
+                        <span class="tech-tag">Blob API</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal для редактирования -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Редактировать существо</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="editModalBody">
+                <!-- Форма редактирования -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="closeModal()">Отмена</button>
+                <button class="btn btn-success" onclick="saveEditedCreature()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal подтверждения удаления -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Удалить существо?</h3>
+                <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить существо <strong id="deleteCreatureName"></strong>?</p>
+                <p style="color: var(--text-secondary); margin-top: 0.5rem;">Это действие нельзя отменить.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeDeleteModal()">Отмена</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="scroll-top" id="scrollTop" onclick="scrollToTop()">↑</button>
+
+    <footer>
+        <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+    </footer>
+
+    <script>
+        // Стандартные существа бестиария
+        const standardCreatures = [
+            {
+                id: 0, name: "Инновациум Пустой", latin: "Innovatium vacuus", icon: "0",
+                description: "Летучее существо, внедряющее «инновации» ради инноваций без понимания их педагогической ценности.",
+                traits: ["Терминологический шум", "Технологический фетишизм", "Модная слепота"],
+                danger: 65, habitat: "Педагогические конференции, стартапы EdTech",
+                weakness: "Доказательная педагогика, лонгитюдные исследования", isStandard: true
+            },
+			{
+                id: 1, name: "Метрикозавр", latin: "Metricosaurus obsessivus", icon: "1",
+                description: "Древнее существо, обитающее в отделах качества образования. Питается исключительно количественными показателями, не способно воспринимать качественные аспекты обучения.",
+                traits: ["KPI-мания", "Табличная слепота", "Цифровой фетишизм"],
+                danger: 75, habitat: "Административные кабинеты, аккредитационные комиссии",
+                weakness: "Качественные исследования, глубинные интервью", isStandard: true
+            },
+            {
+                id: 2, name: "Рейтингоман", latin: "Ratingomanus desperatus", icon: "2",
+                description: "Существо, одержимое позицией в различных рейтингах. Готово пожертвовать качеством образования ради подъёма на одну строчку.",
+                traits: ["Рейтинговая зависимость", "Статусная тревожность", "Сравнительный невроз"],
+                danger: 80, habitat: "Ректораты, пресс-службы вузов",
+                weakness: "Критический анализ методологии рейтингов", isStandard: true
+            },
+            {
+                id: 3, name: "Публикациобес", latin: "Publicatiobesa quantitativa", icon: "3",
+                description: "Ненасытное создание, стремящееся к максимальному количеству публикаций без учёта их качества и значимости.",
+                traits: ["Салями-слайсинг", "Самоцитирование", "Журнальный каннибализм"],
+                danger: 70, habitat: "Научные отделы, хищнические журналы",
+                weakness: "Качественное рецензирование, этические комиссии", isStandard: true
+            },
+            {
+                id: 4, name: "Тестомонстр", latin: "Testomonstrus standardizatus", icon: "4",
+                description: "Существо, уверенное, что любое знание можно измерить тестом с вариантами ответов.",
+                traits: ["Тестовый редукционизм", "Вариантная слепота", "Измерительный абсолютизм"],
+                danger: 85, habitat: "Центры тестирования, ЕГЭ-подготовка",
+                weakness: "Портфолио, проектная деятельность", isStandard: true
+            },
+            {
+                id: 5, name: "Компетенциозавр", latin: "Competenciasaurus formalisticus", icon: "5",
+                description: "Бюрократическое существо, механически переносящее списки компетенций из стандартов без понимания их связи с практикой.",
+                traits: ["Копипаст-синдром", "Формализм", "Документооборотная одержимость"],
+                danger: 65, habitat: "Методические отделы, УМО",
+                weakness: "Практико-ориентированное обучение", isStandard: true
+            },
+            {
+                id: 6, name: "Грантоглот", latin: "Grantoglutus opportunisticus", icon: "6",
+                description: "Хищное существо, охотящееся за грантами ради отчётных показателей, а не научного результата.",
+                traits: ["Грантовая мимикрия", "Отчётная эквилибристика", "Тематический оппортунизм"],
+                danger: 70, habitat: "Грантовые конкурсы, научные фонды",
+                weakness: "Долгосрочная экспертиза результатов", isStandard: true
+            },
+            {
+                id: 7, name: "Индексопитек", latin: "Indexopithecus hirschianus", icon: "7",
+                description: "Примитивное существо, оценивающее учёных исключительно по индексу Хирша.",
+                traits: ["h-индексная редукция", "Цитатная слепота", "Индексный примитивизм"],
+                danger: 75, habitat: "Конкурсные комиссии, научные советы",
+                weakness: "Качественная экспертиза, альтметрики", isStandard: true
+            },
+            {
+                id: 8, name: "Процентоид", latin: "Percentoidus successimanus", icon: "8",
+                description: "Административное существо, требующее 100% успеваемости независимо от реального уровня подготовки.",
+                traits: ["Процентомания", "Статистическая магия", "Бумажный оптимизм"],
+                danger: 90, habitat: "Деканаты, министерства образования",
+                weakness: "Независимый аудит, честная статистика", isStandard: true
+            },
+            {
+                id: 9, name: "Симулякр Педагогический", latin: "Simulacrum paedagogicum", icon: "9",
+                description: "Призрачное существо, имитирующее образовательную деятельность через бесконечные презентации и отчёты.",
+                traits: ["Имитационная деятельность", "Событийный фетишизм", "Отчётная гиперактивность"],
+                danger: 80, habitat: "Показательные уроки, конференции, форумы",
+                weakness: "Глубинное погружение в практику", isStandard: true
+            }
+            
+        ];
+
+        // Доступные эмодзи для выбора
+        const availableEmojis = [
+            "🦖", "🦕", "🐉", "🐲", "👹", "👺", "👻", "💀", "🤖", "👽",
+            "🧟", "🧛", "🧙", "🦹", "🦸", "🎃", "🐙", "🦑", "🦂", "🕷️",
+            "🦇", "🐍", "🐊", "🦎", "🐢", "🦏", "🦛", "🐘", "🐴", "🦔",
+            "🐌", "🦋", "🐛", "🐝", "🐜", "🎇", "☎️", "🦗", "👾", "☠️",
+            "🧠", "👁️", "👥", "📈", "📉", "⏰", "🧐", "✏️", "🔬",  "🧪"
+        ];
+
+        // Состояние приложения
+        let appState = {
+            userName: '',
+            sessionStartTime: null,
+            reflections: {},
+            theme: 'light',
+            userCreatures: [],
+            currentBestiaryTab: 'all',
+            editingCreatureId: null,
+            deletingCreatureId: null,
+            currentTraits: []
+        };
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            renderEmojiPicker();
+            renderBestiary();
+            renderMyCreaturesList();
+            updateCreaturesCount();
+            updateSessionInfo();
+            setInterval(updateTimer, 1000);
+            
+            window.addEventListener('scroll', () => {
+                const btn = document.getElementById('scrollTop');
+                btn.classList.toggle('visible', window.scrollY > 300);
+            });
+        });
+
+        // Рендер выбора эмодзи
+        function renderEmojiPicker() {
+            const picker = document.getElementById('emojiPicker');
+            picker.innerHTML = availableEmojis.map(emoji => 
+                `<button type="button" class="emoji-btn" onclick="selectEmoji('${emoji}')">${emoji}</button>`
+            ).join('');
+        }
+
+        // Выбор эмодзи
+        function selectEmoji(emoji) {
+            document.querySelectorAll('.emoji-btn').forEach(btn => btn.classList.remove('selected'));
+            event.target.classList.add('selected');
+            document.getElementById('creatureIcon').value = emoji;
+        }
+
+        // Добавление признака
+        function addTrait() {
+            const input = document.getElementById('traitInput');
+            const trait = input.value.trim();
+            
+            if (trait && appState.currentTraits.length < 5) {
+                appState.currentTraits.push(trait);
+                input.value = '';
+                renderTraitsPreview();
+            }
+        }
+
+        // Удаление признака
+        function removeTrait(index) {
+            appState.currentTraits.splice(index, 1);
+            renderTraitsPreview();
+        }
+
+        // Рендер превью признаков
+        function renderTraitsPreview() {
+            const container = document.getElementById('traitsPreview');
+            container.innerHTML = appState.currentTraits.map((trait, index) => 
+                `<span class="trait-tag">${trait}<button type="button" onclick="removeTrait(${index})">×</button></span>`
+            ).join('');
+        }
+
+        // Обновление значения опасности
+        function updateDangerValue() {
+            document.getElementById('dangerValue').textContent = document.getElementById('creatureDanger').value;
+        }
+
+        // Сохранение существа
+        function saveCreature(event) {
+            event.preventDefault();
+            
+            const icon = document.getElementById('creatureIcon').value;
+            if (!icon) {
+                alert('Пожалуйста, выберите иконку для существа');
+                return;
+            }
+
+            if (appState.currentTraits.length < 1) {
+                alert('Добавьте хотя бы один характерный признак');
+                return;
+            }
+
+            const newCreature = {
+                id: Date.now(),
+                name: document.getElementById('creatureName').value,
+                latin: document.getElementById('creatureLatin').value,
+                icon: icon,
+                description: document.getElementById('creatureDescription').value,
+                traits: [...appState.currentTraits],
+                danger: parseInt(document.getElementById('creatureDanger').value),
+                habitat: document.getElementById('creatureHabitat').value,
+                weakness: document.getElementById('creatureWeakness').value,
+                isStandard: false,
+                createdAt: new Date().toISOString()
+            };
+
+            appState.userCreatures.push(newCreature);
+            saveState();
+            
+            resetForm();
+            renderBestiary();
+            renderMyCreaturesList();
+            updateCreaturesCount();
+            
+            alert('✨ Существо успешно создано!');
+        }
+
+        // Сброс формы
+        function resetForm() {
+            document.getElementById('creatureForm').reset();
+            document.querySelectorAll('.emoji-btn').forEach(btn => btn.classList.remove('selected'));
+            document.getElementById('creatureIcon').value = '';
+            document.getElementById('dangerValue').textContent = '50';
+            appState.currentTraits = [];
+            renderTraitsPreview();
+        }
+
+        // Рендер списка моих существ
+        function renderMyCreaturesList() {
+            const container = document.getElementById('myCreaturesList');
+            
+            if (appState.userCreatures.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">🦎</div>
+                        <p>Вы ещё не создали ни одного существа</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="my-creatures-grid">
+                    ${appState.userCreatures.map(creature => `
+                        <div class="my-creature-item">
+                            <div class="my-creature-icon">${creature.icon}</div>
+                            <div class="my-creature-info">
+                                <h4>${creature.name}</h4>
+                                <p>${creature.latin}</p>
+                            </div>
+                            <div class="my-creature-actions">
+                                <button class="btn btn-small" onclick="editCreature(${creature.id})"></button>
+                                <button class="btn btn-small btn-danger" onclick="deleteCreature(${creature.id})"></button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Редактирование существа
+        function editCreature(id) {
+            const creature = appState.userCreatures.find(c => c.id === id);
+            if (!creature) return;
+
+            appState.editingCreatureId = id;
+            
+            const modal = document.getElementById('editModal');
+            const body = document.getElementById('editModalBody');
+            
+            body.innerHTML = `
+                <div class="form-group">
+                    <label>Название</label>
+                    <input type="text" id="editName" value="${creature.name}">
+                </div>
+                <div class="form-group">
+                    <label>Латинское название</label>
+                    <input type="text" id="editLatin" value="${creature.latin}">
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="editDescription">${creature.description}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Ареал обитания</label>
+                    <input type="text" id="editHabitat" value="${creature.habitat}">
+                </div>
+                <div class="form-group">
+                    <label>Уязвимость</label>
+                    <input type="text" id="editWeakness" value="${creature.weakness}">
+                </div>
+                <div class="form-group">
+                    <label>Уровень опасности: <span id="editDangerValue">${creature.danger}</span>%</label>
+                    <input type="range" id="editDanger" min="0" max="100" value="${creature.danger}" 
+                           oninput="document.getElementById('editDangerValue').textContent = this.value">
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        // Сохранение отредактированного существа
+        function saveEditedCreature() {
+            const creature = appState.userCreatures.find(c => c.id === appState.editingCreatureId);
+            if (!creature) return;
+
+            creature.name = document.getElementById('editName').value;
+            creature.latin = document.getElementById('editLatin').value;
+            creature.description = document.getElementById('editDescription').value;
+            creature.habitat = document.getElementById('editHabitat').value;
+            creature.weakness = document.getElementById('editWeakness').value;
+            creature.danger = parseInt(document.getElementById('editDanger').value);
+
+            saveState();
+            renderBestiary();
+            renderMyCreaturesList();
+            closeModal();
+        }
+
+        // Закрытие модального окна
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('active');
+            appState.editingCreatureId = null;
+        }
+
+        // Удаление существа
+        function deleteCreature(id) {
+            const creature = appState.userCreatures.find(c => c.id === id);
+            if (!creature) return;
+
+            appState.deletingCreatureId = id;
+            document.getElementById('deleteCreatureName').textContent = creature.name;
+            document.getElementById('deleteModal').classList.add('active');
+        }
+
+        // Подтверждение удаления
+        function confirmDelete() {
+            appState.userCreatures = appState.userCreatures.filter(c => c.id !== appState.deletingCreatureId);
+            saveState();
+            renderBestiary();
+            renderMyCreaturesList();
+            updateCreaturesCount();
+            closeDeleteModal();
+        }
+
+        // Закрытие модального окна удаления
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+            appState.deletingCreatureId = null;
+        }
+
+        // Обновление счётчика существ
+        function updateCreaturesCount() {
+            const count = appState.userCreatures.length;
+            document.getElementById('userCreaturesCount').textContent = count;
+            document.getElementById('myCreaturesTabCount').textContent = `(${count})`;
+        }
+
+        // Переключение вкладок бестиария
+        function showBestiaryTab(tab) {
+            appState.currentBestiaryTab = tab;
+            document.querySelectorAll('.tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderBestiary();
+        }
+
+        // Рендер бестиария
+        function renderBestiary() {
+            const grid = document.getElementById('bestiaryGrid');
+            let creatures = [];
+
+            switch (appState.currentBestiaryTab) {
+                case 'standard':
+                    creatures = standardCreatures;
+                    break;
+                case 'user':
+                    creatures = appState.userCreatures;
+                    break;
+                default:
+                    creatures = [...standardCreatures, ...appState.userCreatures];
+            }
+
+            if (creatures.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="icon">🔍</div>
+                        <p>Нет существ для отображения</p>
+                        ${appState.currentBestiaryTab === 'user' ? '<p>Создайте своё первое существо в разделе "Создать"</p>' : ''}
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = creatures.map(creature => `
+                <div class="creature-card ${creature.isStandard ? '' : 'user-created'}" data-id="${creature.id}">
+                    ${!creature.isStandard ? '<span class="user-badge">Моё создание</span>' : ''}
+                    <div class="creature-header">
+                        <span class="creature-icon">${creature.icon}</span>
+                        <div class="creature-name">${creature.name}</div>
+                        <div class="creature-latin">${creature.latin}</div>
+                    </div>
+                    <div class="creature-body">
+                        <p class="creature-description">${creature.description}</p>
+                        
+                        <div class="creature-traits">
+                            <h4>Характерные признаки:</h4>
+                            <ul class="trait-list">
+                                ${creature.traits.map(t => `<li>${t}</li>`).join('')}
+                            </ul>
+                        </div>
+                        
+                        <div class="creature-traits">
+                            <h4>Ареал обитания:</h4>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary);">${creature.habitat}</p>
+                        </div>
+                        
+                        <div class="creature-traits">
+                            <h4>Уязвимость:</h4>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary);">${creature.weakness}</p>
+                        </div>
+                        
+                        <div class="danger-level">
+                            <span>Опасность:</span>
+                            <div class="danger-bar">
+                                <div class="danger-fill" style="width: ${creature.danger}%"></div>
+                            </div>
+                            <span>${creature.danger}%</span>
+                        </div>
+                        
+                        <div class="reflection-area">
+                            <label for="reflection-${creature.id}">Ваша рефлексия:</label>
+                            <textarea 
+                                id="reflection-${creature.id}" 
+                                placeholder="Запишите ваши мысли об этом существе..."
+                                onchange="saveCreatureReflection('${creature.id}', this.value)"
+                            >${appState.reflections[`creature-${creature.id}`] || ''}</textarea>
+                        </div>
+
+                        ${!creature.isStandard ? `
+                            <div class="card-actions">
+                                <button class="btn btn-small" onclick="editCreature(${creature.id})"> Редактировать</button>
+                                <button class="btn btn-small btn-danger" onclick="deleteCreature(${creature.id})">Удалить</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Переключение темы
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.querySelector('.theme-toggle');
+            
+            if (body.classList.contains('dark-theme')) {
+                body.classList.remove('dark-theme');
+                btn.textContent = '☀️';
+                appState.theme = 'light';
+            } else {
+                body.classList.add('dark-theme');
+                btn.textContent = '🌙';
+                appState.theme = 'dark';
+            }
+            saveState();
+        }
+
+        // Навигация
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(sectionId).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (sectionId === 'export') {
+                updateExportStats();
+            }
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Сохранение имени пользователя
+        function saveUserName() {
+            appState.userName = document.getElementById('userName').value;
+            saveState();
+        }
+
+        // Начало сессии
+        function startSession() {
+            const name = document.getElementById('userName').value.trim();
+            if (!name) {
+                alert('Пожалуйста, введите ваши Фамилию и Имя');
+                return;
+            }
+            
+            appState.userName = name;
+            appState.sessionStartTime = new Date().toISOString();
+            saveState();
+            updateSessionInfo();
+            
+            showSection('bestiary');
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('nav button')[1].classList.add('active');
+        }
+
+        // Обновление информации о сессии
+        function updateSessionInfo() {
+            const info = document.getElementById('sessionInfo');
+            if (appState.sessionStartTime) {
+                const start = new Date(appState.sessionStartTime);
+                info.innerHTML = `
+                    <p><strong>Студент:</strong> ${appState.userName}</p>
+                    <p><strong>Начало сессии:</strong> ${start.toLocaleString('ru-RU')}</p>
+                    <p><strong>Время работы:</strong> <span id="timerDisplay">00:00:00</span></p>
+                `;
+            }
+        }
+
+        // Обновление таймера
+        function updateTimer() {
+            if (appState.sessionStartTime) {
+                const start = new Date(appState.sessionStartTime);
+                const now = new Date();
+                const diff = Math.floor((now - start) / 1000);
+                
+                const hours = Math.floor(diff / 3600);
+                const minutes = Math.floor((diff % 3600) / 60);
+                const seconds = diff % 60;
+                
+                const display = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                const timerEl = document.getElementById('timerDisplay');
+                if (timerEl) timerEl.textContent = display;
+                
+                const statDuration = document.getElementById('statDuration');
+                if (statDuration) statDuration.textContent = display;
+            }
+        }
+
+        // Сохранение рефлексии по существу
+        function saveCreatureReflection(creatureId, value) {
+            appState.reflections[`creature-${creatureId}`] = value;
+            saveState();
+        }
+
+        // Сохранение общей рефлексии
+        function saveReflection(type, value) {
+            appState.reflections[type] = value;
+            saveState();
+        }
+
+        // Обновление статистики экспорта
+        function updateExportStats() {
+            document.getElementById('statUser').textContent = appState.userName || '—';
+            
+            const allCreatureIds = [
+                ...standardCreatures.map(c => c.id),
+                ...appState.userCreatures.map(c => c.id)
+            ];
+            
+            const creatureReflections = allCreatureIds.filter(id => 
+                appState.reflections[`creature-${id}`]?.trim()
+            ).length;
+            
+            const totalReflections = Object.values(appState.reflections).filter(v => v?.trim()).length;
+            
+            document.getElementById('statReflections').textContent = totalReflections;
+            document.getElementById('statCreatures').textContent = `${creatureReflections}/${allCreatureIds.length}`;
+            document.getElementById('statUserCreatures').textContent = appState.userCreatures.length;
+        }
+
+        // Экспорт в HTML
+        function exportToHTML() {
+            if (!appState.userName) {
+                alert('Пожалуйста, введите ваши ФИО и начните сессию');
+                return;
+            }
+
+            const now = new Date();
+            const start = new Date(appState.sessionStartTime);
+            const duration = Math.floor((now - start) / 1000);
+            const durationStr = `${Math.floor(duration / 3600)}ч ${Math.floor((duration % 3600) / 60)}мин ${duration % 60}сек`;
+
+            const allCreatures = [...standardCreatures, ...appState.userCreatures];
+
+            const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Рефлексия - ${appState.userName}</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #333; }
+        h1 { color: #325980; border-bottom: 3px solid #3498db; padding-bottom: 0.5rem; }
+        h2 { color: #325980; margin-top: 2rem; }
+        h3 { color: #3498db; }
+        .meta { background: #f5f5f5; padding: 1rem; border-radius: 10px; margin-bottom: 2rem; }
+        .meta p { margin: 0.25rem 0; }
+        .creature { background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .creature.user-created { border-color: #27ae60; border-width: 2px; }
+        .user-badge { background: #27ae60; color: white; padding: 0.2rem 0.6rem; border-radius: 10px; font-size: 0.8rem; }
+        .creature-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .creature-icon { font-size: 2rem; }
+        .creature-name { font-size: 1.3rem; font-weight: 600; color: #325980; }
+        .creature-latin { font-style: italic; color: #666; font-size: 0.9rem; }
+        .reflection-box { background: #f9f9f9; padding: 1rem; border-left: 4px solid #3498db; border-radius: 0 10px 10px 0; margin-top: 1rem; }
+        .no-reflection { color: #999; font-style: italic; }
+        .footer { text-align: center; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e0e0e0; color: #666; font-size: 0.9rem; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 1rem 0; }
+        .stat { background: #f0f0f0; padding: 1rem; border-radius: 10px; text-align: center; }
+        .stat-value { font-size: 1.5rem; font-weight: bold; color: #3498db; }
+        .stat-label { font-size: 0.85rem; color: #666; }
+    </style>
+</head>
+<body>
+    <h1>Образовательный бестиарий карго-культа</h1>
+    <h2>Отчёт о рефлексии</h2>
+    
+    <div class="meta">
+        <p><strong>Студент:</strong> ${appState.userName}</p>
+        <p><strong>Дата:</strong> ${now.toLocaleDateString('ru-RU')}</p>
+        <p><strong>Время завершения:</strong> ${now.toLocaleTimeString('ru-RU')}</p>
+        <p><strong>Продолжительность работы:</strong> ${durationStr}</p>
+        <p><strong>Начало сессии:</strong> ${start.toLocaleString('ru-RU')}</p>
+    </div>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-value">${standardCreatures.length}</div>
+            <div class="stat-label">Стандартных существ</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">${appState.userCreatures.length}</div>
+            <div class="stat-label">Создано существ</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">${Object.values(appState.reflections).filter(v => v?.trim()).length}</div>
+            <div class="stat-label">Всего рефлексий</div>
+        </div>
+    </div>
+
+    <h2>🐉 Рефлексия по существам бестиария</h2>
+    
+    ${allCreatures.map(c => `
+    <div class="creature ${c.isStandard ? '' : 'user-created'}">
+        <div class="creature-header">
+            <span class="creature-icon">${c.icon}</span>
+            <div>
+                <div class="creature-name">${c.name} ${!c.isStandard ? '<span class="user-badge">✨ Моё создание</span>' : ''}</div>
+                <div class="creature-latin">${c.latin}</div>
+            </div>
+        </div>
+        ${!c.isStandard ? `<p><strong>Описание:</strong> ${c.description}</p>` : ''}
+        <div class="reflection-box">
+            <strong>💭 Рефлексия:</strong><br>
+            ${appState.reflections[`creature-${c.id}`] 
+                ? appState.reflections[`creature-${c.id}`].replace(/\n/g, '<br>') 
+                : '<span class="no-reflection">Рефлексия не записана</span>'}
+        </div>
+    </div>
+    `).join('')}
+
+    <h2>Общая рефлексия</h2>
+    
+    <h3>Наблюдаемые проявления карго-культа</h3>
+    <div class="reflection-box">
+        ${appState.reflections.general?.replace(/\n/g, '<br>') || '<span class="no-reflection">Не заполнено</span>'}
+    </div>
+
+    <h3>Стратегии избегания карго-культа</h3>
+    <div class="reflection-box">
+        ${appState.reflections.future?.replace(/\n/g, '<br>') || '<span class="no-reflection">Не заполнено</span>'}
+    </div>
+
+    <h3>Карго-культ в преподавании иностранных языков</h3>
+    <div class="reflection-box">
+        ${appState.reflections.language?.replace(/\n/g, '<br>') || '<span class="no-reflection">Не заполнено</span>'}
+    </div>
+
+    <h3>Опыт создания собственных персонажей</h3>
+    <div class="reflection-box">
+        ${appState.reflections.creator?.replace(/\n/g, '<br>') || '<span class="no-reflection">Не заполнено</span>'}
+    </div>
+
+    ${appState.userCreatures.length > 0 ? `
+    <h2>✨ Созданные мной существа</h2>
+    ${appState.userCreatures.map(c => `
+    <div class="creature user-created">
+        <div class="creature-header">
+            <span class="creature-icon">${c.icon}</span>
+            <div>
+                <div class="creature-name">${c.name}</div>
+                <div class="creature-latin">${c.latin}</div>
+            </div>
+        </div>
+        <p><strong>Описание:</strong> ${c.description}</p>
+        <p><strong>Признаки:</strong> ${c.traits.join(', ')}</p>
+        <p><strong>Ареал:</strong> ${c.habitat}</p>
+        <p><strong>Уязвимость:</strong> ${c.weakness}</p>
+        <p><strong>Опасность:</strong> ${c.danger}%</p>
+    </div>
+    `).join('')}
+    ` : ''}
+
+    <div class="footer">
+        <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>для всех</p>
+    </div>
+</body>
+</html>`;
+
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Рефлексия_${appState.userName.replace(/\s+/g, '_')}_${now.toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Сохранение состояния
+        function saveState() {
+            localStorage.setItem('bestiaryState', JSON.stringify(appState));
+        }
+
+        // Загрузка состояния
+        function loadState() {
+            const saved = localStorage.getItem('bestiaryState');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                appState = { ...appState, ...parsed };
+                
+                if (appState.theme === 'dark') {
+                    document.body.classList.add('dark-theme');
+                    document.querySelector('.theme-toggle').textContent = '🌙';
+                }
+                
+                if (appState.userName) {
+                    document.getElementById('userName').value = appState.userName;
+                }
+                
+                ['general', 'future', 'language', 'creator'].forEach(type => {
+                    const el = document.getElementById(type + 'Reflection');
+                    if (el && appState.reflections[type]) {
+                        el.value = appState.reflections[type];
+                    }
+                });
+            }
+        }
+
+        // Прокрутка наверх
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Enter для добавления признака
+        document.getElementById('traitInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addTrait();
+            }
+        });
+    </script>
+</body>
+</html>
