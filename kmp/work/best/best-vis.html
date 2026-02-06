@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #1a1a1a;
+            --text-secondary: #555555;
+            --accent-primary: #325980;
+            --accent-secondary: #3498db;
+            --border-color: #f1f1f1;
+            --card-bg: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --node-stroke: #325980;
+            --edge-color: #cccccc;
+            --edge-highlight: #3498db;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #e8e8e8;
+            --text-secondary: #b8b8b8;
+            --accent-primary: #5a8fc4;
+            --accent-secondary: #64b5f6;
+            --border-color: #2a2a4a;
+            --card-bg: #1f1f3a;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --node-stroke: #5a8fc4;
+            --edge-color: #444466;
+            --edge-highlight: #64b5f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+
+        header {
+            background: var(--accent-primary);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-title {
+            display: flex;
+            flex-direction: column;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        header .subtitle {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            max-width: 1800px;
+            margin: 0 auto;
+            min-height: calc(100vh - 80px);
+        }
+
+        .graph-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .graph-header {
+            background: var(--bg-secondary);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .graph-header h2 {
+            color: var(--accent-primary);
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: var(--accent-secondary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        .control-btn.active {
+            background: var(--accent-primary);
+        }
+
+        #graph-svg {
+            width: 100%;
+            height: calc(100vh - 200px);
+            min-height: 500px;
+            cursor: grab;
+        }
+
+        #graph-svg:active {
+            cursor: grabbing;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: var(--accent-primary);
+            color: white;
+            padding: 1rem 1.25rem;
+            font-weight: 600;
+        }
+
+        .card-content {
+            padding: 1.25rem;
+        }
+
+        .filter-section {
+            margin-bottom: 1rem;
+        }
+
+        .filter-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .filter-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .filter-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .chip {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .chip:hover, .chip.active {
+            background: var(--accent-secondary);
+            color: white;
+            border-color: var(--accent-secondary);
+        }
+
+        .detail-panel {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .detail-placeholder {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 2rem 1rem;
+            font-style: italic;
+        }
+
+        .definition-detail {
+            display: none;
+        }
+
+        .definition-detail.visible {
+            display: block;
+        }
+
+        .def-id {
+            display: inline-block;
+            background: var(--accent-primary);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        .def-title {
+            font-size: 1.1rem;
+            color: var(--accent-primary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .def-category {
+            font-size: 0.8rem;
+            color: var(--accent-secondary);
+            margin-bottom: 1rem;
+            padding: 0.4rem 0.8rem;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .def-text {
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .def-connections {
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+        }
+
+        .def-connections h4 {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .connection-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .connection-tag {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.6rem;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            color: var(--accent-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .connection-tag:hover {
+            background: var(--accent-secondary);
+            color: white;
+        }
+
+        .info-content {
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        .info-content p {
+            margin-bottom: 0.75rem;
+        }
+
+        .info-content strong {
+            color: var(--accent-primary);
+        }
+
+        .author-block {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-circle {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+        }
+
+        .legend-line {
+            width: 30px;
+            height: 2px;
+        }
+
+        /* Node styles */
+        .node {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .node:hover .node-circle {
+            filter: brightness(1.15);
+            stroke-width: 3;
+        }
+
+        .node-circle {
+            stroke: var(--node-stroke);
+            stroke-width: 2;
+            transition: all 0.2s ease;
+        }
+
+        .node-label {
+            font-size: 11px;
+            fill: var(--text-primary);
+            pointer-events: none;
+            font-weight: 500;
+        }
+
+        .node.selected .node-circle {
+            stroke-width: 4;
+            stroke: var(--accent-secondary);
+        }
+
+        .edge {
+            stroke: var(--edge-color);
+            stroke-width: 1.5;
+            fill: none;
+            transition: all 0.2s ease;
+        }
+
+        .edge.highlighted {
+            stroke: var(--edge-highlight);
+            stroke-width: 2.5;
+        }
+
+        .edge.dimmed {
+            opacity: 0.2;
+        }
+
+        .node.dimmed {
+            opacity: 0.3;
+        }
+
+        /* Mobile */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                order: -1;
+            }
+
+            #graph-svg {
+                height: 60vh;
+                min-height: 400px;
+            }
+
+            .detail-panel {
+                max-height: 250px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: 0.75rem 1rem;
+            }
+
+            header h1 {
+                font-size: 1.1rem;
+            }
+
+            .main-container {
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .graph-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .controls {
+                width: 100%;
+            }
+
+            .control-btn {
+                flex: 1;
+                text-align: center;
+            }
+
+            #graph-svg {
+                height: 50vh;
+                min-height: 350px;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-secondary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-primary);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px var(--shadow);
+            font-size: 0.85rem;
+            max-width: 280px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 1000;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .tooltip-category {
+            font-size: 0.75rem;
+            color: var(--accent-secondary);
+        }
+		footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+        }
+		
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-title">
+            <h1>Бестиарий: cемиотическая карта</h1>
+            <span class="subtitle">Интерактивная визуализация мультиаспектного корпуса дефиниций</span>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему">☀️</button>
+    </header>
+
+    <div class="main-container">
+        <div class="graph-container">
+            <div class="graph-header">
+                <h2>Граф связей между дефинициями</h2>
+                <div class="controls">
+                    <button class="control-btn active" onclick="setLayout('force')">Семантический</button>
+                    <button class="control-btn" onclick="setLayout('radial')">Радиальный</button>
+                    <button class="control-btn" onclick="setLayout('hierarchy')">Иерархия</button>
+                    <button class="control-btn" onclick="resetView()">Сброс</button>
+                </div>
+            </div>
+            <svg id="graph-svg"></svg>
+            <div class="tooltip" id="tooltip">
+                <div class="tooltip-title"></div>
+                <div class="tooltip-category"></div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="card">
+                <div class="card-header">Фильтры</div>
+                <div class="card-content">
+                    <div class="filter-section">
+                        <span class="filter-label">По аудитории:</span>
+                        <div class="filter-chips" id="audience-filters">
+                            <span class="chip active" data-filter="all">Все</span>
+                            <span class="chip" data-filter="child">Дети</span>
+                            <span class="chip" data-filter="school">Школьники</span>
+                            <span class="chip" data-filter="student">Студенты</span>
+                            <span class="chip" data-filter="professor">Профессора</span>
+                            <span class="chip" data-filter="specialist">Специалисты</span>
+                        </div>
+                    </div>
+                    <div class="filter-section">
+                        <span class="filter-label">По области:</span>
+                        <div class="filter-chips" id="domain-filters">
+                            <span class="chip active" data-filter="all">Все</span>
+                            <span class="chip" data-filter="semiotics">Семиотика</span>
+                            <span class="chip" data-filter="technical">Техническое</span>
+                            <span class="chip" data-filter="humanities">Гуманитарное</span>
+                            <span class="chip" data-filter="formal">Формальное</span>
+                        </div>
+                    </div>
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-circle" style="background: #4CAF50;"></div>
+                            <span>Образование</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-circle" style="background: #2196F3;"></div>
+                            <span>Академическое</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-circle" style="background: #9C27B0;"></div>
+                            <span>Техническое</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-circle" style="background: #FF9800;"></div>
+                            <span>Культурное</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-circle" style="background: #00BCD4;"></div>
+                            <span>Мета</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Детали определения</div>
+                <div class="card-content detail-panel" id="detail-panel">
+                    <div class="detail-placeholder">
+                        Выберите узел на графе для просмотра определения
+                    </div>
+                    <div class="definition-detail" id="definition-detail"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">О приложении</div>
+                <div class="card-content info-content">
+                    <p>
+                        <strong>Визуализация</strong> представляет 17 определений понятия «бестиарий», 
+                        организованных по принципу семиотической абстракции — от детского понимания 
+                        до формализованных моделей.
+                    </p>
+                    <p>
+                        <strong>Связи</strong> между узлами отражают концептуальные, методологические 
+                        и аудиторные пересечения определений.
+                    </p>
+                    <p>
+                        Интерактивность: перетаскивание узлов, масштабирование, 
+                        фильтрация по категориям, три режима раскладки графа.
+                    </p>
+                    <div class="author-block">
+                        <strong>Автор:</strong> Claude (Anthropic)<br>
+                        <strong>Контекст:</strong> Учебный проект по компьютерному моделированию 
+                        для студентов-лингвистов<br>
+                        <strong>Модель:</strong> Claude 3.5 Sonnet
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Data
+        const definitions = [
+            { id: 1, title: "Детское", category: "детское, 6–9 лет", group: "education", 
+              text: "Книжка с картинками про зверей — настоящих и сказочных. Каждый зверь там чему-то учит: лев — быть храбрым, единорог — быть чистым сердцем, а дракон показывает, каким страшным бывает зло.",
+              audience: "child", domain: "humanities" },
+            { id: 2, title: "Школьное", category: "школьное, 10–14 лет", group: "education",
+              text: "Средневековый сборник описаний животных (реальных и фантастических) с иллюстрациями и моральными выводами. Каждое существо — символ: пеликан, кормящий птенцов кровью, — символ Христа.",
+              audience: "school", domain: "humanities" },
+            { id: 3, title: "Медиевистика", category: "студенческое, история книги", group: "academic",
+              text: "Иллюминированный рукописный кодекс XII–XIV вв., восходящий к позднеантичному «Физиологу», содержащий описания с экзегетическими толкованиями в традиции typologia и exemplum.",
+              audience: "student", domain: "humanities" },
+            { id: 4, title: "Семиотика Лотмана", category: "профессорское, семиотика культуры", group: "academic",
+              text: "Семиотическая система, в которой зооморфные знаки функционируют как носители культурных кодов, образуя вторичную моделирующую систему в терминах Лотмана.",
+              audience: "professor", domain: "semiotics" },
+            { id: 5, title: "Формально-математическое", category: "теория множеств", group: "technical",
+              text: "Упорядоченное множество записей B = {b₁, b₂, ..., bₙ}, где каждая запись bᵢ = ⟨name, attributes, taxonomy, source⟩ с операциями фильтрации, сортировки и расширения.",
+              audience: "specialist", domain: "formal" },
+            { id: 6, title: "Геймдизайн", category: "техническое, разработка игр", group: "technical",
+              text: "Структура данных для хранения игровых сущностей типа «существо»; база данных или JSON/XML с полями: ID, характеристики, поведенческие скрипты, ассеты и spawn rules.",
+              audience: "specialist", domain: "technical" },
+            { id: 7, title: "Лингвистическое", category: "лексикология, ономастика", group: "academic",
+              text: "Лексико-семантическое поле, организующее зоонимы в систему: гиперонимы, гипонимы, синонимические ряды; материал для изучения словообразования и семантических сдвигов.",
+              audience: "student", domain: "humanities" },
+            { id: 8, title: "Постколониальное", category: "критическая теория, imagology", group: "cultural",
+              text: "Дискурсивная практика конструирования Другого через зооморфную образность; инструмент колониальной и теологической картографии инаковости.",
+              audience: "professor", domain: "humanities" },
+            { id: 9, title: "Дидактическое", category: "педагогика, методика", group: "education",
+              text: "Педагогический инструмент, использующий привлекательность образов существ для достижения образовательных целей: мнемоника, моральное воспитание, геймификация.",
+              audience: "specialist", domain: "humanities" },
+            { id: 10, title: "Литературоведческое", category: "фантастиковедение, XX–XXI вв.", group: "cultural",
+              text: "Литературный жанр и поэтическая форма (Борхес, Сапковский, Лавкрафт), где перечислительная структура используется для создания вторичных миров и метафикции.",
+              audience: "student", domain: "humanities" },
+            { id: 11, title: "Философское", category: "онтология, модальная метафизика", group: "academic",
+              text: "Онтологическая классификация сущих на шкале между бытием и небытием, реальным и воображаемым; инструмент исследования модальностей существования.",
+              audience: "professor", domain: "humanities" },
+            { id: 12, title: "Коммуникативное", category: "прагматика, теория жанров", group: "academic",
+              text: "Коммуникативный контракт между автором и аудиторией: suspension of disbelief, жанровые ожидания, интертекстуальные отсылки и прагматика использования.",
+              audience: "student", domain: "semiotics" },
+            { id: 13, title: "Антропологическое", category: "этнозоология, фольклористика", group: "cultural",
+              text: "Этнозоологический каталог народных представлений о животных: фольклорные нарративы, приметы, табу, магические практики; источник для реконструкции картины мира.",
+              audience: "student", domain: "humanities" },
+            { id: 14, title: "Искусствоведческое", category: "иконография, визуальные исследования", group: "cultural",
+              text: "Визуальный тезаурус мифологической иконографии: стандартизированные изображения, атрибуты, позы, цветовые коды; Варбургианская традиция, Bildwissenschaft.",
+              audience: "specialist", domain: "humanities" },
+            { id: 15, title: "Криптозоологическое", category: "паранаука, медиаисследования", group: "cultural",
+              text: "Совокупность криптидов — существ, предположительно существующих, но не признанных официальной зоологией (йети, чупакабра, Несси); пограничная область науки и фольклора.",
+              audience: "specialist", domain: "humanities" },
+            { id: 16, title: "Метатеоретическое", category: "семиотика, моделирование", group: "meta",
+              text: "Обобщённая семиотическая модель B = ⟨S, Σ, C, K, A, R, T⟩; инвариант, реализуемый в средневековых рукописях, видеоиграх, выставках и нейросетевых генерациях.",
+              audience: "professor", domain: "semiotics" },
+            { id: 17, title: "LLM-определение", category: "latent_space, attention_graph", group: "meta",
+              text: "∃ latent_manifold M ⊂ ℝᵈ : BESTIARY ≈ dense_subgraph(M) where vertices exhibit high cosine_similarity along axes [+CREATURE, +NAMED, ±REAL]; not_a_referent but activation_pattern.",
+              audience: "specialist", domain: "formal" }
+        ];
+
+        const edges = [
+            { source: 1, target: 2, type: "progression" },
+            { source: 2, target: 3, type: "progression" },
+            { source: 3, target: 4, type: "progression" },
+            { source: 4, target: 16, type: "abstraction" },
+            { source: 5, target: 6, type: "technical" },
+            { source: 5, target: 16, type: "formal" },
+            { source: 5, target: 17, type: "formal" },
+            { source: 6, target: 17, type: "technical" },
+            { source: 7, target: 4, type: "semiotic" },
+            { source: 7, target: 12, type: "linguistic" },
+            { source: 8, target: 4, type: "critical" },
+            { source: 8, target: 13, type: "cultural" },
+            { source: 9, target: 1, type: "didactic" },
+            { source: 9, target: 2, type: "didactic" },
+            { source: 10, target: 3, type: "literary" },
+            { source: 10, target: 13, type: "cultural" },
+            { source: 11, target: 4, type: "philosophical" },
+            { source: 11, target: 16, type: "abstraction" },
+            { source: 12, target: 4, type: "semiotic" },
+            { source: 12, target: 9, type: "pragmatic" },
+            { source: 13, target: 14, type: "cultural" },
+            { source: 13, target: 15, type: "folk" },
+            { source: 14, target: 3, type: "visual" },
+            { source: 16, target: 17, type: "meta" }
+        ];
+
+        const groupColors = {
+            education: "#4CAF50",
+            academic: "#2196F3",
+            technical: "#9C27B0",
+            cultural: "#FF9800",
+            meta: "#00BCD4"
+        };
+
+        // State
+        let svg, width, height;
+        let nodes = [];
+        let selectedNode = null;
+        let currentLayout = 'force';
+        let isDragging = false;
+        let dragNode = null;
+        let offsetX, offsetY;
+        let viewBox = { x: 0, y: 0, w: 0, h: 0 };
+        let scale = 1;
+        let isPanning = false;
+        let panStart = { x: 0, y: 0 };
+
+        // Initialize
+        function init() {
+            svg = document.getElementById('graph-svg');
+            updateDimensions();
+            initNodes();
+            render();
+            setupEvents();
+            setupFilters();
+            window.addEventListener('resize', () => {
+                updateDimensions();
+                if (currentLayout !== 'force') setLayout(currentLayout);
+                render();
+            });
+        }
+
+        function updateDimensions() {
+            const rect = svg.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+            viewBox = { x: 0, y: 0, w: width, h: height };
+            svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+        }
+
+        function initNodes() {
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            nodes = definitions.map((def, i) => {
+                const angle = (i / definitions.length) * Math.PI * 2;
+                const radius = Math.min(width, height) * 0.35;
+                return {
+                    ...def,
+                    x: centerX + Math.cos(angle) * radius,
+                    y: centerY + Math.sin(angle) * radius,
+                    vx: 0,
+                    vy: 0,
+                    radius: def.id === 16 || def.id === 17 ? 28 : 22
+                };
+            });
+
+            // Run force simulation
+            for (let i = 0; i < 200; i++) {
+                simulateForce(0.1);
+            }
+        }
+
+        function simulateForce(alpha) {
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            // Center gravity
+            nodes.forEach(node => {
+                node.vx += (centerX - node.x) * 0.001 * alpha;
+                node.vy += (centerY - node.y) * 0.001 * alpha;
+            });
+
+            // Edge attraction
+            edges.forEach(edge => {
+                const source = nodes.find(n => n.id === edge.source);
+                const target = nodes.find(n => n.id === edge.target);
+                if (source && target) {
+                    const dx = target.x - source.x;
+                    const dy = target.y - source.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                    const force = (dist - 120) * 0.002 * alpha;
+                    source.vx += dx / dist * force;
+                    source.vy += dy / dist * force;
+                    target.vx -= dx / dist * force;
+                    target.vy -= dy / dist * force;
+                }
+            });
+
+            // Node repulsion
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dx = nodes[j].x - nodes[i].x;
+                    const dy = nodes[j].y - nodes[i].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                    if (dist < 150) {
+                        const force = (150 - dist) * 0.05 * alpha / dist;
+                        nodes[i].vx -= dx * force;
+                        nodes[i].vy -= dy * force;
+                        nodes[j].vx += dx * force;
+                        nodes[j].vy += dy * force;
+                    }
+                }
+            }
+
+            // Apply velocity
+            nodes.forEach(node => {
+                if (node !== dragNode) {
+                    node.x += node.vx;
+                    node.y += node.vy;
+                    node.vx *= 0.9;
+                    node.vy *= 0.9;
+                    
+                    // Bounds
+                    const margin = 40;
+                    node.x = Math.max(margin, Math.min(width - margin, node.x));
+                    node.y = Math.max(margin, Math.min(height - margin, node.y));
+                }
+            });
+        }
+
+        function setLayout(layout) {
+            currentLayout = layout;
+            document.querySelectorAll('.controls .control-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            if (layout === 'radial') {
+                nodes.forEach((node, i) => {
+                    const angle = (i / nodes.length) * Math.PI * 2 - Math.PI / 2;
+                    const radius = Math.min(width, height) * 0.38;
+                    node.x = centerX + Math.cos(angle) * radius;
+                    node.y = centerY + Math.sin(angle) * radius;
+                });
+            } else if (layout === 'hierarchy') {
+                const levels = {
+                    education: 0,
+                    cultural: 1,
+                    academic: 2,
+                    technical: 3,
+                    meta: 4
+                };
+                const grouped = {};
+                nodes.forEach(node => {
+                    const level = levels[node.group];
+                    if (!grouped[level]) grouped[level] = [];
+                    grouped[level].push(node);
+                });
+
+                Object.entries(grouped).forEach(([level, group]) => {
+                    const y = 60 + parseInt(level) * (height - 120) / 4;
+                    group.forEach((node, i) => {
+                        node.x = 80 + (i + 0.5) * (width - 160) / group.length;
+                        node.y = y;
+                    });
+                });
+            } else {
+                // Force layout - reinitialize
+                initNodes();
+            }
+
+            render();
+        }
+
+        function render() {
+            let html = '<defs>';
+            html += '<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">';
+            html += `<polygon points="0 0, 10 3.5, 0 7" fill="var(--edge-color)" />`;
+            html += '</marker></defs>';
+
+            // Edges
+            edges.forEach(edge => {
+                const source = nodes.find(n => n.id === edge.source);
+                const target = nodes.find(n => n.id === edge.target);
+                if (source && target) {
+                    const dx = target.x - source.x;
+                    const dy = target.y - source.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const offsetS = source.radius + 2;
+                    const offsetT = target.radius + 2;
+                    
+                    const x1 = source.x + dx / dist * offsetS;
+                    const y1 = source.y + dy / dist * offsetS;
+                    const x2 = target.x - dx / dist * offsetT;
+                    const y2 = target.y - dy / dist * offsetT;
+                    
+                    html += `<line class="edge" data-source="${edge.source}" data-target="${edge.target}" 
+                             x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`;
+                }
+            });
+
+            // Nodes
+            nodes.forEach(node => {
+                const isSelected = selectedNode && selectedNode.id === node.id;
+                html += `<g class="node ${isSelected ? 'selected' : ''}" data-id="${node.id}">`;
+                html += `<circle class="node-circle" cx="${node.x}" cy="${node.y}" r="${node.radius}" 
+                         fill="${groupColors[node.group]}" />`;
+                html += `<text class="node-label" x="${node.x}" y="${node.y + 4}" text-anchor="middle">${node.id}</text>`;
+                html += '</g>';
+            });
+
+            svg.innerHTML = html;
+        }
+
+        function setupEvents() {
+            svg.addEventListener('mousedown', handleMouseDown);
+            svg.addEventListener('mousemove', handleMouseMove);
+            svg.addEventListener('mouseup', handleMouseUp);
+            svg.addEventListener('mouseleave', handleMouseUp);
+            svg.addEventListener('wheel', handleWheel);
+            svg.addEventListener('touchstart', handleTouchStart, { passive: false });
+            svg.addEventListener('touchmove', handleTouchMove, { passive: false });
+            svg.addEventListener('touchend', handleTouchEnd);
+
+            svg.addEventListener('click', (e) => {
+                const nodeEl = e.target.closest('.node');
+                if (nodeEl) {
+                    const id = parseInt(nodeEl.dataset.id);
+                    selectNode(id);
+                }
+            });
+
+            svg.addEventListener('mouseover', (e) => {
+                const nodeEl = e.target.closest('.node');
+                if (nodeEl && !isDragging) {
+                    const id = parseInt(nodeEl.dataset.id);
+                    highlightConnections(id);
+                    showTooltip(e, id);
+                }
+            });
+
+            svg.addEventListener('mouseout', (e) => {
+                if (!e.target.closest('.node')) {
+                    clearHighlight();
+                    hideTooltip();
+                }
+            });
+        }
+
+        function handleMouseDown(e) {
+            const nodeEl = e.target.closest('.node');
+            if (nodeEl) {
+                isDragging = true;
+                const id = parseInt(nodeEl.dataset.id);
+                dragNode = nodes.find(n => n.id === id);
+                const pt = getSVGPoint(e);
+                offsetX = pt.x - dragNode.x;
+                offsetY = pt.y - dragNode.y;
+            } else {
+                isPanning = true;
+                panStart = { x: e.clientX, y: e.clientY };
+            }
+        }
+
+        function handleMouseMove(e) {
+            if (isDragging && dragNode) {
+                const pt = getSVGPoint(e);
+                dragNode.x = pt.x - offsetX;
+                dragNode.y = pt.y - offsetY;
+                render();
+                hideTooltip();
+            } else if (isPanning) {
+                const dx = (e.clientX - panStart.x) * viewBox.w / width;
+                const dy = (e.clientY - panStart.y) * viewBox.h / height;
+                viewBox.x -= dx;
+                viewBox.y -= dy;
+                svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+                panStart = { x: e.clientX, y: e.clientY };
+            }
+        }
+
+        function handleMouseUp() {
+            isDragging = false;
+            dragNode = null;
+            isPanning = false;
+        }
+
+        function handleWheel(e) {
+            e.preventDefault();
+            const scaleFactor = e.deltaY > 0 ? 1.1 : 0.9;
+            const pt = getSVGPoint(e);
+            
+            viewBox.x = pt.x - (pt.x - viewBox.x) * scaleFactor;
+            viewBox.y = pt.y - (pt.y - viewBox.y) * scaleFactor;
+            viewBox.w *= scaleFactor;
+            viewBox.h *= scaleFactor;
+            
+            svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+        }
+
+        function handleTouchStart(e) {
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const nodeEl = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.node');
+                if (nodeEl) {
+                    e.preventDefault();
+                    isDragging = true;
+                    const id = parseInt(nodeEl.dataset.id);
+                    dragNode = nodes.find(n => n.id === id);
+                    const pt = getSVGPointFromTouch(touch);
+                    offsetX = pt.x - dragNode.x;
+                    offsetY = pt.y - dragNode.y;
+                }
+            }
+        }
+
+        function handleTouchMove(e) {
+            if (isDragging && dragNode && e.touches.length === 1) {
+                e.preventDefault();
+                const pt = getSVGPointFromTouch(e.touches[0]);
+                dragNode.x = pt.x - offsetX;
+                dragNode.y = pt.y - offsetY;
+                render();
+            }
+        }
+
+        function handleTouchEnd() {
+            isDragging = false;
+            dragNode = null;
+        }
+
+        function getSVGPoint(e) {
+            const rect = svg.getBoundingClientRect();
+            return {
+                x: viewBox.x + (e.clientX - rect.left) / rect.width * viewBox.w,
+                y: viewBox.y + (e.clientY - rect.top) / rect.height * viewBox.h
+            };
+        }
+
+        function getSVGPointFromTouch(touch) {
+            const rect = svg.getBoundingClientRect();
+            return {
+                x: viewBox.x + (touch.clientX - rect.left) / rect.width * viewBox.w,
+                y: viewBox.y + (touch.clientY - rect.top) / rect.height * viewBox.h
+            };
+        }
+
+        function selectNode(id) {
+            selectedNode = nodes.find(n => n.id === id);
+            render();
+            showDefinitionDetail(selectedNode);
+            highlightConnections(id);
+        }
+
+        function highlightConnections(id) {
+            const connected = new Set([id]);
+            edges.forEach(edge => {
+                if (edge.source === id) connected.add(edge.target);
+                if (edge.target === id) connected.add(edge.source);
+            });
+
+            document.querySelectorAll('.node').forEach(node => {
+                const nodeId = parseInt(node.dataset.id);
+                node.classList.toggle('dimmed', !connected.has(nodeId));
+            });
+
+            document.querySelectorAll('.edge').forEach(edge => {
+                const source = parseInt(edge.dataset.source);
+                const target = parseInt(edge.dataset.target);
+                const isConnected = source === id || target === id;
+                edge.classList.toggle('highlighted', isConnected);
+                edge.classList.toggle('dimmed', !isConnected);
+            });
+        }
+
+        function clearHighlight() {
+            document.querySelectorAll('.node, .edge').forEach(el => {
+                el.classList.remove('dimmed', 'highlighted');
+            });
+        }
+
+        function showTooltip(e, id) {
+            const node = nodes.find(n => n.id === id);
+            const tooltip = document.getElementById('tooltip');
+            tooltip.querySelector('.tooltip-title').textContent = `${node.id}. ${node.title}`;
+            tooltip.querySelector('.tooltip-category').textContent = node.category;
+            
+            const rect = svg.getBoundingClientRect();
+            let x = e.clientX - rect.left + 15;
+            let y = e.clientY - rect.top + 15;
+            
+            if (x + 280 > rect.width) x = e.clientX - rect.left - 290;
+            if (y + 80 > rect.height) y = e.clientY - rect.top - 90;
+            
+            tooltip.style.left = x + 'px';
+            tooltip.style.top = y + 'px';
+            tooltip.classList.add('visible');
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('visible');
+        }
+
+        function showDefinitionDetail(node) {
+            const placeholder = document.querySelector('.detail-placeholder');
+            const detail = document.getElementById('definition-detail');
+            
+            placeholder.style.display = 'none';
+            detail.classList.add('visible');
+
+            const connections = [];
+            edges.forEach(edge => {
+                if (edge.source === node.id) {
+                    const target = nodes.find(n => n.id === edge.target);
+                    connections.push({ id: target.id, title: target.title });
+                }
+                if (edge.target === node.id) {
+                    const source = nodes.find(n => n.id === edge.source);
+                    connections.push({ id: source.id, title: source.title });
+                }
+            });
+
+            detail.innerHTML = `
+                <div class="def-title">
+                    <span class="def-id">${node.id}</span>
+                    ${node.title}
+                </div>
+                <div class="def-category">${node.category}</div>
+                <div class="def-text">${node.text}</div>
+                ${connections.length > 0 ? `
+                    <div class="def-connections">
+                        <h4>Связанные определения:</h4>
+                        <div class="connection-list">
+                            ${connections.map(c => 
+                                `<span class="connection-tag" onclick="selectNode(${c.id})">${c.id}. ${c.title}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function setupFilters() {
+            document.querySelectorAll('.chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const parent = chip.parentElement;
+                    parent.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    applyFilters();
+                });
+            });
+        }
+
+        function applyFilters() {
+            const audienceFilter = document.querySelector('#audience-filters .chip.active').dataset.filter;
+            const domainFilter = document.querySelector('#domain-filters .chip.active').dataset.filter;
+
+            document.querySelectorAll('.node').forEach(nodeEl => {
+                const id = parseInt(nodeEl.dataset.id);
+                const node = nodes.find(n => n.id === id);
+                
+                const audienceMatch = audienceFilter === 'all' || node.audience === audienceFilter;
+                const domainMatch = domainFilter === 'all' || node.domain === domainFilter;
+                
+                nodeEl.style.opacity = (audienceMatch && domainMatch) ? 1 : 0.15;
+            });
+
+            document.querySelectorAll('.edge').forEach(edge => {
+                const sourceId = parseInt(edge.dataset.source);
+                const targetId = parseInt(edge.dataset.target);
+                const sourceNode = nodes.find(n => n.id === sourceId);
+                const targetNode = nodes.find(n => n.id === targetId);
+                
+                const sourceMatch = (audienceFilter === 'all' || sourceNode.audience === audienceFilter) &&
+                                   (domainFilter === 'all' || sourceNode.domain === domainFilter);
+                const targetMatch = (audienceFilter === 'all' || targetNode.audience === audienceFilter) &&
+                                   (domainFilter === 'all' || targetNode.domain === domainFilter);
+                
+                edge.style.opacity = (sourceMatch && targetMatch) ? 1 : 0.1;
+            });
+        }
+
+        function resetView() {
+            viewBox = { x: 0, y: 0, w: width, h: height };
+            svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+            initNodes();
+            render();
+            clearHighlight();
+            
+            document.querySelectorAll('.chip').forEach(chip => {
+                chip.classList.toggle('active', chip.dataset.filter === 'all');
+            });
+            document.querySelectorAll('.node, .edge').forEach(el => el.style.opacity = 1);
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.querySelector('.theme-toggle');
+            
+            if (body.dataset.theme === 'dark') {
+                body.removeAttribute('data-theme');
+                btn.textContent = '☀️';
+            } else {
+                body.dataset.theme = 'dark';
+                btn.textContent = '🌙';
+            }
+            render();
+        }
+
+        // Start
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
