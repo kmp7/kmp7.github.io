@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --success-color: #27ae60;
+            --error-color: #c0392b;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 60px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .add-term-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 32px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        
+        .theme-toggle:hover, .add-term-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px 40px 10px 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--equivalent-color);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn, .modal-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active, .modal-btn.primary {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .modal-btn.secondary {
+            background-color: transparent;
+            color: var(--text-color);
+        }
+        
+        .modal-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* Modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal {
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            animation: modalFadeIn 0.3s ease;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            color: var(--term-color);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .modal-close:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--term-color);
+        }
+        
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .form-note {
+            font-size: 12px;
+            color: var(--equivalent-color);
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            z-index: 1001;
+            animation: toastSlideIn 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .toast.success {
+            background-color: var(--success-color);
+        }
+        
+        .toast.error {
+            background-color: var(--error-color);
+        }
+        
+        .user-term-badge {
+            background-color: var(--success-color);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+            font-weight: normal;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 70px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 40px;
+            }
+            
+            .add-term-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge, .user-term-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+            
+            .modal-overlay {
+                padding: 10px;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+            color: var(--equivalent-color);
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="add-term-toggle" id="addTermToggle" title="Добавить новый термин">+</button>
+            <button class="theme-toggle" id="themeToggle" title="Переключить тему">🌙</button>
+            <h1>BESTIARY</h1>
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+                            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for adding new terms -->
+    <div class="modal-overlay" id="addTermModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Добавить новый термин</h2>
+                <button class="modal-close" id="modalClose">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="termForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="termRu">Термин (русский)</label>
+                            <input type="text" class="form-input" id="termRu" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="termEn">Термин (english)</label>
+                            <input type="text" class="form-input" id="termEn" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="equivalentRu">Эквивалент (русский)</label>
+                            <input type="text" class="form-input" id="equivalentRu">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="equivalentEn">Эквивалент (english)</label>
+                            <input type="text" class="form-input" id="equivalentEn">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="definitionRu">Определение (русский)</label>
+                            <textarea class="form-textarea" id="definitionRu" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="definitionEn">Definition (english)</label>
+                            <textarea class="form-textarea" id="definitionEn" required></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="category">Категория</label>
+                        <input type="text" class="form-input" id="category" placeholder="Например: экономика, Орлова Ева" required>
+                        <div class="form-note">Укажите область знания и ваши Фамилию Имя</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="cancelBtn">Отмена</button>
+                <button class="modal-btn primary" id="saveBtn">Сохранить термин</button>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <div class="container">
+            <p>© 2026 | kmp | CC BY-NC-SA</p>
+            <p>для всех</p>
+        </div>
+    </footer>
+    
+    <div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const addTermToggle = document.getElementById('addTermToggle');
+            const addTermModal = document.getElementById('addTermModal');
+            const modalClose = document.getElementById('modalClose');
+            const cancelBtn = document.getElementById('cancelBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const termForm = document.getElementById('termForm');
+            const body = document.body;
+
+            // Form elements
+            const termRu = document.getElementById('termRu');
+            const termEn = document.getElementById('termEn');
+            const equivalentRu = document.getElementById('equivalentRu');
+            const equivalentEn = document.getElementById('equivalentEn');
+            const definitionRu = document.getElementById('definitionRu');
+            const definitionEn = document.getElementById('definitionEn');
+            const category = document.getElementById('category');
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+            
+            // Theme state
+            let isDarkMode = false;
+            
+            // Default glossary data
+            const defaultGlossaryData = [
+{
+    "id": 1,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Книжка с картинками про зверей — настоящих и сказочных. Каждый зверь там чему-то учит: лев — быть храбрым, единорог — быть чистым сердцем, а дракон показывает, каким страшным бывает зло.",
+      "category": "детское, 6–9 лет, первичное знакомство"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "A picture book about animals — real and magical. Each creature teaches something: the lion teaches bravery, the unicorn teaches purity of heart, and the dragon shows how scary evil can be.",
+      "category": "children's, ages 6–9, introductory"
+    }
+  },
+  {
+    "id": 2,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Средневековый сборник описаний животных (реальных и фантастических) с иллюстрациями и моральными выводами. Каждое существо — символ: пеликан, кормящий птенцов кровью, — символ Христа; василиск — символ смертного греха.",
+      "category": "школьное, 10–14 лет, история и литература"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "A medieval collection of animal descriptions (real and fantastic) with illustrations and moral lessons. Each creature is a symbol: the pelican feeding its young with blood symbolizes Christ; the basilisk symbolizes mortal sin.",
+      "category": "school-level, ages 10–14, history and literature"
+    }
+  },
+  {
+    "id": 3,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Иллюминированный рукописный кодекс XII–XIV вв., восходящий к позднеантичному «Физиологу», содержащий описания животных, птиц, рыб, камней и деревьев с экзегетическими толкованиями в традиции typologia и exemplum; жанр, сочетающий натурфилософию, теологию и дидактику.",
+      "category": "студенческое, медиевистика, история книги"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "An illuminated manuscript codex of the 12th–14th centuries, derived from the late antique 'Physiologus', containing descriptions of animals, birds, fish, stones, and trees with exegetical interpretations in the tradition of typologia and exemplum; a genre combining natural philosophy, theology, and didactics.",
+      "category": "undergraduate, medieval studies, book history"
+    }
+  },
+  {
+    "id": 4,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Семиотическая система, в которой зооморфные знаки функционируют как носители культурных кодов: денотативный уровень (описание существа) служит означающим для коннотативных значений (моральных, эсхатологических, космологических), образуя вторичную моделирующую систему в терминах Лотмана.",
+      "category": "профессорское, семиотика культуры, тартуско-московская школа"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "A semiotic system in which zoomorphic signs function as carriers of cultural codes: the denotative level (creature description) serves as the signifier for connotative meanings (moral, eschatological, cosmological), forming a secondary modeling system in Lotman's terminology.",
+      "category": "professorial, cultural semiotics, Tartu-Moscow school"
+    }
+  },
+  {
+    "id": 5,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Упорядоченное множество записей B = {b₁, b₂, ..., bₙ}, где каждая запись bᵢ = ⟨name, attributes, taxonomy, source⟩ представляет именованную сущность с атрибутами, классификационной позицией и указанием происхождения; над B определены операции фильтрации, сортировки и расширения.",
+      "category": "формальное, теория множеств, информатика"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "An ordered set of records B = {b₁, b₂, ..., bₙ}, where each record bᵢ = ⟨name, attributes, taxonomy, source⟩ represents a named entity with attributes, taxonomic position, and provenance; operations of filtering, sorting, and extension are defined over B.",
+      "category": "formal, set theory, computer science"
+    }
+  },
+  {
+    "id": 6,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Структура данных для хранения игровых сущностей типа «существо»; обычно реализуется как база данных или JSON/XML-файл с полями: ID, имя, характеристики (HP, атака, защита), поведенческие скрипты (AI), ассеты (спрайты, модели, звуки) и условия появления (spawn rules).",
+      "category": "техническое, геймдизайн, разработка игр"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "A data structure for storing game entities of type 'creature'; typically implemented as a database or JSON/XML file with fields: ID, name, stats (HP, attack, defense), behavioral scripts (AI), assets (sprites, models, sounds), and spawn rules.",
+      "category": "technical, game design, game development"
+    }
+  },
+  {
+    "id": 7,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Лексико-семантическое поле, организующее зоонимы (названия существ) в систему: гиперонимы («существо», «монстр»), гипонимы («дракон», «виверна»), синонимические ряды, антонимические пары и тематические группы; материал для изучения словообразования, заимствований и семантических сдвигов.",
+      "category": "лингвистическое, лексикология, ономастика"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "A lexico-semantic field organizing zoonyms (creature names) into a system: hypernyms ('creature', 'monster'), hyponyms ('dragon', 'wyvern'), synonymic series, antonymic pairs, and thematic groups; material for studying word formation, borrowings, and semantic shifts.",
+      "category": "linguistic, lexicology, onomastics"
+    }
+  },
+  {
+    "id": 8,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Дискурсивная практика конструирования Другого через зооморфную образность: наделение чужих народов, маргинальных групп или врагов звериными чертами (кинокефалы, блеммии); инструмент колониальной и теологической картографии инаковости.",
+      "category": "постколониальное, критическая теория, imagology"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "A discursive practice of constructing the Other through zoomorphic imagery: attributing animal features to foreign peoples, marginal groups, or enemies (cynocephali, blemmyes); an instrument of colonial and theological cartography of alterity.",
+      "category": "postcolonial, critical theory, imagology"
+    }
+  },
+  {
+    "id": 9,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Педагогический инструмент, использующий привлекательность образов существ для достижения образовательных целей: запоминание характеристик (мнемоника), моральное воспитание (exemplum), развитие воображения и творчества; применим в геймификации обучения.",
+      "category": "дидактическое, педагогика, методика"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "A pedagogical tool using the appeal of creature imagery to achieve educational goals: memorization of characteristics (mnemonics), moral education (exemplum), development of imagination and creativity; applicable in gamification of learning.",
+      "category": "didactic, pedagogy, methodology"
+    }
+  },
+  {
+    "id": 10,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Литературный жанр и поэтическая форма XX–XXI вв. (Борхес «Книга вымышленных существ», Сапковский, Лавкрафт), в которой перечислительная структура средневекового бестиария используется для создания вторичных миров, метафикции и исследования границ возможного.",
+      "category": "литературоведческое, фантастиковедение, XX–XXI вв."
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "A literary genre and poetic form of the 20th–21st centuries (Borges 'Book of Imaginary Beings', Sapkowski, Lovecraft), in which the enumerative structure of medieval bestiary is used to create secondary worlds, metafiction, and explore the boundaries of the possible.",
+      "category": "literary studies, fantasy studies, 20th–21st c."
+    }
+  },
+  {
+    "id": 11,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Онтологическая классификация сущих, располагающая их на шкале между бытием и небытием, реальным и воображаемым, природным и сверхъестественным; философский инструмент исследования модальностей существования и границ категории «живое».",
+      "category": "философское, онтология, модальная метафизика"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "An ontological classification of beings, placing them on a scale between being and non-being, real and imaginary, natural and supernatural; a philosophical tool for investigating modalities of existence and the boundaries of the category 'living'.",
+      "category": "philosophical, ontology, modal metaphysics"
+    }
+  },
+  {
+    "id": 12,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Коммуникативный контракт между автором и аудиторией, определяющий правила интерпретации: suspension of disbelief (принятие вымышленного как условно реального), жанровые ожидания, интертекстуальные отсылки и прагматику использования (развлечение, обучение, ритуал).",
+      "category": "коммуникативное, прагматика, теория жанров"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "A communicative contract between author and audience defining interpretation rules: suspension of disbelief (accepting the fictional as conditionally real), genre expectations, intertextual references, and pragmatics of use (entertainment, education, ritual).",
+      "category": "communicative, pragmatics, genre theory"
+    }
+  },
+  {
+    "id": 13,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Этнозоологический каталог народных представлений о животных: фольклорные нарративы, приметы, табу, магические практики; источник для реконструкции картины мира, системы ценностей и экологических знаний традиционного общества.",
+      "category": "антропологическое, этнозоология, фольклористика"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "An ethnozoological catalog of folk beliefs about animals: folklore narratives, omens, taboos, magical practices; a source for reconstructing worldview, value systems, and ecological knowledge of traditional societies.",
+      "category": "anthropological, ethnozoology, folklore studies"
+    }
+  },
+  {
+    "id": 14,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Визуальный тезаурус мифологической иконографии: стандартизированные изображения существ, их атрибуты, позы, цветовые коды; материал для изучения трансмиссии образов между культурами и эпохами (Варбургианская традиция, Bildwissenschaft).",
+      "category": "искусствоведческое, иконография, визуальные исследования"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "A visual thesaurus of mythological iconography: standardized depictions of creatures, their attributes, poses, color codes; material for studying the transmission of images across cultures and epochs (Warburgian tradition, Bildwissenschaft).",
+      "category": "art historical, iconography, visual studies"
+    }
+  },
+  {
+    "id": 15,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Совокупность криптидов — существ, предположительно существующих, но не признанных официальной зоологией (йети, чупакабра, Несси); объект криптозоологии, пограничной области между наукой, фольклором и медиа-феноменами.",
+      "category": "криптозоологическое, паранаука, медиаисследования"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "A collection of cryptids — creatures allegedly existing but unrecognized by official zoology (yeti, chupacabra, Nessie); subject of cryptozoology, a borderland between science, folklore, and media phenomena.",
+      "category": "cryptozoological, parascience, media studies"
+    }
+  },
+  {
+    "id": 16,
+    "ru": {
+      "term": "Бестиарий",
+      "equivalent": "Bestiary",
+      "definition": "Обобщённая семиотическая модель B = ⟨S, Σ, C, K, A, R, T⟩, где S — множество именованных сущностей, Σ — репертуар знаков, C — код интерпретации, K — медиум/контекст, A — аудитория, R — правила включения, T — телеология (назначение); инвариант, реализуемый в средневековых рукописях, видеоиграх, выставках и нейросетевых генерациях.",
+      "category": "метатеоретическое, семиотика, моделирование"
+    },
+    "en": {
+      "term": "Bestiary",
+      "equivalent": "Бестиарий",
+      "definition": "A generalized semiotic model B = ⟨S, Σ, C, K, A, R, T⟩, where S — set of named entities, Σ — sign repertoire, C — interpretation code, K — medium/context, A — audience, R — inclusion rules, T — teleology (purpose); an invariant realized in medieval manuscripts, video games, exhibitions, and neural network generations.",
+      "category": "metatheoretical, semiotics, modeling"
+    }
+  },
+{
+"id": 17,
+"ru": {
+"term": "Бестиарий",
+"equivalent": "Bestiary",
+"definition": "Дискретная онтология с двойной проекцией: прямое отображение Φ: E → D (энтитет → денотативный вектор) и обратное отображение Ψ: D → C (денотат → коннотативное пространство), где ядро Ψ образует неинъективное сжатие с потерями, реализующее культурно-обусловленную редукцию семантической размерности; артефакт, демонстрирующий стабильность вторичных семантических кластеров при вариации первичных признаков.",
+"category": "вычислительная семантика, онтологическая инженерия, анализ исторических датасетов"
+},
+"en": {
+"term": "Bestiary",
+"equivalent": "Бестиарий",
+"definition": "A discrete ontology with dual projection: forward mapping Φ: E → D (entity → denotative vector) and inverse mapping Ψ: D → C (denotatum → connotative space), where kernel of Ψ forms a non-injective lossy compression implementing culturally-conditioned semantic dimensionality reduction; artifact demonstrating stability of secondary semantic clusters under primary feature variation.",
+"category": "computational semantics, ontological engineering, historical dataset analysis"
+}
+}
+            ];
+            
+            // Get glossary data from localStorage or use default
+            let glossaryData = JSON.parse(localStorage.getItem('glossaryData'));
+            if (!glossaryData) {
+                glossaryData = defaultGlossaryData;
+                localStorage.setItem('glossaryData', JSON.stringify(glossaryData));
+            }
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Modal functions
+            function openModal() {
+                addTermModal.style.display = 'flex';
+                termRu.focus();
+            }
+
+            function closeModal() {
+                addTermModal.style.display = 'none';
+                termForm.reset();
+            }
+
+            // Modal event listeners
+            addTermToggle.addEventListener('click', openModal);
+            modalClose.addEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
+
+            // Close modal when clicking outside
+            addTermModal.addEventListener('click', function(e) {
+                if (e.target === addTermModal) {
+                    closeModal();
+                }
+            });
+
+            // Save new term
+            saveBtn.addEventListener('click', function() {
+                // Validate form
+                if (!termRu.value.trim() || !termEn.value.trim() || 
+                    !definitionRu.value.trim() || !definitionEn.value.trim() || 
+                    !category.value.trim()) {
+                    showToast('Пожалуйста, заполните все обязательные поля', 'error');
+                    return;
+                }
+
+                // Create new term object
+                const newTerm = {
+                    "ru": {
+                        "term": termRu.value.trim(),
+                        "equivalent": equivalentRu.value.trim() || termEn.value.trim(),
+                        "definition": definitionRu.value.trim(),
+                        "category": category.value.trim()
+                    },
+                    "en": {
+                        "term": termEn.value.trim(),
+                        "equivalent": equivalentEn.value.trim() || termRu.value.trim(),
+                        "definition": definitionEn.value.trim(),
+                        "category": category.value.trim()
+                    },
+                    "isUserAdded": true,
+                    "addedDate": new Date().toISOString()
+                };
+
+                // Add to glossary data
+                glossaryData.push(newTerm);
+                
+                // Save to localStorage
+                localStorage.setItem('glossaryData', JSON.stringify(glossaryData));
+                
+                // Close modal
+                closeModal();
+                
+                // Show success message
+                showToast('Термин успешно добавлен!', 'success');
+                
+                // Re-render glossary
+                const searchTerm = searchInput.value.toLowerCase();
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                } else {
+                    const filteredItems = filterGlossaryItems(searchTerm, currentLang);
+                    renderGlossary(filteredItems, currentLang);
+                }
+            });
+
+            // Show toast notification
+            function showToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            }
+
+            // Function to filter glossary items
+            function filterGlossaryItems(searchTerm, lang) {
+                return glossaryData.filter(item => {
+                    const langData = item[lang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+            }
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                // Sort items: user-added first, then alphabetically
+                items.sort((a, b) => {
+                    if (a.isUserAdded && !b.isUserAdded) return -1;
+                    if (!a.isUserAdded && b.isUserAdded) return 1;
+                    return a[lang].term.localeCompare(b[lang].term);
+                });
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <div>
+                                ${item.isUserAdded ? '<span class="user-term-badge" title="Добавлен пользователем">+</span>' : ''}
+                                <span class="category-badge">${langData.category}</span>
+                            </div>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = filterGlossaryItems(searchTerm, currentLang);
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'МОДЕЛЬ';
+                        document.getElementById('modalTitle').textContent = 'Добавить новый термин';
+                        termRu.placeholder = '';
+                        termEn.placeholder = '';
+                        equivalentRu.placeholder = '';
+                        equivalentEn.placeholder = '';
+                        definitionRu.placeholder = '';
+                        definitionEn.placeholder = '';
+                        category.placeholder = 'Например: экономика, Орлова Ева';
+                        document.getElementById('cancelBtn').textContent = 'Отмена';
+                        document.getElementById('saveBtn').textContent = 'Сохранить термин';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'MODEL';
+                        document.getElementById('modalTitle').textContent = 'Add New Term';
+                        termRu.placeholder = 'Term (russian)';
+                        termEn.placeholder = 'Term (english)';
+                        equivalentRu.placeholder = 'Equivalent (russian)';
+                        equivalentEn.placeholder = 'Equivalent (english)';
+                        definitionRu.placeholder = 'Definition (russian)';
+                        definitionEn.placeholder = 'Definition (english)';
+                        category.placeholder = 'e.g., philosophical, economic, modern';
+                        document.getElementById('cancelBtn').textContent = 'Cancel';
+                        document.getElementById('saveBtn').textContent = 'Save Term';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = filterGlossaryItems(searchTerm, currentLang);
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+Enter or Cmd+Enter to save form
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && addTermModal.style.display === 'flex') {
+                    saveBtn.click();
+                }
+                
+                // Escape to close modal
+                if (e.key === 'Escape' && addTermModal.style.display === 'flex') {
+                    closeModal();
+                }
+                
+                // Ctrl+K or Cmd+K to focus search
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    searchInput.focus();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
