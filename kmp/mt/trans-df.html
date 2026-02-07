@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --success-color: #27ae60;
+            --error-color: #c0392b;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 60px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .add-term-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 32px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        
+        .theme-toggle:hover, .add-term-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px 40px 10px 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--equivalent-color);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn, .modal-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active, .modal-btn.primary {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .modal-btn.secondary {
+            background-color: transparent;
+            color: var(--text-color);
+        }
+        
+        .modal-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* Modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal {
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            animation: modalFadeIn 0.3s ease;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            color: var(--term-color);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .modal-close:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--term-color);
+        }
+        
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .form-note {
+            font-size: 12px;
+            color: var(--equivalent-color);
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            z-index: 1001;
+            animation: toastSlideIn 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .toast.success {
+            background-color: var(--success-color);
+        }
+        
+        .toast.error {
+            background-color: var(--error-color);
+        }
+        
+        .user-term-badge {
+            background-color: var(--success-color);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+            font-weight: normal;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 70px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 40px;
+            }
+            
+            .add-term-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge, .user-term-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+            
+            .modal-overlay {
+                padding: 10px;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+            color: var(--equivalent-color);
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="add-term-toggle" id="addTermToggle" title="Добавить новый термин">+</button>
+            <button class="theme-toggle" id="themeToggle" title="Переключить тему">🌙</button>
+            <h1>MACHINE TRANSLATION</h1>
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+                            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for adding new terms -->
+    <div class="modal-overlay" id="addTermModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Добавить новый термин</h2>
+                <button class="modal-close" id="modalClose">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="termForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="termRu">Термин (русский)</label>
+                            <input type="text" class="form-input" id="termRu" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="termEn">Термин (english)</label>
+                            <input type="text" class="form-input" id="termEn" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="equivalentRu">Эквивалент (русский)</label>
+                            <input type="text" class="form-input" id="equivalentRu">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="equivalentEn">Эквивалент (english)</label>
+                            <input type="text" class="form-input" id="equivalentEn">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="definitionRu">Определение (русский)</label>
+                            <textarea class="form-textarea" id="definitionRu" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="definitionEn">Definition (english)</label>
+                            <textarea class="form-textarea" id="definitionEn" required></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="category">Категория</label>
+                        <input type="text" class="form-input" id="category" placeholder="Например: экономика, Орлова Ева" required>
+                        <div class="form-note">Укажите область знания и ваши Фамилию Имя</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="cancelBtn">Отмена</button>
+                <button class="modal-btn primary" id="saveBtn">Сохранить термин</button>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <div class="container">
+            <p>© 2026 | kmp | CC BY-NC-SA</p>
+            <p>для всех</p>
+        </div>
+    </footer>
+    
+    <div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const addTermToggle = document.getElementById('addTermToggle');
+            const addTermModal = document.getElementById('addTermModal');
+            const modalClose = document.getElementById('modalClose');
+            const cancelBtn = document.getElementById('cancelBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const termForm = document.getElementById('termForm');
+            const body = document.body;
+
+            // Form elements
+            const termRu = document.getElementById('termRu');
+            const termEn = document.getElementById('termEn');
+            const equivalentRu = document.getElementById('equivalentRu');
+            const equivalentEn = document.getElementById('equivalentEn');
+            const definitionRu = document.getElementById('definitionRu');
+            const definitionEn = document.getElementById('definitionEn');
+            const category = document.getElementById('category');
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+            
+            // Theme state
+            let isDarkMode = false;
+            
+            // Default glossary data
+            const defaultGlossaryData = [
+			
+			  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Пословное автоматическое сопоставление исходных словоформ с эквивалентами из словаря без учёта контекста, грамматических связей или коммуникативного смысла высказывания.",
+      "category": "наивное (словарное), начальный уровень, дословный перевод"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "Word-for-word automatic matching of source word forms with dictionary equivalents without consideration of context, grammatical relations, or communicative meaning of the utterance.",
+      "category": "naïve (dictionary-based), basic level, word-for-word translation"
+    }
+  },
+  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Автоматическая межъязыковая лексико-грамматическая трансформация с учётом порядка слов, согласования форм и контекста отдельного предложения.",
+      "category": "школьное понимание, лингводидактика, базовый уровень, грамматический перевод"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "Automatic interlingual lexical-grammatical transformation accounting for word order, form agreement, and sentence-level context.",
+      "category": "school-level understanding, language pedagogy, basic level, grammatical translation"
+    }
+  },
+  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Автоматическое установление межъязыкового соответствия, основанного на лексико-грамматических преобразованиях и базовом учёте прагматики: выбор стиля, адаптацию под целевую аудиторию, разрешение многозначности.",
+      "category": "студенческое (ограниченное) понимание, переводоведение, промежуточный уровень, прагматика перевода"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "Automatic establishment of interlingual correspondence based on lexico-grammatical transformations and basic pragmatics: style selection, audience adaptation, disambiguation.",
+      "category": "student (limited) understanding, translation studies, intermediate level, pragmatics of translation"
+    }
+  },
+  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Машинный перевод между различными знаковыми системами и модальностями: текст↔изображение, видео↔текст и другие, мультимодальная аннотация — с сохранением смыслового ядра в иной форме выражения.",
+      "category": "межсемиотический перевод, Якобсон, мультимодальная семиотика"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "Machine translation between different sign systems and modalities: text↔image, video↔text, etc., multimodal annotation — preserving the semantic core in a different form of expression.",
+      "category": "intersemiotic translation, Jakobson, multimodal semiotics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Наиболее абстрактная модель: перевод как любое допустимое преобразование знаковой системы, инвариантное относительно выбранной целевой характеристики (семантика, прагматика, интерактивные роли и т. д.); критерий «правильности» определяется задачей.",
+      "category": "метатеория перевода, оптимизация, AI-системы, универсальное понимание"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "The most abstract model: translation as any admissible transformation of a sign system invariant with respect to a chosen target characteristic (semantics, pragmatics, interactive roles, etc.); the criterion of 'correctness' is defined by the task.",
+      "category": "metatheory of translation, optimization, AI systems, universal understanding"
+    }
+  },
+			  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Автоматический перевод текста с одного языка на другой с помощью специальной программы или сервиса, как, например, Переводчик от Google или Яндекс.",
+      "category": "бытовое, цифровая эпоха, пользовательские технологии"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "The automatic translation of text from one language to another using a special program or service, such as Google Translate or Yandex.Translator.",
+      "category": "everyday, digital era, consumer technology"
+    }
+  },
+  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Прикладная область компьютерной лингвистики, занимающаяся разработкой алгоритмов и систем для автоматического преобразования текста или речи на исходном языке в текст или речь на целевом языке.",
+      "category": "технико-лингвистический, середина XX — XXI век, компьютерная лингвистика"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "An applied field of computational linguistics concerned with developing algorithms and systems for the automatic conversion of text or speech in a source language into text or speech in a target language.",
+      "category": "technical-linguistic, mid-20th — 21st century, computational linguistics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Исторически — подход, основанный на правилах (Rule-Based MT), где перевод осуществляется с помощью словарей и грамматических правил, вручную составленных лингвистами. Примеры: системы типа Systran.",
+      "category": "лингвистико-инженерный, 1950-е — 1980-е гг., эпоха RBMT"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "Historically — a rule-based approach (Rule-Based MT) where translation is performed using dictionaries and grammatical rules manually crafted by linguists. Examples: systems like Systran.",
+      "category": "linguistic-engineering, 1950s–1980s, RBMT era"
+    }
+  },
+  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Статистический подход (Statistical MT), при котором система «учится» переводу на основе анализа миллионов параллельных текстов (предложение на языке A и его перевод на языке B). Модель вычисляет наиболее вероятный перевод.",
+      "category": "математико-статистический, 1990-е — 2010-е гг., корпусная лингвистика"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A statistical approach (Statistical MT) where the system 'learns' to translate by analyzing millions of parallel texts (a sentence in language A and its translation in language B). The model computes the most probable translation.",
+      "category": "mathematical-statistical, 1990s–2010s, corpus linguistics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Нейронный машинный перевод (Neural MT) — подход, использующий искусственные нейронные сети (обычно архитектуры seq2seq с механизмом внимания) для построения целостного перевода. Система учится на данных и создает перевод как последовательность, учитывая весь контекст.",
+      "category": "нейросетевой, 2010-е — 2020-е гг., deep learning"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "Neural machine translation (Neural MT) — an approach that uses artificial neural networks (typically seq2seq architectures with an attention mechanism) to generate a holistic translation. The system learns from data and produces translation as a sequence, considering the entire context.",
+      "category": "neural network, 2010s–2020s, deep learning"
+    }
+  },
+  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Вычислительная задача поиска оптимальной последовательности слов Y на целевом языке, которая максимизирует условную вероятность P(Y|X) при заданной исходной последовательности X, с учетом лингвистических, семантических и прагматических ограничений.",
+      "category": "формально-математический, теория информации, вероятностное моделирование"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A computational search problem for the optimal word sequence Y in a target language that maximizes the conditional probability P(Y|X) given a source sequence X, subject to linguistic, semantic, and pragmatic constraints.",
+      "category": "formal-mathematical, information theory, probabilistic modeling"
+    }
+  },
+  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Прагматический инструмент межкультурной коммуникации и глобализации, который, с одной стороны, демократизирует доступ к информации, а с другой — ставит вопросы о потере нюансов, авторского стиля и роли человеческого переводчика как культурного медиатора.",
+      "category": "социокультурный, философия языка, глобальные исследования"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A pragmatic tool of intercultural communication and globalization that, on one hand, democratizes access to information, and on the other, raises questions about the loss of nuance, authorial style, and the role of the human translator as a cultural mediator.",
+      "category": "sociocultural, philosophy of language, global studies"
+    }
+  },
+  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Частный случай задачи conditional sequence-to-sequence трансдукции в рамках парадигмы обучения с учителем, где модель, параметризованная глубокой нейронной сетью (напр., Transformer), обучается непосредственно на распределении p(y|x), извлекая индуктивные bias о синтаксисе, семантике и стиле из данных, без явного кодирования лингвистических правил.",
+      "category": "машинное обучение, 2020-е гг., архитектура Transformer, LLM"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A specific case of conditional sequence-to-sequence transduction within the supervised learning paradigm, where a model parameterized by a deep neural network (e.g., Transformer) is trained directly on the distribution p(y|x), extracting inductive biases about syntax, semantics, and style from data, without explicit encoding of linguistic rules.",
+      "category": "machine learning, 2020s, Transformer architecture, LLM"
+    }
+  },
+  {
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Динамический итеративный процесс совместной оптимизации, в котором современная large language model (LLM) выступает как универсальный аппроксиматор функции отображения между языковыми пространствами. В этом процессе перевод возникает как emergent property само-внимательных (self-attention) механизмов, оперирующих dense векторными представлениями, а контроль стиля и домена осуществляется через few-shot prompting или parameter-efficient fine-tuning, размывая границу между задачей перевода и общей задачей контекстно-зависимой текстовой генерации.",
+      "category": "межмодельный, середина 2020-х гг., Large Language Models, emergent abilities"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A dynamic iterative process of joint optimization, where a modern large language model (LLM) acts as a universal approximator of the mapping function between language spaces. In this process, translation emerges as an emergent property of self-attention mechanisms operating on dense vector representations, while style and domain control are achieved through few-shot prompting or parameter-efficient fine-tuning, blurring the line between the translation task and the general task of context-dependent text generation.",
+      "category": "inter-model, mid-2020s, Large Language Models, emergent abilities"
+    }
+  },
+			
+	{
+  "ru": {
+    "term": "Машинный перевод",
+    "equivalent": "Machine Translation",
+    "definition": "Спектр технологий автоматизации межъязыкового преобразования, занимающий континуум от вспомогательного инструмента человеческого переводчика до полностью автономной системы. Градация определяется уровнем вмешательства человека и степенью доверия к выходным данным.",
+    "category": "прагматико-технологический, индустрия перевода, локализация, человеко-машинное взаимодействие (HITL)"
+  },
+  "en": {
+    "term": "Machine Translation",
+    "equivalent": "Машинный перевод",
+    "definition": "A spectrum of technologies for automating interlingual conversion, occupying a continuum from an auxiliary tool for human translators to a fully autonomous system. The gradation is defined by the level of human intervention and the degree of trust in the output" }
+  },		
+			
+	{
+  "ru": {
+    "term": "Машинный перевод (LLM)",
+    "equivalent": "Machine Translation (LLM)",
+    "definition": "Операция T: X → Y, где X ∈ L_S, Y ∈ L_T. L_S, L_T — плотные многообразия в пространстве вложений E, параметризующие распределения p_θ(x) и p_φ(y).\n\nT реализуется как последовательность дифференцируемых преобразований в архитектуре Transformer, оптимизированная для минимизации расхождения между совместным распределением пар (x, y) в обучающем корпусе D и распределением, порождаемым моделью: argmin_θ,φ D_KL( P_data(x, y) || P_model(x, y; θ, φ) ).\n\nМеханизм внимания в T выполняет динамическую маршрутизацию градиента, устанавливая взвешенные связи между токенами x_i и y_j. Веса внимания α_ij = softmax( (Q(x_i) • K(x_j)) / √d_k ) представляют собой параметризованную оценку условной взаимной информации I(x_i; y_j | C), где C — контекстное окно.\n\nТаким образом, перевод есть не биекция между символическими системами, а отображение между вероятностными конструкциями, индуцированное данными. Качество T оценивается не через «точность» относительно гипотетического идеального перевода y*, а через минимизацию свободной энергии системы F = E_q[−log p(y|x)] + KL(q||p) в рамках парадигмы активного вывода, где q — приближенное апостериорное распределение, адаптируемое в процессе генерации.\n\nПрагматические аспекты (стиль, тон) моделируются как скрытые переменные z в иерархической порождающей модели p(y, z|x) = p(y|z, x)p(z|x). Инференция z и последующая генерация y происходят совместно через механизмы контролируемой генерации (controlled decoding) или инструктивного тонкого вмешательства (prompt-based steering) в пространстве скрытых состояний.",
+    "category": "онтология LLM, 2026, компьютерная лингвистика, теория информации"
+  },
+  "en": {
+    "term": "Machine Translation (LLM)",
+    "equivalent": "Машинный перевод (LLM)",
+    "definition": "Operation T: X → Y, where X ∈ L_S, Y ∈ L_T. L_S, L_T are dense manifolds in embedding space E, parameterizing distributions p_θ(x) and p_φ(y).\n\nT is implemented as a sequence of differentiable transformations within a Transformer architecture, optimized to minimize divergence between the joint distribution of pairs (x, y) in training corpus D and the distribution generated by the model: argmin_θ,φ D_KL( P_data(x, y) || P_model(x, y; θ, φ) ).\n\nThe attention mechanism in T performs dynamic gradient routing, establishing weighted connections between tokens x_i and y_j. Attention weights α_ij = softmax( (Q(x_i) • K(x_j)) / √d_k ) represent a parameterized estimate of conditional mutual information I(x_i; y_j | C), where C is the context window.\n\nThus, translation is not a bijection between symbolic systems, but a mapping between probabilistic constructs induced by data. The quality of T is assessed not through 'accuracy' relative to a hypothetical ideal translation y*, but through minimization of the system's free energy F = E_q[−log p(y|x)] + KL(q||p) within the active inference paradigm, where q is an approximate posterior distribution adapted during the generation process.\n\nPragmatic aspects (style, tone) are modeled as latent variables z in a hierarchical generative model p(y, z|x) = p(y|z, x)p(z|x). Inference of z and subsequent generation of y occur jointly via controlled decoding mechanisms or prompt-based steering in the latent state space.",
+    "category": "LLM ontology, 2026, computational linguistics, information theory"
+  }
+}
+
+
+
+            ];
+            
+            // Get glossary data from localStorage or use default
+            let glossaryData = JSON.parse(localStorage.getItem('glossaryData'));
+            if (!glossaryData) {
+                glossaryData = defaultGlossaryData;
+                localStorage.setItem('glossaryData', JSON.stringify(glossaryData));
+            }
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Modal functions
+            function openModal() {
+                addTermModal.style.display = 'flex';
+                termRu.focus();
+            }
+
+            function closeModal() {
+                addTermModal.style.display = 'none';
+                termForm.reset();
+            }
+
+            // Modal event listeners
+            addTermToggle.addEventListener('click', openModal);
+            modalClose.addEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
+
+            // Close modal when clicking outside
+            addTermModal.addEventListener('click', function(e) {
+                if (e.target === addTermModal) {
+                    closeModal();
+                }
+            });
+
+            // Save new term
+            saveBtn.addEventListener('click', function() {
+                // Validate form
+                if (!termRu.value.trim() || !termEn.value.trim() || 
+                    !definitionRu.value.trim() || !definitionEn.value.trim() || 
+                    !category.value.trim()) {
+                    showToast('Пожалуйста, заполните все обязательные поля', 'error');
+                    return;
+                }
+
+                // Create new term object
+                const newTerm = {
+                    "ru": {
+                        "term": termRu.value.trim(),
+                        "equivalent": equivalentRu.value.trim() || termEn.value.trim(),
+                        "definition": definitionRu.value.trim(),
+                        "category": category.value.trim()
+                    },
+                    "en": {
+                        "term": termEn.value.trim(),
+                        "equivalent": equivalentEn.value.trim() || termRu.value.trim(),
+                        "definition": definitionEn.value.trim(),
+                        "category": category.value.trim()
+                    },
+                    "isUserAdded": true,
+                    "addedDate": new Date().toISOString()
+                };
+
+                // Add to glossary data
+                glossaryData.push(newTerm);
+                
+                // Save to localStorage
+                localStorage.setItem('glossaryData', JSON.stringify(glossaryData));
+                
+                // Close modal
+                closeModal();
+                
+                // Show success message
+                showToast('Термин успешно добавлен!', 'success');
+                
+                // Re-render glossary
+                const searchTerm = searchInput.value.toLowerCase();
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                } else {
+                    const filteredItems = filterGlossaryItems(searchTerm, currentLang);
+                    renderGlossary(filteredItems, currentLang);
+                }
+            });
+
+            // Show toast notification
+            function showToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            }
+
+            // Function to filter glossary items
+            function filterGlossaryItems(searchTerm, lang) {
+                return glossaryData.filter(item => {
+                    const langData = item[lang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+            }
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                // Sort items: user-added first, then alphabetically
+                items.sort((a, b) => {
+                    if (a.isUserAdded && !b.isUserAdded) return -1;
+                    if (!a.isUserAdded && b.isUserAdded) return 1;
+                    return a[lang].term.localeCompare(b[lang].term);
+                });
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <div>
+                                ${item.isUserAdded ? '<span class="user-term-badge" title="Добавлен пользователем">+</span>' : ''}
+                                <span class="category-badge">${langData.category}</span>
+                            </div>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = filterGlossaryItems(searchTerm, currentLang);
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'МОДЕЛЬ';
+                        document.getElementById('modalTitle').textContent = 'Добавить новый термин';
+                        termRu.placeholder = '';
+                        termEn.placeholder = '';
+                        equivalentRu.placeholder = '';
+                        equivalentEn.placeholder = '';
+                        definitionRu.placeholder = '';
+                        definitionEn.placeholder = '';
+                        category.placeholder = 'Например: экономика, Орлова Ева';
+                        document.getElementById('cancelBtn').textContent = 'Отмена';
+                        document.getElementById('saveBtn').textContent = 'Сохранить термин';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'MODEL';
+                        document.getElementById('modalTitle').textContent = 'Add New Term';
+                        termRu.placeholder = 'Term (russian)';
+                        termEn.placeholder = 'Term (english)';
+                        equivalentRu.placeholder = 'Equivalent (russian)';
+                        equivalentEn.placeholder = 'Equivalent (english)';
+                        definitionRu.placeholder = 'Definition (russian)';
+                        definitionEn.placeholder = 'Definition (english)';
+                        category.placeholder = 'e.g., philosophical, economic, modern';
+                        document.getElementById('cancelBtn').textContent = 'Cancel';
+                        document.getElementById('saveBtn').textContent = 'Save Term';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = filterGlossaryItems(searchTerm, currentLang);
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+Enter or Cmd+Enter to save form
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && addTermModal.style.display === 'flex') {
+                    saveBtn.click();
+                }
+                
+                // Escape to close modal
+                if (e.key === 'Escape' && addTermModal.style.display === 'flex') {
+                    closeModal();
+                }
+                
+                // Ctrl+K or Cmd+K to focus search
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    searchInput.focus();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
