@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>ТОКЕН</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp |  CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+                       {
+  "ru": {
+    "term": "Токен",
+    "equivalent": "Token (NLP)",
+    "definition": "Токен — это минимальная единица текста (часть слова, целое слово, символ или знак препинания), которую нейросеть воспринимает и обрабатывает как дискретный элемент. В современных LLM это часто «подслово» (subword) или байт-пара, полученная в результате BPE-токенизации.",
+    "category": "Компьютерная лингвистика / NLP"
+  },
+  "en": {
+    "term": "Token",
+    "equivalent": "Токен (NLP)",
+    "definition": "A token is the smallest unit of text (a subword, a whole word, a character, or punctuation) that a neural network perceives and processes as a discrete entity. In modern LLMs, this is often a 'subword' or byte-pair derived from BPE tokenization.",
+    "category": "Computational Linguistics / NLP"
+  }
+},
+{
+  "ru": {
+    "term": "Токен (экземпляр)",
+    "equivalent": "Token (vs. Type)",
+    "definition": "Токен — это конкретное, единичное вхождение знака в речевом акте или тексте (parole), в отличие от «типа» (type) — абстрактного класса или образца, хранящегося в системе языка (langue).",
+    "category": "Семиотика / Теоретическая лингвистика"
+  },
+  "en": {
+    "term": "Token",
+    "equivalent": "Токен (экземпляр)",
+    "definition": "A token is a concrete, individual occurrence of a sign in a speech act or text (parole), as opposed to a 'type' — the abstract class or pattern stored in the language system (langue).",
+    "category": "Semiotics / Theoretical Linguistics"
+  }
+},
+{
+  "ru": {
+    "term": "Токен (словоупотребление)",
+    "equivalent": "Token (Word occurrence)",
+    "definition": "Токен — это единица подсчета объема корпуса; каждое отдельное вхождение любой словоформы в тексте, включая повторы. Противопоставляется «лемме» или уникальному слову.",
+    "category": "Корпусная лингвистика"
+  },
+  "en": {
+    "term": "Token",
+    "equivalent": "Токен (словоупотребление)",
+    "definition": "A token is a unit of corpus size measurement; every individual occurrence of a word form in a text, including repetitions. It is contrasted with a 'lemma' or a unique word type.",
+    "category": "Corpus Linguistics"
+  }
+},
+{
+  "ru": {
+    "term": "Токен безопасности",
+    "equivalent": "Security Token",
+    "definition": "Токен — это физическое устройство (например, USB-ключ) или программный код, генерируемый для подтверждения личности пользователя и предоставления временного доступа к системе.",
+    "category": "Информационная безопасность"
+  },
+  "en": {
+    "term": "Security Token",
+    "equivalent": "Токен безопасности",
+    "definition": "A token is a physical device (e.g., a USB key) or a software code generated to verify a user's identity and grant temporary access to a system.",
+    "category": "Information Security"
+  }
+},
+{
+  "ru": {
+    "term": "Цифровой токен",
+    "equivalent": "Crypto Token",
+    "definition": "Токен — это запись в распределенном реестре (блокчейне), удостоверяющая права владельца на определенный актив, долю в проекте или доступ к услуге (utility token, NFT).",
+    "category": "Блокчейн / Финансы"
+  },
+  "en": {
+    "term": "Crypto Token",
+    "equivalent": "Цифровой токен",
+    "definition": "A token is an entry in a distributed ledger (blockchain) certifying the owner's rights to a specific asset, a share in a project, or access to a service (utility token, NFT).",
+    "category": "Blockchain / Finance"
+  }
+},
+{
+  "ru": {
+    "term": "Лексический токен",
+    "equivalent": "Lexical Token",
+    "definition": "Токен — это структурированная единица данных (ключевое слово, идентификатор, оператор), которую лексический анализатор выделяет из исходного кода программы перед этапом синтаксического анализа.",
+    "category": "Информатика (Compilers)"
+  },
+  "en": {
+    "term": "Lexical Token",
+    "equivalent": "Лексический токен",
+    "definition": "A token is a structured unit of data (keyword, identifier, operator) identified by a lexical analyzer from source code before the parsing stage.",
+    "category": "Computer Science (Compilers)"
+	}
+  },
+  
+  {
+  "ru": {
+    "term": "Токен (в нейросетях)",
+    "equivalent": "Token (Analogy)",
+    "definition": "Токен — это «кирпичик» текста, понятный компьютеру. Компьютер не умеет читать по буквам, как люди. Вместо этого он разбивает слова на кусочки (токены). Слово «молоко» может быть одним кирпичиком, а длинное слово — тремя. Из этих кирпичиков компьютер собирает ответы.",
+    "category": "Учебное / Начальный уровень"
+  },
+  "en": {
+    "term": "Token",
+    "equivalent": "Токен (Аналогия)",
+    "definition": "A token is a text 'brick' that a computer can understand. Computers don't read letter by letter like humans. Instead, they break words into pieces (tokens). The word 'milk' might be one brick, while a long word might be three. The computer uses these bricks to build answers.",
+    "category": "Educational / Entry Level"
+  }
+},
+
+  {
+  "ru": {
+    "term": "Токен (NLP)",
+    "equivalent": "Token (Linguistics focus)",
+    "definition": "Токен — это дискретная единица сегментации текста, полученная статистическим методом (например, BPE или WordPiece). Токен является ключом к вектору-эмбеддингу. Важно: границы токена часто не совпадают с границами морфем (корней, суффиксов), так как деление основано на частотности сочетаний символов, а не на семантике.",
+    "category": "Компьютерная лингвистика"
+  },
+  "en": {
+    "term": "Token",
+    "equivalent": "Токен (Лингвистический фокус)",
+    "definition": "A token is a discrete unit of text segmentation derived via statistical methods (e.g., BPE or WordPiece). A token acts as a key to an embedding vector. Crucially, token boundaries often do not align with morpheme boundaries (roots, suffixes), as segmentation is based on character frequency rather than semantics.",
+    "category": "Computational Linguistics"
+  }
+},
+
+{
+  "ru": {
+    "term": "Токен (индекс)",
+    "equivalent": "Token (Index)",
+    "definition": "Токен — это элемент $t$ из конечного упорядоченного словаря $V$ (Vocabulary), который отображается в $d$-мерное векторное пространство $\mathbb{R}^d$ через матрицу эмбеддингов $E$. Формально, токенизация — это функция $f: S \to \mathbb{Z}^n$, преобразующая входную строку $S$ в последовательность целочисленных индексов.",
+    "category": "Computer Science / Deep Learning"
+  },
+  "en": {
+    "term": "Token",
+    "equivalent": "Токен (индекс)",
+    "definition": "A token is an element $t$ from a finite ordered vocabulary $V$, mapped into a $d$-dimensional vector space $\mathbb{R}^d$ via an embedding matrix $E$. Formally, tokenization is a function $f: S \to \mathbb{Z}^n$ transforming an input string $S$ into a sequence of integer indices.",
+    "category": "Computer Science / Deep Learning"
+  }
+}, 
+
+{
+  "ru": {
+    "term": "Токен (дискретный вход)",
+    "equivalent": "Discrete Input Unit",
+    "definition": "Токен — дискретная входная переменная, представленная уникальным идентификатором (ID), служащая ключом для извлечения вектора состояния из таблицы поиска (Lookup Table). Последовательность токенов определяет контекстное окно, в рамках которого рассчитываются механизмы внимания (Self-Attention) для предсказания вероятностного распределения следующего ID.",
+    "category": "Архитектура трансформеров"
+  },
+  "en": {
+    "term": "Discrete Input Unit",
+    "equivalent": "Токен (дискретный вход)",
+    "definition": "A token is a discrete input variable represented by a unique identifier (ID), serving as a key for retrieving a state vector from a Lookup Table. A sequence of tokens defines the context window within which Self-Attention mechanisms calculate the probability distribution for predicting the next ID.",
+    "category": "Transformer Architecture"
+  }
+},
+
+{
+  "ru": {
+    "term": "Токен ввода/вывода",
+    "equivalent": "I/O Token",
+    "definition": "Токен — нормализованная последовательность байтов, сжатая алгоритмом кодирования пар байтов (или аналогичным) и представленная уникальным целочисленным идентификатором (Token ID). Является базовой единицей измерения длины контекстного окна и стоимости вычислительных ресурсов при инференсе.",
+    "category": "Архитектура LLM / Data Engineering"
+  },
+  "en": {
+    "term": "I/O Token",
+    "equivalent": "Токен ввода/вывода",
+    "definition": "A token is a normalized byte sequence compressed via a byte-pair encoding algorithm (or similar) and represented by a unique integer identifier (Token ID). It constitutes the fundamental unit for measuring context window length and computational resource cost during inference.",
+    "category": "LLM Architecture / Data Engineering"
+  }
+
+}
+
+
+
+
+
+
+
+
+
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
