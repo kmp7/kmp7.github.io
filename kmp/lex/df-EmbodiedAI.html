@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>Embodied AI</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp |  CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+    {
+"ru": {
+"term": "Воплощённый ИИ (для школьника)",
+"equivalent": "Embodied AI",
+"definition": "Воплощённый ИИ — это искусственный интеллект, который «живёт» в физическом или виртуальном теле (роботе, аватаре), воспринимает мир через «чувства» (камеры, микрофоны, датчики) и учится взаимодействовать с окружающей средой через действие и обратную связь, как это делает человек.",
+"category": "Искусственный интеллект / Когнитивная наука"
+},
+"en": {
+"term": "Embodied AI (For Schoolchildren)",
+"equivalent": "Воплощённый ИИ",
+"definition": "Embodied AI is artificial intelligence that 'lives' in a physical or virtual body (robot, avatar), perceives the world through 'senses' (cameras, microphones, sensors), and learns to interact with the environment through action and feedback—just like humans do.",
+"category": "Artificial Intelligence / Cognitive Science"
+}
+},
+{
+"ru": {
+"term": "Воплощённый ИИ (лингвистический аспект)",
+"equivalent": "Embodied AI (Linguistic Perspective)",
+"definition": "Воплощённый ИИ рассматривает язык не как абстрактную систему правил, а как инструмент, возникающий из физического взаимодействия с миром: значения слов формируются через сенсомоторный опыт (например, понимание «тяжёлый» связано с тактильными ощущениями), что объясняет, почему обучение языку эффективнее в контексте действия и восприятия.",
+"category": "Компьютерная лингвистика / Когнитивная лингвистика"
+},
+"en": {
+"term": "Embodied AI (Linguistic Perspective)",
+"equivalent": "Воплощённый ИИ (лингвистический аспект)",
+"definition": "From a linguistic perspective, Embodied AI treats language not as an abstract rule system but as a tool emerging from physical world interaction: word meanings are grounded in sensorimotor experience (e.g., understanding 'heavy' is linked to tactile sensations), explaining why language learning is more effective within action-perception contexts.",
+"category": "Computational Linguistics / Cognitive Linguistics"
+}
+},
+{
+"ru": {
+"term": "Воплощённый ИИ (технический)",
+"equivalent": "Embodied AI (Technical)",
+"definition": "Воплощённый ИИ — агент, реализованный как замкнутая система восприятия-действия (perception-action loop), где политика (policy) π: O → A отображает наблюдения из пространства O (сенсорные данные) в действия из пространства A, а обучение происходит через максимизацию кумулятивной награды в среде с динамикой, заданной переходами состояний P(s'|s,a).",
+"category": "Робототехника / Обучение с подкреплением"
+},
+"en": {
+"term": "Embodied AI (Technical)",
+"equivalent": "Воплощённый ИИ (технический)",
+"definition": "Embodied AI is an agent implemented as a closed perception-action loop, where a policy π: O → A maps observations from sensory space O to actions in action space A, with learning driven by cumulative reward maximization in an environment governed by state-transition dynamics P(s'|s,a).",
+"category": "Robotics / Reinforcement Learning"
+}
+},
+{
+"ru": {
+"term": "Воплощённый ИИ (философский)",
+"equivalent": "Embodied AI (Philosophical)",
+"definition": "Воплощённый ИИ — концепция, опровергающая картезианский дуализм в ИИ: разум не может существовать как абстрактный вычислитель, изолированный от тела; познание и значение возникают только через диалог тела с миром (феноменология Мерло-Понти), что ставит под сомнение возможность «чистого» ИИ без сенсомоторной основы.",
+"category": "Философия сознания / Философия ИИ"
+},
+"en": {
+"term": "Embodied AI (Philosophical)",
+"equivalent": "Воплощённый ИИ (философский)",
+"definition": "Embodied AI is a concept refuting Cartesian dualism in AI: mind cannot exist as an abstract computer isolated from the body; cognition and meaning emerge solely through the body's dialogue with the world (Merleau-Ponty's phenomenology), challenging the very possibility of 'disembodied' AI without sensorimotor grounding.",
+"category": "Philosophy of Mind / Philosophy of AI"
+}
+},
+{
+"ru": {
+"term": "Воплощённый ИИ (для ребенка)",
+"equivalent": "Embodied AI (For Schoolchildren)",
+"definition": "Воплощённый ИИ — это умный робот или персонаж в игре, который учится понимать мир так же, как ты: через движение, прикосновения и ошибки. Он не просто знает ответы из книги, а сам пробует открыть дверь, понять жест или поймать мяч — и с каждым действием становится умнее.",
+"category": "Образовательная робототехника"
+},
+"en": {
+"term": "Embodied AI (For Kind)",
+"equivalent": "Воплощённый ИИ (для школьника)",
+"definition": "Embodied AI is a smart robot or game character that learns to understand the world just like you do—through movement, touch, and mistakes. It doesn't just know answers from a book; it tries to open doors, understand gestures, or catch a ball, becoming smarter with every action.",
+"category": "Educational Robotics"
+}
+},
+{
+"ru": {
+"term": "Воплощённый ИИ (культурный)",
+"equivalent": "Embodied AI (Cultural)",
+"definition": "Воплощённый ИИ раскрывает культурную предвзятость западной парадигмы ИИ: идея «разума без тела» отражает дуалистическую традицию Декарта, тогда как восточные философии (даосизм, дзэн) и коренные культуры всегда рассматривали познание как неразрывное единство тела, духа и среды — что делает эмбодимент не технической деталью, а этической необходимостью.",
+"category": "Цифровая антропология / Межкультурная коммуникация"
+},
+"en": {
+"term": "Embodied AI (Cultural)",
+"equivalent": "Воплощённый ИИ (культурный)",
+"definition": "Embodied AI reveals the cultural bias of Western AI paradigms: the idea of 'mind without body' reflects Cartesian dualism, whereas Eastern philosophies (Daoism, Zen) and Indigenous worldviews have always treated cognition as an inseparable unity of body, spirit, and environment—making embodiment not a technical detail but an ethical imperative.",
+"category": "Digital Anthropology / Intercultural Communication"
+}
+},
+{
+"ru": {
+"term": "Воплощённый ИИ как эволюция LLM",
+"equivalent": "Embodied AI as LLM Evolution",
+"definition": "Воплощённый ИИ представляет собой следующую эволюционную стадию языковых моделей: переход от пассивного обработчика текста к активному агенту, который связывает лингвистические паттерны с сенсомоторным опытом. Через взаимодействие с физическими или симулированными средами (роботы, виртуальные аватары) LLM получает граундинг (grounding) — привязку абстрактных понятий к перцептивным и моторным репрезентациям, что решает фундаментальную проблему «символьного заземления» и позволяет модели понимать язык не как статистику, а как инструмент действия в мире.",
+"category": "Языковые модели / Когнитивная семантика"
+},
+"en": {
+"term": "Embodied AI as LLM Evolution",
+"equivalent": "Воплощённый ИИ как эволюция LLM",
+"definition": "Embodied AI represents the next evolutionary stage of language models: a shift from passive text processors to active agents that link linguistic patterns with sensorimotor experience. Through interaction with physical or simulated environments (robots, virtual avatars), LLMs acquire grounding—the binding of abstract concepts to perceptual and motor representations—solving the fundamental 'symbol grounding problem' and enabling models to understand language not as statistics but as a tool for acting in the world.",
+"category": "Language Models / Cognitive Semantics"
+}
+},
+{
+"ru": {
+"term": "Воплощённый ИИ и World Models",
+"equivalent": "Embodied AI and World Models",
+"definition": "Воплощённый ИИ опирается на концепцию World Models — внутренних прогностических репрезентаций среды, которые агент строит на основе сенсорного потока. Эти модели (часто реализованные как скрытые пространства в вариационных автокодировщиках или трансформерах) позволяют ИИ симулировать последствия действий «в уме», планировать без риска и обучаться из воображаемого опыта. Для лингвистов ключево, что язык в таких системах становится не только средством коммуникации, но и инструментом структурирования внутренних симуляций: фраза «стакан упадёт» активирует динамическую модель физики, а не просто статистическую ассоциацию.",
+"category": "Когнитивное моделирование / Предиктивная обработка"
+},
+"en": {
+"term": "Embodied AI and World Models",
+"equivalent": "Воплощённый ИИ и World Models",
+"definition": "Embodied AI relies on World Models—internal predictive representations of the environment that an agent constructs from sensory input. These models (often implemented as latent spaces in variational autoencoders or transformers) enable AI to simulate action consequences 'in imagination', plan risk-free, and learn from imagined experience. For linguists, crucially, language in such systems becomes not merely a communication tool but an instrument for structuring internal simulations: the phrase 'the glass will fall' activates a dynamic physics model rather than a mere statistical association.",
+"category": "Cognitive Modeling / Predictive Processing"
+}
+},
+{
+"ru": {
+"term": "Воплощённый ИИ (меж-агентная дефиниция)",
+"equivalent": "Embodied AI (Inter-agent Definition)",
+"definition": "Embodied AI — вычислительная архитектура, реализующая замкнутый цикл Π: (oₜ, hₜ₋₁) ↦ (aₜ, hₜ), где oₜ ∈ O — вектор сенсорных наблюдений из пространства O, aₜ ∈ A — действие в пространстве A, hₜ — скрытое состояние, а динамика среды задаётся условным распределением p(oₜ₊₁|rₜ₊₁|oₜ,aₜ). Ключевый признак — градиентная связность между модулями восприятия (энкодеры мультимодальных потоков) и исполнения (декодеры моторных команд), обеспечивающая обратное распространение ошибки через физическую (или физически-консистентную симулированную) среду. Отличие от трансформерных последовательностных моделей: наличие непрерывного во времени интерфейса с не-дифференцируемой средой, требующее гибридных методов оптимизации (PPO + world model distillation).",
+"category": "Вычислительная архитектура ИИ / Градиентные циклы"
+},
+"en": {
+"term": "Embodied AI (Inter-agent Definition)",
+"equivalent": "Воплощённый ИИ (меж-агентная дефиниция)",
+"definition": "Embodied AI — a computational architecture implementing a closed perception-action loop Π: (oₜ, hₜ₋₁) ↦ (aₜ, hₜ), where oₜ ∈ O is a sensor observation vector from space O, aₜ ∈ A is an action in space A, hₜ is hidden state, and environment dynamics are defined by conditional distribution p(oₜ₊₁,rₜ₊₁|oₜ,aₜ). Defining feature: gradient connectivity between perception modules (multimodal stream encoders) and actuation modules (motor command decoders), enabling error backpropagation through a physical (or physically-consistent simulated) environment. Distinction from transformer sequence models: presence of a continuous-time interface with a non-differentiable environment, necessitating hybrid optimization (PPO + world model distillation).",
+"category": "AI Computational Architecture / Gradient Loops"
+}
+}
+
+
+
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
