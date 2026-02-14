@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+ · 大语言模型语言学分析</title>
+<style>
+  /* --- СТИЛИ ПОЛНОСТЬЮ ИДЕНТИЧНЫ ОРИГИНАЛУ --- */
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-card: #ffffff;
+    --nav-color: #325980;
+    --accent: #3498db;
+    --accent-hover: #2980b9;
+    --divider: #f1f1f1;
+    --text-primary: #1a1a2e;
+    --text-secondary: #4a4a6a;
+    --text-muted: #7a7a9a;
+    --border: #e0e0e0;
+    --code-bg: #f8f9fa;
+    --code-border: #e2e6ea;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+    --shadow-hover: 0 4px 20px rgba(0,0,0,0.10);
+    --radius: 10px;
+    --transition: 0.3s ease;
+  }
+
+  [data-theme="dark"] {
+    --bg-primary: #121225;
+    --bg-secondary: #1a1a35;
+    --bg-card: #1e1e3a;
+    --nav-color: #4a8abf;
+    --accent: #5ba8e0;
+    --accent-hover: #7abef0;
+    --divider: #2a2a4a;
+    --text-primary: #e8e8f0;
+    --text-secondary: #b0b0cc;
+    --text-muted: #8080a0;
+    --border: #2e2e50;
+    --code-bg: #16162e;
+    --code-border: #2a2a4a;
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+    --shadow-hover: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  /* --- ВСЕ ОСТАЛЬНЫЕ СТИЛИ БЕЗ ИЗМЕНЕНИЙ --- */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'Microsoft YaHei', sans-serif;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    line-height: 1.7;
+    transition: background var(--transition), color var(--transition);
+  }
+  header {
+    background: var(--nav-color);
+    color: #fff;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: background var(--transition);
+  }
+  .header-inner {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .header-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  #themeToggle {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    font-size: 1.25rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition), transform var(--transition);
+    flex-shrink: 0;
+  }
+  #themeToggle:hover {
+    background: rgba(255,255,255,0.25);
+    transform: rotate(20deg);
+  }
+  .tab-nav {
+    background: var(--bg-primary);
+    border-bottom: 2px solid var(--divider);
+    position: sticky;
+    top: 68px;
+    z-index: 999;
+    transition: background var(--transition), border-color var(--transition);
+    overflow-x: auto;
+  }
+  .tab-nav-inner {
+    max-width: 1140px;
+    margin: 0 auto;
+    display: flex;
+    padding: 0 24px;
+    gap: 0;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    padding: 14px 22px;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all var(--transition);
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .tab-btn:hover { color: var(--accent); }
+  .tab-btn.active {
+    color: var(--nav-color);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+  }
+  main {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+  .tab-panel { display: none; animation: fadeIn 0.35s ease; }
+  .tab-panel.active { display: block; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+    transition: all var(--transition);
+  }
+  .card:hover { box-shadow: var(--shadow-hover); }
+  .card h2 {
+    color: var(--nav-color);
+    font-size: 1.35rem;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--divider);
+    transition: color var(--transition), border-color var(--transition);
+  }
+  .card h3 {
+    color: var(--nav-color);
+    font-size: 1.1rem;
+    margin: 20px 0 10px;
+    transition: color var(--transition);
+  }
+  .card p, .card li {
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    transition: color var(--transition);
+  }
+  .card ul, .card ol {
+    padding-left: 24px;
+    margin-bottom: 12px;
+  }
+  .card li { margin-bottom: 6px; }
+  .highlight-box {
+    background: var(--bg-secondary);
+    border-left: 4px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin: 16px 0;
+    transition: background var(--transition), border-color var(--transition);
+  }
+  .highlight-box p { margin-bottom: 4px; }
+  .warn-box { border-left-color: #e67e22; }
+  .success-box { border-left-color: #27ae60; }
+  .prompt-block {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 10px 0 14px;
+    font-family: 'Consolas', 'Fira Code', monospace;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    position: relative;
+    cursor: pointer;
+    line-height: 1.6;
+    transition: all var(--transition);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .prompt-block:hover { border-color: var(--accent); }
+  .prompt-block .copy-hint {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-family: 'Segoe UI', sans-serif;
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .prompt-block:hover .copy-hint { opacity: 1; }
+  .copied-toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--nav-color);
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 9999;
+  }
+  .copied-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 0.92rem;
+  }
+  .info-table th, .info-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--divider);
+    transition: border-color var(--transition);
+  }
+  .info-table th {
+    background: var(--bg-secondary);
+    color: var(--nav-color);
+    font-weight: 600;
+    transition: background var(--transition), color var(--transition);
+  }
+  .info-table td { color: var(--text-secondary); }
+  .info-table tr:hover td { background: var(--bg-secondary); }
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+  .step-row {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  .step-row p { margin: 0; }
+  .collapsible-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 14px 20px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 2px;
+    transition: all var(--transition);
+    user-select: none;
+  }
+  .collapsible-header:hover { border-color: var(--accent); }
+  .collapsible-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--nav-color);
+  }
+  .collapsible-arrow {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+  }
+  .collapsible-header.open .collapsible-arrow { transform: rotate(180deg); }
+  .collapsible-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+    border: 1px solid transparent;
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+  .collapsible-body.open {
+    max-height: 3000px;
+    border-color: var(--border);
+    border-top: none;
+  }
+  .collapsible-body-inner { padding: 18px 20px; }
+  .collapsible-group { margin-bottom: 12px; }
+  .badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .checklist {
+    list-style: none;
+    padding: 0;
+  }
+  .checklist li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--divider);
+    transition: border-color var(--transition);
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .check-box {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+    font-size: 0.8rem;
+    color: transparent;
+    background: var(--bg-card);
+  }
+  .check-box.checked {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .progress-bar-wrap {
+    background: var(--divider);
+    border-radius: 10px;
+    height: 8px;
+    margin: 12px 0 6px;
+    overflow: hidden;
+    transition: background var(--transition);
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--nav-color));
+    border-radius: 10px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+  .progress-text {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    text-align: right;
+  }
+  footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    border-top: 1px solid var(--divider);
+    transition: color var(--transition), border-color var(--transition);
+  }
+  @media (max-width: 768px) {
+    .header-inner { padding: 12px 16px; }
+    .header-title { font-size: 0.95rem; }
+    .tab-nav-inner { padding: 0 8px; }
+    .tab-btn { padding: 12px 14px; font-size: 0.82rem; }
+    main { padding: 20px 14px 48px; }
+    .card { padding: 20px 18px; }
+    .card h2 { font-size: 1.15rem; }
+    .prompt-block { font-size: 0.82rem; padding: 12px 14px; }
+    .info-table th, .info-table td { padding: 8px 10px; font-size: 0.85rem; }
+  }
+  @media (max-width: 480px) {
+    .header-title { font-size: 0.82rem; }
+    .tab-btn { padding: 10px 10px; font-size: 0.78rem; }
+    .card { padding: 16px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-title">大语言模型语言学分析</div>
+    <div class="header-right">
+      <button id="themeToggle" title="切换主题" aria-label="切换主题">☀️</button>
+    </div>
+  </div>
+</header>
+
+<nav class="tab-nav">
+  <div class="tab-nav-inner">
+    <button class="tab-btn active" data-tab="task">任务</button>
+    <button class="tab-btn" data-tab="prompts">LLM提示词</button>
+    <button class="tab-btn" data-tab="report">报告格式</button>
+    <button class="tab-btn" data-tab="checklist">检查清单</button>
+    <button class="tab-btn" data-tab="llm">建议与工具</button>
+  </div>
+</nav>
+
+<main>
+
+<section class="tab-panel active" id="panel-task">
+
+  <div class="card">
+    <h2>实验目标</h2>
+    <p>撰写一篇个人随笔 <strong>“我与大语言模型共度的寒假”</strong>，并利用大语言模型对其进行全面的计算机语言学分析。</p>
+    <div class="highlight-box">
+      <p><strong>字数要求：</strong>约2000字符（含空格），使用<strong>中文</strong>撰写。</p>
+      <p><strong>文章结构：</strong>第一段 — 主要描述寒假经历；第二段 — 反思LLM的使用及其影响。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>第一步：撰写随笔</h2>
+    <div class="step-row"><span class="step-num">1</span><p>独立完成随笔（约2000字符）。第一段：描述寒假生活；第二段：反思在假期或学习中如何使用LLM（如ChatGPT、Claude、Gemini、DeepSeek、文心一言等）。</p></div>
+    <div class="step-row"><span class="step-num">2</span><p>用中文撰写。</p></div>
+    <div class="step-row"><span class="step-num">3</span><p>将文本保存为电子版（.txt或.docx），以便复制到LLM对话中。</p></div>
+    <div class="highlight-box warn-box">
+      <p><strong>重要提示：</strong>如果随笔的任何部分由LLM撰写或修改，必须明确说明哪些片段以及使用了哪个工具。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>第二步：利用LLM进行语言学分析</h2>
+    <p>针对每项分析任务，向LLM提出1–3个提示词。保存结果以供最终报告使用。</p>
+
+    <table class="info-table">
+      <thead><tr><th style="width:32%">任务</th><th>描述</th></tr></thead>
+      <tbody>
+        <tr><td><strong>分词与规模</strong></td><td>统计字符数（含/不含空格）、词数、句数；平均词长（字符数）、平均句长（词数）。</td></tr>
+        <tr><td><strong>词法分析</strong></td><td>词性标注：确定每个词的词性；输出词性分布百分比。</td></tr>
+        <tr><td><strong>词形还原</strong></td><td>将所有词语还原为基本形式；输出词形词频词典（前20个）。</td></tr>
+        <tr><td><strong>句法分析</strong></td><td>为随笔中的一个关键句子构建依存关系树。</td></tr>
+        <tr><td><strong>错误检测</strong></td><td>查找拼写、标点、搭配错误；提出修改建议。</td></tr>
+        <tr><td><strong>语义分析</strong></td><td>识别关键主题（如休闲、技术、LLM辅助等）；列出与每个主题相关的句子。</td></tr>
+        <tr><td><strong>命名实体识别</strong></td><td>提取命名实体：人物、地点、日期、组织、服务/工具。</td></tr>
+        <tr><td><strong>风格与情感</strong></td><td>确定语域（正式/非正式）、情感色彩和整体情感倾向（积极/中性/消极）；用三个简要文本特征说明理由。</td></tr>
+        <tr><td><strong>改写</strong></td><td>选择一个句子，生成两个改写版本：（1）更正式；（2）更口语化。</td></tr>
+        <tr><td><strong>可读性与连贯性</strong></td><td>评估可读性（针对中文：平均句长、简单/复杂句比例）。提出最多3处修改以改善文本流畅度。</td></tr>
+        <tr><td><strong>元认知</strong></td><td>请LLM生成3–5个关于LLM使用如何影响随笔风格、词汇、结构和内容的假设。</td></tr>
+        <tr><td><strong>可靠性检查</strong></td><td>请LLM评估其每项分析结论的置信度（高/中/低），并列出可能的误差来源。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+<section class="tab-panel" id="panel-prompts">
+
+  <div class="card">
+    <h2>LLM提示词模板</h2>
+    <p>点击任一代码块可复制提示词。请根据您的文本和所选LLM进行调整。</p>
+    <div class="highlight-box">
+      <p><strong>提示：</strong>在LLM会话开始时粘贴完整随笔，然后依次提出分析性问题，这样模型可以保持上下文。</p>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>1. 分词与基本统计</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">分析以下文本。计算：(1) 字符数（含空格和不含空格），(2) 词数，(3) 句数，(4) 平均词长（字符数），(5) 平均句长（词数）。用表格呈现结果。
+
+[在此粘贴您的随笔]<span class="copy-hint">点击复制</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>2. 词法分析（词性标注）</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">对以下文本进行词性标注。为每个词指定词性（名词、动词、形容词、副词、介词、连词、代词、数词、叹词、标点符号）。然后以百分比形式显示词性分布。用表格呈现。
+
+[在此粘贴您的随笔]<span class="copy-hint">点击复制</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>3. 词形还原与词频词典</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">对以下文本进行词形还原：将所有词语转换为基本形式（原型）。创建词形词频词典，输出前20个最频繁的词形，包括绝对频率和占总词数的百分比。格式化为编号列表或表格。
+
+[在此粘贴您的随笔]<span class="copy-hint">点击复制</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>4. 句法分析（依存关系树）</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">为以下句子构建依存关系树。对于每个词，提供：(a) 词本身，(b) 词性标签，(c) 核心词（支配词），(d) 依存关系类型（如主谓、动宾、定中等）。以文本形式可视化树结构。
+
+句子：「[粘贴您随笔中的一个关键句子]」<span class="copy-hint">点击复制</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>5. 错误检测</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">检查以下文本是否存在：(1) 拼写错误，(2) 标点错误，(3) 搭配或语法错误（如量词、语序）。对于每个发现的错误，指出：错误片段、错误类型、修改建议。如果没有错误，请明确说明。
+
+[在此粘贴您的随笔]<span class="copy-hint">点击复制</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>6. 语义分析（关键主题）</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">识别以下文本中的关键主题。对于每个主题，提供：(a) 主题名称，(b) 相关的关键词，(c) 文本中阐述该主题的具体句子。预期主题可能包括：假期/休闲、技术/AI、LLM辅助、学习、个人感受等。
+
+[在此粘贴您的随笔]<span class="copy-hint">点击复制</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>7. 命名实体识别</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">对以下文本进行命名实体识别。以表格形式返回实体列表，包含列：实体、类型（人名、地名、日期、组织名、产品/服务名、事件）、上下文（句子片段）。如果某类型没有实体，请注明。
+
+[在此粘贴您的随笔]<span class="copy-hint">点击复制</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>8. 风格与情感</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">确定以下文本的：(1) 语域 — 正式、半正式或非正式；(2) 整体情感 — 积极、中性或消极；(3) 主要情感色彩（如喜悦、平静、怀旧、热情等）。为每个结论提供三个简要的文本特征（词汇、句法或风格线索）。
+
+[在此粘贴您的随笔]<span class="copy-hint">点击复制</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>9. 改写</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">为以下句子提供两个改写版本：
+(1) 正式版本 — 适用于学术论文或正式文件。
+(2) 口语版本 — 适用于个人博客或朋友间对话。
+解释每个版本中词汇和句法的变化。
+
+句子：「[粘贴您随笔中的一个句子]」<span class="copy-hint">点击复制</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>10. 可读性与连贯性</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">评估以下文本的可读性。计算：(1) 平均句长（词数），(2) 简单句与复杂句的比例（百分比），(3) 适用于中文的可读性指标（如基于字词难度和句长的公式）。然后提出最多3处具体修改，以改善连贯性和流畅度。
+
+[在此粘贴您的随笔]<span class="copy-hint">点击复制</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>11. 元认知</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">基于以下随笔，生成3–5个关于LLM使用如何影响这篇随笔的风格、词汇、结构和内容的假设。为每个假设提供简要理由。
+
+[在此粘贴您的随笔]<span class="copy-hint">点击复制</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>12. 可靠性检查</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">评估您在分析过程中对每项输出（分词、词性标注、词形还原、句法分析、命名实体识别、情感、主题）的置信度。为每项输出指明置信水平（高/中/低），并列出可能的误差或不准确来源。以表格形式呈现。<span class="copy-hint">点击复制</span></div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<section class="tab-panel" id="panel-report">
+
+  <div class="card">
+    <h2>最终报告格式</h2>
+    <p>借助LLM创建一份<strong>HTML格式的报告</strong>。请模型将结果整理得清晰美观。</p>
+
+    <h3>必需包含的章节</h3>
+    <ol>
+      <li><strong>标题块：</strong>实验名称、学生姓名、组别、日期、随笔标题。</li>
+      <li><strong>随笔原文</strong>（中文）。</li>
+      <li><strong>基本统计表：</strong>字符数、词数、句数；平均长度。</li>
+      <li><strong>分析结果</strong> — 每项任务的简要区块：
+        <ul>
+          <li>词性标注及分布</li>
+          <li>前20个词形及频率</li>
+          <li>依存关系树（关键句）</li>
+          <li>发现的错误及修改</li>
+          <li>关键主题及相关句子</li>
+          <li>命名实体</li>
+          <li>情感与风格分析</li>
+          <li>改写版本</li>
+          <li>可读性评估及连贯性建议</li>
+          <li>元认知假设</li>
+          <li>置信度表及误差来源</li>
+        </ul>
+      </li>
+      <li><strong>反思：</strong>一段简短文字（5–7句），说明LLM在撰写随笔和分析过程中有何帮助或阻碍。</li>
+      <li><strong>AI使用声明：</strong>明确说明哪些部分由LLM创建或修改，注明工具名称和日期。</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>报告生成示例提示词</h2>
+    <div class="prompt-block" onclick="copyPrompt(this)">为实验“利用大语言模型进行随笔语言学分析”创建一个HTML报告。使用简洁的CSS（响应式、易读字体、带边框表格）。报告必须包含以下章节：
+1. 标题块（实验名称、学生姓名：[您的姓名]、组别：[您的组别]、日期）。
+2. 随笔原文（中文）。
+3. 基本统计表。
+4. 结果：词性标签、词形（前20）、依存关系树、错误、主题、命名实体、情感、改写、可读性、元认知假设、置信度。
+5. 反思。
+6. AI使用声明。
+
+以下是需要填入的数据：
+[在此粘贴所有分析结果]<span class="copy-hint">点击复制</span></div>
+  </div>
+
+  <div class="card">
+    <h2>评分标准</h2>
+    <table class="info-table">
+      <thead><tr><th>标准</th><th>分值</th></tr></thead>
+      <tbody>
+        <tr><td>随笔：内容、字数、语言</td><td>15</td></tr>
+        <tr><td>完整性：完成全部12项任务</td><td>40</td></tr>
+        <tr><td>提示词质量：调整、迭代优化</td><td>15</td></tr>
+        <tr><td>HTML报告格式</td><td>10</td></tr>
+        <tr><td>反思与AI声明</td><td>10</td></tr>
+        <tr><td>批判性评估（可靠性检查）</td><td>10</td></tr>
+        <tr><td><strong>总分</strong></td><td><strong>100</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+<section class="tab-panel" id="panel-checklist">
+
+  <div class="card">
+    <h2>检查清单</h2>
+    <p>勾选已完成的项目。进度将保存在浏览器中。</p>
+
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <p class="progress-text" id="progressText">已完成 0 / 16</p>
+
+    <ul class="checklist" id="checklist">
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="0">✓</div><span>用中文完成随笔（约2000字符）</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="1">✓</div><span>检查并（如有需要）修正拼写和语法错误</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="2">✓</div><span>随笔保存为电子版</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="3">✓</div><span>分词与基本统计</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="4">✓</div><span>词性标注及分布</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="5">✓</div><span>词形还原及前20词形</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="6">✓</div><span>句法分析（依存关系树）</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="7">✓</div><span>错误检测与修改建议</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="8">✓</div><span>语义分析（关键主题）</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="9">✓</div><span>命名实体识别</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="10">✓</div><span>风格与情感</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="11">✓</div><span>改写</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="12">✓</div><span>可读性与连贯性</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="13">✓</div><span>元认知（假设）</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="14">✓</div><span>可靠性检查</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="15">✓</div><span>HTML报告创建并验证</span></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>提交期限与格式</h2>
+    <div class="highlight-box success-box">
+      <p><strong>截止日期：</strong>由教师指定（通常为下节课）。</p>
+      <p><strong>提交格式：</strong>一个HTML文件，上传至LMS或通过电子邮件发送给教师。</p>
+      <p><strong>文件名：</strong><code>姓名_组别_LLM_随笔.html</code></p>
+    </div>
+  </div>
+
+</section>
+
+<section class="tab-panel" id="panel-llm">
+
+  <div class="card">
+    <h2>LLM进行语言学分析的能力（中文）</h2>
+    <p>现代LLM能够完成全部12项任务，但准确性因任务类型而异。</p>
+  </div>
+
+  <div class="card">
+    <h2>按任务类型的可靠性</h2>
+
+    <h3>高可靠性</h3>
+    <div class="highlight-box success-box">
+      <p><strong>语义与风格层面</strong> — 所有主流LLM的强项。</p>
+    </div>
+    <table class="info-table">
+      <thead><tr><th>任务</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>主题识别</td><td>极佳的主题分组能力。</td></tr>
+        <tr><td>情感与风格</td><td>能可靠区分语域和情感倾向，并提供理由。</td></tr>
+        <tr><td>改写</td><td>核心能力；能生成正式/口语版本。</td></tr>
+        <tr><td>命名实体识别</td><td>可靠提取人名、地名、日期、工具名。</td></tr>
+        <tr><td>元认知（假设）</td><td>能创造性、有洞察力地生成假设。</td></tr>
+        <tr><td>连贯性建议</td><td>对文本流畅性提供高质量建议。</td></tr>
+      </tbody>
+    </table>
+
+    <h3>中等可靠性</h3>
+    <div class="highlight-box">
+      <p><strong>词法与句法</strong> — 总体正确，但歧义情况易出错。</p>
+    </div>
+    <table class="info-table">
+      <thead><tr><th>任务</th><th>典型问题</th></tr></thead>
+      <tbody>
+        <tr><td>词性标注</td><td>同形词错误：如“领导”（名词/动词）、“报告”（名词/动词）。</td></tr>
+        <tr><td>词形还原</td><td>通常正确，但可能对罕见词或文言用法出错。</td></tr>
+        <tr><td>依存关系分析</td><td>近似分析，非形式化解析器——复杂句可能不准确。</td></tr>
+        <tr><td>错误检测</td><td>能较好发现明显拼写错误；细微搭配问题可能漏报或误报。</td></tr>
+      </tbody>
+    </table>
+
+    <h3>低可靠性</h3>
+    <div class="highlight-box warn-box">
+      <p><strong>精确计数</strong> — 架构性局限。</p>
+    </div>
+    <table class="info-table">
+      <thead><tr><th>任务</th><th>LLM为何失败</th></tr></thead>
+      <tbody>
+        <tr><td>字符数</td><td>按token处理，而非字符；一个token可对应1–4+字符。</td></tr>
+        <tr><td>词数</td><td>近似值；5–15%的误差常见。</td></tr>
+        <tr><td>平均词长</td><td>由不精确计数导致。</td></tr>
+        <tr><td>句数</td><td>对“例如”“等等”等缩写、引号、省略号处理困难。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>LLM对比（中文）</h2>
+    <div style="overflow-x:auto">
+      <table class="info-table">
+        <thead><tr><th>特性</th><th>Claude</th><th>ChatGPT (GPT-4o)</th><th>Gemini</th><th>DeepSeek</th><th>文心一言</th></tr></thead>
+        <tbody>
+          <tr><td>中文分析</td><td>是</td><td>是</td><td>是</td><td>是（强）</td><td>是（原生）</td></tr>
+          <tr><td>语义与主题</td><td>优秀</td><td>优秀</td><td>优秀</td><td>优秀</td><td>良好</td></tr>
+          <tr><td>词性与词法</td><td>良好</td><td>良好</td><td>良好</td><td>良好</td><td>中等</td></tr>
+          <tr><td>精确计数</td><td>不可靠</td><td>可靠*</td><td>不可靠</td><td>不可靠</td><td>不可靠</td></tr>
+          <tr><td>代码执行</td><td>否</td><td>是（Code Interpreter）</td><td>是</td><td>部分</td><td>否</td></tr>
+          <tr><td>HTML报告生成</td><td>优秀</td><td>优秀</td><td>良好</td><td>良好</td><td>中等</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:8px;font-size:0.88rem;color:var(--text-muted)">* ChatGPT配合Code Interpreter可运行Python → 精确计数。</p>
+  </div>
+
+  <div class="card">
+    <h2>实用建议</h2>
+
+    <h3>1. 精确计数 — 请求代码而非直接答案</h3>
+    <div class="prompt-block" onclick="copyPrompt(this)">编写一个Python脚本，对以下文本计算：
+字符数（含空格和不含空格），
+词数，
+句数，
+平均词长（字符数），
+平均句长（词数）。
+文本作为字符串变量text传入。
+
+text = """[在此粘贴您的随笔]"""<span class="copy-hint">点击复制</span></div>
+
+    <h3>2. 词法分析 — 使用专业库</h3>
+    <div class="prompt-block" onclick="copyPrompt(this)">使用jieba和pypinyin或LTP库编写Python代码，对以下中文文本进行分词、词性标注和词形还原。输出表格：词 | 词性 | 拼音（可选）。然后计算词性分布百分比。
+
+text = """[在此粘贴您的随笔]"""<span class="copy-hint">点击复制</span></div>
+
+    <h3>3. 交叉验证</h3>
+    <div class="highlight-box">
+      <p>将同一提示词发送给两个不同的LLM（如DeepSeek和ChatGPT）。比较结果并在报告中注明差异——这是实际的“可靠性检查”。</p>
+    </div>
+
+    <h3>4. 迭代优化提示词</h3>
+    <ul>
+      <li>更具体地重新表述</li>
+      <li>要求思维链</li>
+      <li>将复杂请求拆分为多个简单请求</li>
+      <li>指定输出格式（表格、列表、JSON）</li>
+    </ul>
+
+    <h3>5. 使用外部工具验证</h3>
+    <table class="info-table">
+      <thead><tr><th>任务</th><th>工具</th></tr></thead>
+      <tbody>
+        <tr><td>字符/词计数</td><td>字词计数器网站、MS Word</td></tr>
+        <tr><td>拼写检查</td><td>LanguageTool、微软编辑</td></tr>
+        <tr><td>词性标注</td><td>jieba、LTP、Stanford CoreNLP</td></tr>
+        <tr><td>依存句法分析</td><td>LTP、HanLP、spaCy（中文模型）</td></tr>
+        <tr><td>可读性</td><td>中文可读性公式、Python textstat（需适配）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+</main>
+
+<footer>
+  <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+  为语言学学生设计</p>
+</footer>
+<div class="copied-toast" id="copiedToast">已复制到剪贴板</div>
+
+<script>
+    const themeBtn = document.getElementById('themeToggle');
+  const root = document.documentElement;
+
+  function setTheme(dark) {
+    if (dark) {
+      root.setAttribute('data-theme', 'dark');
+      themeBtn.textContent = '🌙';
+      localStorage.setItem('theme', 'dark');
+    } else {
+      root.removeAttribute('data-theme');
+      themeBtn.textContent = '☀️';
+      localStorage.setItem('theme', 'light');
+    }
+  }
+
+  themeBtn.addEventListener('click', () => {
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    setTheme(!isDark);
+  });
+
+  if (localStorage.getItem('theme') === 'dark') setTheme(true);
+
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabPanels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const target = btn.getAttribute('data-tab');
+      document.getElementById('panel-' + target).classList.add('active');
+    });
+  });
+
+  function toggleCollapsible(header) {
+    header.classList.toggle('open');
+    const body = header.nextElementSibling;
+    body.classList.toggle('open');
+  }
+
+  function copyPrompt(block) {
+    const text = block.innerText.replace('点击复制', '').trim();
+    navigator.clipboard.writeText(text).then(() => {
+      const toast = document.getElementById('copiedToast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1800);
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      const toast = document.getElementById('copiedToast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1800);
+    });
+  }
+
+  const STORAGE_KEY = 'llm_lab_checklist_cn';
+  let checks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  if (checks.length !== 16) checks = new Array(16).fill(false);
+
+  function renderChecklist() {
+    const boxes = document.querySelectorAll('.check-box');
+    boxes.forEach((box, i) => {
+      if (checks[i]) box.classList.add('checked');
+      else box.classList.remove('checked');
+    });
+    const done = checks.filter(Boolean).length;
+    const total = checks.length;
+    document.getElementById('progressBar').style.width = (done / total * 100) + '%';
+    document.getElementById('progressText').textContent = '已完成 ' + done + ' / ' + total;
+  }
+
+  function toggleCheck(box) {
+    const idx = parseInt(box.getAttribute('data-idx'));
+    checks[idx] = !checks[idx];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(checks));
+    renderChecklist();
+  }
+
+  renderChecklist();
+</script>
+</body>
+</html>

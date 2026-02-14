@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-card: #ffffff;
+    --nav-color: #325980;
+    --accent: #3498db;
+    --accent-hover: #2980b9;
+    --divider: #f1f1f1;
+    --text-primary: #1a1a2e;
+    --text-secondary: #4a4a6a;
+    --text-muted: #7a7a9a;
+    --border: #e0e0e0;
+    --code-bg: #f8f9fa;
+    --code-border: #e2e6ea;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+    --shadow-hover: 0 4px 20px rgba(0,0,0,0.10);
+    --radius: 10px;
+    --transition: 0.3s ease;
+  }
+
+  [data-theme="dark"] {
+    --bg-primary: #121225;
+    --bg-secondary: #1a1a35;
+    --bg-card: #1e1e3a;
+    --nav-color: #4a8abf;
+    --accent: #5ba8e0;
+    --accent-hover: #7abef0;
+    --divider: #2a2a4a;
+    --text-primary: #e8e8f0;
+    --text-secondary: #b0b0cc;
+    --text-muted: #8080a0;
+    --border: #2e2e50;
+    --code-bg: #16162e;
+    --code-border: #2a2a4a;
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+    --shadow-hover: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    line-height: 1.7;
+    transition: background var(--transition), color var(--transition);
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    background: var(--nav-color);
+    color: #fff;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: background var(--transition);
+  }
+
+  .header-inner {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .header-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  #themeToggle {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    font-size: 1.25rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition), transform var(--transition);
+    flex-shrink: 0;
+  }
+
+  #themeToggle:hover {
+    background: rgba(255,255,255,0.25);
+    transform: rotate(20deg);
+  }
+
+  /* ===== NAV tabs ===== */
+  .tab-nav {
+    background: var(--bg-primary);
+    border-bottom: 2px solid var(--divider);
+    position: sticky;
+    top: 68px;
+    z-index: 999;
+    transition: background var(--transition), border-color var(--transition);
+    overflow-x: auto;
+  }
+
+  .tab-nav-inner {
+    max-width: 1140px;
+    margin: 0 auto;
+    display: flex;
+    padding: 0 24px;
+    gap: 0;
+  }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    padding: 14px 22px;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all var(--transition);
+    white-space: nowrap;
+    font-family: inherit;
+  }
+
+  .tab-btn:hover {
+    color: var(--accent);
+  }
+
+  .tab-btn.active {
+    color: var(--nav-color);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* ===== MAIN ===== */
+  main {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+
+  .tab-panel {
+    display: none;
+    animation: fadeIn 0.35s ease;
+  }
+
+  .tab-panel.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+    transition: all var(--transition);
+  }
+
+  .card:hover {
+    box-shadow: var(--shadow-hover);
+  }
+
+  .card h2 {
+    color: var(--nav-color);
+    font-size: 1.35rem;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--divider);
+    transition: color var(--transition), border-color var(--transition);
+  }
+
+  .card h3 {
+    color: var(--nav-color);
+    font-size: 1.1rem;
+    margin: 20px 0 10px;
+    transition: color var(--transition);
+  }
+
+  .card p, .card li {
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    transition: color var(--transition);
+  }
+
+  .card ul, .card ol {
+    padding-left: 24px;
+    margin-bottom: 12px;
+  }
+
+  .card li { margin-bottom: 6px; }
+
+  /* ===== HIGHLIGHT BOX ===== */
+  .highlight-box {
+    background: var(--bg-secondary);
+    border-left: 4px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin: 16px 0;
+    transition: background var(--transition), border-color var(--transition);
+  }
+
+  .highlight-box p { margin-bottom: 4px; }
+
+  .warn-box {
+    border-left-color: #e67e22;
+  }
+
+  .success-box {
+    border-left-color: #27ae60;
+  }
+
+  /* ===== CODE BLOCKS ===== */
+  .prompt-block {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 10px 0 14px;
+    font-family: 'Consolas', 'Fira Code', monospace;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    position: relative;
+    cursor: pointer;
+    line-height: 1.6;
+    transition: all var(--transition);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .prompt-block:hover {
+    border-color: var(--accent);
+  }
+
+  .prompt-block .copy-hint {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-family: 'Segoe UI', sans-serif;
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+
+  .prompt-block:hover .copy-hint { opacity: 1; }
+
+  .copied-toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--nav-color);
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 9999;
+  }
+
+  .copied-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ===== TABLE ===== */
+  .info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 0.92rem;
+  }
+
+  .info-table th, .info-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--divider);
+    transition: border-color var(--transition);
+  }
+
+  .info-table th {
+    background: var(--bg-secondary);
+    color: var(--nav-color);
+    font-weight: 600;
+    transition: background var(--transition), color var(--transition);
+  }
+
+  .info-table td {
+    color: var(--text-secondary);
+  }
+
+  .info-table tr:hover td {
+    background: var(--bg-secondary);
+  }
+
+  /* ===== STEP NUMBERS ===== */
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+
+  .step-row {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+
+  .step-row p { margin: 0; }
+
+  /* ===== COLLAPSIBLE ===== */
+  .collapsible-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 14px 20px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 2px;
+    transition: all var(--transition);
+    user-select: none;
+  }
+
+  .collapsible-header:hover {
+    border-color: var(--accent);
+  }
+
+  .collapsible-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--nav-color);
+  }
+
+  .collapsible-arrow {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    transition: transform 0.3s ease;
+  }
+
+  .collapsible-header.open .collapsible-arrow {
+    transform: rotate(180deg);
+  }
+
+  .collapsible-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+    border: 1px solid transparent;
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  .collapsible-body.open {
+    max-height: 3000px;
+    border-color: var(--border);
+    border-top: none;
+  }
+
+  .collapsible-body-inner {
+    padding: 18px 20px;
+  }
+
+  .collapsible-group { margin-bottom: 12px; }
+
+  /* ===== BADGE ===== */
+  .badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  /* ===== PROGRESS INDICATOR ===== */
+  .checklist {
+    list-style: none;
+    padding: 0;
+  }
+
+  .checklist li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--divider);
+    transition: border-color var(--transition);
+  }
+
+  .checklist li:last-child { border-bottom: none; }
+
+  .check-box {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+    font-size: 0.8rem;
+    color: transparent;
+    background: var(--bg-card);
+  }
+
+  .check-box.checked {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .progress-bar-wrap {
+    background: var(--divider);
+    border-radius: 10px;
+    height: 8px;
+    margin: 12px 0 6px;
+    overflow: hidden;
+    transition: background var(--transition);
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--nav-color));
+    border-radius: 10px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+
+  .progress-text {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    text-align: right;
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    border-top: 1px solid var(--divider);
+    transition: color var(--transition), border-color var(--transition);
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .header-inner { padding: 12px 16px; }
+    .header-title { font-size: 0.95rem; }
+    .tab-nav-inner { padding: 0 8px; }
+    .tab-btn { padding: 12px 14px; font-size: 0.82rem; }
+    main { padding: 20px 14px 48px; }
+    .card { padding: 20px 18px; }
+    .card h2 { font-size: 1.15rem; }
+    .prompt-block { font-size: 0.82rem; padding: 12px 14px; }
+    .info-table th, .info-table td { padding: 8px 10px; font-size: 0.85rem; }
+  }
+
+  @media (max-width: 480px) {
+    .header-title { font-size: 0.82rem; }
+    .tab-btn { padding: 10px 10px; font-size: 0.78rem; }
+    .card { padding: 16px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-title">Linguistic Analysis with LLM</div>
+    <div class="header-right">
+      <button id="themeToggle" title="Toggle theme" aria-label="Toggle theme">☀️</button>
+    </div>
+  </div>
+</header>
+
+<nav class="tab-nav">
+  <div class="tab-nav-inner">
+    <button class="tab-btn active" data-tab="task">Assignment</button>
+    <button class="tab-btn" data-tab="prompts">LLM Prompts</button>
+    <button class="tab-btn" data-tab="report">Report Format</button>
+    <button class="tab-btn" data-tab="checklist">Checklist</button>
+    <button class="tab-btn" data-tab="llm">Tips & Tools</button>
+  </div>
+</nav>
+
+<main>
+
+<section class="tab-panel active" id="panel-task">
+
+  <div class="card">
+    <h2>Objective</h2>
+    <p>Write a personal essay <strong>"My Winter Holidays with an LLM"</strong> and conduct a comprehensive computational linguistic analysis using a Large Language Model.</p>
+    <div class="highlight-box">
+      <p><strong>Essay length:</strong> ~2000 characters (with spaces), written in <strong>English</strong>.</p>
+      <p><strong>Essay structure:</strong> 1st paragraph — main holiday story; 2nd paragraph — reflection on LLM use.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Step 1. Write the Essay</h2>
+    <div class="step-row"><span class="step-num">1</span><p>Write your essay independently (~2000 characters). First paragraph: describe your winter break. Second paragraph: reflect on how you used LLMs (ChatGPT, Claude, Gemini, DeepSeek, etc.) during the holidays or for your studies.</p></div>
+    <div class="step-row"><span class="step-num">2</span><p>Prepare the text in English.</p></div>
+    <div class="step-row"><span class="step-num">3</span><p>Save the text in a digital format (.txt or .docx) so you can copy it into an LLM chat.</p></div>
+    <div class="highlight-box warn-box">
+      <p><strong>Important:</strong> If any part of the essay was written or edited by an LLM, you must explicitly state which fragments and which tool were used.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Step 2. Linguistic Analysis with an LLM</h2>
+    <p>For each analytical task, formulate 1–3 prompts for the LLM. Save the results for your final report.</p>
+
+    <table class="info-table">
+      <thead>
+        <tr><th style="width:32%">Task</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Tokenization & size</strong></td><td>Count characters (with/without spaces), words, sentences; average word length (in characters), average sentence length (in words).</td></tr>
+        <tr><td><strong>Morphological analysis</strong></td><td>POS tagging: determine the part of speech for each word; show part-of-speech distribution as percentages.</td></tr>
+        <tr><td><strong>Lemmatization</strong></td><td>Reduce all word forms to their base form. Output a frequency dictionary of lemmas (top 20).</td></tr>
+        <tr><td><strong>Syntax parsing</strong></td><td>Build a dependency tree for one key sentence from your essay.</td></tr>
+        <tr><td><strong>Errors & irregularities</strong></td><td>Find spelling, punctuation, and agreement errors; suggest corrections.</td></tr>
+        <tr><td><strong>Semantic analysis</strong></td><td>Identify key themes (e.g., leisure, technology, LLM assistance). List sentences related to each theme.</td></tr>
+        <tr><td><strong>Named Entity Recognition</strong></td><td>Extract named entities: people, places, dates, organizations, tools/services.</td></tr>
+        <tr><td><strong>Style & sentiment</strong></td><td>Determine register (formal/informal), emotional tone, and overall sentiment (positive/neutral/negative). Justify with three brief textual cues.</td></tr>
+        <tr><td><strong>Paraphrasing</strong></td><td>Choose one sentence and produce two paraphrases: (1) more formal, (2) more colloquial.</td></tr>
+        <tr><td><strong>Readability & coherence</strong></td><td>Assess readability (adapted for English: average sentence length, proportion of simple/complex sentences). Suggest up to 3 edits to improve text flow.</td></tr>
+        <tr><td><strong>Metacognition</strong></td><td>Ask the LLM to generate 3–5 hypotheses about how LLM usage may have influenced the essay's style and content.</td></tr>
+        <tr><td><strong>Confidence check</strong></td><td>Ask the LLM to rate its confidence (high/medium/low) in each of its analytical outputs and list possible sources of error.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+<section class="tab-panel" id="panel-prompts">
+
+  <div class="card">
+    <h2>Sample LLM Prompts</h2>
+    <p>Below are prompt templates. Click on any block to copy it. Adapt prompts to your text and chosen LLM.</p>
+    <div class="highlight-box">
+      <p><strong>Tip:</strong> Paste your full essay at the start of the LLM session, then ask analytical questions sequentially so the model retains context.</p>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>1. Tokenization & basic statistics</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">Analyze the following text. Calculate: (1) number of characters (with spaces and without), (2) number of words, (3) number of sentences, (4) average word length in characters, (5) average sentence length in words. Present results in a table.
+
+[Paste your essay text here]<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>2. Morphological analysis (POS tagging)</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">Perform POS tagging on the text below. For each word, specify its part of speech (noun, verb, adjective, adverb, preposition, conjunction, pronoun, numeral, interjection, punctuation). Then show part-of-speech distribution as percentages of total words. Present in a table.
+
+[Paste your essay text here]<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>3. Lemmatization & frequency dictionary</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">Lemmatize the text below: convert all word forms to their base (dictionary) form. Create a frequency dictionary of lemmas and output the top 20 most frequent lemmas with absolute frequency and percentage of total words. Format as a numbered list or table.
+
+[Paste your essay text here]<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>4. Syntax parsing (dependency tree)</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">Build a dependency tree for the following sentence. For each word, provide: (a) the word itself, (b) its POS tag, (c) its head word, (d) the dependency relation (nsubj, obj, amod, advmod, etc.). Visualize the tree in text format.
+
+Sentence: «[Paste one key sentence from your essay]»<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>5. Error detection</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">Check the text below for: (1) spelling errors, (2) punctuation errors, (3) agreement errors (subject-verb, noun-pronoun, tense consistency). For each error found, specify: the erroneous fragment, error type, and suggested correction. If no errors, state that explicitly.
+
+[Paste your essay text here]<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>6. Semantic analysis (key topics)</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">Identify key topics in the text below. For each topic, provide: (a) topic name, (b) key words associated with it, (c) specific sentences from the text where the topic is developed. Expected topics may include: holidays/leisure, technology/AI, LLM assistance, studies, personal impressions, etc.
+
+[Paste your essay text here]<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>7. Named Entity Recognition (NER)</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">Perform Named Entity Recognition on the text below. Return a list of entities in a table with columns: entity, type (PERSON, LOCATION, DATE, ORGANIZATION, PRODUCT/SERVICE, EVENT), context (sentence fragment). If no entities of a given type appear, state that.
+
+[Paste your essay text here]<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>8. Style and sentiment</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">Determine for the text below: (1) register — formal, semi‑formal, or informal; (2) overall sentiment — positive, neutral, or negative; (3) predominant emotional tone (joy, calmness, nostalgia, enthusiasm, etc.). For each conclusion, provide three brief justifications (specific lexical, syntactic, or stylistic cues from the text).
+
+[Paste your essay text here]<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>9. Paraphrasing</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">Suggest two paraphrased versions of the following sentence:
+(1) Formal version — suitable for an academic paper or official document.
+(2) Colloquial version — suitable for a personal blog or friendly conversation.
+Explain the lexical and syntactic changes made in each version.
+
+Sentence: «[Paste one sentence from your essay]»<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>10. Readability and coherence</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">Assess the readability of the text below. Calculate: (1) average sentence length in words, (2) proportion of simple vs. complex sentences (as percentages), (3) approximate readability index adapted for English (e.g., Flesch Reading Ease or Flesch‑Kincaid grade level). Then suggest up to 3 specific edits to improve coherence and flow.
+
+[Paste your essay text here]<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>11. Metacognition</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">Based on the essay below, generate 3–5 hypotheses about how LLM usage might have influenced the style, vocabulary, structure, and content of this essay. For each hypothesis, provide a brief justification.
+
+[Paste your essay text here]<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible-group">
+    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+      <h3>12. Confidence check</h3>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="prompt-block" onclick="copyPrompt(this)">Rate your confidence in each of the analytical outputs you produced (tokenization, POS tagging, lemmatization, syntax parsing, NER, sentiment, topics). For each output, indicate confidence level (high / medium / low) and list possible sources of error or inaccuracy. Present as a table.<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<section class="tab-panel" id="panel-report">
+
+  <div class="card">
+    <h2>Final Report Format</h2>
+    <p>Create an <strong>HTML report</strong> with the help of an LLM. Ask the model to format the results neatly.</p>
+
+    <h3>Required sections</h3>
+    <ol>
+      <li><strong>Title block:</strong> title, student name, group, date, essay title.</li>
+      <li><strong>Original essay text</strong> in English.</li>
+      <li><strong>Basic statistics table:</strong> character, word, sentence counts; average lengths.</li>
+      <li><strong>Analysis results</strong> — concise blocks for each task:
+        <ul>
+          <li>POS tagging & distribution</li>
+          <li>Top‑20 lemmas with frequencies</li>
+          <li>Dependency tree (key sentence)</li>
+          <li>Errors found & corrections</li>
+          <li>Key topics & related sentences</li>
+          <li>Named entities (NER)</li>
+          <li>Sentiment & style analysis</li>
+          <li>Paraphrases</li>
+          <li>Readability assessment & coherence suggestions</li>
+          <li>Metacognition hypotheses</li>
+          <li>Confidence table & error sources</li>
+        </ul>
+      </li>
+      <li><strong>Reflection:</strong> a short paragraph (5–7 sentences) on how the LLM helped or hindered your essay writing and analysis.</li>
+      <li><strong>AI use declaration:</strong> explicit statement of which parts were created or corrected by an LLM, with tool name(s) and date(s).</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Sample prompt for report generation</h2>
+    <div class="prompt-block" onclick="copyPrompt(this)">Create an HTML report for the lab "Computational Linguistic Analysis of an Essay with an LLM". Use clean CSS (responsive, readable fonts, bordered tables). The report must contain the following sections:
+1. Title block (title, student name: [your name], group: [your group], date).
+2. Original essay text (in English).
+3. Basic statistics table.
+4. Results: POS tags, lemmas (top‑20), dependency tree, errors, topics, NER, sentiment, paraphrases, readability, metacognition hypotheses, confidence.
+5. Reflection.
+6. AI use declaration.
+
+Here are the data to fill in:
+[Paste all analysis results]<span class="copy-hint">click to copy</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Grading criteria</h2>
+    <table class="info-table">
+      <thead><tr><th>Criterion</th><th>Points</th></tr></thead>
+      <tbody>
+        <tr><td>Essay: content, length, language</td><td>15</td></tr>
+        <tr><td>Completeness: all 12 tasks performed</td><td>40</td></tr>
+        <tr><td>Prompt quality: adaptation, iterative refinement</td><td>15</td></tr>
+        <tr><td>HTML report formatting</td><td>10</td></tr>
+        <tr><td>Reflection & AI declaration</td><td>10</td></tr>
+        <tr><td>Critical evaluation (confidence check)</td><td>10</td></tr>
+        <tr><td><strong>Total</strong></td><td><strong>100</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+<section class="tab-panel" id="panel-checklist">
+
+  <div class="card">
+    <h2>Checklist</h2>
+    <p>Check off completed items. Progress is saved in your browser.</p>
+
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <p class="progress-text" id="progressText">0 of 16 completed</p>
+
+    <ul class="checklist" id="checklist">
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="0">✓</div><span>Essay written in English (~2000 characters)</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="1">✓</div><span>Spelling & grammar checked and (if needed) corrected</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="2">✓</div><span>Essay saved in digital form</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="3">✓</div><span>Tokenization & basic statistics</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="4">✓</div><span>POS tagging & distribution</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="5">✓</div><span>Lemmatization & top‑20 lemmas</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="6">✓</div><span>Syntax parsing (dependency tree)</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="7">✓</div><span>Error detection & corrections</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="8">✓</div><span>Semantic analysis (key topics)</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="9">✓</div><span>Named Entity Recognition</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="10">✓</div><span>Style & sentiment</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="11">✓</div><span>Paraphrasing</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="12">✓</div><span>Readability & coherence</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="13">✓</div><span>Metacognition (hypotheses)</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="14">✓</div><span>Confidence check</span></li>
+      <li><div class="check-box" onclick="toggleCheck(this)" data-idx="15">✓</div><span>HTML report created & verified</span></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Deadline & submission</h2>
+    <div class="highlight-box success-box">
+      <p><strong>Deadline:</strong> set by instructor (typically next session).</p>
+      <p><strong>Format:</strong> one HTML file uploaded to LMS or emailed to instructor.</p>
+      <p><strong>Filename:</strong> <code>LastName_Group_LLM_Essay.html</code></p>
+    </div>
+  </div>
+
+</section>
+
+<section class="tab-panel" id="panel-llm">
+
+  <div class="card">
+    <h2>LLM capabilities for linguistic analysis (English)</h2>
+    <p>Modern LLMs can perform all 12 tasks, but accuracy varies by task type.</p>
+  </div>
+
+  <div class="card">
+    <h2>Reliability by task type</h2>
+
+    <h3>High reliability</h3>
+    <div class="highlight-box success-box">
+      <p><strong>Semantic & stylistic levels</strong> — strong suit of all leading LLMs.</p>
+    </div>
+    <table class="info-table">
+      <thead><tr><th>Task</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Topic identification</td><td>Excellent at thematic grouping.</td></tr>
+        <tr><td>Sentiment & style</td><td>Confidently distinguishes register, polarity; provides justifications.</td></tr>
+        <tr><td>Paraphrasing</td><td>Core capability; formal/colloquial variants.</td></tr>
+        <tr><td>Named Entity Recognition</td><td>Reliably extracts names, places, dates, tools.</td></tr>
+        <tr><td>Metacognition (hypotheses)</td><td>Creative, insightful generation.</td></tr>
+        <tr><td>Coherence suggestions</td><td>Quality advice on text flow.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Medium reliability</h3>
+    <div class="highlight-box">
+      <p><strong>Morphology & syntax</strong> — generally correct, but ambiguous cases cause errors.</p>
+    </div>
+    <table class="info-table">
+      <thead><tr><th>Task</th><th>Typical issues</th></tr></thead>
+      <tbody>
+        <tr><td>POS tagging</td><td>Errors with homonyms: "record" (noun/verb), "lead", "wind".</td></tr>
+        <tr><td>Lemmatization</td><td>Usually correct, but may struggle with irregular forms.</td></tr>
+        <tr><td>Dependency parsing</td><td>Approximate, not a formal parser — possible inaccuracies in complex sentences.</td></tr>
+        <tr><td>Error detection</td><td>Good at gross spelling errors; subtle agreement issues may be missed or produce false positives.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Low reliability</h3>
+    <div class="highlight-box warn-box">
+      <p><strong>Exact counts</strong> — fundamental architectural limitation.</p>
+    </div>
+    <table class="info-table">
+      <thead><tr><th>Task</th><th>Why LLMs fail</th></tr></thead>
+      <tbody>
+        <tr><td>Character count</td><td>Process text as tokens, not characters; one token = 1–4+ characters.</td></tr>
+        <tr><td>Word count</td><td>Approximate; errors 5–15% common.</td></tr>
+        <tr><td>Average word length</td><td>Result of inaccurate counts.</td></tr>
+        <tr><td>Sentence count</td><td>Problems with abbreviations (e.g., "Dr.", "e.g."), quotes, ellipses.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>LLM comparison (English focus)</h2>
+    <div style="overflow-x:auto">
+      <table class="info-table">
+        <thead><tr><th>Feature</th><th>Claude</th><th>ChatGPT</th><th>Gemini</th><th>DeepSeek</th></tr></thead>
+        <tbody>
+          <tr><td>English analysis</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+          <tr><td>Semantics & topics</td><td>Excellent</td><td>Excellent</td><td>Excellent</td><td>Good</td></tr>
+          <tr><td>POS & morphology</td><td>Good</td><td>Good</td><td>Good</td><td>Good</td></tr>
+          <tr><td>Exact counting</td><td>Unreliable</td><td>Reliable*</td><td>Unreliable</td><td>Unreliable</td></tr>
+          <tr><td>Code execution</td><td>No</td><td>Yes (Code Interpreter)</td><td>Yes</td><td>Partial</td></tr>
+          <tr><td>HTML report generation</td><td>Excellent</td><td>Excellent</td><td>Good</td><td>Good</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:8px;font-size:0.88rem;color:var(--text-muted)">* ChatGPT with Code Interpreter runs Python → exact counts.</p>
+  </div>
+
+  <div class="card">
+    <h2>Practical recommendations</h2>
+
+    <h3>1. For exact counts — ask for code, not an answer</h3>
+    <div class="prompt-block" onclick="copyPrompt(this)">Write a Python script that for the given text calculates:
+number of characters (with and without spaces),
+number of words,
+number of sentences,
+average word length (in characters),
+average sentence length (in words).
+Text is passed as a string variable text.
+
+text = """[Paste your essay]"""<span class="copy-hint">click to copy</span></div>
+
+    <h3>2. For morphology — use specialised libraries</h3>
+    <div class="prompt-block" onclick="copyPrompt(this)">Write Python code using spaCy (with en_core_web_sm) to perform POS tagging and lemmatization on the following English text. Output a table: word | lemma | POS. Then compute part‑of‑speech distribution as percentages.
+
+text = """[Paste your essay]"""<span class="copy-hint">click to copy</span></div>
+
+    <h3>3. Cross‑check between LLMs</h3>
+    <div class="highlight-box">
+      <p>Send the same prompt to two different LLMs (e.g., Claude and ChatGPT). Compare results and note discrepancies in your report — this is practical "confidence check".</p>
+    </div>
+
+    <h3>4. Iterative prompt refinement</h3>
+    <ul>
+      <li>Rephrase more specifically</li>
+      <li>Ask for chain‑of‑thought</li>
+      <li>Break complex requests into simpler ones</li>
+      <li>Specify output format (table, list, JSON)</li>
+    </ul>
+
+    <h3>5. Verification with external tools</h3>
+    <table class="info-table">
+      <thead><tr><th>Task</th><th>Tool</th></tr></thead>
+      <tbody>
+        <tr><td>Character/word count</td><td>charactercounttool.com, MS Word</td></tr>
+        <tr><td>Spelling</td><td>LanguageTool, Grammarly</td></tr>
+        <tr><td>POS tagging</td><td>spaCy, NLTK</td></tr>
+        <tr><td>Dependency parsing</td><td>spaCy displaCy, Stanford Parser</td></tr>
+        <tr><td>Readability</td><td>readability‑score.com, Python textstat</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+</main>
+
+<footer>
+  <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</footer>
+<div class="copied-toast" id="copiedToast">Скопировано в буфер обмена</div>
+
+<script>
+    const themeBtn = document.getElementById('themeToggle');
+  const root = document.documentElement;
+
+  function setTheme(dark) {
+    if (dark) {
+      root.setAttribute('data-theme', 'dark');
+      themeBtn.textContent = '🌙';
+      localStorage.setItem('theme', 'dark');
+    } else {
+      root.removeAttribute('data-theme');
+      themeBtn.textContent = '☀️';
+      localStorage.setItem('theme', 'light');
+    }
+  }
+
+  themeBtn.addEventListener('click', () => {
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    setTheme(!isDark);
+  });
+
+  // Restore saved theme
+  if (localStorage.getItem('theme') === 'dark') setTheme(true);
+
+  /* ===== TABS ===== */
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabPanels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const target = btn.getAttribute('data-tab');
+      document.getElementById('panel-' + target).classList.add('active');
+    });
+  });
+
+  /* ===== COLLAPSIBLE ===== */
+  function toggleCollapsible(header) {
+    header.classList.toggle('open');
+    const body = header.nextElementSibling;
+    body.classList.toggle('open');
+  }
+
+  /* ===== COPY PROMPT ===== */
+  function copyPrompt(block) {
+    const text = block.innerText.replace('нажмите, чтобы скопировать', '').trim();
+    navigator.clipboard.writeText(text).then(() => {
+      const toast = document.getElementById('copiedToast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1800);
+    }).catch(() => {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      const toast = document.getElementById('copiedToast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1800);
+    });
+  }
+
+  /* ===== CHECKLIST ===== */
+  const STORAGE_KEY = 'llm_lab_checklist';
+  let checks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  if (checks.length !== 16) checks = new Array(16).fill(false);
+
+  function renderChecklist() {
+    const boxes = document.querySelectorAll('.check-box');
+    boxes.forEach((box, i) => {
+      if (checks[i]) box.classList.add('checked');
+      else box.classList.remove('checked');
+    });
+    const done = checks.filter(Boolean).length;
+    const total = checks.length;
+    document.getElementById('progressBar').style.width = (done / total * 100) + '%';
+    document.getElementById('progressText').textContent = done + ' из ' + total + ' выполнено';
+  }
+
+  function toggleCheck(box) {
+    const idx = parseInt(box.getAttribute('data-idx'));
+    checks[idx] = !checks[idx];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(checks));
+    renderChecklist();
+  }
+
+  renderChecklist();
+</script>
+</body>
+</html>
