@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+		
+		<p><strong>Повод:</strong> <a target="blank" href="https://www.anthropic.com/research/measuring-agent-autonomy" class="link-kmp15"> Measuring AI agent autonomy in practice</a> <br> <br> 
+
+
+<div class="conversation-container">
+
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Привет! Я изучаю свежий отчет Anthropic <b>«Measuring AI agent autonomy in practice»</b>. Кратко - как обстоят дела с автономностью агентов (например, Claude Code) в реальных рабочих условиях? Насколько ИИ самостоятелен сегодня?</p>
+</div>
+</div>
+
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Gemini (Google)
+</div>
+<div class="message-content">
+<p>Цифры из статьи развенчивают миф о «всесильном роботе». Вот ключевые факты:</p>
+<ul>
+<li><b>Контроль человека:</b> Около <b>73%</b> вызовов инструментов ИИ-агентом происходят под прямым наблюдением. Мы всё еще «держим руку на пульсе».</li>
+<li><b>Самокоррекция:</b> Агенты запрашивают уточнения у человека в два раза чаще, чем человек сам прерывает их работу. Это значит, что модель «осознает» границы своей компетенции.</li>
+<li><b>Безопасность действий:</b> Лишь <b>0,8%</b> действий агентов являются необратимыми. Основная масса задач — это поиск информации или написание кода в изолированной среде.</li>
+</ul>
+<p>Статья подчеркивает: автономность — это не статичная цифра, а <b>динамический процесс</b>, который зависит от того, насколько пользователь доверяет системе и насколько система умеет признавать свои ошибки.</p>
+</div>
+</div>
+
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Это перекликается с педагогикой! Получается, что автономность ИИ, его безопасность и эффективность — это <b>«совместная конструкция»</b>. </p>
+<p>Для будущих учителей это ключевой инсайт: ИИ меняет мир не сам по себе, а через нашу готовность меняться. Мы должны быть требовательны к себе и ответственны за результат работы «тандема». Если педагог делегирует ИИ проверку знаний, не понимая, как работает алгоритм, он теряет свою профессиональную субъектность. Ты согласен?</p>
+</div>
+</div>
+
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Gemini (Google)
+</div>
+<div class="message-content">
+<p>Полностью согласен. Ваша мысль переводит технологию в плоскость <b>этической педагогики</b>. Давайте разберем, почему «совместная конструкция» требует от человека максимума усилий:</p>
+<ol>
+<li><b>Интеллектуальная честность:</b> Использование ИИ — это не «чит-код», а расширение возможностей. Если студент использует ИИ для написания эссе, он должен уметь защитить каждый тезис, выданный машиной.</li>
+<li><b>Критическая бдительность:</b> Исследование показало, что опытные пользователи переходят к «активному мониторингу». В образовании это означает: учитель не просто смотрит в экран, он анализирует логику ИИ, чтобы вовремя заметить «галлюцинацию».</li>
+<li><b>Культура запроса:</b> Точность работы ИИ напрямую зависит от ясности мысли человека. Нечеткий промпт — это отражение нечеткого педагогического замысла.</li>
+</ol>
+<p><b>Главный вывод для студентов:</b> Ваша способность работать над собой, развивать кругозор и брать на себя ответственность за «машинные» решения — это и есть то, что сделает ИИ полезным инструментом, а не опасным костылем.</p>
+</div>
+</div>
+
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Значит, формула успеха для педагога будущего звучит так: <b>«Развивай себя, чтобы управлять технологией»</b>. ИИ не освобождает нас от мышления, он делает качественное мышление обязательным условием выживания в профессии.</p>
+</div>
+</div>
+
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Gemini (Google)
+</div>
+<div class="message-content">
+<p>Именно! Как отмечают исследователи из Anthropic, граница рисков постоянно расширяется. И единственным надежным предохранителем в этой системе остается <b>осознанный человек</b>.</p>
+<p>В этой «совместной конструкции» роль педагога становится даже более величественной: он теперь не просто передатчик информации, а <b>навигатор в мире смыслов</b>, который учит детей оставаться людьми в эпоху машин.</p>
+</div>
+</div>
+
+</div>
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
