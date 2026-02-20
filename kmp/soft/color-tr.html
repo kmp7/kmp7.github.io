@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        /* ===== CSS VARIABLES ===== */
+        :root[data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: #ffffff;
+            --nav-bg: #325980;
+            --nav-text: #ffffff;
+            --heading-color: #325980;
+            --text-primary: #2c3e50;
+            --text-secondary: #5a6a7a;
+            --interactive: #3498db;
+            --interactive-hover: #2980b9;
+            --divider: #f1f1f1;
+            --border: #e0e0e0;
+            --input-bg: #f9f9f9;
+            --shadow: rgba(50, 89, 128, 0.08);
+            --shadow-hover: rgba(50, 89, 128, 0.15);
+            --code-bg: #f0f4f8;
+            --badge-bg: #e8f4fd;
+            --badge-text: #325980;
+            --success: #27ae60;
+            --copied-bg: rgba(39, 174, 96, 0.9);
+        }
+
+        :root[data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: #1e2a3a;
+            --nav-bg: #0f1923;
+            --nav-text: #e0e0e0;
+            --heading-color: #6db3f2;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0b0c0;
+            --interactive: #5dade2;
+            --interactive-hover: #85c1e9;
+            --divider: #2a3a4a;
+            --border: #2a3a4a;
+            --input-bg: #162030;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --shadow-hover: rgba(0, 0, 0, 0.5);
+            --code-bg: #162030;
+            --badge-bg: #1a3050;
+            --badge-text: #6db3f2;
+            --success: #2ecc71;
+            --copied-bg: rgba(46, 204, 113, 0.9);
+        }
+
+        /* ===== RESET & BASE ===== */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.4s ease, color 0.4s ease;
+            min-height: 100vh;
+        }
+
+        /* ===== HEADER / NAV ===== */
+        header {
+            background: var(--nav-bg);
+            color: var(--nav-text);
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 12px var(--shadow);
+            transition: background-color 0.4s ease;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #e74c3c, #f39c12, #2ecc71, #3498db, #9b59b6);
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .header-subtitle {
+            font-size: 0.8rem;
+            opacity: 0.75;
+            margin-left: 0.5rem;
+            font-weight: 400;
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--nav-text);
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: rotate(20deg);
+        }
+
+        /* ===== MAIN ===== */
+        main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 3rem;
+        }
+
+        /* ===== INFO BLOCK ===== */
+        .info-block {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 16px var(--shadow);
+            border: 1px solid var(--divider);
+            transition: all 0.4s ease;
+        }
+
+        .info-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .info-header h2 {
+            color: var(--heading-color);
+            font-size: 1.35rem;
+            font-weight: 700;
+        }
+
+        .info-toggle-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--badge-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+            color: var(--heading-color);
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .info-toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .info-content {
+            margin-top: 1.25rem;
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.3s ease;
+        }
+
+        .info-content.collapsed {
+            max-height: 0 !important;
+            opacity: 0;
+            margin-top: 0;
+        }
+
+        .info-content p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        .info-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-content strong {
+            color: var(--text-primary);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .info-card {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            border: 1px solid var(--divider);
+        }
+
+        .info-card h4 {
+            color: var(--heading-color);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.4rem;
+        }
+
+        .info-card p {
+            font-size: 0.88rem;
+            margin-bottom: 0;
+        }
+
+        /* ===== COLOR PICKER AREA ===== */
+        .picker-section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 16px var(--shadow);
+            border: 1px solid var(--divider);
+            transition: all 0.4s ease;
+        }
+
+        .picker-section h2 {
+            color: var(--heading-color);
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+
+        .picker-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        /* Left: picker + sliders */
+        .picker-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .color-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .color-input-native {
+            width: 100%;
+            height: 180px;
+            border: 3px solid var(--border);
+            border-radius: 14px;
+            cursor: pointer;
+            padding: 4px;
+            background: var(--bg-secondary);
+            transition: border-color 0.3s ease;
+        }
+
+        .color-input-native:hover {
+            border-color: var(--interactive);
+        }
+
+        .color-input-native::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .color-input-native::-webkit-color-swatch {
+            border: none;
+            border-radius: 10px;
+        }
+
+        .color-input-native::-moz-color-swatch {
+            border: none;
+            border-radius: 10px;
+        }
+
+        /* HEX input */
+        .hex-input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .hex-input-group label {
+            font-weight: 600;
+            color: var(--heading-color);
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        .hex-text-input {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 1.05rem;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            transition: border-color 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .hex-text-input:focus {
+            outline: none;
+            border-color: var(--interactive);
+        }
+
+        /* RGB Sliders */
+        .sliders-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .slider-label {
+            font-weight: 700;
+            font-size: 0.85rem;
+            width: 20px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .slider-label.r-label { color: #e74c3c; }
+        .slider-label.g-label { color: #27ae60; }
+        .slider-label.b-label { color: #2980b9; }
+
+        .slider-input {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            outline: none;
+            transition: opacity 0.2s;
+        }
+
+        .slider-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .slider-input::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .slider-r { background: linear-gradient(to right, #000, #e74c3c); }
+        .slider-r::-webkit-slider-thumb { background: #e74c3c; }
+        .slider-r::-moz-range-thumb { background: #e74c3c; }
+
+        .slider-g { background: linear-gradient(to right, #000, #27ae60); }
+        .slider-g::-webkit-slider-thumb { background: #27ae60; }
+        .slider-g::-moz-range-thumb { background: #27ae60; }
+
+        .slider-b { background: linear-gradient(to right, #000, #2980b9); }
+        .slider-b::-webkit-slider-thumb { background: #2980b9; }
+        .slider-b::-moz-range-thumb { background: #2980b9; }
+
+        .slider-value {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            width: 36px;
+            text-align: right;
+            color: var(--text-secondary);
+        }
+
+        /* Right: Preview */
+        .preview-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .color-preview-box {
+            width: 100%;
+            height: 180px;
+            border-radius: 14px;
+            border: 3px solid var(--border);
+            transition: background-color 0.15s ease, border-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-label {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            backdrop-filter: blur(4px);
+        }
+
+        .contrast-samples {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .contrast-box {
+            border-radius: 8px;
+            padding: 0.75rem;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            transition: all 0.15s ease;
+        }
+
+        .contrast-box span {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 400;
+            margin-top: 0.15rem;
+            opacity: 0.8;
+        }
+
+        /* ===== OUTPUT SECTION ===== */
+        .output-section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 16px var(--shadow);
+            border: 1px solid var(--divider);
+            transition: all 0.4s ease;
+        }
+
+        .output-section h2 {
+            color: var(--heading-color);
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+
+        .output-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .output-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--divider);
+            border-radius: 12px;
+            padding: 1.1rem 1.25rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .output-card:hover {
+            border-color: var(--interactive);
+            box-shadow: 0 4px 12px var(--shadow-hover);
+            transform: translateY(-1px);
+        }
+
+        .output-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .output-format-name {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--interactive);
+        }
+
+        .copy-hint {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .output-card:hover .copy-hint {
+            opacity: 1;
+        }
+
+        .output-value {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 1rem;
+            color: var(--text-primary);
+            word-break: break-all;
+            line-height: 1.5;
+        }
+
+        .output-description {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.4rem;
+            line-height: 1.4;
+        }
+
+        /* Copied tooltip */
+        .copied-toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--copied-bg);
+            color: #fff;
+            padding: 0.7rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            z-index: 9999;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .copied-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ===== NAMED COLORS SECTION ===== */
+        .named-section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 16px var(--shadow);
+            border: 1px solid var(--divider);
+            transition: all 0.4s ease;
+        }
+
+        .named-section h2 {
+            color: var(--heading-color);
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+        }
+
+        .named-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .named-color-match {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            border: 1px solid var(--divider);
+        }
+
+        .named-swatch {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            border: 2px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .named-info {
+            flex: 1;
+        }
+
+        .named-color-name {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--text-primary);
+        }
+
+        .named-color-hex {
+            font-family: 'Consolas', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .named-distance {
+            font-size: 0.75rem;
+            color: var(--interactive);
+            margin-top: 0.15rem;
+        }
+
+        /* ===== PALETTE PRESETS ===== */
+        .presets-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .preset-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .preset-btn:hover {
+            transform: scale(1.15);
+            border-color: var(--interactive);
+            box-shadow: 0 2px 8px var(--shadow-hover);
+        }
+
+		footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 0px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            header {
+                padding: 0 1rem;
+            }
+
+            .header-subtitle {
+                display: none;
+            }
+
+            main {
+                padding: 1rem 0.75rem 2rem;
+            }
+
+            .info-block,
+            .picker-section,
+            .output-section,
+            .named-section {
+                padding: 1.25rem 1rem;
+                border-radius: 12px;
+            }
+
+            .picker-layout {
+                grid-template-columns: 1fr;
+                gap: 1.25rem;
+            }
+
+            .color-input-native {
+                height: 120px;
+            }
+
+            .color-preview-box {
+                height: 100px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .output-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .contrast-samples {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-title {
+                font-size: 1.05rem;
+            }
+
+            .info-block h2,
+            .picker-section h2,
+            .output-section h2,
+            .named-section h2 {
+                font-size: 1.15rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+    <div class="header-left">
+        <div class="logo-icon"></div>
+        <div>
+            <span class="header-title">Color Translator</span>
+            </div>
+    </div>
+    <button class="theme-toggle" id="themeToggle" title="Переключить тему" aria-label="Переключить тему">☀️</button>
+</header>
+
+<main>
+
+    <!-- Info Block -->
+    <section class="info-block">
+        <div class="info-header" id="infoHeader">
+            <h2>Интерактивный переводчик цветов</h2>
+            <div class="info-toggle-icon" id="infoToggleIcon">&#9660;</div>
+        </div>
+        <div class="info-content" id="infoContent">
+            <p>
+                <strong>Color Translator</strong> — действующая модель 
+                <strong>межсемиотического перевода</strong> цвета в текст (код) различных знаковых систем: шестнадцатеричной (HEX), функциональной (RGB, HSL),
+                именованной (CSS Named Colors) ++             </p>
+            <div class="info-grid">
+                <div class="info-card">
+                    <h4>Как использовать</h4>
+                    <p>Выберите цвет с помощью палитры, ползунков RGB или введите HEX-код вручную. Кодировки обновятся автоматически.</p>
+                </div>
+                <div class="info-card">
+                    <h4>Копирование</h4>
+                    <p>Нажмите на любую карточку с кодировкой, чтобы скопировать значение в буфер обмена для использования в CSS.</p>
+                </div>
+                <div class="info-card">
+                    <h4>Форматы</h4>
+                    <p>HEX, RGB, RGBA, HSL, HSLA, HWB, CMYK, а также ближайший именованный CSS-цвет из 148 стандартных наименований.</p>
+                </div>
+                <div class="info-card">
+                    <h4>Применение</h4>
+                    <p>Используйте при кастомизации приложений для редактирования CSS-стилей, создания тем оформления, подбора цветовых палитр.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Color Picker Section -->
+    <section class="picker-section">
+        <h2>Выбор цвета</h2>
+
+        <!-- Preset swatches -->
+        <div class="presets-row" id="presetsRow"></div>
+
+        <div class="picker-layout">
+            <!-- Left: Controls -->
+            <div class="picker-controls">
+                <div class="color-input-wrapper">
+                    <input type="color" id="colorPicker" class="color-input-native" value="#3498db">
+                </div>
+
+                <div class="hex-input-group">
+                    <label for="hexInput">HEX:</label>
+                    <input type="text" id="hexInput" class="hex-text-input" value="#3498DB" maxlength="7" spellcheck="false">
+                </div>
+
+                <div class="sliders-group">
+                    <div class="slider-row">
+                        <span class="slider-label r-label">R</span>
+                        <input type="range" id="sliderR" class="slider-input slider-r" min="0" max="255" value="52">
+                        <span class="slider-value" id="valR">52</span>
+                    </div>
+                    <div class="slider-row">
+                        <span class="slider-label g-label">G</span>
+                        <input type="range" id="sliderG" class="slider-input slider-g" min="0" max="255" value="152">
+                        <span class="slider-value" id="valG">152</span>
+                    </div>
+                    <div class="slider-row">
+                        <span class="slider-label b-label">B</span>
+                        <input type="range" id="sliderB" class="slider-input slider-b" min="0" max="255" value="219">
+                        <span class="slider-value" id="valB">219</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Preview -->
+            <div class="preview-area">
+                <div class="color-preview-box" id="previewBox">
+                    <span class="preview-label" id="previewLabel">#3498DB</span>
+                </div>
+                <div class="contrast-samples">
+                    <div class="contrast-box" id="contrastWhite">
+                        Белый текст
+                        <span id="contrastWhiteRatio"></span>
+                    </div>
+                    <div class="contrast-box" id="contrastBlack">
+                        Чёрный текст
+                        <span id="contrastBlackRatio"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Output Section -->
+    <section class="output-section">
+        <h2>Кодировки цвета</h2>
+        <div class="output-grid" id="outputGrid"></div>
+    </section>
+
+    <!-- Named Color Section -->
+    <section class="named-section">
+        <h2>Ближайший именованный цвет CSS</h2>
+        <p class="named-subtitle">Из 148 стандартных именованных цветов CSS</p>
+        <div class="named-color-match" id="namedMatch">
+            <div class="named-swatch" id="namedSwatch"></div>
+            <div class="named-info">
+                <div class="named-color-name" id="namedName">—</div>
+                <div class="named-color-hex" id="namedHex">—</div>
+                <div class="named-distance" id="namedDistance"></div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+
+<div class="copied-toast" id="copiedToast">Скопировано в буфер обмена</div>
+
+
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+
+<script>
+        const themeToggle = document.getElementById('themeToggle');
+    const html = document.documentElement;
+
+    function setTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        themeToggle.textContent = theme === 'dark' ? '🌙' : '☀️';
+        localStorage.setItem('color-translator-theme', theme);
+    }
+
+    themeToggle.addEventListener('click', () => {
+        const current = html.getAttribute('data-theme');
+        setTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    // Load saved theme
+    const savedTheme = localStorage.getItem('color-translator-theme');
+    if (savedTheme) setTheme(savedTheme);
+    else if (window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme('dark');
+
+    // ===== INFO TOGGLE =====
+    const infoHeader = document.getElementById('infoHeader');
+    const infoContent = document.getElementById('infoContent');
+    const infoToggleIcon = document.getElementById('infoToggleIcon');
+
+    infoHeader.addEventListener('click', () => {
+        infoContent.classList.toggle('collapsed');
+        infoToggleIcon.classList.toggle('collapsed');
+    });
+
+    // ===== PRESET COLORS =====
+    const presetColors = [
+        '#E74C3C', '#E67E22', '#F1C40F', '#2ECC71', '#1ABC9C',
+        '#3498DB', '#325980', '#9B59B6', '#E91E63', '#795548',
+        '#607D8B', '#34495E', '#000000', '#FFFFFF', '#ECF0F1',
+        '#BDC3C7', '#FF6B6B', '#48DBFB', '#FF9FF3', '#FECA57'
+    ];
+
+    const presetsRow = document.getElementById('presetsRow');
+    presetColors.forEach(color => {
+        const btn = document.createElement('button');
+        btn.className = 'preset-btn';
+        btn.style.backgroundColor = color;
+        btn.title = color;
+        btn.setAttribute('aria-label', `Выбрать цвет ${color}`);
+        btn.addEventListener('click', () => {
+            updateFromHex(color);
+        });
+        presetsRow.appendChild(btn);
+    });
+
+    // ===== CORE ELEMENTS =====
+    const colorPicker = document.getElementById('colorPicker');
+    const hexInput = document.getElementById('hexInput');
+    const sliderR = document.getElementById('sliderR');
+    const sliderG = document.getElementById('sliderG');
+    const sliderB = document.getElementById('sliderB');
+    const valR = document.getElementById('valR');
+    const valG = document.getElementById('valG');
+    const valB = document.getElementById('valB');
+    const previewBox = document.getElementById('previewBox');
+    const previewLabel = document.getElementById('previewLabel');
+    const outputGrid = document.getElementById('outputGrid');
+    const copiedToast = document.getElementById('copiedToast');
+
+    let currentR = 52, currentG = 152, currentB = 219;
+
+    // ===== COLOR CONVERSIONS =====
+    function rgbToHex(r, g, b) {
+        return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+    }
+
+    function hexToRgb(hex) {
+        hex = hex.replace('#', '');
+        if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+        const num = parseInt(hex, 16);
+        return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+    }
+
+    function rgbToHsl(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+        if (max === min) {
+            h = s = 0;
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                case g: h = ((b - r) / d + 2) / 6; break;
+                case b: h = ((r - g) / d + 4) / 6; break;
+            }
+        }
+        return {
+            h: Math.round(h * 360),
+            s: Math.round(s * 100),
+            l: Math.round(l * 100)
+        };
+    }
+
+    function rgbToHwb(r, g, b) {
+        const hsl = rgbToHsl(r, g, b);
+        r /= 255; g /= 255; b /= 255;
+        const w = Math.min(r, g, b);
+        const bk = 1 - Math.max(r, g, b);
+        return {
+            h: hsl.h,
+            w: Math.round(w * 100),
+            b: Math.round(bk * 100)
+        };
+    }
+
+    function rgbToCmyk(r, g, b) {
+        if (r === 0 && g === 0 && b === 0) return { c: 0, m: 0, y: 0, k: 100 };
+        let c = 1 - (r / 255);
+        let m = 1 - (g / 255);
+        let y = 1 - (b / 255);
+        const k = Math.min(c, m, y);
+        c = Math.round(((c - k) / (1 - k)) * 100);
+        m = Math.round(((m - k) / (1 - k)) * 100);
+        y = Math.round(((y - k) / (1 - k)) * 100);
+        return { c, m, y, k: Math.round(k * 100) };
+    }
+
+    function luminance(r, g, b) {
+        const [rs, gs, bs] = [r, g, b].map(c => {
+            c /= 255;
+            return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+    }
+
+    function contrastRatio(l1, l2) {
+        const lighter = Math.max(l1, l2);
+        const darker = Math.min(l1, l2);
+        return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    // ===== NAMED COLORS =====
+    const namedColors = {
+        'aliceblue':'#F0F8FF','antiquewhite':'#FAEBD7','aqua':'#00FFFF','aquamarine':'#7FFFD4',
+        'azure':'#F0FFFF','beige':'#F5F5DC','bisque':'#FFE4C4','black':'#000000',
+        'blanchedalmond':'#FFEBCD','blue':'#0000FF','blueviolet':'#8A2BE2','brown':'#A52A2A',
+        'burlywood':'#DEB887','cadetblue':'#5F9EA0','chartreuse':'#7FFF00','chocolate':'#D2691E',
+        'coral':'#FF7F50','cornflowerblue':'#6495ED','cornsilk':'#FFF8DC','crimson':'#DC143C',
+        'cyan':'#00FFFF','darkblue':'#00008B','darkcyan':'#008B8B','darkgoldenrod':'#B8860B',
+        'darkgray':'#A9A9A9','darkgreen':'#006400','darkkhaki':'#BDB76B','darkmagenta':'#8B008B',
+        'darkolivegreen':'#556B2F','darkorange':'#FF8C00','darkorchid':'#9932CC','darkred':'#8B0000',
+        'darksalmon':'#E9967A','darkseagreen':'#8FBC8F','darkslateblue':'#483D8B','darkslategray':'#2F4F4F',
+        'darkturquoise':'#00CED1','darkviolet':'#9400D3','deeppink':'#FF1493','deepskyblue':'#00BFFF',
+        'dimgray':'#696969','dodgerblue':'#1E90FF','firebrick':'#B22222','floralwhite':'#FFFAF0',
+        'forestgreen':'#228B22','fuchsia':'#FF00FF','gainsboro':'#DCDCDC','ghostwhite':'#F8F8FF',
+        'gold':'#FFD700','goldenrod':'#DAA520','gray':'#808080','green':'#008000',
+        'greenyellow':'#ADFF2F','honeydew':'#F0FFF0','hotpink':'#FF69B4','indianred':'#CD5C5C',
+        'indigo':'#4B0082','ivory':'#FFFFF0','khaki':'#F0E68C','lavender':'#E6E6FA',
+        'lavenderblush':'#FFF0F5','lawngreen':'#7CFC00','lemonchiffon':'#FFFACD','lightblue':'#ADD8E6',
+        'lightcoral':'#F08080','lightcyan':'#E0FFFF','lightgoldenrodyellow':'#FAFAD2','lightgray':'#D3D3D3',
+        'lightgreen':'#90EE90','lightpink':'#FFB6C1','lightsalmon':'#FFA07A','lightseagreen':'#20B2AA',
+        'lightskyblue':'#87CEFA','lightslategray':'#778899','lightsteelblue':'#B0C4DE','lightyellow':'#FFFFE0',
+        'lime':'#00FF00','limegreen':'#32CD32','linen':'#FAF0E6','magenta':'#FF00FF',
+        'maroon':'#800000','mediumaquamarine':'#66CDAA','mediumblue':'#0000CD','mediumorchid':'#BA55D3',
+        'mediumpurple':'#9370DB','mediumseagreen':'#3CB371','mediumslateblue':'#7B68EE',
+        'mediumspringgreen':'#00FA9A','mediumturquoise':'#48D1CC','mediumvioletred':'#C71585',
+        'midnightblue':'#191970','mintcream':'#F5FFFA','mistyrose':'#FFE4E1','moccasin':'#FFE4B5',
+        'navajowhite':'#FFDEAD','navy':'#000080','oldlace':'#FDF5E6','olive':'#808000',
+        'olivedrab':'#6B8E23','orange':'#FFA500','orangered':'#FF4500','orchid':'#DA70D6',
+        'palegoldenrod':'#EEE8AA','palegreen':'#98FB98','paleturquoise':'#AFEEEE','palevioletred':'#DB7093',
+        'papayawhip':'#FFEFD5','peachpuff':'#FFDAB9','peru':'#CD853F','pink':'#FFC0CB',
+        'plum':'#DDA0DD','powderblue':'#B0E0E6','purple':'#800080','rebeccapurple':'#663399',
+        'red':'#FF0000','rosybrown':'#BC8F8F','royalblue':'#4169E1','saddlebrown':'#8B4513',
+        'salmon':'#FA8072','sandybrown':'#F4A460','seagreen':'#2E8B57','seashell':'#FFF5EE',
+        'sienna':'#A0522D','silver':'#C0C0C0','skyblue':'#87CEEB','slateblue':'#6A5ACD',
+        'slategray':'#708090','snow':'#FFFAFA','springgreen':'#00FF7F','steelblue':'#4682B4',
+        'tan':'#D2B48C','teal':'#008080','thistle':'#D8BFD8','tomato':'#FF6347',
+        'turquoise':'#40E0D0','violet':'#EE82EE','wheat':'#F5DEB3','white':'#FFFFFF',
+        'whitesmoke':'#F5F5F5','yellow':'#FFFF00','yellowgreen':'#9ACD32'
+    };
+
+    function findNearestNamedColor(r, g, b) {
+        let minDist = Infinity;
+        let closest = { name: '', hex: '' };
+        for (const [name, hex] of Object.entries(namedColors)) {
+            const nc = hexToRgb(hex);
+            const dist = Math.sqrt(
+                Math.pow(r - nc.r, 2) + Math.pow(g - nc.g, 2) + Math.pow(b - nc.b, 2)
+            );
+            if (dist < minDist) {
+                minDist = dist;
+                closest = { name, hex, dist };
+            }
+        }
+        closest.dist = Math.round(minDist * 100) / 100;
+        return closest;
+    }
+
+    // ===== OUTPUT FORMATS =====
+    function generateOutputs(r, g, b) {
+        const hex = rgbToHex(r, g, b);
+        const hsl = rgbToHsl(r, g, b);
+        const hwb = rgbToHwb(r, g, b);
+        const cmyk = rgbToCmyk(r, g, b);
+
+        return [
+            {
+                name: 'HEX',
+                value: hex,
+                desc: 'Шестнадцатеричная запись — наиболее распространённый формат в CSS'
+            },
+            {
+                name: 'HEX (сокр.)',
+                value: tryShortHex(hex),
+                desc: 'Сокращённая форма HEX (если возможно): #RRGGBB → #RGB'
+            },
+            {
+                name: 'RGB',
+                value: `rgb(${r}, ${g}, ${b})`,
+                desc: 'Функциональная запись: красный, зелёный, синий (0–255)'
+            },
+            {
+                name: 'RGBA',
+                value: `rgba(${r}, ${g}, ${b}, 1.0)`,
+                desc: 'RGB с альфа-каналом (прозрачность 0.0–1.0)'
+            },
+            {
+                name: 'RGB %',
+                value: `rgb(${pct(r)}, ${pct(g)}, ${pct(b)})`,
+                desc: 'RGB в процентном формате'
+            },
+            {
+                name: 'HSL',
+                value: `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`,
+                desc: 'Оттенок (0–360°), насыщенность и светлота в процентах'
+            },
+            {
+                name: 'HSLA',
+                value: `hsla(${hsl.h}, ${hsl.s}%, ${hsl.l}%, 1.0)`,
+                desc: 'HSL с альфа-каналом прозрачности'
+            },
+            {
+                name: 'HWB',
+                value: `hwb(${hwb.h} ${hwb.w}% ${hwb.b}%)`,
+                desc: 'Оттенок, белизна, чернота — интуитивный формат CSS Level 4'
+            },
+            {
+                name: 'CMYK',
+                value: `cmyk(${cmyk.c}%, ${cmyk.m}%, ${cmyk.y}%, ${cmyk.k}%)`,
+                desc: 'Субтрактивная модель для полиграфии (Cyan, Magenta, Yellow, Key)'
+            },
+            {
+                name: 'CSS Filter',
+                value: `brightness(0) saturate(100%) ...`,
+                desc: 'Приблизительный CSS-фильтр (используйте специализированные калькуляторы)'
+            },
+            {
+                name: 'Integer',
+                value: `${(r << 16) + (g << 8) + b}`,
+                desc: 'Целочисленное представление цвета (десятичное)'
+            },
+            {
+                name: 'CSS Modern',
+                value: `color(srgb ${(r/255).toFixed(3)} ${(g/255).toFixed(3)} ${(b/255).toFixed(3)})`,
+                desc: 'Современный синтаксис CSS Color Level 4 в sRGB'
+            }
+        ];
+    }
+
+    function tryShortHex(hex) {
+        const h = hex.replace('#', '');
+        if (h[0] === h[1] && h[2] === h[3] && h[4] === h[5]) {
+            return '#' + h[0] + h[2] + h[4];
+        }
+        return hex + ' (не сокращается)';
+    }
+
+    function pct(v) {
+        return (v / 255 * 100).toFixed(1) + '%';
+    }
+
+    // ===== RENDER =====
+    function renderOutputs(r, g, b) {
+        const outputs = generateOutputs(r, g, b);
+        outputGrid.innerHTML = '';
+        outputs.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'output-card';
+            card.innerHTML = `
+                <div class="output-card-header">
+                    <span class="output-format-name">${item.name}</span>
+                    <span class="copy-hint">Нажмите для копирования</span>
+                </div>
+                <div class="output-value">${item.value}</div>
+                <div class="output-description">${item.desc}</div>
+            `;
+            card.addEventListener('click', () => {
+                copyToClipboard(item.value);
+            });
+            outputGrid.appendChild(card);
+        });
+    }
+
+    function updatePreview(r, g, b) {
+        const hex = rgbToHex(r, g, b);
+        previewBox.style.backgroundColor = hex;
+        previewLabel.textContent = hex;
+
+        // Contrast
+        const lum = luminance(r, g, b);
+        const lumWhite = luminance(255, 255, 255);
+        const lumBlack = luminance(0, 0, 0);
+        const crWhite = contrastRatio(lum, lumWhite);
+        const crBlack = contrastRatio(lum, lumBlack);
+
+        const contrastWhite = document.getElementById('contrastWhite');
+        const contrastBlack = document.getElementById('contrastBlack');
+        const contrastWhiteRatio = document.getElementById('contrastWhiteRatio');
+        const contrastBlackRatio = document.getElementById('contrastBlackRatio');
+
+        contrastWhite.style.backgroundColor = hex;
+        contrastWhite.style.color = '#ffffff';
+        contrastWhiteRatio.textContent = `Контраст: ${crWhite.toFixed(2)}:1 ${crWhite >= 4.5 ? 'AA' : crWhite >= 3 ? 'AA Large' : 'Fail'}`;
+
+        contrastBlack.style.backgroundColor = hex;
+        contrastBlack.style.color = '#000000';
+        contrastBlackRatio.textContent = `Контраст: ${crBlack.toFixed(2)}:1 ${crBlack >= 4.5 ? 'AA' : crBlack >= 3 ? 'AA Large' : 'Fail'}`;
+
+        // Named color
+        const nearest = findNearestNamedColor(r, g, b);
+        document.getElementById('namedSwatch').style.backgroundColor = nearest.hex;
+        document.getElementById('namedName').textContent = nearest.name;
+        document.getElementById('namedHex').textContent = nearest.hex;
+        document.getElementById('namedDistance').textContent =
+            nearest.dist === 0 ? 'Точное совпадение' : `Расстояние: ${nearest.dist} (евклидово в RGB)`;
+    }
+
+    function updateAll(r, g, b) {
+        currentR = r; currentG = g; currentB = b;
+        const hex = rgbToHex(r, g, b);
+
+        colorPicker.value = hex.toLowerCase();
+        hexInput.value = hex;
+        sliderR.value = r; valR.textContent = r;
+        sliderG.value = g; valG.textContent = g;
+        sliderB.value = b; valB.textContent = b;
+
+        updatePreview(r, g, b);
+        renderOutputs(r, g, b);
+    }
+
+    function updateFromHex(hex) {
+        hex = hex.trim();
+        if (!hex.startsWith('#')) hex = '#' + hex;
+        // Expand shorthand
+        if (/^#[0-9A-Fa-f]{3}$/.test(hex)) {
+            hex = '#' + hex[1]+hex[1] + hex[2]+hex[2] + hex[3]+hex[3];
+        }
+        if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+            const { r, g, b } = hexToRgb(hex);
+            updateAll(r, g, b);
+        }
+    }
+
+    // ===== EVENT LISTENERS =====
+    colorPicker.addEventListener('input', () => {
+        updateFromHex(colorPicker.value);
+    });
+
+    hexInput.addEventListener('input', () => {
+        let val = hexInput.value.trim();
+        if (!val.startsWith('#')) val = '#' + val;
+        if (/^#[0-9A-Fa-f]{3}$/.test(val) || /^#[0-9A-Fa-f]{6}$/.test(val)) {
+            updateFromHex(val);
+        }
+    });
+
+    hexInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            updateFromHex(hexInput.value);
+        }
+    });
+
+    [sliderR, sliderG, sliderB].forEach(slider => {
+        slider.addEventListener('input', () => {
+            updateAll(
+                parseInt(sliderR.value),
+                parseInt(sliderG.value),
+                parseInt(sliderB.value)
+            );
+        });
+    });
+
+    // ===== CLIPBOARD =====
+    let toastTimeout;
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('Скопировано: ' + text);
+        }).catch(() => {
+            // Fallback
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast('Скопировано: ' + text);
+        });
+    }
+
+    function showToast(msg) {
+        copiedToast.textContent = msg;
+        copiedToast.classList.add('show');
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+            copiedToast.classList.remove('show');
+        }, 2000);
+    }
+
+    // ===== INIT =====
+    updateAll(52, 152, 219);
+</script>
+</body>
+</html>
