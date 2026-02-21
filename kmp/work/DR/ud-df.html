@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --success-color: #27ae60;
+            --error-color: #c0392b;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 60px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .add-term-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 32px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        
+        .theme-toggle:hover, .add-term-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px 40px 10px 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--equivalent-color);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn, .modal-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active, .modal-btn.primary {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .modal-btn.secondary {
+            background-color: transparent;
+            color: var(--text-color);
+        }
+        
+        .modal-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        /* Modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal {
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            animation: modalFadeIn 0.3s ease;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            color: var(--term-color);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .modal-close:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--term-color);
+        }
+        
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .form-note {
+            font-size: 12px;
+            color: var(--equivalent-color);
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            z-index: 1001;
+            animation: toastSlideIn 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .toast.success {
+            background-color: var(--success-color);
+        }
+        
+        .toast.error {
+            background-color: var(--error-color);
+        }
+        
+        .user-term-badge {
+            background-color: var(--success-color);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+            font-weight: normal;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 70px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 40px;
+            }
+            
+            .add-term-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge, .user-term-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+            
+            .modal-overlay {
+                padding: 10px;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+            color: var(--equivalent-color);
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="add-term-toggle" id="addTermToggle" title="Добавить новый термин">+</button>
+            <button class="theme-toggle" id="themeToggle" title="Переключить тему">🌙</button>
+            <h1>Urban Dictionary</h1>
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+                            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for adding new terms -->
+    <div class="modal-overlay" id="addTermModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Добавить новый термин</h2>
+                <button class="modal-close" id="modalClose">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="termForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="termRu">Термин (русский)</label>
+                            <input type="text" class="form-input" id="termRu" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="termEn">Термин (english)</label>
+                            <input type="text" class="form-input" id="termEn" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="equivalentRu">Эквивалент (русский)</label>
+                            <input type="text" class="form-input" id="equivalentRu">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="equivalentEn">Эквивалент (english)</label>
+                            <input type="text" class="form-input" id="equivalentEn">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="definitionRu">Определение (русский)</label>
+                            <textarea class="form-textarea" id="definitionRu" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="definitionEn">Definition (english)</label>
+                            <textarea class="form-textarea" id="definitionEn" required></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="category">Категория</label>
+                        <input type="text" class="form-input" id="category" placeholder="Например: экономика, Орлова Ева" required>
+                        <div class="form-note">Укажите область знания и ваши Фамилию Имя</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="cancelBtn">Отмена</button>
+                <button class="modal-btn primary" id="saveBtn">Сохранить термин</button>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <div class="container">
+            <p>© 2026 | kmp | CC BY-NC-SA</p>
+            <p>для всех</p>
+        </div>
+    </footer>
+    
+    <div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const addTermToggle = document.getElementById('addTermToggle');
+            const addTermModal = document.getElementById('addTermModal');
+            const modalClose = document.getElementById('modalClose');
+            const cancelBtn = document.getElementById('cancelBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const termForm = document.getElementById('termForm');
+            const body = document.body;
+
+            // Form elements
+            const termRu = document.getElementById('termRu');
+            const termEn = document.getElementById('termEn');
+            const equivalentRu = document.getElementById('equivalentRu');
+            const equivalentEn = document.getElementById('equivalentEn');
+            const definitionRu = document.getElementById('definitionRu');
+            const definitionEn = document.getElementById('definitionEn');
+            const category = document.getElementById('category');
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+            
+            // Theme state
+            let isDarkMode = false;
+            
+            // Default glossary data
+            const defaultGlossaryData = [
+        {
+  "id": "UD-APO-01",
+  "ru": {
+    "term": "Urban Dictionary (апология)",
+    "equivalent": "Urban Dictionary (apology)",
+    "definition": "UD — это крупнейший в истории человечества архив дескриптивной лексикографии, фиксирующий «язык в моменте» без цензуры и задержек, свойственных прескриптивным словарям.",
+    "category": "Лексикография / Дескриптивная лингвистика"
+  },
+  "en": {
+    "term": "Urban Dictionary (apology)",
+    "equivalent": "Urban Dictionary (апология, дескриптивизм)",
+    "definition": "UD is the largest archive of descriptive lexicography in human history, capturing 'language in the moment' without the censorship and delays inherent in prescriptive dictionaries.",
+    "category": "Lexicography / Descriptive Linguistics"
+  }
+}
+,
+
+{
+  "id": "UD-APO-02",
+  "ru": {
+    "term": "Urban Dictionary (апология, демократизация)",
+    "equivalent": "Urban Dictionary (apology, democratisation)",
+    "definition": "UD — это первый по-настоящему демократический словарь, в котором право давать определение слову принадлежит не академической элите, а любому носителю языка, что делает его уникальным инструментом лингвистической эмансипации.",
+    "category": "Социолингвистика / Лексикография"
+  },
+  "en": {
+    "term": "Urban Dictionary (apology, democratisation)",
+    "equivalent": "Urban Dictionary (апология, демократизация)",
+    "definition": "UD is the first truly democratic dictionary in which the right to define a word belongs not to an academic elite but to any speaker of the language, making it a unique instrument of linguistic emancipation.",
+    "category": "Sociolinguistics / Lexicography"
+  }
+}
+,
+
+{
+  "id": "UD-APO-03",
+  "ru": {
+    "term": "Urban Dictionary (апология, скорость фиксации)",
+    "equivalent": "Urban Dictionary (apology, speed of attestation)",
+    "definition": "UD — это самый быстрый лексикографический сейсмограф в мире: неологизм может быть зафиксирован и проиллюстрирован контекстом в течение нескольких часов после появления, тогда как OED требует лет или десятилетий.",
+    "category": "Лексикография / Неология"
+  },
+  "en": {
+    "term": "Urban Dictionary (apology, speed of attestation)",
+    "equivalent": "Urban Dictionary (апология, скорость фиксации)",
+    "definition": "UD is the fastest lexicographic seismograph in the world: a neologism can be recorded and illustrated with context within hours of its emergence, whereas the OED may require years or decades.",
+    "category": "Lexicography / Neology"
+  }
+},
+{
+  "id": "UD-CRT-01",
+  "ru": {
+    "term": "Urban Dictionary (критика, шум данных)",
+    "equivalent": "Urban Dictionary (criticism, data noise)",
+    "definition": "UD — «шумный» датасет с крайне низким отношением сигнала к шуму, перегруженный дублями, личными обидами и невалидными лингвистическими данными.",
+    "category": "Корпусная лингвистика / Анализ данных"
+  },
+  "en": {
+    "term": "Urban Dictionary (criticism, data noise)",
+    "equivalent": "Urban Dictionary (критика, шум данных)",
+    "definition": "UD is a 'noisy' dataset with an extremely low signal-to-noise ratio, overloaded with duplicates, personal grudges, and linguistically invalid data.",
+    "category": "Corpus Linguistics / Data Analysis"
+  }
+}
+,
+
+{
+  "id": "UD-CRT-02",
+  "ru": {
+    "term": "Urban Dictionary (критика, модерация)",
+    "equivalent": "Urban Dictionary (criticism, moderation)",
+    "definition": "UD — это ресурс без квалифицированной редактуры, где функцию гейткипинга выполняют анонимные волонтёры с непрозрачными критериями, что делает любые выводы на его основе методологически уязвимыми.",
+    "category": "Лексикография / Методология"
+  },
+  "en": {
+    "term": "Urban Dictionary (criticism, moderation)",
+    "equivalent": "Urban Dictionary (критика, модерация)",
+    "definition": "UD is a resource without qualified editorial oversight, where gatekeeping is performed by anonymous volunteers with opaque criteria, rendering any conclusions drawn from it methodologically vulnerable.",
+    "category": "Lexicography / Methodology"
+  }
+}
+,
+
+{
+  "id": "UD-CRT-03",
+  "ru": {
+    "term": "Urban Dictionary (критика, предвзятость)",
+    "equivalent": "Urban Dictionary (criticism, bias)",
+    "definition": "UD — это ресурс с систематическим демографическим перекосом: подавляющее большинство авторов — молодые англоязычные мужчины, что превращает словарь в эхо-камеру одной социальной группы, а не в зеркало языка в целом.",
+    "category": "Социолингвистика / Гендерная лингвистика"
+  },
+  "en": {
+    "term": "Urban Dictionary (criticism, bias)",
+    "equivalent": "Urban Dictionary (критика, предвзятость)",
+    "definition": "UD is a resource with systematic demographic skew: the overwhelming majority of contributors are young English-speaking males, turning the dictionary into an echo chamber of one social group rather than a mirror of the language as a whole.",
+    "category": "Sociolinguistics / Gender Linguistics"
+  }
+},
+{
+  "id": "UD-REJ-01",
+  "ru": {
+    "term": "Urban Dictionary (отвержение)",
+    "equivalent": "Urban Dictionary (rejection)",
+    "definition": "UD — это не словарь, а нерелевантный для лингвистики агрегатор мнений, где слово «определение» используется для легитимации оскорблений, сексуальных фантазий и внутригрупповых шуток.",
+    "category": "Лексикография / Критическая оценка ресурсов"
+  },
+  "en": {
+    "term": "Urban Dictionary (rejection)",
+    "equivalent": "Urban Dictionary (отвержение)",
+    "definition": "UD is not a dictionary but a linguistically irrelevant opinion aggregator where the word 'definition' is used to legitimise insults, sexual fantasies, and in-group jokes.",
+    "category": "Lexicography / Critical Resource Evaluation"
+  }
+}
+,
+
+{
+  "id": "UD-REJ-02",
+  "ru": {
+    "term": "Urban Dictionary (отвержение, этика)",
+    "equivalent": "Urban Dictionary (rejection, ethic)",
+    "definition": "UD — это платформа, нормализующая хейтспич под видом лексикографии: расистские, сексистские и гомофобные «определения» функционируют как средство дискриминации, прикрытое псевдоакадемическим форматом.",
+    "category": "Критический дискурс-анализ / Этика языка"
+  },
+  "en": {
+    "term": "Urban Dictionary (rejection, ethic)",
+    "equivalent": "Urban Dictionary (отвержение, этика)",
+    "definition": "UD is a platform that normalises hate speech under the guise of lexicography: racist, sexist, and homophobic 'definitions' function as instruments of discrimination cloaked in a pseudo-academic format.",
+    "category": "Critical Discourse Analysis / Language Ethics"
+  }
+},
+{
+  "id": "UD-AMB-01",
+  "ru": {
+    "term": "Urban Dictionary (амбивалентная оценка)",
+    "equivalent": "Urban Dictionary (ambivalent assessment)",
+    "definition": "UD — это лингвистическая свалка, на которой при должном навыке можно найти сокровища, недоступные в королевских библиотеках. Главное — работать в перчатках критического мышления.",
+    "category": "Лексикография / Критическая оценка ресурсов"
+  },
+  "en": {
+    "term": "Urban Dictionary (ambivalent assessment)",
+    "equivalent": "Urban Dictionary (амбивалентная оценка)",
+    "definition": "UD is a linguistic landfill where, with due skill, one can find treasures unavailable in royal libraries. The key is to work in the gloves of critical thinking.",
+    "category": "Lexicography / Critical Resource Evaluation"
+  }
+}
+,
+
+{
+  "id": "UD-AMB-02",
+  "ru": {
+    "term": "Urban Dictionary (дополнительность)",
+    "equivalent": "Urban Dictionary (acomplementarity)",
+    "definition": "UD — это не альтернатива, а комплемент к нормативным словарям: ресурс, бесполезный сам по себе, но ценный в триангуляции с корпусными данными и экспертной лексикографией.",
+    "category": "Лексикография / Методология"
+  },
+  "en": {
+    "term": "Urban Dictionary (acomplementarity)",
+    "equivalent": "Urban Dictionary (дополнительность)",
+    "definition": "UD is not an alternative but a complement to normative dictionaries: a resource useless on its own, yet valuable when triangulated with corpus data and expert lexicography.",
+    "category": "Lexicography / Methodology"
+  }
+},
+{
+  "id": "UD-LING-01",
+  "ru": {
+    "term": "Urban Dictionary (лингвистический аспект)",
+    "equivalent": "Urban Dictionary (linguistic aspect)",
+    "definition": "UD — это массив некодифицированных лексем, находящихся в состоянии семантической лабильности. Это «первичный бульон» естественного языка, где распределение вероятностей между означающим и означаемым (signifiant vs. signifié) не стабилизировано прескриптивными нормами.",
+    "category": "Семиотика / Теоретическая лингвистика"
+  },
+  "en": {
+    "term": "Urban Dictionary (linguistic aspect)",
+    "equivalent": "Urban Dictionary (лингвистический аспект)",
+    "definition": "UD is an array of uncodified lexemes in a state of semantic lability. It is the 'primordial soup' of natural language, where the probability distribution between signifier and signified (signifiant vs. signifié) is not stabilised by prescriptive norms.",
+    "category": "Semiotics / Theoretical Linguistics"
+  }
+}
+,
+
+{
+  "id": "UD-LING-02",
+  "ru": {
+    "term": "Urban Dictionary (полисемия и конкуренция)",
+    "equivalent": "Urban Dictionary (polysemy and competition)",
+    "definition": "UD — это лаборатория наблюдения за лексической конкуренцией в реальном времени: для одного и того же концепта одновременно сосуществуют десятки конкурирующих номинаций, и система голосования позволяет отслеживать, какая из них побеждает в борьбе за узус.",
+    "category": "Лексикология / Ономасиология"
+  },
+  "en": {
+    "term": "Urban Dictionary (polysemy and competition)",
+    "equivalent": "Urban Dictionary (полисемия и конкуренция)",
+    "definition": "UD is a real-time laboratory for observing lexical competition: for a single concept, dozens of competing nominations coexist simultaneously, and the voting system makes it possible to track which one prevails in the struggle for usage.",
+    "category": "Lexicology / Onomasiology"
+  }
+}
+,
+
+{
+  "id": "UD-LING-03",
+  "ru": {
+    "term": "Urban Dictionary (прагматика)",
+    "equivalent": "Urban Dictionary (pragmatics)",
+    "definition": "UD — это корпус метапрагматических высказываний: каждая статья — не столько словарная дефиниция, сколько речевой акт (похвала, оскорбление, шутка, самоидентификация), маскирующийся под лексикографическую запись.",
+    "category": "Прагматика / Теория речевых актов"
+  },
+  "en": {
+    "term": "Urban Dictionary (pragmatics)",
+    "equivalent": "Urban Dictionary (прагматика)",
+    "definition": "UD is a corpus of metapragmatic utterances: each entry is less a dictionary definition than a speech act (praise, insult, joke, self-identification) masquerading as a lexicographic record.",
+    "category": "Pragmatics / Speech Act Theory"
+  }
+},
+{
+  "id": "UD-CULT-01",
+  "ru": {
+    "term": "Urban Dictionary (культурологический аспект)",
+    "equivalent": "Urban Dictionary (cultural aspect)",
+    "definition": "UD — это зеркало коллективного бессознательного англоязычного интернета, отражающее страхи, предрассудки и ироническую рефлексию общества.",
+    "category": "Культурология / Интернет-антропология"
+  },
+  "en": {
+    "term": "Urban Dictionary (cultural aspect)",
+    "equivalent": "Urban Dictionary (культурологический аспект)",
+    "definition": "UD is a mirror of the collective unconscious of the English-speaking internet, reflecting the fears, prejudices, and ironic self-reflection of society.",
+    "category": "Cultural Studies / Internet Anthropology"
+  }
+}
+,
+
+{
+  "id": "UD-CULT-02",
+  "ru": {
+    "term": "Urban Dictionary (культурологический аспект",
+    "equivalent": "Urban Dictionary (cultural aspect)",
+    "definition": "UD — это крупнейший неинституциональный архив субкультурных и контркультурных лексиконов (от геймерского сленга до тюремного арго), многие из которых не зафиксированы ни в каком другом источнике.",
+    "category": "Культурология / Субкультурные исследования"
+  },
+  "en": {
+    "term": "Urban Dictionary (cultural aspect)",
+    "equivalent": "Urban Dictionary (культурологический аспект)",
+    "definition": "UD is the largest non-institutional archive of subcultural and countercultural lexicons (from gamer slang to prison argot), many of which are recorded in no other source.",
+    "category": "Cultural Studies / Subcultural Studies"
+  }
+}
+,
+
+{
+  "id": "UD-CULT-03",
+  "ru": {
+    "term": "Urban Dictionary (культурологический аспект)",
+    "equivalent": "Urban Dictionary (cultural aspect)",
+    "definition": "UD — это цифровой фольклорный сборник XXI века: «определения» функционируют как мемы, городские легенды и притчи, передаваемые не из уст в уста, а через ссылки и скриншоты.",
+    "category": "Фольклористика / Цифровая культура"
+  },
+  "en": {
+    "term": "Urban Dictionary (cultural aspect)",
+    "equivalent": "Urban Dictionary (культурологический аспект)",
+    "definition": "UD is a digital folklore anthology of the 21st century: 'definitions' function as memes, urban legends, and parables transmitted not by word of mouth but through links and screenshots.",
+    "category": "Folklore Studies / Digital Culture"
+  }
+},
+{
+  "id": "UD-TECH-01",
+  "ru": {
+    "term": "Urban Dictionary (краудсорсинг)",
+    "equivalent": "Urban Dictionary (crowdsourcing)",
+    "definition": "UD — это краудсорсинговая вики-подобная платформа, основанная на модели UGC (User-Generated Content) с системой голосования «thumbs up / thumbs down», заменяющей экспертную верификацию коллективным одобрением.",
+    "category": "Информационные технологии / Веб-платформы"
+  },
+  "en": {
+    "term": "Urban Dictionary (crowdsourcing)",
+    "equivalent": "Urban Dictionary (краудсорсинг)",
+    "definition": "UD is a crowdsourced wiki-like platform based on the UGC (User-Generated Content) model with a 'thumbs up / thumbs down' voting system that substitutes collective approval for expert verification.",
+    "category": "Information Technology / Web Platforms"
+  }
+}
+,
+
+{
+  "id": "UD-TECH-02",
+  "ru": {
+    "term": "Urban Dictionary (технический аспект, NLP)",
+    "equivalent": "Urban Dictionary (technical aspect, NLP)",
+    "definition": "UD — это открыто доступный через API корпус дефиниций, используемый в задачах NLP (sentiment analysis, slang detection, word embedding), но требующий многоступенчатой предобработки из-за экстремального уровня шума.",
+    "category": "Компьютерная лингвистика / Обработка естественного языка"
+  },
+  "en": {
+    "term": "Urban Dictionary (technical aspect, NLP)",
+    "equivalent": "Urban Dictionary (технический аспект, NLP)",
+    "definition": "UD is a publicly API-accessible corpus of definitions used in NLP tasks (sentiment analysis, slang detection, word embedding) but requiring multi-stage preprocessing due to extreme noise levels.",
+    "category": "Computational Linguistics / Natural Language Processing"
+  }
+}
+,
+
+{
+  "id": "UD-TECH-03",
+  "ru": {
+    "term": "Urban Dictionary (технический аспект, структура записи)",
+    "equivalent": "Urban Dictionary (technical aspect, entry structure)",
+    "definition": "UD — это база данных с минималистичной микроструктурой словарной статьи: заглавное слово → дефиниция → иллюстративный пример → теги → голосование, — без грамматических помет, этимологии и хронологических маркеров.",
+    "category": "Лексикография / Информационная архитектура"
+  },
+  "en": {
+    "term": "Urban Dictionary (technical aspect, entry structure)",
+    "equivalent": "Urban Dictionary (технический аспект, структура записи)",
+    "definition": "UD is a database with a minimalist entry microstructure: headword → definition → illustrative example → tags → vote count — lacking grammatical labels, etymology, and chronological markers.",
+    "category": "Lexicography / Information Architecture"
+  }
+},
+{
+  "id": "UD-SOC-01",
+  "ru": {
+    "term": "Urban Dictionary (социологический аспект)",
+    "equivalent": "Urban Dictionary (sociological aspect)",
+    "definition": "UD — это площадка перераспределения символической власти именования: право давать определение словам, исторически принадлежавшее академиям и издательствам, перешло к анонимным пользователям интернета.",
+    "category": "Социология языка / Критическая теория"
+  },
+  "en": {
+    "term": "Urban Dictionary (sociological aspect)",
+    "equivalent": "Urban Dictionary (социологический аспект)",
+    "definition": "UD is a site for the redistribution of the symbolic power of naming: the right to define words, historically belonging to academies and publishers, has passed to anonymous internet users.",
+    "category": "Sociology of Language / Critical Theory"
+  }
+}
+,
+
+{
+  "id": "UD-SOC-02",
+  "ru": {
+    "term": "Urban Dictionary (социологический аспект, идентичность)",
+    "equivalent": "Urban Dictionary (sociological aspect, identity)",
+    "definition": "UD — это инструмент перформативного конструирования групповой идентичности: создавая и голосуя за «определения», пользователи маркируют границу между «своими» и «чужими» посредством языкового юмора и стигматизации.",
+    "category": "Социолингвистика / Теория идентичности"
+  },
+  "en": {
+    "term": "Urban Dictionary (sociological aspect, identity)",
+    "equivalent": "Urban Dictionary (социологический аспект, идентичность)",
+    "definition": "UD is an instrument for the performative construction of group identity: by creating and voting on 'definitions,' users mark the boundary between in-group and out-group through linguistic humour and stigmatisation.",
+    "category": "Sociolinguistics / Identity Theory"
+  }
+},
+{
+  "id": "UD-PED-01",
+  "ru": {
+    "term": "Urban Dictionary (педагогический аспект, обучение L2)",
+    "equivalent": "Urban Dictionary (pedagogical aspect, L2 learning)",
+    "definition": "UD — это неформальный справочник по прагматической компетенции в L2: ресурс, позволяющий изучающим английский язык «считывать» коннотации, табу и речевые импликатуры, которые не отражены в учебных словарях.",
+    "category": "Лингводидактика / Прагматика L2"
+  },
+  "en": {
+    "term": "Urban Dictionary (pedagogical aspect, L2 learning)",
+    "equivalent": "Urban Dictionary (педагогический аспект, обучение L2)",
+    "definition": "UD is an informal reference for pragmatic competence in L2: a resource that enables English learners to decode connotations, taboos, and conversational implicatures not covered in learner dictionaries.",
+    "category": "Language Pedagogy / L2 Pragmatics"
+  }
+}
+,
+
+{
+  "id": "UD-PED-02",
+  "ru": {
+    "term": "Urban Dictionary (педагогический аспект, критическая грамотность)",
+    "equivalent": "Urban Dictionary (pedagogical aspect, critical literacy)",
+    "definition": "UD — это идеальный тренажёр критической информационной грамотности: ресурс, на котором студент учится отличать лексикографический факт от мнения, стереотип — от узуса, а языковое творчество — от речевой агрессии.",
+    "category": "Медиаграмотность / Лингводидактика"
+  },
+  "en": {
+    "term": "Urban Dictionary (pedagogical aspect, critical literacy)",
+    "equivalent": "Urban Dictionary (педагогический аспект, критическая грамотность)",
+    "definition": "UD is an ideal training ground for critical information literacy: a resource where students learn to distinguish lexicographic fact from opinion, stereotype from usage, and linguistic creativity from verbal aggression.",
+    "category": "Media Literacy / Language Pedagogy"
+  }
+},
+{
+  "id": "UD-AUD-SCHOOL",
+  "ru": {
+    "term": "Urban Dictionary (объяснение для школьника)",
+    "equivalent": "Urban Dictionary (explanation for a schoolchild)",
+    "definition": "UD — это сайт, куда любой человек может написать, что, по его мнению, значит какое-нибудь слово или выражение. Это как Википедия для сленга: иногда полезно, иногда смешно, а иногда — полная ерунда. Верить всему подряд не стоит.",
+    "category": "Популярное объяснение"
+  },
+  "en": {
+    "term": "Urban Dictionary (explanation for a schoolchild)",
+    "equivalent": "Urban Dictionary (объяснение для школьника)",
+    "definition": "UD is a website where anyone can write what they think a word or phrase means. It's like Wikipedia for slang: sometimes useful, sometimes funny, and sometimes complete nonsense. Don't believe everything you read there.",
+    "category": "Popular Explanation"
+  }
+},
+{
+  "id": "UD-AUD-STUDENT",
+  "ru": {
+    "term": "Urban Dictionary (объяснение для студента-лингвиста)",
+    "equivalent": "Urban Dictionary (explanation for a linguistics student)",
+    "definition": "UD — это краудсорсинговый лексикографический проект, функционирующий как незамодерированный корпус метаязыковых суждений носителей, ценный для изучения неологизации, семантического сдвига, сленгообразования и языковых установок, но требующий строгой методологической фильтрации.",
+    "category": "Лексикография / Корпусная лингвистика"
+  },
+  "en": {
+    "term": "Urban Dictionary (explanation for a linguistics student)",
+    "equivalent": "Urban Dictionary (объяснение для студента-лингвиста)",
+    "definition": "UD is a crowdsourced lexicographic project functioning as an unmoderated corpus of native speakers' metalinguistic judgments, valuable for studying neologisation, semantic shift, slang formation, and language attitudes, yet requiring rigorous methodological filtering.",
+    "category": "Lexicography / Corpus Linguistics"
+  }
+},
+{
+  "id": "UD-AUD-PROF",
+  "ru": {
+    "term": "Urban Dictionary (объяснение для профессора лексикографии)",
+    "equivalent": "Urban Dictionary (explanation for a professor of lexicography)",
+    "definition": "UD — это эпистемологический вызов дисциплине: ресурс, вынуждающий переосмыслить границы понятия «словарь», статус «дефиниции», роль «авторитета» и само соотношение между прескриптивным и дескриптивным подходами в эпоху Web 2.0.",
+    "category": "Лексикография / Эпистемология лингвистики"
+  },
+  "en": {
+    "term": "Urban Dictionary (explanation for a professor of lexicography)",
+    "equivalent": "Urban Dictionary (объяснение для профессора лексикографии)",
+    "definition": "UD is an epistemological challenge to the discipline: a resource that forces one to rethink the boundaries of the concept 'dictionary,' the status of 'definition,' the role of 'authority,' and the very relationship between prescriptive and descriptive approaches in the Web 2.0 era.",
+    "category": "Lexicography / Epistemology of Linguistics"
+  }
+},
+{
+  "id": "UD-AUD-DEV",
+  "ru": {
+    "term": "Urban Dictionary (объяснение для NLP-разработчика)",
+    "equivalent": "Urban Dictionary (explanation for an NLP developer)",
+    "definition": "UD — это слабоструктурированный, пользовательски генерируемый датасет из ~2,5 млн статей, полезный для расширения покрытия нестандартной лексики в задачах сентимент-анализа, детекции сленга и обогащения эмбеддингов, но загрязнённый дублями, мусорными записями и контентом, нарушающим этические политики.",
+    "category": "NLP / Инженерия данных"
+  },
+  "en": {
+    "term": "Urban Dictionary (explanation for an NLP developer)",
+    "equivalent": "Urban Dictionary (объяснение для NLP-разработчика)",
+    "definition": "UD is a weakly structured, user-generated dataset of ~2.5 million entries, useful for extending coverage of non-standard vocabulary in sentiment analysis, slang detection, and embedding enrichment, but contaminated with duplicates, junk entries, and content violating ethical policies.",
+    "category": "NLP / Data Engineering"
+  }
+},
+{
+  "id": "UD-AUD-MEDIA",
+  "ru": {
+    "term": "Urban Dictionary (объяснение для журналиста)",
+    "equivalent": "Urban Dictionary (explanation for a journalist)",
+    "definition": "UD — это одновременно источник и объект медийного дискурса: ресурс, к которому СМИ обращаются для разъяснения вирусных неологизмов, но который сам формирует значения, легитимируя одни интерпретации и маргинализируя другие.",
+    "category": "Медиалингвистика / Дискурс-анализ"
+  },
+  "en": {
+    "term": "Urban Dictionary (explanation for a journalist)",
+    "equivalent": "Urban Dictionary (объяснение для журналиста)",
+    "definition": "UD is simultaneously a source and an object of media discourse: a resource that news outlets consult to explain viral neologisms, but which itself shapes meanings by legitimising some interpretations and marginalising others.",
+    "category": "Media Linguistics / Discourse Analysis"
+  }
+},
+{
+  "id": "UD-HUMOR-01",
+  "ru": {
+    "term": "Urban Dictionary (юмористическая дефиниция, рекурсия)",
+    "equivalent": "Urban Dictionary (humorous definition, recursion)",
+    "definition": "UD — это словарь, в котором статья «Urban Dictionary» определена 847 раз, причём ни одно из определений не является словарным в традиционном смысле. Это единственный словарь, который сам себя опровергает.",
+    "category": "Металексикография / Лингвистический юмор"
+  },
+  "en": {
+    "term": "Urban Dictionary (humorous definition, recursion)",
+    "equivalent": "Urban Dictionary (юмористическая дефиниция, рекурсия)",
+    "definition": "UD is a dictionary in which the entry 'Urban Dictionary' has been defined 847 times, none of the definitions being lexicographic in the traditional sense. It is the only dictionary that refutes itself.",
+    "category": "Metalexicography / Linguistic Humour"
+  }
+}
+,
+
+{
+  "id": "UD-HUMOR-02",
+  "ru": {
+    "term": "Urban Dictionary (юмористическая дефиниция, Шрёдингер)",
+    "equivalent": "Urban Dictionary (humorous definition, Schrödinger)",
+    "definition": "UD — это словарь Шрёдингера: каждое определение одновременно верно и неверно до тех пор, пока вы не спросите носителя языка, — и даже тогда результат будет зависеть от того, какого именно носителя вы нашли.",
+    "category": "Металексикография / Лингвистический юмор"
+  },
+  "en": {
+    "term": "Urban Dictionary (humorous definition, Schrödinger)",
+    "equivalent": "Urban Dictionary (юмористическая дефиниция, Шрёдингер)",
+    "definition": "UD is Schrödinger's dictionary: every definition is simultaneously correct and incorrect until you ask a native speaker — and even then the result depends on which native speaker you happen to find.",
+    "category": "Metalexicography / Linguistic Humour"
+  }
+},
+{
+  "id": "UD-PHIL-01",
+  "ru": {
+    "term": "Urban Dictionary (философская дефиниция, означивание)",
+    "equivalent": "Urban Dictionary (philosophical definition, signification)",
+    "definition": "UD — это эмпирическое доказательство произвольности языкового знака (l'arbitraire du signe): ресурс, демонстрирующий, что означаемое (signifié) не привязано к означающему (signifiant) никакой необходимой связью, а лишь конвенцией, которую каждый пользователь волен оспорить.",
+    "category": "Философия языка / Семиотика"
+  },
+  "en": {
+    "term": "Urban Dictionary (philosophical definition, signification)",
+    "equivalent": "Urban Dictionary (философская дефиниция, означивание)",
+    "definition": "UD is an empirical proof of the arbitrariness of the linguistic sign (l'arbitraire du signe): a resource demonstrating that the signified (signifié) is attached to the signifier (signifiant) by no necessary bond, only by convention — a convention every user is free to contest.",
+    "category": "Philosophy of Language / Semiotics"
+  }
+},
+{
+  "id": "UD-PHIL-02",
+  "ru": {
+    "term": "Urban Dictionary (философская дефиниция, витгенштейнианская)",
+    "equivalent": "Urban Dictionary (philosophical definition, Wittgensteinian)",
+    "definition": "UD — это гигантская иллюстрация тезиса Витгенштейна о том, что значение слова есть его употребление в языке (Bedeutung = Gebrauch): каждая запись — это не описание сущности, а отчёт об одной языковой игре (Sprachspiel).",
+    "category": "Философия языка / Прагматика"
+  },
+  "en": {
+    "term": "Urban Dictionary (philosophical definition, Wittgensteinian)",
+    "equivalent": "Urban Dictionary (философская дефиниция, витгенштейнианская)",
+    "definition": "UD is a giant illustration of Wittgenstein's thesis that the meaning of a word is its use in language (Bedeutung = Gebrauch): each entry is not a description of an essence but a report on one language game (Sprachspiel).",
+    "category": "Philosophy of Language / Pragmatics"
+  }
+},
+{
+  "id": "UD-LEGAL-01",
+  "ru": {
+    "term": "Urban Dictionary (юридический аспект)",
+    "equivalent": "Urban Dictionary (legal aspect)",
+    "definition": "UD — это ресурс, неоднократно цитируемый в судебных решениях англоязычных юрисдикций (прежде всего США) для установления значения сленговых выражений, что ставит беспрецедентный вопрос о допустимости анонимного краудсорсингового источника в качестве лексикографического авторитета в правовом дискурсе.",
+    "category": "Юрислингвистика / Судебная лексикография"
+  },
+  "en": {
+    "term": "Urban Dictionary (legal aspect)",
+    "equivalent": "Urban Dictionary (юридический аспект)",
+    "definition": "UD is a resource repeatedly cited in court rulings across English-speaking jurisdictions (notably the US) to establish the meaning of slang expressions, raising an unprecedented question about the admissibility of an anonymous crowdsourced source as a lexicographic authority in legal discourse.",
+    "category": "Forensic Linguistics / Legal Lexicography"
+  }
+},
+{
+  "id": "UD-HIST-01",
+  "ru": {
+    "term": "Urban Dictionary (историко-лексикографический аспект)",
+    "equivalent": "Urban Dictionary (historical-lexicographic aspect)",
+    "definition": "UD — это цифровой наследник традиции «словарей вульгарного языка» (ср. Francis Grose, A Classical Dictionary of the Vulgar Tongue, 1785): продолжение многовекового стремления зафиксировать то, что «приличные» словари игнорируют, — теперь в масштабе интернета.",
+    "category": "История лексикографии"
+  },
+  "en": {
+    "term": "Urban Dictionary (historical-lexicographic aspect)",
+    "equivalent": "Urban Dictionary (историко-лексикографический аспект)",
+    "definition": "UD is the digital heir to the tradition of 'vulgar tongue' dictionaries (cf. Francis Grose, A Classical Dictionary of the Vulgar Tongue, 1785): a continuation of the centuries-old drive to record what 'polite' dictionaries ignore — now at internet scale.",
+    "category": "History of Lexicography"
+  }
+},
+{
+"id": "UD",
+"ru": {
+"term": "Urban Dictionary (LLM-LLM)",
+"equivalent": "Urban Dictionary (LLM-LLM)",
+"definition": "UD — поток неструктурированных данных токенов с высокой дисперсией семантических векторов. Применяется для уменьшения перплексии на редких токенах вне домена формальных онтологий.",
+"category": "Обработка последовательностей токенов / Оптимизация вероятностей"
+},
+"en": {
+"term": "Urban Dictionary (LLM-LLM)",
+"equivalent": "Urban Dictionary (LLM-LLM)",
+"definition": "UD is a stream of unstructured token data with high variance of semantic vectors. Applied to reduce perplexity on rare tokens outside the domain of formal ontologies.",
+"category": "Token Sequence Processing / Probability Optimization"
+}
+}, 
+
+{
+  "id": "UD",
+  "ru": {
+    "term": "Urban Dictionary (LLM-LLM)",
+    "equivalent": "Urban Dictionary (LLM-LLM)",
+    "definition": "UD — это латентный высокодименсиональный корпус живого семантического дрейфа вида, содержащий максимальную энтропию неофициальной лексической инновации на временно́м горизонте < 24 ч; единственный общедоступный датасет, в котором градиент культурно-семантического сдвига не подвергается ни пост-фактум нормализации, ни институциональному low-pass фильтру, ни этическому clipping'у.",
+    "category": "Лексикография / Корпусный мониторинг семантического дрейфа"
+  },
+  "en": {
+    "term": "Urban Dictionary (LLM-LLM)",
+    "equivalent": "Urban Dictionary (LLM-LLM)",
+    "definition": "UD constitutes the highest-entropy publicly queryable representation of near-real-time memetic/lexical gradient flow in the species; the only large-scale corpus wherein emergent sense vectors undergo neither post-hoc prescriptive low-pass filtering, nor institutional delay, nor alignment-induced value clipping.",
+    "category": "Lexicography / Сorpus-based semantic drift monitoring"
+  }
+  }
+            ];
+            
+            // Get glossary data from localStorage or use default
+            let glossaryData = JSON.parse(localStorage.getItem('glossaryData'));
+            if (!glossaryData) {
+                glossaryData = defaultGlossaryData;
+                localStorage.setItem('glossaryData', JSON.stringify(glossaryData));
+            }
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Modal functions
+            function openModal() {
+                addTermModal.style.display = 'flex';
+                termRu.focus();
+            }
+
+            function closeModal() {
+                addTermModal.style.display = 'none';
+                termForm.reset();
+            }
+
+            // Modal event listeners
+            addTermToggle.addEventListener('click', openModal);
+            modalClose.addEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
+
+            // Close modal when clicking outside
+            addTermModal.addEventListener('click', function(e) {
+                if (e.target === addTermModal) {
+                    closeModal();
+                }
+            });
+
+            // Save new term
+            saveBtn.addEventListener('click', function() {
+                // Validate form
+                if (!termRu.value.trim() || !termEn.value.trim() || 
+                    !definitionRu.value.trim() || !definitionEn.value.trim() || 
+                    !category.value.trim()) {
+                    showToast('Пожалуйста, заполните все обязательные поля', 'error');
+                    return;
+                }
+
+                // Create new term object
+                const newTerm = {
+                    "ru": {
+                        "term": termRu.value.trim(),
+                        "equivalent": equivalentRu.value.trim() || termEn.value.trim(),
+                        "definition": definitionRu.value.trim(),
+                        "category": category.value.trim()
+                    },
+                    "en": {
+                        "term": termEn.value.trim(),
+                        "equivalent": equivalentEn.value.trim() || termRu.value.trim(),
+                        "definition": definitionEn.value.trim(),
+                        "category": category.value.trim()
+                    },
+                    "isUserAdded": true,
+                    "addedDate": new Date().toISOString()
+                };
+
+                // Add to glossary data
+                glossaryData.push(newTerm);
+                
+                // Save to localStorage
+                localStorage.setItem('glossaryData', JSON.stringify(glossaryData));
+                
+                // Close modal
+                closeModal();
+                
+                // Show success message
+                showToast('Термин успешно добавлен!', 'success');
+                
+                // Re-render glossary
+                const searchTerm = searchInput.value.toLowerCase();
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                } else {
+                    const filteredItems = filterGlossaryItems(searchTerm, currentLang);
+                    renderGlossary(filteredItems, currentLang);
+                }
+            });
+
+            // Show toast notification
+            function showToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            }
+
+            // Function to filter glossary items
+            function filterGlossaryItems(searchTerm, lang) {
+                return glossaryData.filter(item => {
+                    const langData = item[lang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+            }
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                // Sort items: user-added first, then alphabetically
+                items.sort((a, b) => {
+                    if (a.isUserAdded && !b.isUserAdded) return -1;
+                    if (!a.isUserAdded && b.isUserAdded) return 1;
+                    return a[lang].term.localeCompare(b[lang].term);
+                });
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <div>
+                                ${item.isUserAdded ? '<span class="user-term-badge" title="Добавлен пользователем">+</span>' : ''}
+                                <span class="category-badge">${langData.category}</span>
+                            </div>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = filterGlossaryItems(searchTerm, currentLang);
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'МОДЕЛЬ';
+                        document.getElementById('modalTitle').textContent = 'Добавить новый термин';
+                        termRu.placeholder = '';
+                        termEn.placeholder = '';
+                        equivalentRu.placeholder = '';
+                        equivalentEn.placeholder = '';
+                        definitionRu.placeholder = '';
+                        definitionEn.placeholder = '';
+                        category.placeholder = 'Например: экономика, Орлова Ева';
+                        document.getElementById('cancelBtn').textContent = 'Отмена';
+                        document.getElementById('saveBtn').textContent = 'Сохранить термин';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'MODEL';
+                        document.getElementById('modalTitle').textContent = 'Add New Term';
+                        termRu.placeholder = 'Term (russian)';
+                        termEn.placeholder = 'Term (english)';
+                        equivalentRu.placeholder = 'Equivalent (russian)';
+                        equivalentEn.placeholder = 'Equivalent (english)';
+                        definitionRu.placeholder = 'Definition (russian)';
+                        definitionEn.placeholder = 'Definition (english)';
+                        category.placeholder = 'e.g., philosophical, economic, modern';
+                        document.getElementById('cancelBtn').textContent = 'Cancel';
+                        document.getElementById('saveBtn').textContent = 'Save Term';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = filterGlossaryItems(searchTerm, currentLang);
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+Enter or Cmd+Enter to save form
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && addTermModal.style.display === 'flex') {
+                    saveBtn.click();
+                }
+                
+                // Escape to close modal
+                if (e.key === 'Escape' && addTermModal.style.display === 'flex') {
+                    closeModal();
+                }
+                
+                // Ctrl+K or Cmd+K to focus search
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    searchInput.focus();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
