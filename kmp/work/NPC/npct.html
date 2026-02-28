@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-primary:#ffffff;--bg-secondary:#f5f5f5;--bg-card:#ffffff;
+  --text-primary:#2c3e50;--text-secondary:#5a6c7e;--text-muted:#8a95a0;
+  --accent:#325980;--accent-light:#3498db;--accent-bg:rgba(52,152,219,.07);
+  --border:#dde3e9;--divider:#f1f1f1;--input-bg:#fafbfc;
+  --shadow:0 2px 12px rgba(50,89,128,.08);--shadow-lg:0 4px 24px rgba(50,89,128,.12);
+  --radius:10px;--transition:.25s ease;
+}
+[data-theme="dark"]{
+  --bg-primary:#0e1721;--bg-secondary:#152231;--bg-card:#1a2d40;
+  --text-primary:#d0dce8;--text-secondary:#8a9db2;--text-muted:#5e7389;
+  --accent:#5a9fd4;--accent-light:#6cb4e6;--accent-bg:rgba(90,159,212,.1);
+  --border:#253545;--divider:#1e3044;--input-bg:#12202e;
+  --shadow:0 2px 12px rgba(0,0,0,.3);--shadow-lg:0 4px 24px rgba(0,0,0,.4);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,'Helvetica Neue',Arial,sans-serif;
+  background:var(--bg-secondary);color:var(--text-primary);line-height:1.65;transition:background var(--transition),color var(--transition)}
+
+/* HEADER */
+header{background:var(--accent);color:#fff;padding:1.1rem 1.5rem;position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);transition:background var(--transition)}
+[data-theme="dark"] header{background:#15283a}
+.header-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.header-title h1{font-size:1.8rem;font-weight:700;letter-spacing:-.02em;line-height:1.3}
+.header-title p{font-size:.82rem;opacity:.82;margin-top:.15rem;font-weight:400}
+#themeToggle{background:rgba(255,255,255,.15);border:none;color:#fff;width:38px;height:38px;border-radius:50%;
+  cursor:pointer;font-size:1.15rem;display:flex;align-items:center;justify-content:center;
+  transition:background .2s;flex-shrink:0}
+#themeToggle:hover{background:rgba(255,255,255,.28)}
+
+/* NAV */
+nav{background:var(--bg-card);border-bottom:1px solid var(--border);position:sticky;top:62px;z-index:99;
+  transition:background var(--transition),border-color var(--transition)}
+.nav-inner{max-width:1100px;margin:0 auto;display:flex;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+.nav-inner::-webkit-scrollbar{display:none}
+.nav-btn{padding:.75rem 1.1rem;border:none;background:transparent;color:var(--text-secondary);
+  font-size:.84rem;font-weight:500;cursor:pointer;white-space:nowrap;position:relative;
+  transition:color .2s;font-family:inherit}
+.nav-btn:hover{color:var(--accent)}
+.nav-btn.active{color:var(--accent);font-weight:600}
+.nav-btn.active::after{content:'';position:absolute;bottom:0;left:.8rem;right:.8rem;height:2.5px;
+  background:var(--accent-light);border-radius:2px}
+.nav-btn .dot{display:inline-block;width:6px;height:6px;background:var(--accent-light);border-radius:50%;
+  margin-left:5px;vertical-align:middle;opacity:0;transition:opacity .2s}
+.nav-btn .dot.filled{opacity:1}
+
+/* MAIN */
+main{max-width:1100px;margin:0 auto;padding:1.5rem 1rem 3rem}
+
+/* SECTIONS */
+.tab-section{display:none;animation:fadeUp .35s ease}
+.tab-section.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* CARDS */
+.card{background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:2rem;margin-bottom:1.5rem;transition:background var(--transition),box-shadow var(--transition)}
+.card-accent{border-left:4px solid var(--accent-light)}
+
+/* INTRO */
+.intro-block{background:var(--accent-bg);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.4rem 1.6rem;margin-bottom:1.5rem;transition:background var(--transition),border-color var(--transition)}
+.intro-block p{font-size:.92rem;color:var(--text-secondary);line-height:1.7}
+.intro-block strong{color:var(--accent);font-weight:600}
+
+/* TASK HEADER */
+.task-num{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
+  background:var(--accent);color:#fff;border-radius:50%;font-size:.85rem;font-weight:700;margin-right:.7rem;flex-shrink:0}
+.task-heading{display:flex;align-items:center;margin-bottom:.6rem}
+.task-heading h2{font-size:1.2rem;color:var(--accent);font-weight:700}
+.task-desc{color:var(--text-secondary);font-size:.9rem;line-height:1.7;margin-bottom:1.6rem;
+  padding-bottom:1.2rem;border-bottom:1px solid var(--divider)}
+
+/* FORMS */
+.form-group{margin-bottom:1.4rem}
+.form-group label{display:block;font-size:.85rem;font-weight:600;color:var(--text-primary);margin-bottom:.4rem}
+.form-group .hint{font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;font-weight:400}
+textarea,input[type="text"],input[type="date"]{width:100%;padding:.7rem .9rem;border:1.5px solid var(--border);
+  border-radius:8px;font-size:.9rem;font-family:inherit;color:var(--text-primary);background:var(--input-bg);
+  transition:border-color .2s,background .2s,box-shadow .2s;line-height:1.6;resize:vertical}
+textarea:focus,input[type="text"]:focus{outline:none;border-color:var(--accent-light);
+  box-shadow:0 0 0 3px rgba(52,152,219,.12);background:var(--bg-card)}
+textarea{min-height:100px}
+textarea.tall{min-height:150px}
+.word-count{font-size:.75rem;color:var(--text-muted);text-align:right;margin-top:.25rem}
+
+/* PAIR GROUP */
+.pair-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.pair-arrow{display:flex;align-items:center;justify-content:center;color:var(--accent-light);font-size:1.3rem;
+  grid-column:1/-1;padding:0;margin:-.6rem 0}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.5rem;border:none;border-radius:8px;
+  font-size:.9rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+.btn-primary{background:var(--accent-light);color:#fff}
+.btn-primary:hover{background:var(--accent);box-shadow:0 4px 14px rgba(52,152,219,.3)}
+.btn-outline{background:transparent;color:var(--accent-light);border:1.5px solid var(--accent-light)}
+.btn-outline:hover{background:var(--accent-bg)}
+.btn-danger{background:transparent;color:#c0392b;border:1.5px solid #e8c4c0}
+.btn-danger:hover{background:rgba(192,57,43,.06)}
+.btn-group{display:flex;gap:.8rem;flex-wrap:wrap;margin-top:1.5rem}
+
+/* EXPORT */
+.export-info{display:flex;align-items:flex-start;gap:1rem;padding:1.2rem;background:var(--accent-bg);
+  border-radius:8px;margin-bottom:1.5rem}
+.export-info-icon{font-size:1.3rem;color:var(--accent);flex-shrink:0;line-height:1;margin-top:.1rem}
+.export-info p{font-size:.88rem;color:var(--text-secondary);line-height:1.6}
+
+/* AUTOSAVE */
+.save-status{position:fixed;bottom:1.2rem;right:1.2rem;background:var(--bg-card);color:var(--text-muted);
+  font-size:.78rem;padding:.45rem .9rem;border-radius:6px;box-shadow:var(--shadow);opacity:0;
+  transition:opacity .3s;pointer-events:none;z-index:50;border:1px solid var(--border)}
+.save-status.visible{opacity:1}
+
+/* PROGRESS */
+.progress-bar{width:100%;height:6px;background:var(--divider);border-radius:3px;overflow:hidden;margin-top:.8rem}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent-light),var(--accent));
+  border-radius:3px;transition:width .4s ease}
+
+/* FOOTER */
+footer{text-align:center;padding:2rem 1rem;color:var(--text-muted);font-size:.8rem;
+  border-top:1px solid var(--divider);transition:border-color var(--transition)}
+
+/* MOBILE */
+@media(max-width:768px){
+  .header-title h1{font-size:1.05rem}
+  .header-title p{font-size:.74rem}
+  header{padding:.85rem 1rem;top:0}
+  nav{top:54px}
+  .nav-btn{padding:.65rem .85rem;font-size:.8rem}
+  main{padding:1rem .7rem 2rem}
+  .card{padding:1.3rem 1.1rem}
+  .pair-row{grid-template-columns:1fr}
+  .task-heading h2{font-size:1.05rem}
+  .btn-group{flex-direction:column}
+  .btn{justify-content:center}
+}
+@media(max-width:480px){
+  .header-title h1{font-size:.95rem}
+  .card{padding:1.1rem .9rem;border-radius:8px}
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--divider)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+/* PRINT */
+@media print{header,nav,footer,.btn-group,.save-status{display:none!important}
+  .tab-section{display:block!important}main{max-width:100%}
+  .card{box-shadow:none;border:1px solid #ddd;break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-title">
+      <h1>Практикум: LLM-NPC</h1>
+     
+    </div>
+    <button id="themeToggle" title="Переключить тему" aria-label="Переключить тему">☀️</button>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-inner">
+    <button class="nav-btn active" data-tab="info">Студент</button>
+    <button class="nav-btn" data-tab="task1">Задание 1<span class="dot" id="dot1"></span></button>
+    <button class="nav-btn" data-tab="task2">Задание 2<span class="dot" id="dot2"></span></button>
+    <button class="nav-btn" data-tab="task3">Задание 3<span class="dot" id="dot3"></span></button>
+    <button class="nav-btn" data-tab="task4">Задание 4<span class="dot" id="dot4"></span></button>
+    <button class="nav-btn" data-tab="task5">Задание 5<span class="dot" id="dot5"></span></button>
+    <button class="nav-btn" data-tab="export">Экспорт</button>
+  </div>
+</nav>
+
+<main>
+<!-- ==================== СТУДЕНТ ==================== -->
+<section class="tab-section active" id="sec-info">
+  <div class="intro-block">
+    <p><strong>NPC (Non-Player Character)</strong> в контексте данного курса &mdash; это управляемый, конфигурируемый агент образовательного взаимодействия на основе большой языковой модели (LLM). В отличие от стихийного использования чат-ботов, подход LLM-NPC предполагает осознанное проектирование роли, поведения и ограничений ИИ-собеседника через систему промптов. Выполняя задания практикума, вы научитесь конструировать эффективные промпты, критически оценивать ответы LLM и использовать ИИ как инструмент профессионального развития лингвиста и преподавателя.</p>
+  </div>
+  <div class="card">
+    <h2 style="color:var(--accent);font-size:1.15rem;margin-bottom:1.2rem">Информация о студенте</h2>
+    <div class="form-group">
+      <label for="student_name">Фамилия Имя</label>
+      <input type="text" id="student_name" placeholder="Орлова Ева" autocomplete="name">
+    </div>
+    <div class="form-group">
+      <label for="student_group">Группа</label>
+      <input type="text" id="student_group" placeholder="300">
+    </div>
+    <div class="form-group">
+      <label for="student_date">Дата выполнения</label>
+      <input type="date" id="student_date">
+    </div>
+    <div class="form-group">
+      <label for="student_llm">Используемая LLM</label>
+      <input type="text" id="student_llm" placeholder="ChatGPT / Claude / DeepSeek / ...">
+    </div>
+    <div style="margin-top:1rem">
+      <label style="font-size:.85rem;font-weight:600;color:var(--text-primary)">Общий прогресс</label>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <p style="font-size:.78rem;color:var(--text-muted);margin-top:.3rem" id="progressText">0 из 5 заданий начато</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ЗАДАНИЕ 1 ==================== -->
+<section class="tab-section" id="sec-task1">
+  <div class="card card-accent">
+    <div class="task-heading"><span class="task-num">1</span><h2>Конструирование ролей</h2></div>
+    <div class="task-desc">
+      Выберите одну учебную ситуацию из вашей практики (подготовка к экзамену, работа над переводом, анализ текста, подготовка к дискуссии и др.). Напишите три промпта, задающих LLM роли различных педагогических агентов (например: наставник, экзаменатор, коллега-переводчик, носитель языка, методист). Протестируйте каждый промпт и сохраните ключевые фрагменты ответов. Сравните результаты: какая роль оказалась наиболее продуктивной для решения выбранной учебной задачи и почему?
+    </div>
+    <div class="form-group">
+      <label for="t1_situation">Описание учебной ситуации</label>
+      <textarea id="t1_situation" rows="3" placeholder="Опишите выбранную учебную ситуацию: контекст, цель, уровень владения языком..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t1_prompt1">Промпт 1 &mdash; первая педагогическая роль</label>
+      <textarea id="t1_prompt1" rows="4" placeholder="Полный текст промпта с указанием роли..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t1_result1">Ответ LLM на промпт 1 (ключевые фрагменты)</label>
+      <textarea id="t1_result1" rows="4" placeholder="Скопируйте или опишите наиболее значимые фрагменты ответа..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t1_prompt2">Промпт 2 &mdash; вторая педагогическая роль</label>
+      <textarea id="t1_prompt2" rows="4" placeholder="Полный текст промпта с указанием роли..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t1_result2">Ответ LLM на промпт 2 (ключевые фрагменты)</label>
+      <textarea id="t1_result2" rows="4" placeholder="Скопируйте или опишите наиболее значимые фрагменты ответа..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t1_prompt3">Промпт 3 &mdash; третья педагогическая роль</label>
+      <textarea id="t1_prompt3" rows="4" placeholder="Полный текст промпта с указанием роли..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t1_result3">Ответ LLM на промпт 3 (ключевые фрагменты)</label>
+      <textarea id="t1_result3" rows="4" placeholder="Скопируйте или опишите наиболее значимые фрагменты ответа..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t1_analysis">Сравнительный анализ: какая роль наиболее продуктивна и почему?</label>
+      <textarea id="t1_analysis" rows="5" class="tall" placeholder="Проанализируйте три варианта: качество ответов, релевантность, глубина, практическая польза..."></textarea>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ЗАДАНИЕ 2 ==================== -->
+<section class="tab-section" id="sec-task2">
+  <div class="card card-accent">
+    <div class="task-heading"><span class="task-num">2</span><h2>От слабого промпта к сильному</h2></div>
+    <div class="task-desc">
+      Возьмите три &laquo;слабых&raquo; промпта из своего опыта общения с LLM (или сформулируйте типичные неэффективные запросы). Трансформируйте каждый в &laquo;сильный&raquo; промпт, последовательно добавив компоненты: <em>роль, контекст, задача, формат ответа, ограничения</em>. Протестируйте оба варианта каждой пары и проанализируйте разницу в качестве, релевантности и полезности ответов.
+    </div>
+    <h3 style="font-size:.95rem;color:var(--accent);margin-bottom:1rem">Пара 1</h3>
+    <div class="pair-row">
+      <div class="form-group"><label for="t2_weak1">Слабый промпт</label><textarea id="t2_weak1" rows="3" placeholder="Исходный неэффективный промпт..."></textarea></div>
+      <div class="form-group"><label for="t2_strong1">Сильный промпт</label><textarea id="t2_strong1" rows="3" placeholder="Трансформированный промпт (роль + контекст + задача + формат + ограничения)..."></textarea></div>
+    </div>
+    <div class="form-group"><label for="t2_diff1">Разница в ответах</label><textarea id="t2_diff1" rows="3" placeholder="Как изменился ответ LLM?"></textarea></div>
+    <h3 style="font-size:.95rem;color:var(--accent);margin:1rem 0">Пара 2</h3>
+    <div class="pair-row">
+      <div class="form-group"><label for="t2_weak2">Слабый промпт</label><textarea id="t2_weak2" rows="3" placeholder="Исходный неэффективный промпт..."></textarea></div>
+      <div class="form-group"><label for="t2_strong2">Сильный промпт</label><textarea id="t2_strong2" rows="3" placeholder="Трансформированный промпт..."></textarea></div>
+    </div>
+    <div class="form-group"><label for="t2_diff2">Разница в ответах</label><textarea id="t2_diff2" rows="3" placeholder="Как изменился ответ LLM?"></textarea></div>
+    <h3 style="font-size:.95rem;color:var(--accent);margin:1rem 0">Пара 3</h3>
+    <div class="pair-row">
+      <div class="form-group"><label for="t2_weak3">Слабый промпт</label><textarea id="t2_weak3" rows="3" placeholder="Исходный неэффективный промпт..."></textarea></div>
+      <div class="form-group"><label for="t2_strong3">Сильный промпт</label><textarea id="t2_strong3" rows="3" placeholder="Трансформированный промпт..."></textarea></div>
+    </div>
+    <div class="form-group"><label for="t2_diff3">Разница в ответах</label><textarea id="t2_diff3" rows="3" placeholder="Как изменился ответ LLM?"></textarea></div>
+    <div class="form-group">
+      <label for="t2_analysis">Общий анализ: закономерности и выводы</label>
+      <textarea id="t2_analysis" rows="5" class="tall" placeholder="Какие компоненты сильного промпта оказали наибольшее влияние? Какие закономерности вы выявили?"></textarea>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ЗАДАНИЕ 3 ==================== -->
+<section class="tab-section" id="sec-task3">
+  <div class="card card-accent">
+    <div class="task-heading"><span class="task-num">3</span><h2>Обучение через преподавание</h2></div>
+    <div class="task-desc">
+      Задайте LLM роль ученика определённого уровня (A1&ndash;C1), изучающего язык, который вы преподаёте или будете преподавать. Объясните ему выбранную грамматическую (или лексическую) тему. Проведите обучающий диалог, отвечая на вопросы &laquo;ученика&raquo;. Оцените: помог ли вам этот опыт глубже понять тему? Какие вопросы &laquo;ученика&raquo; оказались неожиданными или заставили вас пересмотреть способ объяснения?
+    </div>
+    <div class="form-group">
+      <label for="t3_topic">Целевой язык, уровень ученика и тема</label>
+      <textarea id="t3_topic" rows="2" placeholder="Например: английский язык, уровень B1, тема — Present Perfect vs Past Simple"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t3_prompt">Промпт: задание роли ученика</label>
+      <textarea id="t3_prompt" rows="4" placeholder="Полный текст промпта, определяющего роль, уровень, поведение и типичные ошибки «ученика»..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t3_dialogue">Ход взаимодействия (ключевые фрагменты диалога)</label>
+      <textarea id="t3_dialogue" rows="6" class="tall" placeholder="Приведите наиболее показательные фрагменты вашего обучающего диалога..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t3_questions">Неожиданные вопросы «ученика»</label>
+      <textarea id="t3_questions" rows="4" placeholder="Какие вопросы вас удивили? Были ли вопросы, на которые вам было трудно ответить?"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t3_reflection">Рефлексия: чему вы научились?</label>
+      <textarea id="t3_reflection" rows="5" class="tall" placeholder="Помог ли опыт «преподавания» лучше понять тему? Что бы вы изменили в своём объяснении? Как этот метод можно использовать в подготовке к занятиям?"></textarea>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ЗАДАНИЕ 4 ==================== -->
+<section class="tab-section" id="sec-task4">
+  <div class="card card-accent">
+    <div class="task-heading"><span class="task-num">4</span><h2>Критический анализ обратной связи</h2></div>
+    <div class="task-desc">
+      Напишите текст на изучаемом языке (100&ndash;150 слов). Попросите LLM проверить его в трёх различных ролях: (а)&nbsp;строгий академический корректор, (б)&nbsp;дружелюбный тьютор, (в)&nbsp;сократический собеседник, задающий наводящие вопросы. Сравните три варианта обратной связи по критериям: детальность, тон, полезность для обучения, мотивационный эффект. Какой подход оказался наиболее эффективным для вашего уровня и целей?
+    </div>
+    <div class="form-group">
+      <label for="t4_text">Ваш текст на изучаемом языке</label>
+      <div class="hint">Рекомендуемый объём: 100&ndash;150 слов</div>
+      <textarea id="t4_text" rows="5" placeholder="Напишите текст на целевом языке..."></textarea>
+      <div class="word-count" id="t4_wc">0 слов</div>
+    </div>
+    <div class="form-group">
+      <label for="t4_corrector">Обратная связь: строгий академический корректор</label>
+      <textarea id="t4_corrector" rows="5" placeholder="Вставьте или опишите ответ LLM в роли строгого корректора..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t4_tutor">Обратная связь: дружелюбный тьютор</label>
+      <textarea id="t4_tutor" rows="5" placeholder="Вставьте или опишите ответ LLM в роли дружелюбного тьютора..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t4_socratic">Обратная связь: сократический собеседник</label>
+      <textarea id="t4_socratic" rows="5" placeholder="Вставьте или опишите ответ LLM в роли сократического собеседника..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t4_analysis">Сравнительный анализ трёх подходов</label>
+      <textarea id="t4_analysis" rows="5" class="tall" placeholder="Сравните подходы по критериям: детальность, тон, полезность, мотивационный эффект. Какой вариант наиболее эффективен для вашего уровня и целей?"></textarea>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ЗАДАНИЕ 5 ==================== -->
+<section class="tab-section" id="sec-task5">
+  <div class="card card-accent">
+    <div class="task-heading"><span class="task-num">5</span><h2>Анализ ограничений LLM</h2></div>
+    <div class="task-desc">
+      Проведите диалог с LLM на целевом языке (не менее 7 минут). Затем критически проанализируйте диалог по следующим параметрам: проявляла ли модель угодливость (sycophancy)? Были ли фактические неточности или галлюцинации? Давала ли модель спорные рекомендации по словоупотреблению или грамматике? Насколько естественной была речь модели? Как вы можете усовершенствовать свои промпты, чтобы минимизировать выявленные проблемы?
+    </div>
+    <div class="form-group">
+      <label for="t5_prompt">Промпт для инициирования диалога</label>
+      <textarea id="t5_prompt" rows="4" placeholder="Полный текст промпта, задающего контекст, роль и тему диалога..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t5_dialogue">Ключевые фрагменты диалога</label>
+      <textarea id="t5_dialogue" rows="6" class="tall" placeholder="Приведите наиболее показательные фрагменты (в том числе проблемные места)..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t5_problems">Выявленные проблемы</label>
+      <div class="hint">Угодливость, фактические неточности, галлюцинации, спорные рекомендации, неестественность речи и др.</div>
+      <textarea id="t5_problems" rows="5" placeholder="Подробно опишите каждую выявленную проблему с примерами из диалога..."></textarea>
+    </div>
+    <div class="form-group">
+      <label for="t5_strategies">Стратегии улучшения промптов</label>
+      <textarea id="t5_strategies" rows="5" class="tall" placeholder="Какие конкретные изменения в промптах помогут минимизировать выявленные проблемы? Предложите улучшенные формулировки..."></textarea>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== ЭКСПОРТ ==================== -->
+<section class="tab-section" id="sec-export">
+  <div class="card">
+    <h2 style="color:var(--accent);font-size:1.15rem;margin-bottom:1rem">Экспорт отчёта</h2>
+    <div class="export-info">
+      <div class="export-info-icon">i</div>
+      <p>Отчёт будет сформирован в виде HTML-документа, содержащего ваши данные и ответы по всем пяти заданиям. Файл можно открыть в браузере или распечатать. Данные автоматически сохраняются в памяти браузера — вы можете вернуться к работе позже.</p>
+    </div>
+    <div id="exportPreview" style="margin-bottom:1rem"></div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="exportReport()">Экспортировать в HTML</button>
+      <button class="btn btn-danger" onclick="clearAllData()">Очистить все данные</button>
+    </div>
+  </div>
+</section>
+</main>
+
+<div class="save-status" id="saveStatus">Данные сохранены</div>
+
+<footer>
+  <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ====== FIELD REGISTRY ====== */
+  const fields = {
+    info: ['student_name','student_group','student_date','student_llm'],
+    task1: ['t1_situation','t1_prompt1','t1_result1','t1_prompt2','t1_result2','t1_prompt3','t1_result3','t1_analysis'],
+    task2: ['t2_weak1','t2_strong1','t2_diff1','t2_weak2','t2_strong2','t2_diff2','t2_weak3','t2_strong3','t2_diff3','t2_analysis'],
+    task3: ['t3_topic','t3_prompt','t3_dialogue','t3_questions','t3_reflection'],
+    task4: ['t4_text','t4_corrector','t4_tutor','t4_socratic','t4_analysis'],
+    task5: ['t5_prompt','t5_dialogue','t5_problems','t5_strategies']
+  };
+  const allFields = Object.values(fields).flat();
+
+  const taskLabels = {
+    t1_situation:'Описание учебной ситуации', t1_prompt1:'Промпт 1 — первая педагогическая роль',
+    t1_result1:'Ответ LLM на промпт 1', t1_prompt2:'Промпт 2 — вторая педагогическая роль',
+    t1_result2:'Ответ LLM на промпт 2', t1_prompt3:'Промпт 3 — третья педагогическая роль',
+    t1_result3:'Ответ LLM на промпт 3', t1_analysis:'Сравнительный анализ',
+    t2_weak1:'Слабый промпт 1', t2_strong1:'Сильный промпт 1', t2_diff1:'Разница в ответах (пара 1)',
+    t2_weak2:'Слабый промпт 2', t2_strong2:'Сильный промпт 2', t2_diff2:'Разница в ответах (пара 2)',
+    t2_weak3:'Слабый промпт 3', t2_strong3:'Сильный промпт 3', t2_diff3:'Разница в ответах (пара 3)',
+    t2_analysis:'Общий анализ',
+    t3_topic:'Язык, уровень и тема', t3_prompt:'Промпт: роль ученика',
+    t3_dialogue:'Фрагменты диалога', t3_questions:'Неожиданные вопросы «ученика»', t3_reflection:'Рефлексия',
+    t4_text:'Текст на изучаемом языке', t4_corrector:'Строгий корректор', t4_tutor:'Дружелюбный тьютор',
+    t4_socratic:'Сократический собеседник', t4_analysis:'Сравнительный анализ',
+    t5_prompt:'Промпт для диалога', t5_dialogue:'Фрагменты диалога',
+    t5_problems:'Выявленные проблемы', t5_strategies:'Стратегии улучшения'
+  };
+
+  const taskTitles = {
+    task1:'Задание 1. Конструирование ролей',
+    task2:'Задание 2. От слабого промпта к сильному',
+    task3:'Задание 3. Обучение через преподавание',
+    task4:'Задание 4. Критический анализ обратной связи',
+    task5:'Задание 5. Анализ ограничений LLM'
+  };
+
+  const taskDescs = {
+    task1:'Выберите учебную ситуацию и протестируйте три педагогические роли LLM-NPC.',
+    task2:'Трансформируйте слабые промпты в сильные, добавив роль, контекст, задачу, формат, ограничения.',
+    task3:'Задайте LLM роль ученика и проведите обучающий диалог по грамматической теме.',
+    task4:'Получите обратную связь на свой текст от LLM в трёх различных ролях и сравните подходы.',
+    task5:'Проведите диалог с LLM и критически проанализируйте ограничения модели.'
+  };
+
+  /* ====== THEME ====== */
+  const html = document.documentElement;
+  const themeBtn = document.getElementById('themeToggle');
+  const savedTheme = localStorage.getItem('npc_theme') || 'light';
+  html.setAttribute('data-theme', savedTheme);
+  themeBtn.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+  themeBtn.addEventListener('click', () => {
+    const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    html.setAttribute('data-theme', next);
+    themeBtn.textContent = next === 'dark' ? '🌙' : '☀️';
+    localStorage.setItem('npc_theme', next);
+  });
+
+  /* ====== TABS ====== */
+  const navBtns = document.querySelectorAll('.nav-btn');
+  const sections = document.querySelectorAll('.tab-section');
+  function showTab(tabId) {
+    sections.forEach(s => s.classList.remove('active'));
+    navBtns.forEach(b => b.classList.remove('active'));
+    const sec = document.getElementById('sec-' + tabId);
+    const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+    if (sec) sec.classList.add('active');
+    if (btn) { btn.classList.add('active'); btn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); }
+    if (tabId === 'export') updateExportPreview();
+  }
+  navBtns.forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+
+  /* ====== AUTO-SAVE ====== */
+  let saveTimer;
+  const saveStatus = document.getElementById('saveStatus');
+  function save() {
+    const data = {};
+    allFields.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
+    localStorage.setItem('npc_data', JSON.stringify(data));
+    saveStatus.classList.add('visible');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveStatus.classList.remove('visible'), 1500);
+    updateProgress();
+  }
+  function load() {
+    const raw = localStorage.getItem('npc_data');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      allFields.forEach(id => { const el = document.getElementById(id); if (el && data[id]) el.value = data[id]; });
+    } catch(e) {}
+    updateProgress();
+    updateWordCount();
+  }
+  allFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => { save(); if (id === 't4_text') updateWordCount(); });
+  });
+
+  /* ====== SET DATE ====== */
+  const dateEl = document.getElementById('student_date');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0,10);
+
+  /* ====== WORD COUNT ====== */
+  function updateWordCount() {
+    const ta = document.getElementById('t4_text');
+    const wc = document.getElementById('t4_wc');
+    if (!ta || !wc) return;
+    const words = ta.value.trim() ? ta.value.trim().split(/\s+/).length : 0;
+    wc.textContent = words + ' ' + pluralize(words, 'слово','слова','слов');
+    wc.style.color = (words >= 100 && words <= 150) ? '#27ae60' : (words > 150 ? '#c0392b' : 'var(--text-muted)');
+  }
+  function pluralize(n, one, few, many) {
+    const abs = Math.abs(n) % 100;
+    const last = abs % 10;
+    if (abs > 10 && abs < 20) return many;
+    if (last > 1 && last < 5) return few;
+    if (last === 1) return one;
+    return many;
+  }
+
+  /* ====== PROGRESS ====== */
+  function updateProgress() {
+    let started = 0;
+    ['task1','task2','task3','task4','task5'].forEach((tk, i) => {
+      const has = fields[tk].some(id => { const el = document.getElementById(id); return el && el.value.trim().length > 0; });
+      const dot = document.getElementById('dot' + (i+1));
+      if (dot) dot.classList.toggle('filled', has);
+      if (has) started++;
+    });
+    const pct = Math.round((started / 5) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressText').textContent = started + ' из 5 заданий начато';
+  }
+
+  /* ====== EXPORT PREVIEW ====== */
+  function updateExportPreview() {
+    const name = document.getElementById('student_name').value || '(не указано)';
+    const group = document.getElementById('student_group').value || '(не указано)';
+    const date = document.getElementById('student_date').value || '(не указано)';
+    const llm = document.getElementById('student_llm').value || '(не указано)';
+    let filled = 0, total = 0;
+    ['task1','task2','task3','task4','task5'].forEach(tk => {
+      fields[tk].forEach(id => {
+        total++;
+        const el = document.getElementById(id);
+        if (el && el.value.trim()) filled++;
+      });
+    });
+    const div = document.getElementById('exportPreview');
+    div.innerHTML = `<div style="padding:1rem;background:var(--accent-bg);border-radius:8px;font-size:.88rem;color:var(--text-secondary);line-height:1.7">
+      <strong>Студент:</strong> ${esc(name)}<br>
+      <strong>Группа:</strong> ${esc(group)}<br>
+      <strong>Дата:</strong> ${esc(date)}<br>
+      <strong>LLM:</strong> ${esc(llm)}<br>
+      <strong>Заполнено полей:</strong> ${filled} из ${total}
+    </div>`;
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  /* ====== EXPORT ====== */
+  window.exportReport = function() {
+    const name = document.getElementById('student_name').value || 'Студент';
+    const group = document.getElementById('student_group').value || '';
+    const date = document.getElementById('student_date').value || '';
+    const llm = document.getElementById('student_llm').value || '';
+
+    let html = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
+<title>Отчёт — ${esc(name)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;
+  color:#2c3e50;line-height:1.7;padding:2rem;max-width:900px;margin:0 auto;background:#fff}
+h1{font-size:1.4rem;color:#325980;margin-bottom:.3rem}
+h2{font-size:1.1rem;color:#325980;margin:2rem 0 .5rem;padding-top:1.5rem;border-top:2px solid #e8edf2}
+h3{font-size:.92rem;color:#3498db;margin:1.2rem 0 .3rem}
+.meta{color:#6c7a89;font-size:.88rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid #325980}
+.field-label{font-weight:600;font-size:.85rem;color:#5a6c7e;margin-top:1rem;margin-bottom:.2rem}
+.field-value{background:#f8f9fa;border-left:3px solid #3498db;padding:.6rem 1rem;margin-bottom:.8rem;
+  border-radius:0 6px 6px 0;white-space:pre-wrap;font-size:.9rem;line-height:1.65}
+.empty{color:#aab5c1;font-style:italic;background:#fafafa;border-left-color:#ddd}
+.footer-print{margin-top:2.5rem;padding-top:1rem;border-top:1px solid #e0e0e0;text-align:center;
+  color:#aab5c1;font-size:.78rem}
+@media print{body{padding:1rem;font-size:13px}h2{break-before:auto;page-break-after:avoid}.field-value{break-inside:avoid}}
+</style></head><body>
+<h1>Отчёт по практикуму &laquo;LLM-NPC в обучении языкам&raquo;</h1>
+<div class="meta"><strong>Студент:</strong> ${esc(name)}`;
+    if (group) html += ` &nbsp;|&nbsp; <strong>Группа:</strong> ${esc(group)}`;
+    if (date) html += ` &nbsp;|&nbsp; <strong>Дата:</strong> ${esc(date)}`;
+    if (llm) html += `<br><strong>Используемая LLM:</strong> ${esc(llm)}`;
+    html += `</div>`;
+
+    ['task1','task2','task3','task4','task5'].forEach(tk => {
+      html += `<h2>${esc(taskTitles[tk])}</h2><p style="color:#6c7a89;font-size:.85rem;margin-bottom:.8rem">${esc(taskDescs[tk])}</p>`;
+      fields[tk].forEach(id => {
+        const el = document.getElementById(id);
+        const val = el ? el.value.trim() : '';
+        const label = taskLabels[id] || id;
+        html += `<div class="field-label">${esc(label)}</div>`;
+        html += val
+          ? `<div class="field-value">${esc(val)}</div>`
+          : `<div class="field-value empty">Не заполнено</div>`;
+      });
+    });
+
+    html += `<div class="footer-print">Курс &laquo;ИИ в профессиональной деятельности&raquo; &bull; Практикум LLM-NPC &bull; ${esc(date)}</div>`;
+    html += `</body></html>`;
+
+    const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = name.replace(/[^a-zA-Zа-яА-ЯёЁ0-9_\- ]/g,'').trim().replace(/\s+/g,'_') || 'report';
+    a.href = url;
+    a.download = `Отчёт_LLM-NPC_${safeName}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  /* ====== CLEAR ====== */
+  window.clearAllData = function() {
+    if (!confirm('Вы уверены, что хотите удалить все введённые данные? Это действие необратимо.')) return;
+    allFields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('student_date').value = new Date().toISOString().slice(0,10);
+    localStorage.removeItem('npc_data');
+    updateProgress();
+    updateWordCount();
+    showTab('info');
+  };
+
+  /* ====== INIT ====== */
+  load();
+})();
+</script>
+</body>
+</html>
