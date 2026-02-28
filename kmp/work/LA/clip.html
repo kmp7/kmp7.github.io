@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+:root {
+  --bg-primary:#ffffff;--bg-secondary:#f5f5f5;--bg-card:#ffffff;
+  --header-bg:#325980;--header-text:#ffffff;
+  --text-primary:#2c3e50;--text-secondary:#5a6a7a;
+  --heading-color:#325980;--accent:#3498db;--accent-hover:#2980b9;
+  --accent-light:rgba(52,152,219,.1);--divider:#f1f1f1;--border:#e0e0e0;
+  --shadow:0 2px 12px rgba(0,0,0,.07);--shadow-hover:0 4px 20px rgba(0,0,0,.11);
+  --input-bg:#ffffff;--input-border:#d0d7de;--input-focus:#3498db;
+  --tag-bg:#e8f4fd;--tag-text:#325980;--progress-bg:#e0e0e0;
+  --progress-fill:#3498db;--nav-bg:#2a4d6e;
+  --quote-border:#3498db;--quote-bg:#f8fbff;
+}
+[data-theme="dark"]{
+  --bg-primary:#0d1117;--bg-secondary:#161b22;--bg-card:#1c2128;
+  --header-bg:#1a2940;--header-text:#e0e0e0;
+  --text-primary:#d0d7de;--text-secondary:#8b949e;
+  --heading-color:#79b8e8;--accent:#58a6d4;--accent-hover:#79b8e8;
+  --accent-light:rgba(88,166,212,.12);--divider:#30363d;--border:#30363d;
+  --shadow:0 2px 12px rgba(0,0,0,.3);--shadow-hover:0 4px 20px rgba(0,0,0,.4);
+  --input-bg:#21262d;--input-border:#30363d;--input-focus:#58a6d4;
+  --tag-bg:rgba(88,166,212,.15);--tag-text:#79b8e8;--progress-bg:#30363d;
+  --progress-fill:#58a6d4;--nav-bg:#131a24;
+  --quote-border:#58a6d4;--quote-bg:rgba(88,166,212,.05);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px; scroll-padding-top: 164px;}
+body{font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, Helvetica, sans-serif; background:var(--bg-secondary);color:var(--text-primary);line-height:1.72;transition:background .3s,color .3s;min-height:100vh}
+h1,h2,h3{color:var(--heading-color);line-height:1.32}
+h1{font-size:2rem;font-weight:800;font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, Helvetica, sans-serif}
+h2{font-size:1.45rem;font-weight:700;margin-bottom:1rem;font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, Helvetica, sans-serif}
+h3{font-size:1.1rem;font-weight:600;margin-bottom:.7rem}
+p{margin-bottom:1rem}
+a{color:var(--accent);text-decoration:none;transition:color .2s}
+a:hover{color:var(--accent-hover);text-decoration:underline}
+
+
+header{background:var(--header-bg);color:var(--header-text);position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.header-main{display:flex;align-items:center;justify-content:space-between;padding:.9rem 2rem;max-width:1100px;margin:0 auto}
+.header-title h1{color:var(--header-text);font-size:1.55rem;margin:0;letter-spacing:1px}
+.header-title .subtitle{font-size:.82rem;opacity:.85;font-weight:400;margin-top:2px}
+.theme-toggle{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:50%;width:40px;height:40px;font-size:1.15rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s;flex-shrink:0}
+.theme-toggle:hover{background:rgba(255,255,255,.26);transform:rotate(18deg)}
+
+nav{background:var(--nav-bg);overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
+nav::-webkit-scrollbar{height:3px}
+nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.3);border-radius:3px}
+.nav-inner{display:flex;max-width:1100px;margin:0 auto;padding:0 1rem}
+nav a{color:rgba(255,255,255,.72);padding:.7rem 1rem;font-size:.8rem;font-weight:500;text-decoration:none;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+nav a:hover,nav a.active{color:#fff;border-bottom-color:var(--accent);text-decoration:none}
+
+main{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
+
+.section{background:var(--bg-card);border-radius:12px;padding:2rem;margin-bottom:2rem;box-shadow:var(--shadow);border:1px solid var(--border);transition:all .3s;animation:fadeIn .5s ease}
+.section:hover{box-shadow:var(--shadow-hover)}
+  
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.section-number{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--accent);color:#fff;border-radius:50%;font-size:.82rem;font-weight:700;margin-right:.7rem;flex-shrink:0}
+.section-header{display:flex;align-items:center;margin-bottom:1.4rem;padding-bottom:.9rem;border-bottom:2px solid var(--divider)}
+.section-header h2{margin:0}
+
+.hero{background:linear-gradient(135deg,var(--header-bg),#3a7cbd);color:#fff;border-radius:12px;padding:2.8rem 2.5rem;margin-bottom:2rem;text-align:center}
+.hero h1{color:#fff;font-size:2.4rem;margin-bottom:.5rem}
+.hero .hero-subtitle{font-size:1.05rem;opacity:.9;margin-bottom:1.2rem;font-weight:300}
+.hero .hero-desc{font-size:.93rem;opacity:.85;max-width:700px;margin:0 auto;line-height:1.65}
+.name-input-group{display:flex;align-items:center;gap:1rem;margin:1.8rem auto 0;max-width:480px}
+.name-input-group label{font-weight:600;white-space:nowrap;font-size:.92rem}
+.name-input-group input{flex:1;padding:.65rem 1rem;border:2px solid rgba(255,255,255,.3);border-radius:8px;background:rgba(255,255,255,.14);color:#fff;font-size:.97rem;font-family:inherit;transition:all .3s}
+.name-input-group input::placeholder{color:rgba(255,255,255,.48)}
+.name-input-group input:focus{outline:none;border-color:rgba(255,255,255,.6);background:rgba(255,255,255,.24)}
+
+.info-block{background:var(--quote-bg);border-left:4px solid var(--quote-border);padding:1.2rem 1.4rem;border-radius:0 8px 8px 0;margin:1.2rem 0}
+.info-block p:last-child{margin-bottom:0}
+
+.def-list{list-style:none;padding:0}
+.def-list li{padding:.7rem 0;border-bottom:1px solid var(--divider);display:flex;align-items:flex-start;gap:.7rem}
+.def-list li:last-child{border-bottom:none}
+.def-marker{min-width:8px;height:8px;background:var(--accent);border-radius:50%;margin-top:.55rem;flex-shrink:0}
+.def-term{font-weight:600;color:var(--heading-color)}
+
+.tag-group{display:flex;flex-wrap:wrap;gap:.45rem;margin:1rem 0}
+.tag{background:var(--tag-bg);color:var(--tag-text);padding:.32rem .8rem;border-radius:20px;font-size:.8rem;font-weight:500}
+
+.collapsible{border:1px solid var(--border);border-radius:8px;margin:1rem 0;overflow:hidden}
+.collapsible-header{display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.2rem;background:var(--bg-secondary);cursor:pointer;transition:background .2s;user-select:none}
+.collapsible-header:hover{background:var(--divider)}
+.collapsible-header h3{margin:0;font-size:.97rem;font-weight:600}
+.collapsible-arrow{font-size:.75rem;transition:transform .3s;color:var(--text-secondary)}
+.collapsible.open .collapsible-arrow{transform:rotate(180deg)}
+.collapsible-body{max-height:0;overflow:hidden;transition:max-height .4s ease,padding .3s;padding:0 1.2rem}
+.collapsible.open .collapsible-body{max-height:2200px;padding:1.2rem}
+
+.reflection-group{margin:1.5rem 0}
+.reflection-group label{display:block;font-weight:600;margin-bottom:.45rem;color:var(--heading-color);font-size:.93rem;line-height:1.5}
+.reflection-group .hint{display:block;font-weight:400;color:var(--text-secondary);font-size:.84rem;margin-bottom:.7rem;font-style:italic}
+textarea{width:100%;min-height:115px;padding:.95rem 1rem;border:2px solid var(--input-border);border-radius:8px;background:var(--input-bg);color:var(--text-primary);font-family:inherit;font-size:.93rem;line-height:1.62;resize:vertical;transition:all .3s}
+textarea:focus{outline:none;border-color:var(--input-focus);box-shadow:0 0 0 3px var(--accent-light)}
+textarea::placeholder{color:var(--text-secondary);opacity:.65}
+
+.progress-container{margin:1.4rem 0;padding:1.1rem 1.2rem;background:var(--bg-secondary);border-radius:10px;border:1px solid var(--border)}
+.progress-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:.45rem;font-size:.88rem;font-weight:500}
+.progress-bar{height:7px;background:var(--progress-bg);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#27ae60);border-radius:4px;transition:width .5s;width:0}
+
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.8rem 1.6rem;border:none;border-radius:8px;font-family:inherit;font-size:.93rem;font-weight:600;cursor:pointer;transition:all .3s}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(52,152,219,.28)}
+.btn-primary:hover{background:var(--accent-hover);transform:translateY(-1px);box-shadow:0 4px 12px rgba(52,152,219,.38)}
+.btn-primary:active{transform:translateY(0)}
+.btn-secondary{background:var(--bg-secondary);color:var(--text-primary);border:2px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-group{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.4rem}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;margin:1.4rem 0}
+.strategy-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:1.4rem;transition:all .3s}
+.strategy-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+.strategy-card h3{font-size:.97rem;display:flex;align-items:center;gap:.5rem}
+.strategy-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;background:var(--accent-light);color:var(--accent);border-radius:8px;font-size:.95rem;font-weight:700;flex-shrink:0}
+
+.comparison-table{width:100%;border-collapse:collapse;margin:1.3rem 0;font-size:.88rem}
+.comparison-table th{background:var(--header-bg);color:#fff;padding:.75rem .9rem;text-align:left;font-weight:600}
+.comparison-table td{padding:.65rem .9rem;border-bottom:1px solid var(--divider);vertical-align:top}
+.comparison-table tr:nth-child(even) td{background:var(--bg-secondary)}
+.comparison-table tr:hover td{background:var(--accent-light)}
+
+.highlight-box{background:var(--accent-light);border:1px solid var(--accent);border-radius:10px;padding:1.4rem;margin:1.4rem 0}
+.highlight-box h3{color:var(--accent);margin-bottom:.45rem}
+
+footer{background:var(--header-bg);color:rgba(255,255,255,.7);text-align:center;padding:1.4rem;font-size:.83rem;margin-top:2rem}
+footer strong{color:#fff}
+
+.notification{position:fixed;bottom:2rem;right:2rem;background:#27ae60;color:#fff;padding:.95rem 1.4rem;border-radius:8px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.2);transform:translateY(100px);opacity:0;transition:all .4s;z-index:200;font-size:.9rem}
+.notification.show{transform:translateY(0);opacity:1}
+.notification.error{background:#e74c3c}
+
+@media(max-width:768px){
+  .header-main{padding:.7rem 1rem}
+  .header-title h1{font-size:1.25rem}
+  .header-title .subtitle{font-size:.72rem}
+  .hero{padding:2rem 1.4rem}
+  .hero h1{font-size:1.7rem}
+  main{padding:1rem}
+  .section{padding:1.4rem 1.15rem}
+  .name-input-group{flex-direction:column;align-items:stretch}
+  .two-col{grid-template-columns:1fr}
+  h2{font-size:1.25rem}
+  .comparison-table{font-size:.78rem}
+  .comparison-table th,.comparison-table td{padding:.45rem .65rem}
+  nav a{padding:.55rem .7rem;font-size:.76rem}
+  .section-header{flex-wrap:wrap}
+}
+@media(max-width:480px){
+  .hero h1{font-size:1.4rem}
+  .hero .hero-subtitle{font-size:.9rem}
+  .btn-group{flex-direction:column}
+  .btn{width:100%;justify-content:center}
+}
+@media print{
+  header,nav,footer,.theme-toggle,.btn-group,.progress-container{display:none!important}
+  .section{break-inside:avoid;box-shadow:none;border:1px solid #ddd}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-main">
+    <div class="header-title">
+      <h1>КЛиП</h1>
+      <div class="subtitle">Компьютерная лингвистика и перевод</div>
+    </div>
+    <button class="theme-toggle" id="themeToggle" title="Переключить тему">☀️</button>
+  </div>
+  <nav>
+    <div class="nav-inner">
+      <a href="#intro">Введение</a>
+      <a href="#metaphor">Метафора</a>
+      <a href="#thinking">Мышление</a>
+      <a href="#reflection">Рефлексия</a>
+      <a href="#strategies">Стратегии</a>
+      <a href="#export">Экспорт</a>
+    </div>
+  </nav>
+</header>
+
+<main>
+
+  <div class="hero" id="intro">
+    <h1>От клипов — к континууму</h1>
+    <p class="hero-subtitle">Рефлексия первого семестра</p>
+    <p class="hero-desc">
+      Аббревиатура курса — <strong>КЛиП</strong> — хороший повод для размышления</p>
+    <div class="name-input-group">
+      <label for="studentName">Студент:</label>
+      <input type="text" id="studentName" placeholder="Фамилия Имя" autocomplete="name">
+    </div>
+  </div>
+
+  <div class="section" id="metaphor">
+    <div class="section-header">
+      <span class="section-number">1</span>
+      <h2>«КЛиП» — больше, чем аббревиатура</h2>
+    </div>
+    <p>
+      Аббревиатура курса <strong>«Компьютерная лингвистика и перевод»</strong> омонимична
+      слову <strong>«клип»</strong> — многозначному слову, каждое значение которого
+      предлагает собственный ракурс для осмысления учебного процесса.
+    </p>
+    <h3>Значения слова «клип»</h3>
+    <ul class="def-list">
+      <li>
+        <span class="def-marker"></span>
+        <div><span class="def-term">Видеоклип</span> — короткое музыкальное или рекламное видео,
+        как правило, сопровождающее песню. Формат предполагает яркость, сжатость,
+        монтажную фрагментарность.</div>
+      </li>
+      <li>
+        <span class="def-marker"></span>
+        <div><span class="def-term">Клип в мультимедиа и видеомонтаже</span> — элемент таймлайна
+        в видеоредакторе или DAW (цифровой звуковой рабочей станции): дискретный фрагмент,
+        из которых монтируется целое произведение.</div>
+      </li>
+      <li>
+        <span class="def-marker"></span>
+        <div><span class="def-term">В переносном употреблении</span> — короткое впечатление,
+        яркий эпизод, мгновенный образ. Метафорическое расширение, связанное с медийным
+        контекстом.</div>
+      </li>
+      <li>
+        <span class="def-marker"></span>
+        <div><span class="def-term">Англ. clip (существительное)</span> — зажим, скрепка, обойма.
+        Приспособление, которое <em>скрепляет, соединяет, удерживает вместе</em>:
+        paper clip (канцелярская скрепка), hair clip (заколка), clip of a magazine (обойма).</div>
+      </li>
+      <li>
+        <span class="def-marker"></span>
+        <div><span class="def-term">Англ. to clip (глагол)</span> — обрезать, подстригать,
+        отсекать лишнее. В машинном обучении: <em>gradient clipping</em> — ограничение
+        величины градиента для стабилизации обучения нейросети.</div>
+      </li>
+    </ul>
+
+    <div class="highlight-box">
+      <h3>Парадокс «клипа»: фрагмент и скрепка</h3>
+      <p>
+        Обратите внимание на продуктивное противоречие: одно и то же слово обозначает
+        <strong>и фрагмент</strong> (короткое видео, обрезок), <strong>и средство
+        соединения</strong> (зажим, скрепка). Наш курс КЛиП работает в обоих режимах:
+        каждое занятие — это «клип»-фрагмент, но сам курс призван стать «клипом»-скрепкой,
+        связывающей разрозненные знания о языке, технологиях и переводе в единое целое.
+      </p>
+    </div>
+  </div>
+
+  <div class="section" id="thinking">
+    <div class="section-header">
+      <span class="section-number">2</span>
+      <h2>Клиповое мышление и системное мышление</h2>
+    </div>
+
+    <div class="info-block">
+      <p>
+        <strong>Клиповое мышление</strong> — склонность воспринимать информацию и мыслить
+        фрагментами, короткими образами и впечатлениями, без выстраивания целостной
+        причинно-следственной структуры. Термин метафоричен: свойства медийного клипа
+        (краткость, яркость, фрагментарность, лёгкая усваиваемость) переносятся на
+        когнитивную сферу. Семантически «клип» здесь — моделирующий образец формы мысли:
+        фрагмент, не изложение.
+      </p>
+    </div>
+
+    <div class="collapsible" id="coll1">
+      <div class="collapsible-header" onclick="toggleCollapsible('coll1')">
+        <h3>Происхождение и контекст термина</h3>
+        <span class="collapsible-arrow">&#9660;</span>
+      </div>
+      <div class="collapsible-body">
+        <p>
+          Идея восходит к книге <strong>Элвина Тоффлера «Шок будущего»</strong>
+          (<em>Future Shock</em>, 1970), где описана <em>blip culture</em> — культура
+          коротких информационных вспышек, характерная для постиндустриального общества.
+        </p>
+        <p>
+          В российском научном дискурсе термин «клиповое мышление» получил развитие
+          в работах философа <strong>Ф.И. Гиренка</strong> и культуролога
+          <strong>К.Г. Фрумкина</strong> (2010). Он связывается с массовым потреблением
+          коротких медиаформатов: TV-реклама, интернет-видео, ленты социальных сетей,
+          короткие видео (TikTok, Reels, Shorts).
+        </p>
+        <p>
+          Важно: «клиповое мышление» — не клинический диагноз, а культурологическая
+          метафора, описывающая тенденцию, которую можно осознать и компенсировать.
+        </p>
+      </div>
+    </div>
+
+    <div class="collapsible" id="coll2">
+      <div class="collapsible-header" onclick="toggleCollapsible('coll2')">
+        <h3>Английские эквиваленты и переводческая лакуна</h3>
+        <span class="collapsible-arrow">&#9660;</span>
+      </div>
+      <div class="collapsible-body">
+        <p>
+          Прямой перевод <em>clip thinking</em> крайне редко встречается в англоязычной
+          научной литературе. Более распространённые описательные эквиваленты:
+        </p>
+        <div class="tag-group">
+          <span class="tag">fragmented thinking</span>
+          <span class="tag">short-form thinking</span>
+          <span class="tag">image-based thinking</span>
+          <span class="tag">scattered attention</span>
+          <span class="tag">short attention span</span>
+          <span class="tag">attention fragmentation</span>
+          <span class="tag">blip culture (Toffler)</span>
+        </div>
+        <p style="margin-top:1rem">
+          Отсутствие точного английского эквивалента — само по себе показательно.
+          Это пример <strong>переводческой лакуны</strong>: культурно-специфический
+          концепт, не имеющий однословного соответствия в другом языке. Для студентов
+          курса «Компьютерная лингвистика и перевод» это наглядная иллюстрация проблематики
+          переводческой эквивалентности, которую мы изучаем.
+        </p>
+      </div>
+    </div>
+
+    <div class="collapsible" id="coll3">
+      <div class="collapsible-header" onclick="toggleCollapsible('coll3')">
+        <h3>Сравнение: клиповое vs. системное мышление</h3>
+        <span class="collapsible-arrow">&#9660;</span>
+      </div>
+      <div class="collapsible-body">
+        <table class="comparison-table">
+          <thead>
+            <tr><th>Параметр</th><th>Клиповое мышление</th><th>Системное мышление</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Единица восприятия</td><td>Фрагмент, образ, впечатление</td><td>Структура, система, модель</td></tr>
+            <tr><td>Связи</td><td>Ассоциативные, слабые</td><td>Причинно-следственные, логические</td></tr>
+            <tr><td>Глубина</td><td>Поверхностная</td><td>Многоуровневая</td></tr>
+            <tr><td>Временной горизонт</td><td>«Здесь и сейчас»</td><td>Ретроспектива и перспектива</td></tr>
+            <tr><td>Результат</td><td>Мозаика без целого</td><td>Целостная картина</td></tr>
+            <tr><td>Аналогия с КЛиП</td><td>Отдельные темы без связей</td><td>Интегрированное понимание дисциплины</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="info-block" style="margin-top:1.4rem">
+      <p>
+        <strong>Почему это важно для нашего курса?</strong> Модульная структура КЛиП —
+        вынужденная: курс компактный, а проблемное поле обширно и междисциплинарно.
+        Каждый модуль — «клип» в смысле фрагмента. Задача студента — стать «клипом»
+        в смысле скрепки: самостоятельно связать фрагменты в целостное, многоуровневое
+        понимание предмета во всей его сложности.
+      </p>
+    </div>
+  </div>
+
+  <div class="section" id="reflection">
+    <div class="section-header">
+      <span class="section-number">3</span>
+      <h2>Рефлексия первого семестра</h2>
+    </div>
+    <p>
+      Ответьте на вопросы ниже. Цель — не формальный отчёт, а осмысленная работа
+      по интеграции фрагментов пройденного материала. Данные автоматически сохраняются
+      в браузере. Результаты можно экспортировать в HTML-документ.
+    </p>
+
+    <div class="progress-container">
+      <div class="progress-label">
+        <span>Прогресс заполнения</span>
+        <span id="progressText">0 / 7</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <div class="reflection-group">
+      <label>1. Ретроспектива: темы первого семестра</label>
+      <span class="hint">Вспомните и перечислите основные темы, понятия и инструменты, с которыми вы познакомились. Что запомнилось ярче всего?</span>
+      <textarea id="r1" placeholder="Перечислите темы и ключевые понятия первого семестра..." oninput="handleInput()"></textarea>
+    </div>
+
+    <div class="reflection-group">
+      <label>2. Скрытые связи между темами</label>
+      <span class="hint">Выберите любые две темы из перечисленных. Опишите, как они связаны: какие общие принципы, методы или проблемы их объединяют?</span>
+      <textarea id="r2" placeholder="Какие связи вы видите между темами курса?" oninput="handleInput()"></textarea>
+    </div>
+
+    <div class="reflection-group">
+      <label>3. Уровни языка и компьютерная обработка</label>
+      <span class="hint">Как различные уровни лингвистического анализа (фонетика, морфология, синтаксис, семантика, прагматика, дискурс) представлены в задачах компьютерной лингвистики? Приведите примеры.</span>
+      <textarea id="r3" placeholder="Соотнесите уровни языкового анализа с задачами КЛ..." oninput="handleInput()"></textarea>
+    </div>
+
+    <div class="reflection-group">
+      <label>4. Перевод как мост между лингвистикой и технологиями</label>
+      <span class="hint">Как понятие «перевод» связывает лингвистику и компьютерные технологии? Какие проблемы перевода остаются сложными для машинных систем? Возможен ли полностью автоматический перевод?</span>
+      <textarea id="r4" placeholder="Ваши размышления о связи перевода и технологий..." oninput="handleInput()"></textarea>
+    </div>
+
+    <div class="reflection-group">
+      <label>5. От «клипов» к системе</label>
+      <span class="hint">Какие темы курса остались для вас разрозненными «клипами» — фрагментами, не встроенными в целостную картину? Что помогло бы их интегрировать?</span>
+      <textarea id="r5" placeholder="Какие фрагменты пока не связались в целое?" oninput="handleInput()"></textarea>
+    </div>
+
+    <div class="reflection-group">
+      <label>6. Межмодульные мосты</label>
+      <span class="hint">Предложите одну связь между темами курса, которая не обсуждалась на занятиях. Объясните, почему эта связь важна.</span>
+      <textarea id="r6" placeholder="Ваша собственная межмодульная связь..." oninput="handleInput()"></textarea>
+    </div>
+
+    <div class="reflection-group">
+      <label>7. Взгляд вперёд: второй семестр</label>
+      <span class="hint">Какие темы или навыки вы хотели бы углубить во втором семестре? Какие вопросы остались без ответа? Что вызывает наибольший интерес?</span>
+      <textarea id="r7" placeholder="Ваши ожидания и планы на второй семестр..." oninput="handleInput()"></textarea>
+    </div>
+  </div>
+
+  <div class="section" id="strategies">
+    <div class="section-header">
+      <span class="section-number">4</span>
+      <h2>Стратегии интеграции знаний</h2>
+    </div>
+    <p>
+      Осознание фрагментарности — первый шаг к её преодолению.
+      Проверенные техники, которые помогают превратить «клипы» знаний в связную систему:
+    </p>
+    <div class="two-col">
+      <div class="strategy-card">
+        <h3><span class="strategy-icon">1</span> Ментальные карты</h3>
+        <p>Визуальное представление связей между темами. Центральный узел — «КЛиП»,
+        ветви — темы курса, связи между ветвями — межмодульные мосты.</p>
+      </div>
+      <div class="strategy-card">
+        <h3><span class="strategy-icon">2</span> Сравнительные таблицы</h3>
+        <p>Сопоставление тем по общим параметрам: методы, уровень языка, тип данных,
+        практические задачи. Помогает увидеть структурные паттерны.</p>
+      </div>
+      <div class="strategy-card">
+        <h3><span class="strategy-icon">3</span> Межмодульные вопросы</h3>
+        <p>Формулируйте вопросы, ответы на которые требуют знаний из нескольких тем.
+        Например: «Как корпусные данные используются в машинном переводе?»</p>
+      </div>
+      <div class="strategy-card">
+        <h3><span class="strategy-icon">4</span> Мета-рефлексия</h3>
+        <p>Регулярный анализ собственного понимания: что я знаю? что не знаю?
+        что связано? что противоречит? Именно этим мы занимаемся сейчас.</p>
+      </div>
+    </div>
+    <div class="info-block">
+      <p>
+        <strong>Ключевой принцип:</strong> интеграция знаний — активный процесс.
+        Она требует целенаправленного усилия по установлению связей, которые не всегда
+        очевидны. Каждый «клип»-фрагмент должен быть осознанно «прикреплён» к другим
+        с помощью «клипа»-скрепки вашего мышления.
+      </p>
+    </div>
+  </div>
+
+  <div class="section" id="export">
+    <div class="section-header">
+      <span class="section-number">5</span>
+      <h2>Экспорт рефлексии</h2>
+    </div>
+    <p>
+      Сохраните результаты вашей работы в виде HTML-документа. Файл будет содержать
+      ваши ответы и ключевые материалы занятия.
+    </p>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="exportHTML()">&#8595; Экспортировать в HTML</button>
+      <button class="btn btn-secondary" onclick="clearAll()">&#8634; Очистить все поля</button>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <p>© 2025 | kmp | CC BY-NC-SA 4.0</p>
+  <p>для всех</p>
+</footer>
+
+<div class="notification" id="notification"></div>
+
+<script>
+const FIELDS=['studentName','r1','r2','r3','r4','r5','r6','r7'];
+const REFL_FIELDS=['r1','r2','r3','r4','r5','r6','r7'];
+const STORAGE_KEY='klip-reflection-data';
+const THEME_KEY='klip-theme';
+
+const themeToggle=document.getElementById('themeToggle');
+const html=document.documentElement;
+const savedTheme=localStorage.getItem(THEME_KEY)||'light';
+html.setAttribute('data-theme',savedTheme);
+themeToggle.textContent=savedTheme==='dark'?'🌙':'☀️';
+
+themeToggle.addEventListener('click',()=>{
+  const c=html.getAttribute('data-theme');
+  const n=c==='light'?'dark':'light';
+  html.setAttribute('data-theme',n);
+  themeToggle.textContent=n==='dark'?'🌙':'☀️';
+  localStorage.setItem(THEME_KEY,n);
+});
+
+function toggleCollapsible(id){document.getElementById(id).classList.toggle('open')}
+
+function updateProgress(){
+  let f=0;
+  REFL_FIELDS.forEach(id=>{if(document.getElementById(id).value.trim().length>10)f++});
+  const pct=Math.round(f/REFL_FIELDS.length*100);
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('progressText').textContent=f+' / '+REFL_FIELDS.length;
+}
+
+function saveToStorage(){
+  const d={};
+  FIELDS.forEach(id=>{d[id]=document.getElementById(id).value});
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(d));
+}
+
+function loadFromStorage(){
+  const s=localStorage.getItem(STORAGE_KEY);
+  if(!s)return;
+  try{const d=JSON.parse(s);FIELDS.forEach(id=>{if(d[id])document.getElementById(id).value=d[id]});updateProgress()}catch(e){}
+}
+
+function handleInput(){saveToStorage();updateProgress()}
+
+FIELDS.forEach(id=>{
+  document.getElementById(id).addEventListener('input',handleInput);
+});
+
+loadFromStorage();
+
+function showNotification(msg,err){
+  const n=document.getElementById('notification');
+  n.textContent=msg;n.className='notification'+(err?' error':'');
+  setTimeout(()=>n.classList.add('show'),10);
+  setTimeout(()=>n.classList.remove('show'),3500);
+}
+
+function clearAll(){
+  if(!confirm('Очистить все поля рефлексии? Это действие необратимо.'))return;
+  REFL_FIELDS.forEach(id=>{document.getElementById(id).value=''});
+  saveToStorage();updateProgress();showNotification('Все поля очищены');
+}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function exportHTML(){
+  const name=document.getElementById('studentName').value.trim();
+  if(!name){showNotification('Введите Фамилию и Имя',true);document.getElementById('studentName').focus();return}
+  const date=new Date().toLocaleDateString('ru-RU',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const titles=['1. Ретроспектива: темы первого семестра','2. Скрытые связи между темами','3. Уровни языка и компьютерная обработка','4. Перевод как мост','5. От «клипов» к системе','6. Межмодульные мосты','7. Взгляд вперёд: второй семестр'];
+  let rHTML='',filled=0;
+  REFL_FIELDS.forEach((id,i)=>{
+    const v=document.getElementById(id).value.trim();
+    if(v)filled++;
+    rHTML+=`<div style="margin:1.3rem 0;padding:1.2rem;background:#f5f5f5;border-radius:8px;border-left:4px solid #3498db"><h3 style="color:#325980;font-size:.97rem;margin:0 0 .7rem">${titles[i]}</h3><div style="font-size:.93rem;white-space:pre-wrap;line-height:1.65">${v?esc(v).replace(/\n/g,'<br>'):'<em style="color:#999">Не заполнено</em>'}</div></div>`;
+  });
+
+  const doc=`<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>КЛиП — Рефлексия — ${esc(name)}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',Roboto,-apple-system,sans-serif;color:#2c3e50;line-height:1.7;background:#f9f9f9;padding:2rem}.c{max-width:800px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);overflow:hidden}.hd{background:#325980;color:#fff;padding:2rem 2.5rem}.hd h1{font-size:1.5rem;margin-bottom:.25rem;font-family:Verdana}.hd .m{opacity:.85;font-size:.88rem}.bd{padding:2rem 2.5rem}.bd h2{color:#325980;font-family:Arial;font-size:1.25rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:2px solid #f1f1f1}.bd h2:first-child{margin-top:0}.ib{background:#f8fbff;border-left:4px solid #3498db;padding:1.1rem 1.3rem;border-radius:0 8px 8px 0;margin:1rem 0}.ib p{margin-bottom:.5rem}.ib p:last-child{margin-bottom:0}.di{padding:.45rem 0;border-bottom:1px solid #f1f1f1}.di:last-child{border-bottom:none}.dt{font-weight:600;color:#325980}.hb{background:rgba(52,152,219,.08);border:1px solid #3498db;border-radius:10px;padding:1.2rem 1.4rem;margin:1.4rem 0}.hb h3{color:#3498db;margin-bottom:.4rem;font-size:1rem}.st{margin-top:1.4rem;padding:.9rem;background:#e8f4fd;border-radius:8px;font-size:.88rem;text-align:center;color:#325980}.ct{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.83rem}.ct th{background:#325980;color:#fff;padding:.55rem .75rem;text-align:left}.ct td{padding:.45rem .75rem;border-bottom:1px solid #f1f1f1}.ct tr:nth-child(even) td{background:#f9f9f9}.ft{padding:1.3rem 2.5rem;background:#f5f5f5;text-align:center;font-size:.78rem;color:#888;border-top:1px solid #e0e0e0}@media print{body{padding:0;background:#fff}.c{box-shadow:none;border-radius:0}}@media(max-width:600px){body{padding:.5rem}.hd,.bd,.ft{padding:1.2rem}}</style></head><body>
+<div class="c"><div class="hd"><h1>КЛиП: Рефлексия первого семестра</h1><div class="m"><strong>${esc(name)}</strong><br>${date}</div></div>
+<div class="bd"><h2>«КЛиП» — больше, чем аббревиатура</h2>
+<p>Аббревиатура курса «Компьютерная лингвистика и перевод» омонимична слову «клип» — многозначному слову, каждое значение которого предлагает свой ракурс для осмысления учебного процесса.</p>
+<div class="ib"><p><strong>Значения слова «клип»:</strong></p>
+<div class="di"><span class="dt">Видеоклип</span> — короткое музыкальное или рекламное видео. Формат: яркость, сжатость, фрагментарность.</div>
+<div class="di"><span class="dt">Клип в мультимедиа</span> — элемент таймлайна: дискретный фрагмент, из которых монтируется целое.</div>
+<div class="di"><span class="dt">Переносное значение</span> — короткое впечатление, яркий эпизод, мгновенный образ.</div>
+<div class="di"><span class="dt">Англ. clip (зажим, скрепка)</span> — приспособление, которое скрепляет, соединяет, удерживает вместе.</div>
+<div class="di"><span class="dt">Англ. to clip (глагол)</span> — обрезать, отсекать лишнее. В ML: gradient clipping.</div></div>
+<div class="hb"><h3>Парадокс «клипа»: фрагмент и скрепка</h3><p>Одно и то же слово обозначает и фрагмент, и средство соединения. Курс КЛиП работает в обоих режимах: каждое занятие — «клип»-фрагмент, но сам курс — «клип»-скрепка, связывающая знания о языке, технологиях и переводе.</p></div>
+<h2>Клиповое мышление vs. системное мышление</h2>
+<p><strong>Клиповое мышление</strong> — склонность воспринимать информацию фрагментами без выстраивания целостной структуры. Термин восходит к «blip culture» Э. Тоффлера (1970) и развит в российском дискурсе Ф.И. Гиренком и К.Г. Фрумкиным.</p>
+<table class="ct"><tr><th>Параметр</th><th>Клиповое мышление</th><th>Системное мышление</th></tr>
+<tr><td>Единица</td><td>Фрагмент, образ</td><td>Структура, модель</td></tr>
+<tr><td>Связи</td><td>Ассоциативные, слабые</td><td>Причинно-следственные</td></tr>
+<tr><td>Глубина</td><td>Поверхностная</td><td>Многоуровневая</td></tr>
+<tr><td>Результат</td><td>Мозаика без целого</td><td>Целостная картина</td></tr></table>
+<h2>Рефлексия</h2><div class="st">Заполнено вопросов: ${filled} из 7</div>
+${rHTML}</div>
+<div class="ft">© 2026 | kmp | CC BY-NC-SA 4.0</div></div></body></html>`;
+
+  const blob=new Blob([doc],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`КЛиП_Рефлексия_${name.replace(/\s+/g,'_')}.html`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showNotification('Рефлексия экспортирована!');
+}
+
+// Active nav
+const navLinks=document.querySelectorAll('nav a');
+window.addEventListener('scroll',()=>{
+  let cur='';
+  document.querySelectorAll('[id]').forEach(s=>{
+    if(s.id&&s.getBoundingClientRect().top<=150)cur=s.id;
+  });
+  navLinks.forEach(l=>{l.classList.toggle('active',l.getAttribute('href')==='#'+cur)});
+});
+</script>
+</body>
+</html>
