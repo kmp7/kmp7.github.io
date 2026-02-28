@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: #ffffff;
+            --nav-color: #325980;
+            --accent: #3498db;
+            --accent-hover: #2980b9;
+            --divider: #f1f1f1;
+            --text-primary: #2c3e50;
+            --text-secondary: #5a6a7a;
+            --text-muted: #8899aa;
+            --border: #dde3ea;
+            --input-bg: #ffffff;
+            --shadow: 0 2px 12px rgba(50, 89, 128, 0.08);
+            --shadow-hover: 0 4px 20px rgba(50, 89, 128, 0.14);
+            --code-bg: #f8f9fb;
+            --preview-bg: #fafbfc;
+            --transition: 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1f2e;
+            --bg-secondary: #151925;
+            --bg-card: #212639;
+            --nav-color: #5b9bd5;
+            --accent: #5dade2;
+            --accent-hover: #3498db;
+            --divider: #2a3045;
+            --text-primary: #e0e6ed;
+            --text-secondary: #a0aec0;
+            --text-muted: #6b7a8d;
+            --border: #2f3651;
+            --input-bg: #1e2336;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.4);
+            --code-bg: #1e2336;
+            --preview-bg: #1a1f2e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background var(--transition), color var(--transition);
+            min-height: 100vh;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--nav-color);
+            color: #ffffff;
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            transition: background var(--transition);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+       
+
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        header h1 span {
+            font-weight: 300;
+            opacity: 0.85;
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
+        }
+
+        /* MAIN */
+        main {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 3rem;
+        }
+
+        .intro-section {
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 1.75rem 2rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid var(--accent);
+            box-shadow: var(--shadow);
+            transition: all var(--transition);
+        }
+
+        .intro-section h2 {
+            color: var(--nav-color);
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .intro-section p {
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+        }
+
+        /* FORM CARD */
+        .form-card {
+            background: var(--bg-card);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 2rem;
+            transition: all var(--transition);
+        }
+
+        .form-card-header {
+            background: var(--nav-color);
+            color: #fff;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-card-header .step-badge {
+            background: rgba(255, 255, 255, 0.2);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .form-card-body {
+            padding: 1.75rem 2rem 2rem;
+        }
+
+        /* FORM ELEMENTS */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--nav-color);
+            letter-spacing: 0.01em;
+        }
+
+        label .req {
+            color: #e74c3c;
+            margin-left: 2px;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 0.7rem 0.9rem;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.92rem;
+            font-family: inherit;
+            color: var(--text-primary);
+            background: var(--input-bg);
+            transition: all var(--transition);
+            outline: none;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.12);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        textarea.example-area {
+            min-height: 70px;
+        }
+
+        .hint {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        .lang-section-title {
+            color: var(--nav-color);
+            font-size: 0.95rem;
+            font-weight: 700;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            margin-top: 0.5rem;
+            border-bottom: 2px solid var(--divider);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .lang-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.55rem;
+            border-radius: 4px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--divider);
+            margin: 1.5rem 0;
+        }
+
+        /* BUTTONS */
+        .btn-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            padding: 0.7rem 1.6rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--divider);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-export {
+            background: var(--nav-color);
+            color: #fff;
+        }
+
+        .btn-export:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: #e74c3c;
+            border: 1.5px solid #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        /* PREVIEW */
+        .preview-section {
+            background: var(--bg-card);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: all var(--transition);
+        }
+
+        .preview-header {
+            background: var(--nav-color);
+            color: #fff;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .preview-body {
+            padding: 2rem;
+        }
+
+        .preview-empty {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .preview-empty .icon-placeholder {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.3;
+            color: var(--nav-color);
+        }
+
+        /* PREVIEW CARD STYLING */
+        .def-card {
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .def-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .def-card-header {
+            background: var(--bg-secondary);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--divider);
+        }
+
+        .def-term {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--nav-color);
+        }
+
+        .def-category {
+            font-size: 0.75rem;
+            background: var(--accent);
+            color: #fff;
+            padding: 0.2rem 0.7rem;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .def-card-body {
+            padding: 1.25rem 1.5rem;
+        }
+
+        .def-equivalent {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .def-text {
+            font-size: 0.95rem;
+            line-height: 1.65;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .def-example-block {
+            background: var(--code-bg);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            padding: 0.85rem 1.1rem;
+            margin-top: 0.75rem;
+        }
+
+        .def-example-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.3rem;
+        }
+
+        .def-example-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .def-author {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: right;
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--divider);
+        }
+
+        /* JSON PREVIEW */
+        .json-section {
+            margin-top: 1.5rem;
+        }
+
+        .json-toggle {
+            background: none;
+            border: 1.5px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--nav-color);
+            font-family: inherit;
+            transition: all var(--transition);
+        }
+
+        .json-toggle:hover {
+            background: var(--bg-secondary);
+        }
+
+        .json-code {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-top: 0.75rem;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            display: none;
+        }
+
+        .json-code.visible {
+            display: block;
+        }
+
+        /* NOTIFICATION */
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 1.5rem;
+            background: var(--bg-card);
+            border: 1.5px solid var(--accent);
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            box-shadow: var(--shadow-hover);
+            z-index: 200;
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            max-width: 340px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            border-color: #e74c3c;
+        }
+
+        .notification-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--nav-color);
+            margin-bottom: 0.2rem;
+        }
+
+        .notification-text {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            header {
+                padding: 0 1rem;
+            }
+
+            header h1 {
+                font-size: 1rem;
+            }
+
+            header h1 span {
+                display: none;
+            }
+
+            main {
+                padding: 1.25rem 1rem 2rem;
+            }
+
+            .intro-section {
+                padding: 1.25rem 1.25rem;
+            }
+
+            .form-card-body,
+            .preview-body {
+                padding: 1.25rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .btn-row {
+                flex-direction: column;
+            }
+
+            .btn {
+                justify-content: center;
+                width: 100%;
+            }
+
+            .def-card-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .notification {
+                right: 0.75rem;
+                left: 0.75rem;
+                max-width: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 0.9rem;
+            }
+
+            .header-logo {
+                width: 30px;
+                height: 30px;
+                font-size: 0.9rem;
+            }
+
+            .form-card-header,
+            .preview-header {
+                padding: 0.85rem 1.25rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* SCROLLBAR */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* ANIMATION */
+        .fade-in {
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+                <h1>Definition constructor</span></h1>
+    </div>
+    <button class="theme-toggle" id="themeToggle" title="Toggle theme">☀️</button>
+</header>
+
+<main>
+    <!-- Intro -->
+    <section class="intro-section fade-in">
+        <h2>Конструктор дефиниций</h2>
+        <p>Заполните форму ниже, чтобы создать собственное двуязычное определение (RU/EN). Вы сможете просмотреть таблицу, просмотреть соответствующий формат JSON и экспортировать результат в файл HTML..</p>
+    </section>
+
+    <!-- STEP 1: Author -->
+    <div class="form-card fade-in">
+        <div class="form-card-header">
+            <span class="step-badge">1</span>
+            Автор дефиниции
+        </div>
+        <div class="form-card-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="authorLastName">Фамилия <span class="req">*</span></label>
+                    <input type="text" id="authorLastName" placeholder="Орлова">
+                </div>
+                <div class="form-group">
+                    <label for="authorFirstName">Имя <span class="req">*</span></label>
+                    <input type="text" id="authorFirstName" placeholder="Ева">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STEP 2: Definition Content -->
+    <div class="form-card fade-in">
+        <div class="form-card-header">
+            <span class="step-badge">2</span>
+            Определение термина
+        </div>
+        <div class="form-card-body">
+
+            <!-- RU block -->
+            <div class="lang-section-title">
+                <span class="lang-badge">RU</span> Русская версия
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ruTerm">Термин <span class="req">*</span></label>
+                    <input type="text" id="ruTerm" placeholder="Термин">
+                </div>
+                <div class="form-group">
+                    <label for="ruEquiv">Эквивалент (EN)</label>
+                    <input type="text" id="ruEquiv" placeholder="Term">
+                </div>
+            </div>
+
+            <div class="form-group full-width" style="margin-bottom:1.25rem">
+                <label for="ruDef">Дефиниция <span class="req">*</span></label>
+                <textarea id="ruDef" placeholder="Введите определение на русском языке..."></textarea>
+            </div>
+
+            <div class="form-group full-width" style="margin-bottom:1.25rem">
+                <label for="ruExample">Пример в контексте исследования <span class="req">*</span></label>
+                <textarea id="ruExample" class="example-area" placeholder="Пример использования термина в контексте вашей учёбы ..."></textarea>
+                <span class="hint">Используйте термин в предложении, связанном с вашим опытом обучения.</span>
+            </div>
+
+            <div class="form-group full-width" style="margin-bottom:0.5rem">
+                <label for="ruCategory">Категории</label>
+                <input type="text" id="ruCategory" placeholder="дидактический, для новичков">
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- EN block -->
+            <div class="lang-section-title">
+                <span class="lang-badge">EN</span> English version
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="enTerm">Term <span class="req">*</span></label>
+                    <input type="text" id="enTerm" placeholder="Term">
+                </div>
+                <div class="form-group">
+                    <label for="enEquiv">Equivalent (RU)</label>
+                    <input type="text" id="enEquiv" placeholder="Термин">
+                </div>
+            </div>
+
+            <div class="form-group full-width" style="margin-bottom:1.25rem">
+                <label for="enDef">Definition <span class="req">*</span></label>
+                <textarea id="enDef" placeholder="Enter the definition in English..."></textarea>
+            </div>
+
+            <div class="form-group full-width" style="margin-bottom:1.25rem">
+                <label for="enExample">Example in study context <span class="req">*</span></label>
+                <textarea id="enExample" class="example-area" placeholder="Example of the term used in a student's learning context..."></textarea>
+                <span class="hint">Use the term in a sentence related to your learning experience</span>
+            </div>
+
+            <div class="form-group full-width">
+                <label for="enCategory">Category</label>
+                <input type="text" id="enCategory" placeholder="didactic, for beginners">
+            </div>
+
+            <!-- Action buttons -->
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="generatePreview()">Сгенерировать</button>
+                <button class="btn btn-danger" onclick="clearForm()">Очистить форму</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PREVIEW -->
+    <section class="preview-section fade-in" id="previewSection">
+        <div class="preview-header">
+            <span>JASON</span>
+            <button class="btn btn-export" onclick="exportHTML()" id="exportBtn" style="display:none; padding:0.4rem 1rem; font-size:0.82rem;">Экспорт в HTML</button>
+        </div>
+        <div class="preview-body" id="previewBody">
+            <div class="preview-empty">
+                <div class="icon-placeholder">&#9998;</div>
+                <p>Заполните форму и нажмите «Сгенерировать», чтобы увидеть ваш код в Jason здесь.</p>
+            </div>
+        </div>
+
+        <!-- JSON -->
+        <div style="padding: 0 2rem 1.5rem;" id="jsonArea" class="json-section" style="display:none;">
+            <button class="json-toggle" onclick="toggleJson()">Показать/скрыть JSON</button>
+            <pre class="json-code" id="jsonCode"></pre>
+        </div>
+    </section>
+</main>
+<!-- Notification -->
+<div class="notification" id="notification">
+    <div class="notification-title" id="notifTitle"></div>
+    <div class="notification-text" id="notifText"></div>
+</div>
+
+
+<script>
+    // Theme toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const html = document.documentElement;
+
+    function setTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+        localStorage.setItem('glossary-theme', theme);
+    }
+
+    themeToggle.addEventListener('click', () => {
+        const current = html.getAttribute('data-theme');
+        setTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    // Load saved theme
+    const savedTheme = localStorage.getItem('glossary-theme');
+    if (savedTheme) setTheme(savedTheme);
+
+    // Notification
+    function showNotification(title, text, isError = false) {
+        const notif = document.getElementById('notification');
+        document.getElementById('notifTitle').textContent = title;
+        document.getElementById('notifText').textContent = text;
+        notif.classList.toggle('error', isError);
+        notif.classList.add('show');
+        setTimeout(() => notif.classList.remove('show'), 3500);
+    }
+
+    // Current data
+    let currentData = null;
+
+    // Generate preview
+    function generatePreview() {
+        const lastName = document.getElementById('authorLastName').value.trim();
+        const firstName = document.getElementById('authorFirstName').value.trim();
+        const ruTerm = document.getElementById('ruTerm').value.trim();
+        const ruEquiv = document.getElementById('ruEquiv').value.trim();
+        const ruDef = document.getElementById('ruDef').value.trim();
+        const ruExample = document.getElementById('ruExample').value.trim();
+        const ruCategory = document.getElementById('ruCategory').value.trim();
+        const enTerm = document.getElementById('enTerm').value.trim();
+        const enEquiv = document.getElementById('enEquiv').value.trim();
+        const enDef = document.getElementById('enDef').value.trim();
+        const enExample = document.getElementById('enExample').value.trim();
+        const enCategory = document.getElementById('enCategory').value.trim();
+
+        // Validation
+        if (!lastName || !firstName) {
+            showNotification('Обязательное поле', 'Введите свои Фамилию Имя.', true);
+            return;
+        }
+        if (!ruTerm || !ruDef || !ruExample) {
+            showNotification('Обязательное поле', 'Заполните поле, указав термин, его определение и пример на русском языке.', true);
+            return;
+        }
+        if (!enTerm || !enDef || !enExample) {
+            showNotification('Обязательное поле', 'Заполните поле, указав английский термин, его определение и пример.', true);
+            return;
+        }
+
+        const author = lastName + ' ' + firstName;
+
+        currentData = {
+            author: author,
+            ru: {
+                term: ruTerm,
+                equivalent: ruEquiv || enTerm,
+                definition: ruDef,
+                example: ruExample,
+                category: ruCategory || ''
+            },
+            en: {
+                term: enTerm,
+                equivalent: enEquiv || ruTerm,
+                definition: enDef,
+                example: enExample,
+                category: enCategory || ''
+            }
+        };
+
+        renderPreview(currentData);
+        renderJson(currentData);
+        document.getElementById('exportBtn').style.display = 'inline-flex';
+        document.getElementById('jsonArea').style.display = 'block';
+
+        showNotification('Предварительный просмотр создан, Ваша статья готова. Вы можете экспортировать её в формат HTML.');
+        document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function renderPreview(data) {
+        const container = document.getElementById('previewBody');
+        container.innerHTML = `
+            <!-- RU Card -->
+            <div class="def-card fade-in">
+                <div class="def-card-header">
+                    <span class="def-term">${escapeHtml(data.ru.term)}</span>
+                    ${data.ru.category ? `<span class="def-category">${escapeHtml(data.ru.category)}</span>` : ''}
+                </div>
+                <div class="def-card-body">
+                    <div class="def-equivalent">Equivalent: <strong>${escapeHtml(data.ru.equivalent)}</strong></div>
+                    <div class="def-text">${escapeHtml(data.ru.definition)}</div>
+                    <div class="def-example-block">
+                        <div class="def-example-label">Exemple en contexte</div>
+                        <div class="def-example-text">${escapeHtml(data.ru.example)}</div>
+                    </div>
+                    <div class="def-author">Auteur : ${escapeHtml(data.author)}</div>
+                </div>
+            </div>
+
+            <!-- EN Card -->
+            <div class="def-card fade-in">
+                <div class="def-card-header">
+                    <span class="def-term">${escapeHtml(data.en.term)}</span>
+                    ${data.en.category ? `<span class="def-category">${escapeHtml(data.en.category)}</span>` : ''}
+                </div>
+                <div class="def-card-body">
+                    <div class="def-equivalent">Equivalent: <strong>${escapeHtml(data.en.equivalent)}</strong></div>
+                    <div class="def-text">${escapeHtml(data.en.definition)}</div>
+                    <div class="def-example-block">
+                        <div class="def-example-label">Example in context</div>
+                        <div class="def-example-text">${escapeHtml(data.en.example)}</div>
+                    </div>
+                    <div class="def-author">Author: ${escapeHtml(data.author)}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderJson(data) {
+        const jsonObj = {
+            author: data.author,
+            ru: {
+                term: data.ru.term,
+                equivalent: data.ru.equivalent,
+                definition: data.ru.definition,
+                example: data.ru.example,
+                category: data.ru.category
+            },
+            en: {
+                term: data.en.term,
+                equivalent: data.en.equivalent,
+                definition: data.en.definition,
+                example: data.en.example,
+                category: data.en.category
+            }
+        };
+        document.getElementById('jsonCode').textContent = JSON.stringify(jsonObj, null, 2);
+    }
+
+    function toggleJson() {
+        document.getElementById('jsonCode').classList.toggle('visible');
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Clear form
+    function clearForm() {
+        const ids = ['authorLastName', 'authorFirstName', 'ruTerm', 'ruEquiv', 'ruDef', 'ruExample', 'ruCategory', 'enTerm', 'enEquiv', 'enDef', 'enExample', 'enCategory'];
+        ids.forEach(id => document.getElementById(id).value = '');
+        document.getElementById('previewBody').innerHTML = `
+            <div class="preview-empty">
+                <div class="icon-placeholder">&#9998;</div>
+                <p>Remplissez le formulaire et cliquez sur &laquo; Generer l'apercu &raquo; pour voir votre fiche ici.</p>
+            </div>`;
+        document.getElementById('exportBtn').style.display = 'none';
+        document.getElementById('jsonArea').style.display = 'none';
+        document.getElementById('jsonCode').classList.remove('visible');
+        currentData = null;
+        showNotification('Formulaire efface', 'Tous les champs ont ete reinitialises.');
+    }
+
+    // Export HTML
+    function exportHTML() {
+        if (!currentData) return;
+
+        const d = currentData;
+        const htmlContent = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Авторская дефиниция — ${d.ru.term} / ${d.en.term}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif; background:#f5f5f5; color:#2c3e50; padding:2rem 1rem; line-height:1.6; }
+.container { max-width:760px; margin:0 auto; }
+header { background:#325980; color:#fff; padding:1.25rem 2rem; border-radius:12px 12px 0 0; }
+header h1 { font-size:1.2rem; font-weight:600; }
+header p { font-size:0.82rem; opacity:0.8; margin-top:0.25rem; }
+.card { background:#fff; border:1.5px solid #dde3ea; border-radius:12px; overflow:hidden; margin-bottom:1.5rem; box-shadow:0 2px 12px rgba(50,89,128,0.08); }
+.card-header { background:#f5f5f5; padding:1rem 1.5rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f1f1f1; flex-wrap:wrap; gap:0.5rem; }
+.term { font-size:1.15rem; font-weight:700; color:#325980; }
+.category { font-size:0.75rem; background:#3498db; color:#fff; padding:0.2rem 0.7rem; border-radius:20px; }
+.card-body { padding:1.25rem 1.5rem; }
+.equivalent { font-size:0.85rem; color:#8899aa; margin-bottom:0.75rem; }
+.definition { font-size:0.95rem; line-height:1.65; margin-bottom:1rem; }
+.example-block { background:#f8f9fb; border-left:3px solid #3498db; border-radius:0 8px 8px 0; padding:0.85rem 1.1rem; margin-top:0.75rem; }
+.example-label { font-size:0.78rem; font-weight:700; color:#3498db; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.3rem; }
+.example-text { font-size:0.9rem; color:#5a6a7a; font-style:italic; }
+.author { font-size:0.8rem; color:#8899aa; text-align:right; margin-top:1rem; padding-top:0.75rem; border-top:1px solid #f1f1f1; }
+.json-section { background:#fff; border:1.5px solid #dde3ea; border-radius:12px; padding:1.5rem; box-shadow:0 2px 12px rgba(50,89,128,0.08); }
+.json-section h3 { color:#325980; font-size:0.95rem; margin-bottom:0.75rem; }
+pre { background:#f8f9fb; border:1px solid #dde3ea; border-radius:8px; padding:1rem; overflow-x:auto; font-family:Consolas,Monaco,'Courier New',monospace; font-size:0.82rem; line-height:1.6; color:#5a6a7a; }
+footer { text-align:center; margin-top:2rem; font-size:0.78rem; color:#8899aa; }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>Авторская дефиниция</h1>
+<p>Author: ${escapeHtml(d.author)}</p>
+</header>
+
+<div style="height:1.5rem"></div>
+
+<div class="card">
+<div class="card-header">
+<span class="term">${escapeHtml(d.ru.term)}</span>
+${d.ru.category ? `<span class="category">${escapeHtml(d.ru.category)}</span>` : ''}
+</div>
+<div class="card-body">
+<div class="equivalent">Equivalent: <strong>${escapeHtml(d.ru.equivalent)}</strong></div>
+<div class="definition">${escapeHtml(d.ru.definition)}</div>
+<div class="example-block">
+<div class="example-label">Пример в контексте учёбы</div>
+<div class="example-text">${escapeHtml(d.ru.example)}</div>
+</div>
+<div class="author">Автор: ${escapeHtml(d.author)}</div>
+</div>
+</div>
+
+<div class="card">
+<div class="card-header">
+<span class="term">${escapeHtml(d.en.term)}</span>
+${d.en.category ? `<span class="category">${escapeHtml(d.en.category)}</span>` : ''}
+</div>
+<div class="card-body">
+<div class="equivalent">Equivalent: <strong>${escapeHtml(d.en.equivalent)}</strong></div>
+<div class="definition">${escapeHtml(d.en.definition)}</div>
+<div class="example-block">
+<div class="example-label">Example in study context</div>
+<div class="example-text">${escapeHtml(d.en.example)}</div>
+</div>
+<div class="author">Author: ${escapeHtml(d.author)}</div>
+</div>
+</div>
+
+<div class="json-section">
+<h3>JSON Format</h3>
+<pre>${escapeHtml(JSON.stringify({
+    author: d.author,
+    ru: { term: d.ru.term, equivalent: d.ru.equivalent, definition: d.ru.definition, example: d.ru.example, category: d.ru.category },
+    en: { term: d.en.term, equivalent: d.en.equivalent, definition: d.en.definition, example: d.en.example, category: d.en.category }
+}, null, 2))}</pre>
+</div>
+<footer>
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+</footer>
+
+</div>
+</body>
+</html>`;
+
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const safeName = d.author.replace(/\s+/g, '_');
+        a.href = url;
+        a.download = `glossary_${safeName}_${d.en.term.replace(/\s+/g, '_')}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showNotification('Файл экспортирован', 'HTML-файл успешно загружен');
+    }
+</script>
+
+</body>
+</html>
