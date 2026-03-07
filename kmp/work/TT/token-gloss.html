@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-tertiary: #f1f1f1;
+            --text-primary: #1a1a2e;
+            --text-secondary: #4a4a5a;
+            --text-muted: #6a6a7a;
+            --accent-primary: #325980;
+            --accent-secondary: #3498db;
+            --accent-hover: #2980b9;
+            --border-color: #e0e0e0;
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+            --card-bg: #ffffff;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --warning: #f39c12;
+            --info: #9b59b6;
+            --gradient: linear-gradient(135deg, #325980, #3498db);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #333333;
+            --bg-tertiary: #0f3460;
+            --text-primary: #eeeeee;
+            --text-secondary: #eeeeee;
+            --text-muted: #eeeeee;
+            --accent-primary: #4a90c2;
+            --accent-secondary: #5dade2;
+            --accent-hover: #85c1e9;
+            --border-color: #2a2a4a;
+            --shadow: 0 4px 20px rgba(0,0,0,0.3);
+            --shadow-hover: 0 8px 30px rgba(0,0,0,0.4);
+            --card-bg: #154873;
+            --gradient: linear-gradient(135deg, #0f3460, #4a90c2);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            transition: all 0.3s ease;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            background: var(--gradient);
+            color: white;
+            padding: 2rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            font-size: 1.8rem;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.3rem;
+            padding: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(20deg);
+        }
+
+        /* Search Bar */
+        .search-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .search-input-wrapper {
+            flex: 1;
+            min-width: 280px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            font-size: 1.1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1.2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            color: var(--text-muted);
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--bg-tertiary);
+            border: none;
+            color: var(--text-muted);
+            font-size: 1rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .search-clear.show {
+            display: flex;
+        }
+
+        .search-clear:hover {
+            background: var(--accent-secondary);
+            color: white;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 1rem 0;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: var(--accent-secondary);
+        }
+
+        /* Category Filters */
+        .filters-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem 1rem;
+        }
+
+        .filter-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .filter-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .filter-chip {
+            padding: 0.5rem 1rem;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .filter-chip:hover {
+            border-color: var(--accent-secondary);
+            color: var(--accent-secondary);
+        }
+
+        .filter-chip.active {
+            background: var(--accent-secondary);
+            border-color: var(--accent-secondary);
+            color: white;
+        }
+
+        .filter-chip .count {
+            background: rgba(0,0,0,0.1);
+            padding: 0.1rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+
+        .filter-chip.active .count {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem 3rem;
+        }
+
+        /* Category Section */
+        .category-section {
+            margin-bottom: 2.5rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 3px solid var(--accent-secondary);
+        }
+
+        .category-icon {
+            font-size: 1.5rem;
+            background: var(--bg-tertiary);
+            padding: 0.5rem;
+            border-radius: 10px;
+        }
+
+        .category-title {
+            font-size: 1.4rem;
+            color: var(--accent-primary);
+            font-weight: 700;
+        }
+
+        .category-count {
+            margin-left: auto;
+            background: var(--accent-secondary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Term Cards Grid */
+        .terms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1rem;
+        }
+
+        /* Term Card */
+        .term-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 1.25rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .term-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-secondary);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .term-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--accent-secondary);
+        }
+
+        .term-card:hover::before {
+            transform: scaleY(1);
+        }
+
+        .term-card.expanded {
+            grid-column: span 1;
+        }
+
+        .term-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .term-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .term-english {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-style: italic;
+            background: var(--bg-tertiary);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+
+        .term-definition {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .term-extra {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed var(--border-color);
+            display: none;
+        }
+
+        .term-card.expanded .term-extra {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; max-height: 0; }
+            to { opacity: 1; max-height: 200px; }
+        }
+
+        .term-example {
+            background: var(--bg-tertiary);
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .term-example-label {
+            font-weight: 600;
+            color: var(--accent-secondary);
+            margin-right: 0.5rem;
+        }
+
+        .term-tags {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .term-tag {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.6rem;
+            background: var(--accent-secondary);
+            color: white;
+            border-radius: 10px;
+        }
+
+        .expand-hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .term-card:hover .expand-hint {
+            opacity: 1;
+        }
+
+        .term-card.expanded .expand-hint {
+            display: none;
+        }
+
+        /* Special Sections */
+        .info-card {
+            background: var(--gradient);
+            color: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-card h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .formula-box {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            font-family: 'Consolas', 'Monaco', monospace;
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        .formula-line {
+            padding: 0.3rem 0;
+            color: var(--text-secondary);
+        }
+
+        .formula-highlight {
+            color: var(--accent-secondary);
+            font-weight: 600;
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .comparison-table th {
+            background: var(--accent-primary);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .comparison-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        .comparison-table tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Resources Section */
+        .resource-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.3s;
+        }
+
+        .resource-card:hover {
+            border-color: var(--accent-secondary);
+            transform: translateX(5px);
+            box-shadow: var(--shadow);
+        }
+
+        .resource-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+
+        .resource-info h4 {
+            color: var(--accent-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .resource-info p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .resource-arrow {
+            margin-left: auto;
+            color: var(--accent-secondary);
+            font-size: 1.2rem;
+        }
+
+        /* No Results */
+        .no-results {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .no-results-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .no-results h3 {
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Back to Top */
+        .scroll-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--accent-secondary);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s;
+            z-index: 999;
+        }
+
+        .scroll-top:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .scroll-top.show {
+            display: flex;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            margin-top: 0px;
+            font-size: 0.9rem;
+        }
+		
+        /* Alphabet Navigation */
+        .alphabet-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            justify-content: center;
+            padding: 1rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .alphabet-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .alphabet-btn:hover {
+            background: var(--accent-secondary);
+            color: white;
+        }
+
+        .alphabet-btn.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* View Toggle */
+        .view-toggle {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            padding: 0.25rem;
+        }
+
+        .view-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-size: 1.1rem;
+        }
+
+        .view-btn.active {
+            background: var(--accent-secondary);
+            color: white;
+        }
+
+        /* List View */
+        .terms-list {
+            display: none;
+        }
+
+        .terms-list.active {
+            display: block;
+        }
+
+        .terms-grid.active {
+            display: grid;
+        }
+
+        .terms-grid:not(.active) {
+            display: none;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .list-item:hover {
+            border-color: var(--accent-secondary);
+            padding-left: 1.5rem;
+        }
+
+        .list-term {
+            font-weight: 600;
+            color: var(--accent-primary);
+            min-width: 200px;
+        }
+
+        .list-english {
+            color: var(--text-muted);
+            font-style: italic;
+            min-width: 150px;
+        }
+
+        .list-definition {
+            color: var(--text-secondary);
+            flex: 1;
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .search-container, .filters-container, main {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            .terms-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-chips {
+                justify-content: center;
+            }
+
+            .stats-bar {
+                justify-content: center;
+            }
+
+            .alphabet-nav {
+                display: none;
+            }
+
+            .list-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .list-term, .list-english {
+                min-width: auto;
+            }
+
+            .comparison-table {
+                font-size: 0.85rem;
+            }
+
+            .comparison-table th, .comparison-table td {
+                padding: 0.5rem;
+            }
+        }
+
+        /* Print */
+        @media print {
+            header, .search-container, .filters-container, .scroll-top, footer, .theme-toggle {
+                display: none !important;
+            }
+            
+            .term-card {
+                break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ccc;
+            }
+            
+            .term-extra {
+                display: block !important;
+            }
+        }
+
+        /* Highlight */
+        mark {
+            background: rgba(52, 152, 219, 0.3);
+            color: inherit;
+            padding: 0.1rem 0.2rem;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon"></span>
+                <span>Глоссарий токенизации</span>
+            </div>
+            <div class="header-controls">
+                <div class="view-toggle">
+                    <button class="view-btn active" data-view="grid" title="Карточки">▦</button>
+                    <button class="view-btn" data-view="list" title="Список">☰</button>
+                </div>
+                <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">☀️</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="search-container">
+        <div class="search-box">
+            <div class="search-input-wrapper">
+                <span class="search-icon"></span>
+                <input type="text" class="search-input" id="searchInput" placeholder="Поиск термина (рус/eng)...">
+                <button class="search-clear" id="searchClear">✕</button>
+            </div>
+        </div>
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span></span>
+                <span>Всего терминов: <span class="stat-value" id="totalTerms">0</span></span>
+            </div>
+            <div class="stat-item">
+                <span></span>
+                <span>Найдено: <span class="stat-value" id="foundTerms">0</span></span>
+            </div>
+            <div class="stat-item">
+                <span></span>
+                <span>Категорий: <span class="stat-value" id="totalCategories">0</span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="filters-container">
+        <div class="filter-label">Фильтр по категориям</div>
+        <div class="filter-chips" id="filterChips">
+            <!-- Generated by JS -->
+        </div>
+    </div>
+
+    <main id="mainContent">
+        <!-- Generated by JS -->
+    </main>
+
+     <footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+    <button class="scroll-top" id="scrollTop">↑</button>
+
+    <script>
+        // ========== DATA ==========
+        const glossaryData = {
+            categories: [
+                {
+                    id: 'basic',
+                    name: 'Базовые понятия',
+                    icon: '',
+                    terms: [
+                        {
+                            term: 'Токен',
+                            english: 'Token',
+                            definition: 'Минимальная единица текста, которую обрабатывает языковая модель. Может быть словом, частью слова, символом или даже байтом.',
+                            example: '«Привет» → 1 токен; «Переосвидетельствование» → 6 токенов',
+                            tags: ['основы', 'ключевой']
+                        },
+                        {
+                            term: 'Токенизация',
+                            english: 'Tokenization',
+                            definition: 'Процесс разбиения текста на токены для последующей обработки моделью.',
+                            example: 'Входной этап любого NLP-пайплайна',
+                            tags: ['процесс', 'основы']
+                        },
+                        {
+                            term: 'Токенизатор',
+                            english: 'Tokenizer',
+                            definition: 'Программный компонент, выполняющий токенизацию по определённому алгоритму и словарю.',
+                            example: 'У каждой LLM свой токенизатор (GPT, Claude, LLaMA)',
+                            tags: ['компонент']
+                        },
+                        {
+                            term: 'Детокенизация',
+                            english: 'Detokenization',
+                            definition: 'Обратный процесс: сборка текста из токенов. Не всегда возможна без потерь.',
+                            example: 'Проблемы с пробелами, регистром при восстановлении',
+                            tags: ['процесс']
+                        },
+                        {
+                            term: 'Словарь токенов',
+                            english: 'Vocabulary (Vocab)',
+                            definition: 'Конечный набор всех токенов, известных модели. Типичный размер: 30 000 – 100 000 токенов.',
+                            example: 'GPT-4: ~100K; Claude: ~100K; BERT: ~30K',
+                            tags: ['структура']
+                        },
+                        {
+                            term: 'ID токена',
+                            english: 'Token ID',
+                            definition: 'Уникальный числовой идентификатор токена в словаре.',
+                            example: '«Привет» → ID 15339',
+                            tags: ['структура']
+                        }
+                    ]
+                },
+                {
+                    id: 'algorithms',
+                    name: 'Алгоритмы',
+                    icon: '',
+                    terms: [
+                        {
+                            term: 'BPE',
+                            english: 'Byte-Pair Encoding',
+                            definition: 'Алгоритм сжатия, адаптированный для токенизации. Итеративно объединяет наиболее частые пары символов/токенов.',
+                            example: 'Используется в GPT-2, GPT-3, GPT-4, LLaMA, Claude',
+                            tags: ['ключевой', 'алгоритм']
+                        },
+                        {
+                            term: 'Байтовый BPE',
+                            english: 'Byte-level BPE',
+                            definition: 'Вариант BPE, работающий на уровне байтов UTF-8, а не символов. Позволяет обрабатывать любой текст без OOV.',
+                            example: 'GPT-2+, большинство современных LLM',
+                            tags: ['алгоритм']
+                        },
+                        {
+                            term: 'WordPiece',
+                            english: 'WordPiece',
+                            definition: 'Алгоритм, похожий на BPE, но использующий вероятностный критерий слияния (максимизация likelihood).',
+                            example: 'Используется в BERT, DistilBERT, Electra',
+                            tags: ['алгоритм', 'Google']
+                        },
+                        {
+                            term: 'Unigram',
+                            english: 'Unigram (LM)',
+                            definition: 'Вероятностный алгоритм: начинает с большого словаря и итеративно удаляет токены с наименьшим влиянием на likelihood.',
+                            example: 'Используется в XLNet, ALBERT, T5, mBART',
+                            tags: ['алгоритм']
+                        },
+                        {
+                            term: 'SentencePiece',
+                            english: 'SentencePiece',
+                            definition: 'Библиотека/фреймворк от Google, реализующая BPE и Unigram. Работает с «сырым» текстом без предварительной токенизации по пробелам.',
+                            example: 'T5, ALBERT, XLM-RoBERTa, LLaMA',
+                            tags: ['библиотека', 'Google']
+                        }
+                    ]
+                },
+                {
+                    id: 'levels',
+                    name: 'Уровни',
+                    icon: '',
+                    terms: [
+                        {
+                            term: 'Пословная токенизация',
+                            english: 'Word-level',
+                            definition: 'Каждое слово = отдельный токен. Интуитивный подход, но создаёт огромный словарь и проблему OOV.',
+                            example: '✅ Интуитивно; ❌ Огромный словарь, проблема OOV',
+                            tags: ['уровень']
+                        },
+                        {
+                            term: 'Посимвольная токенизация',
+                            english: 'Character-level',
+                            definition: 'Каждый символ = токен. Маленький словарь, но очень длинные последовательности.',
+                            example: '✅ Маленький словарь (~100); ❌ Длинные последовательности',
+                            tags: ['уровень']
+                        },
+                        {
+                            term: 'Субсловная токенизация',
+                            english: 'Subword-level',
+                            definition: 'Токены — это части слов (морфемоподобные единицы). Баланс размера словаря и длины. Стандарт для LLM.',
+                            example: '✅ Баланс размера и длины; Стандарт для LLM',
+                            tags: ['уровень', 'ключевой']
+                        },
+                        {
+                            term: 'Побайтовая токенизация',
+                            english: 'Byte-level',
+                            definition: 'Каждый байт UTF-8 = токен (256 базовых единиц). Универсальность, но ещё более длинные последовательности.',
+                            example: '✅ Универсальность; ❌ Ещё более длинные последовательности',
+                            tags: ['уровень']
+                        }
+                    ]
+                },
+                {
+                    id: 'processes',
+                    name: 'Процессы',
+                    icon: '',
+                    terms: [
+                        {
+                            term: 'Предварительная токенизация',
+                            english: 'Pre-tokenization',
+                            definition: 'Разбиение текста на «слова» перед применением BPE/WordPiece (обычно по пробелам и пунктуации).',
+                            example: '"Hello, world!" → ["Hello", ",", "world", "!"]',
+                            tags: ['этап']
+                        },
+                        {
+                            term: 'Нормализация',
+                            english: 'Normalization',
+                            definition: 'Приведение текста к стандартному виду: lowercase, удаление диакритики, NFKC-нормализация Unicode и т.д.',
+                            example: '"Привет!" → "привет!"',
+                            tags: ['этап']
+                        },
+                        {
+                            term: 'Правила слияния',
+                            english: 'Merge rules',
+                            definition: 'Упорядоченный список пар токенов, которые BPE объединяет. Хранится вместе со словарём.',
+                            example: '("e", "s") → "es", ("es", "t") → "est"',
+                            tags: ['структура']
+                        },
+                        {
+                            term: 'Жадная токенизация',
+                            english: 'Greedy tokenization',
+                            definition: 'Стратегия выбора самого длинного совпадающего токена из словаря (слева направо).',
+                            example: 'Находит максимально длинный токен в каждой позиции',
+                            tags: ['стратегия']
+                        },
+                        {
+                            term: 'Обучение токенизатора',
+                            english: 'Tokenizer training',
+                            definition: 'Процесс построения словаря и правил слияния на большом корпусе текстов.',
+                            example: 'Требует миллионов документов для качественного словаря',
+                            tags: ['процесс']
+                        }
+                    ]
+                },
+                {
+                    id: 'special',
+                    name: 'Спец. токены',
+                    icon: '',
+                    terms: [
+                            {
+        "term": "Специальный токен",
+        "english": "Special token",
+        "definition": "Служебный токен с особой функцией, не являющийся частью естественного текста.",
+        "example": "[CLS], [SEP], <s>, </s>, [PAD]",
+        "tags": ["служебный"]
+    },
+    {
+        "term": "Токен начала",
+        "english": "BOS (Beginning of Sequence)",
+        "definition": "Маркер начала последовательности. Сигнализирует модели о старте нового текста.",
+        "example": "<|startoftext|>, [CLS]",
+        "tags": ["служебный"]
+    },
+    {
+        "term": "Токен конца",
+        "english": "EOS (End of Sequence)",
+        "definition": "Маркер конца последовательности. Сигнал модели остановить генерацию.",
+        "example": "<|endoftext|>, [SEP]",
+        "tags": ["служебный"]
+    },
+    {
+        "term": "Токен заполнения",
+        "english": "PAD (Padding)",
+        "definition": "Используется для выравнивания последовательностей до одной длины в батче.",
+        "example": "[PAD], <pad>",
+        "tags": ["служебный"]
+    },
+    {
+        "term": "Токен неизвестного",
+        "english": "UNK (Unknown)",
+        "definition": "Заменяет токены, отсутствующие в словаре. Редко используется в byte-level BPE.",
+        "example": "[UNK], <unk>",
+        "tags": ["служебный"]
+    },
+    {
+        "term": "Токен маски",
+        "english": "MASK",
+        "definition": "Используется в задачах маскированного языкового моделирования (MLM) для скрытия слов.",
+        "example": "[MASK] (BERT)",
+        "tags": ["служебный", "MLM"]
+    }
+                    ]
+                },
+                {
+                    id: 'architecture',
+                    name: 'Архитектура',
+                    icon: '',
+                    terms: [
+                        {
+                            term: 'Эмбеддинг',
+                            english: 'Embedding',
+                            definition: 'Векторное представление токена в многомерном пространстве (обычно 768–4096 измерений).',
+                            example: 'Токен "кот" → вектор [0.12, -0.45, 0.78, ...]',
+                            tags: ['вектор', 'ключевой']
+                        },
+                        {
+                            term: 'Позиционное кодирование',
+                            english: 'Positional encoding',
+                            definition: 'Способ передачи информации о позиции токена в последовательности. Необходимо, так как трансформер не знает порядок.',
+                            example: 'Синусоидальное, обучаемое, RoPE',
+                            tags: ['архитектура']
+                        },
+                        {
+                            term: 'Механизм внимания',
+                            english: 'Attention mechanism',
+                            definition: 'Механизм, позволяющий модели «связывать» токены между собой, восстанавливая смысл из фрагментов.',
+                            example: 'Self-attention, Cross-attention, Multi-head attention',
+                            tags: ['архитектура', 'ключевой']
+                        },
+                        {
+                            term: 'Контекстное окно',
+                            english: 'Context window',
+                            definition: 'Максимальное количество токенов, которое модель может обработать за один раз.',
+                            example: 'GPT-4: 8K–128K; Claude: 100K–200K',
+                            tags: ['ограничение']
+                        },
+                        {
+                            term: 'Трансформер',
+                            english: 'Transformer',
+                            definition: 'Архитектура нейросети, основанная на механизме внимания (Vaswani et al., 2017). Основа всех современных LLM.',
+                            example: 'GPT, BERT, T5, LLaMA — все на базе трансформера',
+                            tags: ['архитектура', 'ключевой']
+                        }
+                    ]
+                },
+                {
+                    id: 'metrics',
+                    name: 'Метрики',
+                    icon: '',
+                    terms: [
+                        {
+                            term: 'Фертильность',
+                            english: 'Fertility',
+                            definition: 'Среднее количество токенов на одно слово в тексте. Для русского обычно 1.5–2.5, для английского 1.0–1.3.',
+                            example: 'Высокая фертильность = больше токенов = дороже API',
+                            tags: ['метрика']
+                        },
+                        {
+                            term: 'Компрессия',
+                            english: 'Compression ratio',
+                            definition: 'Отношение количества символов к количеству токенов. Чем выше — тем эффективнее токенизатор.',
+                            example: '~4 символа/токен для английского',
+                            tags: ['метрика']
+                        },
+                        {
+                            term: 'Покрытие',
+                            english: 'Coverage',
+                            definition: 'Доля текста, которую можно токенизировать без UNK-токенов. В byte-level BPE всегда 100%.',
+                            example: 'Byte-level BPE: 100% покрытие любого текста',
+                            tags: ['метрика']
+                        },
+                        {
+                            term: 'OOV',
+                            english: 'Out-of-Vocabulary',
+                            definition: 'Проблема слов, отсутствующих в словаре. Субсловные методы (BPE, WordPiece) минимизируют OOV.',
+                            example: 'Редкие имена, неологизмы, опечатки',
+                            tags: ['проблема']
+                        }
+                    ]
+                },
+                {
+                    id: 'linguistics',
+                    name: 'Лингвистические параллели',
+                    icon: '',
+                    terms: [
+                        {
+                            term: 'Морфема vs Токен',
+                            english: 'Morpheme vs Token',
+                            definition: 'Морфема — минимальная значимая единица (определяется семантикой). Токен — статистически частотная единица (определяется частотностью).',
+                            example: 'Морфема: "пере-чит-ыва-ть"; Токен: "пере|чит|ывать"',
+                            tags: ['сравнение', 'ключевой']
+                        },
+                        {
+                            term: 'Лексема',
+                            english: 'Lexeme',
+                            definition: 'Абстрактная единица словаря в лингвистике. Токенизатор не знает о леммах и работает со словоформами.',
+                            example: '"читать", "читаю", "читал" — одна лексема, разные токены',
+                            tags: ['сравнение']
+                        },
+                        {
+                            term: 'Графема',
+                            english: 'Grapheme',
+                            definition: 'Минимальная единица письма в лингвистике, связанная с фонемой. Character token — её аналог в NLP.',
+                            example: 'Буква "а" как графема и как токен',
+                            tags: ['сравнение']
+                        },
+                        {
+                            term: 'Словоформа',
+                            english: 'Surface form',
+                            definition: 'Конкретная форма слова в тексте. Токенизатор работает именно со словоформами.',
+                            example: '"бегу", "бежишь", "бежал" — разные словоформы',
+                            tags: ['сравнение']
+                        },
+                        {
+                            term: 'Сегментация',
+                            english: 'Segmentation',
+                            definition: 'Лингвистический термин для разбиения на единицы. Токенизация — её инженерный аналог с другими принципами.',
+                            example: 'Лингвист: по смыслу; BPE: по частотности',
+                            tags: ['сравнение']
+                        }
+                    ]
+                },
+                {
+                    id: 'models',
+                    name: 'Токенизаторы',
+                    icon: '',
+                    terms: [
+                        {
+                            term: 'GPT-2 / GPT-3 / GPT-4',
+                            english: 'GPT series (OpenAI)',
+                            definition: 'Семейство моделей OpenAI. Используют Byte-level BPE. GPT-4 использует библиотеку tiktoken со словарём ~100K.',
+                            example: 'tiktoken: cl100k_base (GPT-4), p50k_base (GPT-3)',
+                            tags: ['модель', 'OpenAI']
+                        },
+                        {
+                            term: 'BERT',
+                            english: 'BERT (Google)',
+                            definition: 'Модель Google для понимания языка. Использует WordPiece со словарём ~30K. Маркер "##" для продолжения слова.',
+                            example: '"playing" → ["play", "##ing"]',
+                            tags: ['модель', 'Google']
+                        },
+                        {
+                            term: 'T5',
+                            english: 'T5 (Google)',
+                            definition: 'Text-to-Text Transfer Transformer. Использует SentencePiece (Unigram) со словарём ~32K.',
+                            example: 'Единый формат для всех задач NLP',
+                            tags: ['модель', 'Google']
+                        },
+                        {
+                            term: 'LLaMA',
+                            english: 'LLaMA (Meta)',
+                            definition: 'Семейство открытых моделей Meta. Использует SentencePiece (BPE) со словарём ~32K, обучен на многоязычных данных.',
+                            example: 'Основа для Alpaca, Vicuna и других fine-tuned моделей',
+                            tags: ['модель', 'Meta']
+                        },
+                        {
+                            term: 'Claude',
+                            english: 'Claude (Anthropic)',
+                            definition: 'Семейство моделей Anthropic. Использует Byte-level BPE со словарём ~100K, аналогично GPT-4.',
+                            example: 'Конкурент GPT-4 с длинным контекстом',
+                            tags: ['модель', 'Anthropic']
+                        }
+                    ]
+                },
+                {
+                    id: 'practical',
+                    name: 'Практическое',
+                    icon: '',
+                    terms: [
+                        {
+                            term: 'Промпт',
+                            english: 'Prompt',
+                            definition: 'Входной текст (запрос) пользователя к модели. Состоит из системного промпта и пользовательского сообщения.',
+                            example: '"Напиши стихотворение о весне"',
+                            tags: ['практика']
+                        },
+                        {
+                            term: 'Инференс',
+                            english: 'Inference',
+                            definition: 'Процесс генерации ответа моделью. Происходит токен за токеном (авторегрессивно).',
+                            example: 'Время инференса зависит от длины ответа',
+                            tags: ['практика']
+                        },
+                        {
+                            term: 'API',
+                            english: 'API (Application Programming Interface)',
+                            definition: 'Интерфейс для программного взаимодействия с моделью. Тарификация обычно по токенам.',
+                            example: 'OpenAI API, Anthropic API, Google AI',
+                            tags: ['практика']
+                        },
+                        {
+                            term: 'Тарификация по токенам',
+                            english: 'Token-based pricing',
+                            definition: 'Модель оплаты API: стоимость = количество токенов × цена за 1K токенов. Вход и выход часто тарифицируются по-разному.',
+                            example: 'GPT-4: $0.03/1K input, $0.06/1K output',
+                            tags: ['практика', 'бизнес']
+                        },
+                        {
+                            term: 'Лимит токенов',
+                            english: 'Token limit',
+                            definition: 'Максимальное количество токенов (вход + выход) за один запрос. Определяется контекстным окном модели.',
+                            example: 'GPT-4 Turbo: 128K токенов',
+                            tags: ['практика', 'ограничение']
+                        }
+                    ]
+                },
+                {
+                    id: 'formulas',
+                    name: 'Формулы и соотношения',
+                    icon: '',
+                    terms: [
+                        {
+                            term: 'Токены → Символы (EN)',
+                            english: 'Tokens to Characters (EN)',
+                            definition: '1 токен ≈ 4 символа для английского языка. Это эмпирическое среднее значение.',
+                            example: '100 токенов ≈ 400 символов',
+                            tags: ['формула']
+                        },
+                        {
+                            term: 'Токены → Символы (RU)',
+                            english: 'Tokens to Characters (RU)',
+                            definition: '1 токен ≈ 1-2 символа для русского языка из-за кириллицы и сложной морфологии.',
+                            example: '100 токенов ≈ 150-200 символов',
+                            tags: ['формула']
+                        },
+                        {
+                            term: 'Токены → Слова (EN)',
+                            english: 'Tokens to Words (EN)',
+                            definition: '1 токен ≈ 0.75 слова для английского. Частые слова = 1 токен, редкие разбиваются.',
+                            example: '100 токенов ≈ 75 слов',
+                            tags: ['формула']
+                        },
+                        {
+                            term: 'Токены → Слова (RU)',
+                            english: 'Tokens to Words (RU)',
+                            definition: '1 токен ≈ 0.4-0.5 слова для русского. Русские слова часто требуют 2-3 токена.',
+                            example: '100 токенов ≈ 40-50 слов',
+                            tags: ['формула']
+                        },
+                        {
+                            term: 'Токены → Страницы',
+                            english: 'Tokens to Pages',
+                            definition: '1000 токенов ≈ 1-2 страницы текста (зависит от языка и форматирования).',
+                            example: '8000 токенов ≈ 10-15 страниц',
+                            tags: ['формула']
+                        }
+                    ]
+                }
+            ],
+            resources: [
+                {
+                    title: 'Hugging Face Tokenizers',
+                    description: 'Документация библиотеки токенизаторов',
+                    url: 'https://huggingface.co/docs/tokenizers',
+                    icon: ''
+                },
+                {
+                    title: 'OpenAI Tokenizer (VPN)',
+                    description: 'Онлайн-инструмент для подсчёта токенов',
+                    url: 'https://platform.openai.com/tokenizer',
+                    icon: ''
+                },
+                {
+                    title: 'SentencePiece (Google)',
+                    description: 'GitHub репозиторий библиотеки',
+                    url: 'https://github.com/google/sentencepiece',
+                    icon: ''
+                },
+                {
+                    title: 'Статья о BPE',
+                    description: 'Sennrich et al., 2015 — оригинальная статья',
+                    url: 'https://arxiv.org/abs/1508.07909',
+                    icon: ''
+                }
+            ]
+        };
+
+        // ========== STATE ==========
+        let activeCategory = 'all';
+        let searchQuery = '';
+        let currentView = 'grid';
+        let expandedCards = new Set();
+
+        // ========== INIT ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            initFilters();
+            renderContent();
+            initSearch();
+            initViewToggle();
+            initScrollTop();
+            updateStats();
+        });
+
+        // ========== THEME ==========
+        function initTheme() {
+            const themeToggle = document.getElementById('themeToggle');
+            const saved = localStorage.getItem('theme');
+            
+            if (saved === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+            
+            themeToggle.addEventListener('click', () => {
+                const isDark = document.body.hasAttribute('data-theme');
+                if (isDark) {
+                    document.body.removeAttribute('data-theme');
+                    themeToggle.textContent = '☀️';
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    document.body.setAttribute('data-theme', 'dark');
+                    themeToggle.textContent = '🌙';
+                    localStorage.setItem('theme', 'dark');
+                }
+            });
+        }
+
+        // ========== FILTERS ==========
+        function initFilters() {
+            const container = document.getElementById('filterChips');
+            
+            // All filter
+            let html = `<button class="filter-chip active" data-category="all">
+                <span>Все</span>
+                <span class="count">${getTotalTermsCount()}</span>
+            </button>`;
+            
+            // Category filters
+            glossaryData.categories.forEach(cat => {
+                html += `<button class="filter-chip" data-category="${cat.id}">
+                    <span>${cat.icon} ${cat.name}</span>
+                    <span class="count">${cat.terms.length}</span>
+                </button>`;
+            });
+            
+            container.innerHTML = html;
+            
+            // Events
+            container.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    container.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    activeCategory = chip.dataset.category;
+                    renderContent();
+                    updateStats();
+                });
+            });
+        }
+
+        function getTotalTermsCount() {
+            return glossaryData.categories.reduce((sum, cat) => sum + cat.terms.length, 0);
+        }
+
+        // ========== SEARCH ==========
+        function initSearch() {
+            const input = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('searchClear');
+            
+            input.addEventListener('input', (e) => {
+                searchQuery = e.target.value.toLowerCase().trim();
+                clearBtn.classList.toggle('show', searchQuery.length > 0);
+                renderContent();
+                updateStats();
+            });
+            
+            clearBtn.addEventListener('click', () => {
+                input.value = '';
+                searchQuery = '';
+                clearBtn.classList.remove('show');
+                renderContent();
+                updateStats();
+            });
+        }
+
+        // ========== VIEW TOGGLE ==========
+        function initViewToggle() {
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentView = btn.dataset.view;
+                    renderContent();
+                });
+            });
+        }
+
+        // ========== RENDER ==========
+        function renderContent() {
+            const main = document.getElementById('mainContent');
+            let html = '';
+            
+            const filteredCategories = getFilteredCategories();
+            
+            if (filteredCategories.length === 0 || filteredCategories.every(c => c.filteredTerms.length === 0)) {
+                html = renderNoResults();
+            } else {
+                filteredCategories.forEach(cat => {
+                    if (cat.filteredTerms.length > 0) {
+                        html += renderCategory(cat);
+                    }
+                });
+                
+                // Resources section
+                if (activeCategory === 'all' && !searchQuery) {
+                    html += renderResources();
+                }
+            }
+            
+            main.innerHTML = html;
+            
+            // Init card events
+            initCardEvents();
+        }
+
+        function getFilteredCategories() {
+            return glossaryData.categories
+                .filter(cat => activeCategory === 'all' || cat.id === activeCategory)
+                .map(cat => ({
+                    ...cat,
+                    filteredTerms: cat.terms.filter(term => matchesSearch(term))
+                }));
+        }
+
+        function matchesSearch(term) {
+            if (!searchQuery) return true;
+            
+            const searchIn = [
+                term.term,
+                term.english,
+                term.definition,
+                term.example || '',
+                ...(term.tags || [])
+            ].join(' ').toLowerCase();
+            
+            return searchIn.includes(searchQuery);
+        }
+
+        function renderCategory(cat) {
+            const termsHtml = currentView === 'grid' 
+                ? renderTermsGrid(cat.filteredTerms, cat.id)
+                : renderTermsList(cat.filteredTerms, cat.id);
+            
+            return `
+                <section class="category-section" id="cat-${cat.id}">
+                    <div class="category-header">
+                        <span class="category-icon">${cat.icon}</span>
+                        <h2 class="category-title">${cat.name}</h2>
+                        <span class="category-count">${cat.filteredTerms.length}</span>
+                    </div>
+                    ${termsHtml}
+                </section>
+            `;
+        }
+
+        function renderTermsGrid(terms, catId) {
+            const cards = terms.map((term, idx) => {
+                const cardId = `${catId}-${idx}`;
+                const isExpanded = expandedCards.has(cardId);
+                
+                return `
+                    <div class="term-card ${isExpanded ? 'expanded' : ''}" data-card-id="${cardId}">
+                        <div class="term-header">
+                            <span class="term-title">${highlightSearch(term.term)}</span>
+                            <span class="term-english">${highlightSearch(term.english)}</span>
+                        </div>
+                        <p class="term-definition">${highlightSearch(term.definition)}</p>
+                        ${term.example ? `
+                            <div class="term-extra">
+                                <div class="term-example">
+                                    <span class="term-example-label">Пример:</span>
+                                    ${highlightSearch(term.example)}
+                                </div>
+                                ${term.tags ? `
+                                    <div class="term-tags">
+                                        ${term.tags.map(tag => `<span class="term-tag">${tag}</span>`).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                        <div class="expand-hint">Нажмите для подробностей</div>
+                    </div>
+                `;
+            }).join('');
+            
+            return `<div class="terms-grid active">${cards}</div>`;
+        }
+
+        function renderTermsList(terms, catId) {
+            const items = terms.map((term, idx) => {
+                const cardId = `${catId}-${idx}`;
+                
+                return `
+                    <div class="list-item" data-card-id="${cardId}">
+                        <span class="list-term">${highlightSearch(term.term)}</span>
+                        <span class="list-english">${highlightSearch(term.english)}</span>
+                        <span class="list-definition">${highlightSearch(term.definition)}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            return `<div class="terms-list active">${items}</div>`;
+        }
+
+        function renderResources() {
+            const cards = glossaryData.resources.map(res => `
+                <a href="${res.url}" target="_blank" rel="noopener" class="resource-card">
+                    <span class="resource-icon">${res.icon}</span>
+                    <div class="resource-info">
+                        <h4>${res.title}</h4>
+                        <p>${res.description}</p>
+                    </div>
+                    <span class="resource-arrow">→</span>
+                </a>
+            `).join('');
+            
+            return `
+                <section class="category-section">
+                    <div class="category-header">
+                        <span class="category-icon"></span>
+                        <h2 class="category-title">Рекомендуемые ресурсы</h2>
+                    </div>
+                    <div class="terms-grid active" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                        ${cards}
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderNoResults() {
+            return `
+                <div class="no-results">
+                    <div class="no-results-icon"></div>
+                    <h3>Ничего не найдено</h3>
+                    <p>Попробуйте изменить поисковый запрос или сбросить фильтры</p>
+                </div>
+            `;
+        }
+
+        function highlightSearch(text) {
+            if (!searchQuery || !text) return text;
+            
+            const regex = new RegExp(`(${escapeRegex(searchQuery)})`, 'gi');
+            return text.replace(regex, '<mark>$1</mark>');
+        }
+
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // ========== CARD EVENTS ==========
+        function initCardEvents() {
+            document.querySelectorAll('.term-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const cardId = card.dataset.cardId;
+                    
+                    if (expandedCards.has(cardId)) {
+                        expandedCards.delete(cardId);
+                        card.classList.remove('expanded');
+                    } else {
+                        expandedCards.add(cardId);
+                        card.classList.add('expanded');
+                    }
+                });
+            });
+        }
+
+        // ========== STATS ==========
+        function updateStats() {
+            const total = getTotalTermsCount();
+            const found = getFilteredCategories().reduce((sum, cat) => sum + cat.filteredTerms.length, 0);
+            const categories = glossaryData.categories.length;
+            
+            document.getElementById('totalTerms').textContent = total;
+            document.getElementById('foundTerms').textContent = found;
+            document.getElementById('totalCategories').textContent = categories;
+        }
+
+        // ========== SCROLL TOP ==========
+        function initScrollTop() {
+            const btn = document.getElementById('scrollTop');
+            
+            window.addEventListener('scroll', () => {
+                btn.classList.toggle('show', window.scrollY > 300);
+            });
+            
+            btn.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+    </script>
+</body>
+</html>

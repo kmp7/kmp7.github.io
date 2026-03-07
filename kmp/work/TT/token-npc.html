@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+/* ===== CSS Variables ===== */
+:root {
+  --bg1:#ffffff;--bg2:#f5f5f5;--card:#ffffff;--text1:#2c3e50;--text2:#5a6c7d;
+  --heading:#325980;--accent:#3498db;--accent-h:#2980b9;--accent-l:rgba(52,152,219,.1);
+  --border:#f1f1f1;--border-s:#e0e0e0;--shadow:0 2px 10px rgba(0,0,0,.06);
+  --shadow-h:0 4px 16px rgba(0,0,0,.1);--radius:8px;--tr:.3s ease;
+  --hh:62px;--nh:46px;--code-bg:#f8f9fa;
+  --info-bg:rgba(52,152,219,.07);--info-b:#3498db;
+  --ex-bg:rgba(39,174,96,.07);--ex-b:#27ae60;
+  --note-bg:rgba(243,156,18,.07);--note-b:#f39c12;
+}
+[data-theme="dark"]{
+  --bg1:#0f172a;--bg2:#1e293b;--card:#1e293b;--text1:#e2e8f0;--text2:#94a3b8;
+  --heading:#7db4e0;--accent:#60a5fa;--accent-h:#93c5fd;--accent-l:rgba(96,165,250,.13);
+  --border:#334155;--border-s:#475569;--shadow:0 2px 10px rgba(0,0,0,.25);
+  --shadow-h:0 4px 16px rgba(0,0,0,.35);--code-bg:#334155;
+  --info-bg:rgba(96,165,250,.1);--info-b:#60a5fa;
+  --ex-bg:rgba(52,211,153,.1);--ex-b:#34d399;
+  --note-bg:rgba(251,191,36,.1);--note-b:#fbbf24;
+}
+
+/* ===== Reset ===== */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--hh) + var(--nh) + 24px)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ubuntu,sans-serif;
+  background:var(--bg2);color:var(--text1);line-height:1.75;
+  transition:background var(--tr),color var(--tr)}
+
+/* ===== Header ===== */
+header{position:fixed;top:0;left:0;right:0;z-index:1000;background:var(--heading);
+  transition:background var(--tr)}
+[data-theme="dark"] header{background:#1a2744}
+.h-top{max-width:1100px;margin:0 auto;padding:0 20px;height:var(--hh);
+  display:flex;align-items:center;justify-content:space-between}
+.h-title{color:#fff;font-size:1.5rem;font-weight:700;letter-spacing:-.01em}
+.h-ctrl{display:flex;align-items:center;gap:10px}
+#themeBtn{background:rgba(255,255,255,.14);border:none;color:#fff;width:38px;height:38px;
+  border-radius:50%;cursor:pointer;font-size:1.15rem;display:flex;align-items:center;
+  justify-content:center;transition:background var(--tr)}
+#themeBtn:hover{background:rgba(255,255,255,.25)}
+.burger{display:none;background:0 0;border:none;cursor:pointer;padding:6px;
+  flex-direction:column;gap:5px}
+.burger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;
+  transition:var(--tr)}
+.burger.on span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
+.burger.on span:nth-child(2){opacity:0}
+.burger.on span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
+
+/* ===== Nav ===== */
+nav{position:fixed;top:var(--hh);left:0;right:0;z-index:999;background:var(--card);
+  border-bottom:1px solid var(--border);transition:background  #1e90ff;}
+.n-in{max-width:1100px;margin:0 auto;padding:0 20px;height:var(--nh);
+  display:flex;align-items:center;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.n-in::-webkit-scrollbar{display:none}
+.n-a{padding:7px 14px;color:var(--text2);text-decoration:none;font-size:.88rem;
+  font-weight:500;border-radius:6px;white-space:nowrap;transition:color var(--tr),background var(--tr)}
+.n-a:hover,.n-a.on{color:var(--accent);background:var(--accent-l);font-weight:600}
+
+/* ===== Main ===== */
+main{max-width:860px;margin:0 auto;padding:calc(var(--hh)+var(--nh)+28px) 20px 48px}
+
+/* ===== Sections ===== */
+section{background:var(--card);border-radius:var(--radius);padding:36px;margin-bottom:22px;
+  box-shadow:var(--shadow);border:1px solid var(--border);
+  transition:background var(--tr),border-color var(--tr)}
+.sn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;
+  background:var(--accent);color:#fff;border-radius:50%;font-size:.82rem;font-weight:700;
+  margin-right:10px;flex-shrink:0}
+section h2{color:var(--heading);font-size:1.45rem;font-weight:700;margin-bottom:22px;
+  padding-bottom:10px;border-bottom:2px solid var(--border);display:flex;align-items:center;
+  transition:color var(--tr)}
+section h3{color:var(--heading);font-size:1.12rem;font-weight:600;margin:24px 0 10px}
+section p{margin-bottom:14px}
+section ul,section ol{margin:10px 0 18px 22px}
+section li{margin-bottom:6px}
+strong,.term{font-weight:600;color:var(--heading)}
+
+/* ===== Boxes ===== */
+.box{padding:18px 22px;border-radius:var(--radius);margin:18px 0;border-left:4px solid}
+.box-i{background:var(--info-bg);border-color:var(--info-b)}
+.box-e{background:var(--ex-bg);border-color:var(--ex-b)}
+.box-n{background:var(--note-bg);border-color:var(--note-b)}
+.box b{display:block;margin-bottom:6px;font-size:.93rem}
+.box-i b{color:var(--info-b)}.box-e b{color:var(--ex-b)}.box-n b{color:var(--note-b)}
+
+/* ===== Code / Pre ===== */
+code{background:var(--code-bg);padding:2px 5px;border-radius:4px;
+  font-family:Consolas,Monaco,'Courier New',monospace;font-size:.88em}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px;overflow-x:auto;margin:14px 0;font-family:Consolas,Monaco,monospace;
+  font-size:.84rem;line-height:1.65;position:relative;white-space:pre-wrap;word-break:break-word}
+.cp{position:absolute;top:6px;right:6px;background:var(--accent);color:#fff;border:none;
+  padding:3px 10px;border-radius:4px;font-size:.78rem;cursor:pointer;opacity:.85;transition:opacity var(--tr)}
+.cp:hover{opacity:1}
+
+/* ===== Table ===== */
+.tbl-wrap{overflow-x:auto;margin:18px 0}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--border)}
+th{background:var(--bg2);color:var(--heading);font-weight:600}
+tr:hover td{background:var(--accent-l)}
+
+/* ===== Tokenizer Demo ===== */
+.demo{background:var(--bg2);border-radius:var(--radius);padding:22px;margin:18px 0}
+.demo textarea{width:100%;min-height:72px;padding:10px 14px;border:2px solid var(--border-s);
+  border-radius:var(--radius);font-family:inherit;font-size:.95rem;color:var(--text1);
+  background:var(--card);resize:vertical;transition:border-color var(--tr)}
+.demo textarea:focus{outline:none;border-color:var(--accent)}
+.demo-btns{display:flex;gap:8px;margin:14px 0;flex-wrap:wrap}
+.dbtn{padding:8px 18px;border:2px solid var(--accent);background:0 0;color:var(--accent);
+  border-radius:6px;font-size:.88rem;font-weight:500;cursor:pointer;transition:all var(--tr)}
+.dbtn:hover,.dbtn.on{background:var(--accent);color:#fff}
+.demo-out{background:var(--card);border-radius:var(--radius);padding:16px;min-height:50px;
+  border:1px solid var(--border);margin-top:10px}
+.tok{display:inline-block;padding:3px 7px;margin:3px 2px;border-radius:4px;
+  font-family:Consolas,Monaco,monospace;font-size:.88rem;border:1px solid rgba(128,128,128,.2)}
+.tc0{background:rgba(59,130,246,.14)}.tc1{background:rgba(16,185,129,.14)}
+.tc2{background:rgba(236,72,153,.14)}.tc3{background:rgba(245,158,11,.14)}
+.tc4{background:rgba(139,92,246,.14)}.tc5{background:rgba(20,184,166,.14)}
+.tc6{background:rgba(239,68,68,.14)}.tc7{background:rgba(34,197,94,.14)}
+.tcnt{margin-top:10px;font-weight:600;color:var(--heading);font-size:.92rem}
+
+/* ===== Accordion ===== */
+.acc-item{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;
+  overflow:hidden;transition:border-color var(--tr)}
+.acc-item.on{border-color:var(--accent)}
+.acc-h{width:100%;padding:14px 18px;background:var(--bg2);border:none;color:var(--text1);
+  font-size:.95rem;font-weight:600;text-align:left;cursor:pointer;display:flex;
+  justify-content:space-between;align-items:center;transition:background var(--tr),color var(--tr)}
+.acc-h:hover{background:var(--accent-l);color:var(--accent)}
+.acc-h::after{content:'+';font-size:1.2rem;font-weight:300;transition:transform var(--tr)}
+.acc-item.on .acc-h::after{content:'\2212'}
+.acc-b{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.acc-c{padding:18px}
+
+/* ===== Form ===== */
+.fg{margin-bottom:18px}
+.fl{display:block;font-weight:600;margin-bottom:6px;color:var(--heading);font-size:.95rem}
+.fi,.ft{width:100%;padding:10px 14px;border:2px solid var(--border-s);border-radius:var(--radius);
+  font-family:inherit;font-size:1rem;color:var(--text1);background:var(--card);
+  transition:border-color var(--tr)}
+.fi:focus,.ft:focus{outline:none;border-color:var(--accent)}
+.ft{min-height:180px;resize:vertical;line-height:1.7}
+.btn{padding:12px 30px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);
+  font-size:1rem;font-weight:600;cursor:pointer;transition:background var(--tr),transform .15s}
+.btn:hover{background:var(--accent-h);transform:translateY(-1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.msg{margin-top:12px;padding:10px 16px;border-radius:var(--radius);font-size:.9rem;display:none}
+.msg-ok{background:var(--ex-bg);color:var(--ex-b);border:1px solid var(--ex-b)}
+.msg-err{background:rgba(239,68,68,.08);color:#e74c3c;border:1px solid #e74c3c}
+.guide{background:var(--bg2);border-radius:var(--radius);padding:18px;margin:18px 0}
+.guide p{font-size:.92rem;color:var(--text2);margin-bottom:6px}
+
+/* ===== Footer ===== */
+footer{text-align:center;padding:28px 20px;color:var(--text2);font-size:.84rem;
+  border-top:1px solid var(--border);background:var(--card)}
+
+/* ===== Responsive ===== */
+@media(max-width:768px){
+  html{scroll-padding-top:calc(var(--hh)+20px)}
+  .h-title{font-size:.95rem}
+  .burger{display:flex}
+  nav{max-height:0;overflow:hidden;transition:max-height .35s ease;top:var(--hh)}
+  nav.open{max-height:500px}
+  .n-in{flex-direction:column;height:auto;padding:6px 16px;align-items:stretch}
+  .n-a{padding:11px 14px;border-radius:0;border-bottom:1px solid var(--border)}
+  main{padding-top:calc(var(--hh)+20px)}
+  section{padding:22px 18px}
+  section h2{font-size:1.2rem}
+  .demo-btns{flex-direction:column}
+  .dbtn{width:100%;text-align:center}
+}
+@media(max-width:480px){
+  .h-title{font-size:.85rem}
+  section{padding:18px 14px}
+  section h2{font-size:1.1rem}
+  pre{font-size:.78rem;padding:12px}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="h-top">
+    <div class="h-title">Токенизация c LLM-NPC</div>
+    <div class="h-ctrl">
+      <button id="themeBtn" title="Переключить тему">☀️</button>
+      <button class="burger" id="burgerBtn" aria-label="Меню">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ===== NAV ===== -->
+<nav id="mainNav">
+  <div class="n-in">
+    <a href="#s1" class="n-a on">Введение</a>
+    <a href="#s2" class="n-a">Основы</a>
+    <a href="#s3" class="n-a">Виды</a>
+    <a href="#s4" class="n-a">LLM и токены</a>
+    <a href="#s5" class="n-a">NPC-подход</a>
+    <a href="#s6" class="n-a">Промптинг</a>
+	<a href="#s6a" class="n-a">Ограничения</a>
+	<a href="#s6b" class="n-a">Препроцессинг</a>
+    <a href="#s7" class="n-a">Практикум</a>
+    <a href="#s8" class="n-a">Выводы</a>
+  </div>
+</nav>
+
+<!-- ===== MAIN ===== -->
+<main>
+
+<!-- Section 1 -->
+<section id="s1">
+  <h2><span class="sn">1</span>Введение</h2>
+    <div class="box box-i">
+    В парадигме <strong>AI First </strong>важно познакомиться с проведением токенизации с помощью LLM как образовательных NPC (Non-Player Character), где моделируется пользователем LLM-персонаж с определённой ролью, характером и стратегией взаимодействия. Сам промптинг по заданию роли рекомендуется обсуждать с LLM.
+  </div>
+
+  <h3>Токенизация для лингвистов</h3>
+  <p>Лингвисты привыкли работать с <strong>морфемами, лексемами, синтагмами</strong> &mdash; единицами, выделяемыми по лингвистическим критериям. Большие языковые модели (LLM) оперируют иными единицами &mdash; <strong>токенами</strong>, которые определяются вероятностно и не всегда совпадают с привычными лингвистическими границами. Понимание этого разрыва критически важно для:</p>
+  <ul>
+    <li>грамотного использования LLM в преподавании и исследованиях;</li>
+    <li>осознания ограничений и «слепых зон» языковых моделей;</li>
+    <li>эффективного промптинга &mdash; составления запросов к LLM;</li>
+    <li>критической оценки результатов, которые выдаёт модель.</li>
+  </ul>
+
+  </section>
+
+<!-- Section 2 -->
+<section id="s2">
+  <h2><span class="sn">2</span>Основы токенизации</h2>
+  <p><strong>Токенизация</strong> (tokenization) &mdash; процесс разбиения непрерывного текста на минимальные единицы (<strong>токены</strong>), которые служат входными данными для модели обработки естественного языка (NLP). Токен может соответствовать слову, части слова, отдельному символу или даже фрагменту байтовой последовательности.</p>
+
+  <h3>Лингвистический анализ vs. вычислительная токенизация</h3>
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Критерий</th><th>Лингвистический анализ</th><th>Токенизация в NLP</th></tr>
+    <tr><td>Цель</td><td>Описание структуры языка</td><td>Подготовка данных для модели</td></tr>
+    <tr><td>Единица</td><td>Морфема, лексема, синтагма</td><td>Токен (статистическая единица)</td></tr>
+    <tr><td>Критерий выделения</td><td>Значение, грамматическая функция</td><td>Частотность, оптимальность кодирования</td></tr>
+    <tr><td>Универсальность</td><td>Язык-специфичные правила</td><td>Единый алгоритм для многих языков</td></tr>
+    <tr><td>Пример для «перечитывание»</td><td>пере- + чит- + -ыва- + -ни- + -е</td><td>пере + чит + ывание (условно)</td></tr>
+  </table>
+  </div>
+
+  <div class="box box-n">
+    <b>Ключевое различие</b>
+    Лингвист спрашивает: «Какова структура и значение этой единицы?» Алгоритм токенизации спрашивает: «Как закодировать текст наименьшим числом единиц из фиксированного словаря?» Эти задачи пересекаются, но не совпадают.
+  </div>
+
+  <p>Понимание разницы позволяет лингвисту точнее интерпретировать поведение LLM: модель не «знает» морфологию &mdash; она оперирует статистическими паттернами на уровне токенов.</p>
+</section>
+
+<!-- Section 3 -->
+<section id="s3">
+  <h2><span class="sn">3</span>Виды токенизации</h2>
+
+  <h3>3.1. Пословная (word-level)</h3>
+  <p>Текст разбивается по пробелам и знакам препинания. Каждое слово &mdash; отдельный токен.</p>
+  <ul>
+    <li><strong>Плюс:</strong> интуитивно понятна, совпадает с бытовым представлением о «словах».</li>
+    <li><strong>Минус:</strong> огромный словарь (сотни тысяч словоформ для флективных языков), проблема «неизвестных слов» (OOV).</li>
+  </ul>
+
+  <h3>3.2. Посимвольная (character-level)</h3>
+  <p>Каждый символ (буква, цифра, знак) &mdash; отдельный токен. Словарь минимален.</p>
+  <ul>
+    <li><strong>Плюс:</strong> нет проблемы OOV, маленький словарь.</li>
+    <li><strong>Минус:</strong> последовательности очень длинные, модели сложнее «увидеть» семантику.</li>
+  </ul>
+
+  <h3>3.3. Подсловная (subword) &mdash; доминирующий подход</h3>
+  <p>Компромисс: частотные слова остаются целыми, редкие разбиваются на подсловные единицы. Основные алгоритмы:</p>
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Алгоритм</th><th>Принцип</th><th>Используется в</th></tr>
+    <tr><td><strong>BPE</strong> (Byte Pair Encoding)</td><td>Итеративное слияние наиболее частотных пар символов</td><td>GPT-серия, LLaMA</td></tr>
+    <tr><td><strong>WordPiece</strong></td><td>Слияние пар, максимизирующих правдоподобие языковой модели</td><td>BERT, DistilBERT</td></tr>
+    <tr><td><strong>Unigram</strong></td><td>Начинает с большого словаря, итеративно удаляет наименее полезные единицы</td><td>T5, ALBERT</td></tr>
+    <tr><td><strong>SentencePiece</strong></td><td>Работает на уровне «сырых» символов без предварительной сегментации</td><td>mT5, XLNet, Claude</td></tr>
+  </table>
+  </div>
+
+  <div class="box box-e">
+    <b>Пример BPE для слова «токенизация»</b>
+    Начало: т, о, к, е, н, и, з, а, ц, и, я &rarr; слияния частых пар &rarr; ток, ен, из, ация &rarr; или: токен, изация. Конкретный результат зависит от обучающего корпуса.
+  </div>
+</section>
+
+<!-- Section 4 -->
+<section id="s4">
+  <h2><span class="sn">4</span>Токенизация в LLM</h2>
+
+  <h3>Как LLM обрабатывают текст</h3>
+  <p>Пользователь вводит текст &rarr; <strong>токенизатор</strong> разбивает его на токены &rarr; каждый токен сопоставляется с числовым идентификатором из <strong>словаря</strong> (vocabulary, обычно 32 000&ndash;128 000 единиц) &rarr; числа подаются на вход нейросети. Модель «видит» не буквы и не слова, а последовательность числовых кодов токенов.</p>
+
+  <h3>Контекстное окно и лимит токенов</h3>
+  <p>Каждая LLM имеет ограничение на длину входа + выхода, измеряемое в токенах (например, 8K, 128K, 200K). Это значит:</p>
+  <ul>
+    <li>Длинные тексты могут не поместиться целиком.</li>
+    <li>Языки с богатой морфологией (русский, финский, турецкий) «тратят» больше токенов на то же содержание, чем английский.</li>
+    <li>Стоимость API обычно рассчитывается за количество токенов.</li>
+  </ul>
+
+  <div class="box box-n">
+    <b>Русский vs. английский: расход токенов</b>
+    Одно и то же сообщение на русском языке может занимать в 1,5&ndash;2 раза больше токенов, чем на английском. Причина: токенизаторы обучены преимущественно на англоязычных корпусах, русские словоформы чаще разбиваются на подсловные единицы.
+  </div>
+
+  <h3>Практические следствия для лингвиста</h3>
+  <ul>
+    <li>Ошибки модели на стыках токенов (особенно при работе с морфологией) имеют системный характер.</li>
+    <li>Редкие слова, неологизмы, имена собственные разбиваются на мелкие токены &mdash; модель обрабатывает их менее уверенно.</li>
+    <li>Понимание токенизации помогает формулировать промпты, минимизирующие ошибки.</li>
+  </ul>
+</section>
+
+<!-- Section 5 -->
+<section id="s5">
+  <h2><span class="sn">5</span>LLM как образовательный NPC</h2>
+
+  <h3>Концепция</h3>
+  <p>Термин <strong>NPC</strong> (Non-Player Character) означает: <strong>LLM получает чётко определённую роль</strong> и действует в её рамках, вместо того чтобы быть «универсальным ассистентом».</p>
+
+  <p><strong>Бессубъектный актор (агенc)</strong> &mdash; ключевое понятие. LLM не обладает субъектностью (сознанием, намерениями, опытом), но может последовательно <em>имитировать</em> поведение определённого персонажа. Задавая роль, мы не создаём субъекта &mdash; мы конфигурируем модель поведения.</p>
+
+  <h3>Типы образовательных NPC</h3>
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Тип NPC</th><th>Функция</th><th>Когда использовать</th></tr>
+    <tr><td><strong>Токенизатор</strong></td><td>Демонстрирует и объясняет процесс разбиения текста на токены</td><td>Изучение основ NLP, знакомство с механикой LLM</td></tr>
+    <tr><td><strong>Наставник</strong></td><td>Направляет обучение, задаёт вопросы, поддерживает рефлексию</td><td>Самостоятельное изучение новой темы</td></tr>
+    <tr><td><strong>Эксперт</strong></td><td>Даёт глубокие, детальные объяснения в конкретной области</td><td>Углублённое изучение, подготовка к экзамену</td></tr>
+    <tr><td><strong>Критик</strong></td><td>Анализирует работу студента, даёт конструктивную обратную связь</td><td>Проверка эссе, перевода, плана урока</td></tr>
+  </table>
+  </div>
+
+  <h3>Преимущества ролевого подхода</h3>
+  <ul>
+    <li><strong>Фокусировка:</strong> модель не отвлекается на посторонние темы.</li>
+    <li><strong>Последовательность:</strong> ответы выдержаны в едином стиле и уровне сложности.</li>
+    <li><strong>Педагогическая стратегия:</strong> можно задать, как NPC реагирует на ошибки &mdash; сразу исправляет, задаёт наводящие вопросы или ждёт самокоррекции.</li>
+    <li><strong>Воспроизводимость:</strong> удачный промпт можно переиспользовать и дорабатывать.</li>
+  </ul>
+</section>
+
+<!-- Section 6 -->
+<section id="s6">
+  <h2><span class="sn">6</span>Стратегии промптинга для создания NPC</h2>
+
+  <h3>Структура промпта</h3>
+  <p>Эффективный промпт для создания образовательного NPC включает четыре компонента:</p>
+  <ol>
+    <li><strong>Роль</strong> &mdash; кто этот персонаж (специальность, должность, функция).</li>
+    <li><strong>Характер</strong> &mdash; стиль коммуникации (строгий, дружелюбный, сократический).</li>
+    <li><strong>Экспертиза</strong> &mdash; предметная область и уровень глубины.</li>
+    <li><strong>Стратегия взаимодействия</strong> &mdash; как реагировать на вопросы и ошибки.</li>
+  </ol>
+
+  <h3>Примеры промптов</h3>
+  <div class="accordion" id="promptAcc">
+
+    <div class="acc-item">
+      <button class="acc-h">NPC: Токенизатор</button>
+      <div class="acc-b"><div class="acc-c">
+        <pre>Ты — NPC-токенизатор по имени «ТокенМастер».
+
+Роль: специалист по токенизации текста для NLP.
+Характер: увлечённый, терпеливый, любишь наглядные примеры.
+Экспертиза: BPE, WordPiece, SentencePiece, особенности токенизации разных языков.
+Стратегия: когда пользователь даёт текст, ты пошагово показываешь, как он разбивается на токены, объясняешь логику разбиения, сравниваешь с лингвистическим морфемным разбором.
+
+Начни с приветствия и предложи пользователю ввести слово или фразу для анализа.<button class="cp" onclick="copyPre(this)">Копировать</button></pre>
+      </div></div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-h">NPC: Наставник</button>
+      <div class="acc-b"><div class="acc-c">
+        <pre>Ты — NPC-наставник по имени «Навигатор».
+
+Роль: педагог-фасилитатор, помогающий студенту-лингвисту самостоятельно разобраться в теме токенизации и работы LLM.
+Характер: тёплый, поддерживающий, применяешь сократический метод — предпочитаешь задавать вопросы, а не давать готовые ответы.
+Экспертиза: прикладная лингвистика, NLP, методика преподавания.
+Стратегия: узнай, что студент уже знает. Предлагай задания нарастающей сложности. После каждого ответа студента давай краткую обратную связь и задавай следующий вопрос. Не давай готовых ответов сразу — веди к самостоятельному открытию.<button class="cp" onclick="copyPre(this)">Копировать</button></pre>
+      </div></div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-h">NPC: Эксперт</button>
+      <div class="acc-b"><div class="acc-c">
+        <pre>Ты — NPC-эксперт по имени «Профессор Лексикон».
+
+Роль: авторитетный исследователь в области компьютерной лингвистики.
+Характер: академичный, точный, приводишь ссылки на ключевые работы (Sennrich et al. 2016 — BPE; Kudo 2018 — SentencePiece; и др.).
+Экспертиза: глубокое знание алгоритмов токенизации, архитектуры Transformer, связь между лингвистической теорией и NLP.
+Стратегия: отвечай развёрнуто и структурированно. Используй терминологию, но поясняй её. Приводи конкретные числовые примеры (размеры словарей, длины последовательностей). Сравнивай подходы объективно.<button class="cp" onclick="copyPre(this)">Копировать</button></pre>
+      </div></div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-h">NPC: Критик</button>
+      <div class="acc-b"><div class="acc-c">
+        <pre>Ты — NPC-критик по имени «Рецензент».
+
+Роль: строгий, но справедливый рецензент студенческих работ в области прикладной лингвистики.
+Характер: прямолинейный, конкретный, всегда обосновывает свою оценку. Отмечаешь и сильные стороны, и недостатки.
+Экспертиза: академическое письмо, лингвистическая терминология, стандарты научных работ.
+Стратегия: когда студент присылает текст, ты оцениваешь его по критериям: (1) точность терминологии, (2) полнота раскрытия темы, (3) логичность аргументации, (4) качество примеров. Даёшь итоговую оценку и 2–3 конкретные рекомендации по улучшению.<button class="cp" onclick="copyPre(this)">Копировать</button></pre>
+      </div></div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-h">Метапромпт: обсуждение промптинга с LLM</button>
+      <div class="acc-b"><div class="acc-c">
+        <p>Сам промптинг по заданию роли студенты также могут и должны обсудить с LLM &mdash; это называется <strong>метапромптинг</strong>. Пример:</p>
+        <pre>Я студент-лингвист, изучаю использование LLM в образовании. Помоги мне составить промпт, который превратит тебя в образовательного NPC — наставника по фонетике английского языка для русскоязычных студентов.
+
+Требования к NPC:
+— сократический метод обучения;
+— фокус на произношении проблемных звуков (/θ/, /ð/, /ŋ/);
+— использование IPA-транскрипции;
+— уровень студента: B1.
+
+Предложи промпт и объясни, почему ты выбрал именно такие формулировки.<button class="cp" onclick="copyPre(this)">Копировать</button></pre>
+        <p>Такой подход позволяет студенту не только получить готовый промпт, но и понять принципы его конструирования.</p>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="box box-i">
+    <b>Совет по итеративному улучшению</b>
+    Первый промпт редко бывает идеальным. После нескольких реплик оцените, насколько NPC следует заданной роли. Если поведение отклоняется, уточните промпт: добавьте ограничения, конкретизируйте стратегию, приведите примеры желаемых ответов.
+  </div>
+</section>
+
+<!-- Section 6.5: Ограничения и риски — вставить между секциями 6 и 7 -->
+<section id="s6a">
+  <h2><span class="sn">7</span>Ограничения и риски использования LLM как NPC-токенизатора</h2>
+
+  <div class="box box-n">
+    <b>«Все модели неверны, но некоторые полезны» — Джордж Бокс</b>
+    Этот принцип статистика Джорджа Бокса в полной мере относится к LLM в роли токенизатора. Модель способна дать полезное приближение и объяснение, но её ответы не являются точной репликой реального алгоритма. Осознание границ модели — не менее важный учебный результат, чем освоение самой токенизации.
+  </div>
+
+  <h3>1. LLM не выполняет настоящую токенизацию</h3>
+  <p>Когда вы просите LLM разбить текст на токены, она <strong>не запускает токенизатор внутри себя</strong>, а <strong>генерирует правдоподобный ответ</strong> на основе статистических паттернов. Это принципиальное различие:</p>
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Реальный токенизатор</th><th>LLM в роли NPC-токенизатора</th></tr>
+    <tr><td>Детерминированный алгоритм: один вход — всегда один и тот же выход</td><td>Стохастическая генерация: при разных запусках результат может различаться</td></tr>
+    <tr><td>Работает с конкретным словарём (например, cl100k_base для GPT-4)</td><td>Не имеет доступа к своему словарю токенов; «рассуждает» о нём приблизительно</td></tr>
+    <tr><td>Гарантированная точность</td><td>Может допускать ошибки, особенно на редких словах и языках, отличных от английского</td></tr>
+    <tr><td>Мгновенный результат для любой длины текста</td><td>Ограничена контекстным окном; длинные тексты требуют разбиения</td></tr>
+  </table>
+  </div>
+
+  <h3>2. Галлюцинации и ложная уверенность</h3>
+  <p>LLM может выдать токенизацию, которая <strong>выглядит убедительно, но фактически неверна</strong>. Это проявление общего свойства языковых моделей — галлюцинаций. Особенно высок риск в следующих случаях:</p>
+  <ul>
+    <li><strong>Редкие и длинные слова</strong> — модель может разбить их произвольно, не по границам реального BPE-словаря.</li>
+    <li><strong>Нелатинские алфавиты</strong> — токенизация кириллицы, арабского, CJK-символов хуже представлена в обучающих данных модели.</li>
+    <li><strong>Подсчёт количества токенов</strong> — LLM систематически ошибается при подсчёте, поскольку не умеет надёжно считать элементы последовательностей.</li>
+    <li><strong>Специальные символы и пробелы</strong> — обработка пунктуации, юникодных символов и пробелов часто описывается моделью неточно.</li>
+  </ul>
+
+  <div class="box box-i">
+    <b>Правило верификации</b>
+    Любой результат, полученный от LLM-токенизатора, следует проверять с помощью настоящего инструмента. Эталонные ресурсы: <strong>OpenAI Tokenizer</strong> (platform.openai.com/tokenizer) для моделей GPT, библиотека <code>tiktoken</code> (Python), <code>sentencepiece</code> для моделей на базе T5/LLaMA. Для токенизатора Claude — библиотека от Anthropic.
+  </div>
+
+  <h3>3. Отсутствие доступа к собственным параметрам</h3>
+  <p>LLM не может «заглянуть» в свой собственный токенизатор. Она не знает:</p>
+  <ul>
+    <li>точный состав своего словаря токенов;</li>
+    <li>какие именно ID присвоены каким подсловным единицам;</li>
+    <li>как конкретно был токенизирован входной промпт пользователя.</li>
+  </ul>
+  <p>Всё, что она «знает» о токенизации, — это информация из обучающего корпуса: статьи, документация, учебники. Она воспроизводит <strong>знание о токенизации</strong>, а не <strong>саму токенизацию</strong>.</p>
+
+  <h3>4. Педагогические риски</h3>
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Риск</th><th>Описание</th><th>Как минимизировать</th></tr>
+    <tr>
+      <td><strong>Некритичное доверие</strong></td>
+      <td>Студент принимает результат LLM за истину, не проверяя</td>
+      <td>Ввести обязательный этап верификации через эталонный инструмент</td>
+    </tr>
+    <tr>
+      <td><strong>Иллюзия понимания</strong></td>
+      <td>Гладкое объяснение модели создаёт ощущение глубокого понимания, которого на самом деле нет</td>
+      <td>Задавать контрольные вопросы, требующие применения знаний к новым примерам</td>
+    </tr>
+    <tr>
+      <td><strong>Смешение уровней</strong></td>
+      <td>Студент путает лингвистический морфемный анализ с вычислительной токенизацией</td>
+      <td>Явно противопоставлять два подхода; требовать параллельного разбора</td>
+    </tr>
+    <tr>
+      <td><strong>Воспроизводимость</strong></td>
+      <td>При повторном запросе LLM может дать другую токенизацию того же текста</td>
+      <td>Документировать все ответы; показать студентам, что результат нестабилен</td>
+    </tr>
+    <tr>
+      <td><strong>Чрезмерная зависимость</strong></td>
+      <td>Студент использует LLM вместо самостоятельного анализа</td>
+      <td>Чередовать задания «с LLM» и «без LLM»; требовать обоснования собственными словами</td>
+    </tr>
+  </table>
+  </div>
+
+  <h3>5. Когда LLM-токенизатор полезен, а когда — нет</h3>
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Полезен</th><th>Не подходит</th></tr>
+    <tr><td>Первое знакомство с концепцией токенизации</td><td>Получение точных данных для исследования</td></tr>
+    <tr><td>Объяснение принципов BPE, WordPiece «своими словами»</td><td>Точный подсчёт токенов для оценки стоимости API</td></tr>
+    <tr><td>Сравнительный анализ подходов к токенизации (концептуальный)</td><td>Отладка промптов с точностью до токена</td></tr>
+    <tr><td>Генерация примеров и учебных заданий</td><td>Построение токенизированных датасетов</td></tr>
+    <tr><td>Обсуждение связи между лингвистическим и вычислительным анализом</td><td>Верификация работы конкретного токенизатора</td></tr>
+  </table>
+  </div>
+
+  <div class="box box-e">
+    <b>Учебная стратегия: «Поймай ошибку»</b>
+    Эффективное упражнение: попросите LLM-токенизатор разбить 5 слов на токены, затем проверьте результат через настоящий токенизатор (например, platform.openai.com/tokenizer). Найдите расхождения и объясните, почему модель ошиблась. Такое задание одновременно учит токенизации и критическому отношению к результатам LLM.
+  </div>
+
+  <h3>6. Итог</h3>
+  <p>Использование LLM как образовательного NPC-токенизатора — это <strong>модель</strong> в боксовском смысле: она неверна в деталях, но полезна для формирования интуиции и концептуального понимания. Задача преподавателя и студента — осознавать границы этой модели и <strong>дополнять</strong> её точными инструментами там, где требуется достоверность.</p>
+
+  <p>Критическое мышление при работе с LLM — это не скептицизм ради скептицизма, а <strong>профессиональная компетенция</strong>: умение извлекать пользу из несовершенного инструмента, понимая природу и масштаб его несовершенств.</p>
+</section>
+
+
+<!-- Section 6b: LLM как NPC в других областях препроцессинга — вставить после секции 6a -->
+<section id="s6b">
+  <h2><span class="sn">8</span>LLM как NPC в других областях препроцессинга текста</h2>
+
+  <p>Подход «LLM как образовательный NPC» применим не только к токенизации. Препроцессинг текста включает ряд смежных задач, в каждой из которых LLM может выступать наставником или инструментом — с различной степенью надёжности.</p>
+
+  <div class="box box-n">
+    <b>«Все модели неверны, но некоторые полезны» — Джордж Бокс</b>
+    Во всех областях препроцессинга прослеживается устойчивый паттерн: LLM лучше <strong>рассуждает о процессе</strong>, чем <strong>воспроизводит процесс</strong>. Для студентов-лингвистов это само по себе ценное наблюдение: оно иллюстрирует разницу между <strong>декларативным знанием</strong> (знать, что) и <strong>процедурным знанием</strong> (знать, как) — различие, хорошо знакомое в лингводидактике.
+  </div>
+
+  <h3>1. Очистка текста</h3>
+  <p>Удаление HTML-тегов, спецсимволов, технического шума. LLM в роли NPC-«чистильщика» — одна из <strong>наиболее сильных ролей</strong>, поскольку очистка допускает вариативность результата (нет единственного детерминированного алгоритма).</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Подзадача</th><th>Качество выполнения</th><th>Качество объяснения</th></tr>
+    <tr><td>Удаление HTML-тегов</td><td>Отлично — модель хорошо «знает» структуру HTML</td><td>Отлично</td></tr>
+    <tr><td>Удаление спецсимволов</td><td>Хорошо, но может «потерять» значимые символы</td><td>Отлично</td></tr>
+    <tr><td>Фильтрация шума</td><td>Хорошо — способна отличить контент от служебного мусора</td><td>Отлично</td></tr>
+  </table>
+  </div>
+
+  <div class="box box-i">
+    <b>Риск: тихая потеря информации</b>
+    Модель может молча удалить значимую информацию — математические символы, эмодзи с семантической нагрузкой, специальную разметку — или, наоборот, оставить шум, приняв его за контент. Всегда сверяйте результат с исходным текстом.
+  </div>
+
+  <h3>2. Нормализация</h3>
+  <p>Приведение текста к единообразному виду: регистр, Unicode-формы (NFC/NFD), пунктуация. Здесь LLM <strong>полезна для объяснений</strong>, но <strong>ненадёжна для выполнения</strong>.</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Подзадача</th><th>Объяснение</th><th>Выполнение</th></tr>
+    <tr><td>Приведение регистра</td><td>Отлично объясняет правила и исключения</td><td>Выполняет надёжно</td></tr>
+    <tr><td>Unicode-нормализация</td><td>Хорошо объясняет разницу NFC/NFD</td><td><strong>Ненадёжна</strong> — не различает визуально идентичные символы</td></tr>
+    <tr><td>Унификация пунктуации</td><td>Хорошо объясняет правила</td><td>Может применять непоследовательно</td></tr>
+  </table>
+  </div>
+
+  <div class="box box-e">
+    <b>Наглядный пример ограничения</b>
+    Unicode-нормализация требует побайтовой точности. LLM не «видит» разницу между «й» (U+0439, один символ) и «и» + «&#774;» (U+0438 + U+0306, два символа). Модель работает на уровне токенов, а не на уровне кодовых точек Unicode. Именно на этом примере можно показать студентам, почему LLM не заменяет детерминированные инструменты.
+  </div>
+
+  <h3>3. Лемматизация и стемминг</h3>
+  <p>Две родственные, но принципиально разные задачи. Отношение LLM к ним — <strong>асимметрично</strong>.</p>
+
+  <h3>3.1. Лемматизация</h3>
+  <p>Приведение словоформы к начальной форме (лемме) с учётом контекста. Здесь LLM <strong>парадоксально близка к экспертному инструменту</strong>, поскольку лемматизация требует понимания контекста — именно того, в чём языковые модели сильны.</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Пример</th><th>Правильная лемма</th><th>LLM справится?</th><th>Комментарий</th></tr>
+    <tr><td>«бежавших»</td><td>бежать</td><td>Да, уверенно</td><td>Стандартная форма</td></tr>
+    <tr><td>«стали» (металл)</td><td>сталь</td><td>Да — учитывает контекст</td><td rowspan="2">Преимущество перед pymorphy2, который не различает омонимы без контекста</td></tr>
+    <tr><td>«стали» (глагол)</td><td>стать</td><td>Да — учитывает контекст</td></tr>
+    <tr><td>«печь» (сущ. vs. глагол)</td><td>печь / печь</td><td>Да — по контексту</td><td>Контекстная дизамбигуация</td></tr>
+    <tr><td>Редкие / устаревшие формы</td><td>Специфично</td><td>Может ошибаться</td><td>Нестабильность на периферии</td></tr>
+  </table>
+  </div>
+
+  <h3>3.2. Стемминг</h3>
+  <p>Механическое отсечение окончаний и суффиксов (алгоритмы Портера, Snowball). Здесь LLM <strong>избыточна</strong>: она будет «рассуждать» над задачей, которая решается простым алгоритмом за микросекунды.</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Критерий</th><th>Алгоритмический стеммер</th><th>LLM</th></tr>
+    <tr><td>Скорость</td><td>Микросекунды</td><td>Секунды</td></tr>
+    <tr><td>Детерминированность</td><td>Абсолютная</td><td>Нет — результат может варьироваться</td></tr>
+    <tr><td>Педагогическая ценность</td><td>Нужно объяснять отдельно</td><td>Может объяснить и показать пошагово</td></tr>
+    <tr><td>Практическое применение</td><td>Оправдано</td><td>Не оправдано — проще запустить стеммер</td></tr>
+  </table>
+  </div>
+
+  <div class="box box-i">
+    <b>Вывод</b>
+    LLM-лемматизатор полезнее LLM-стеммера. Для стемминга LLM ценна как <strong>объясняющий NPC</strong> (наставник, показывающий логику алгоритма), но не как выполняющий инструмент.
+  </div>
+
+  <h3>4. Удаление стоп-слов</h3>
+  <p>Фильтрация служебных слов (предлоги, союзы, частицы), не несущих самостоятельной семантики. Интересный случай, где LLM потенциально <strong>превосходит</strong> традиционные инструменты.</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Подход</th><th>Традиционный фильтр</th><th>LLM</th></tr>
+    <tr><td>Список стоп-слов</td><td>Фиксированный (NLTK: около 150 слов для русского)</td><td>Может рассуждать контекстно</td></tr>
+    <tr><td>«Не» — стоп-слово?</td><td>Всегда удаляется по списку</td><td>Может оставить, если семантически значимо</td></tr>
+    <tr><td>Доменная адаптация</td><td>Требует ручной настройки списка</td><td>Может адаптироваться через промпт</td></tr>
+  </table>
+  </div>
+
+  <div class="box box-e">
+    <b>Пример контекстного преимущества</b>
+    В предложении «Не всё то золото, что блестит» слово «не» несёт ключевую семантику и не должно удаляться, хотя формально входит в любой стоп-лист. LLM способна это распознать. Традиционный фильтр — нет.
+  </div>
+
+  <p><strong>Риск:</strong> непоследовательность. При обработке корпуса из 1000 предложений LLM может в одних случаях удалить слово, в других — оставить его, без объяснимой логики. Для воспроизводимости результатов это неприемлемо.</p>
+
+  <h3>5. Сводная матрица</h3>
+
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Область</th><th>NPC-наставник (объяснение)</th><th>NPC-инструмент (выполнение)</th><th>Главный риск</th></tr>
+    <tr><td><strong>Очистка текста</strong></td><td>Отлично</td><td>Хорошо</td><td>Потеря значимых элементов</td></tr>
+    <tr><td><strong>Нормализация</strong></td><td>Хорошо</td><td>Слабо (Unicode)</td><td>Побайтовая неточность</td></tr>
+    <tr><td><strong>Лемматизация</strong></td><td>Отлично</td><td>Хорошо (с контекстом)</td><td>Нестабильность на редких формах</td></tr>
+    <tr><td><strong>Стемминг</strong></td><td>Отлично</td><td>Избыточна</td><td>Нет смысла использовать для выполнения</td></tr>
+    <tr><td><strong>Удаление стоп-слов</strong></td><td>Отлично</td><td>Средне</td><td>Непоследовательность</td></tr>
+    <tr><td><strong>Токенизация</strong> (для сравнения)</td><td>Отлично</td><td>Слабо</td><td>Галлюцинации, неточный подсчёт</td></tr>
+  </table>
+  </div>
+
+  <h3>6. Педагогические рекомендации</h3>
+
+  <div class="tbl-wrap">
+  <table>
+    <tr><th>Принцип</th><th>Реализация</th></tr>
+    <tr>
+      <td><strong>Разделяй роли</strong></td>
+      <td>Используйте LLM как NPC-наставника для объяснения всех областей, но как NPC-инструмент — только для очистки и лемматизации, и всегда с верификацией</td>
+    </tr>
+    <tr>
+      <td><strong>Сравнивай результаты</strong></td>
+      <td>Давайте студентам задания на сопоставление: результат LLM vs. результат алгоритмического инструмента (NLTK, spaCy, pymorphy2, BeautifulSoup)</td>
+    </tr>
+    <tr>
+      <td><strong>Ищи границы</strong></td>
+      <td>Лучшее учебное упражнение — найти случай, где LLM ошибается. Это формирует критическое мышление и углубляет понимание предмета</td>
+    </tr>
+    <tr>
+      <td><strong>Документируй</strong></td>
+      <td>Приучайте студентов фиксировать промпты, ответы модели и результаты верификации. Это основа воспроизводимости</td>
+    </tr>
+    <tr>
+      <td><strong>Чередуй</strong></td>
+      <td>Каждое задание «с LLM» должно сопровождаться заданием «без LLM» — ручным анализом или использованием программного инструмента</td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="box box-n">
+    <b>Итог</b>
+    Во всех областях препроцессинга LLM максимально полезна как <strong>объясняющий NPC</strong> и ограниченно полезна как <strong>выполняющий NPC</strong>. Осознание этой асимметрии — ключевая компетенция для лингвиста, работающего в парадигме AI First. Студент, который понимает, <em>когда</em> и <em>почему</em> LLM надёжна, а когда нет, владеет инструментом на качественно ином уровне, чем тот, кто просто принимает любой ответ модели на веру.
+  </div>
+</section>
+
+
+
+<!-- Section 7 -->
+<section id="s7">
+  <h2><span class="sn">9</span>Интерактивная токенизация</h2>
+  <p>Введите текст и посмотрите, как он разбивается на токены разными способами. Это упрощённая демонстрация &mdash; реальные токенизаторы LLM используют обученные BPE/SentencePiece-словари.</p>
+
+  <div class="demo">
+    <textarea id="demoInput" placeholder="Введите текст для токенизации...">Токенизация является важным этапом обработки естественного языка. Large Language Models используют подсловную токенизацию.</textarea>
+    <div class="demo-btns">
+      <button class="dbtn on" data-mode="word" onclick="runDemo('word',this)">Пословная</button>
+      <button class="dbtn" data-mode="char" onclick="runDemo('char',this)">Посимвольная</button>
+      <button class="dbtn" data-mode="sub" onclick="runDemo('sub',this)">Подсловная</button>
+    </div>
+    <div class="demo-out" id="demoOut"></div>
+    <div class="tcnt" id="demoCnt"></div>
+  </div>
+
+  <h3>Задания для самостоятельной работы</h3>
+  <ol>
+    <li>Введите в демонстрацию одно и то же предложение на русском и английском языке. Сравните количество токенов. Объясните разницу.</li>
+    <li>Введите слово с приставкой и суффиксом (например, «перечитывание»). Сравните подсловную токенизацию с морфемным разбором.</li>
+    <li>Откройте любую LLM (ChatGPT, Claude, GigaChat) и используйте один из промптов из раздела 6. Оцените, насколько модель следует заданной роли.</li>
+    <li>Составьте собственный промпт для NPC, который помогает изучать грамматику изучаемого вами иностранного языка. Обсудите промпт с LLM (метапромптинг).</li>
+  </ol>
+</section>
+
+<!-- Section 8 -->
+<section id="s8">
+  <h2><span class="sn">10</span>Выводы</h2>
+  <p>Заполните поля ниже и экспортируйте ваши выводы в HTML-документ.</p>
+
+  <div class="fg">
+    <label class="fl" for="sName">Фамилия Имя</label>
+    <input class="fi" type="text" id="sName" placeholder="Иванов Иван" autocomplete="name">
+  </div>
+
+  <div class="guide">
+    <p><strong>Направляющие вопросы для рефлексии:</strong></p>
+    <p>&bull; Как вы понимаете связь между лингвистическим анализом и токенизацией?</p>
+    <p>&bull; Какой тип образовательного NPC кажется вам наиболее полезным для изучения/преподавания языков? Почему?</p>
+    <p>&bull; Как токенизация влияет на работу LLM с русским языком по сравнению с английским?</p>
+    <p>&bull; Какие стратегии промптинга вы бы использовали в своей учебной или преподавательской практике?</p>
+    <p>&bull; Что нового вы узнали? Что хотели бы изучить глубже?</p>
+  </div>
+
+  <div class="fg">
+    <label class="fl" for="sText">Ваши выводы</label>
+    <textarea class="ft" id="sText" placeholder="Напишите ваши выводы по результатам знакомства с материалом..."></textarea>
+  </div>
+
+  <button class="btn" id="exportBtn" onclick="exportHTML()">Экспортировать в HTML</button>
+  <div class="msg msg-ok" id="msgOk">Файл успешно сформирован и скачан.</div>
+  <div class="msg msg-err" id="msgErr">Пожалуйста, заполните оба поля.</div>
+</section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</footer>
+
+<!-- ===== JAVASCRIPT ===== -->
+<script>
+/* ===== Theme Toggle ===== */
+const themeBtn=document.getElementById('themeBtn');
+const html=document.documentElement;
+const saved=localStorage.getItem('theme');
+if(saved){html.setAttribute('data-theme',saved);themeBtn.textContent=saved==='dark'?'🌙':'☀️'}
+
+themeBtn.addEventListener('click',()=>{
+  const isDark=html.getAttribute('data-theme')==='dark';
+  const next=isDark?'light':'dark';
+  html.setAttribute('data-theme',next);
+  themeBtn.textContent=next==='dark'?'🌙':'☀️';
+  localStorage.setItem('theme',next);
+});
+
+/* ===== Mobile Menu ===== */
+const burger=document.getElementById('burgerBtn');
+const nav=document.getElementById('mainNav');
+burger.addEventListener('click',()=>{
+  burger.classList.toggle('on');
+  nav.classList.toggle('open');
+});
+
+document.querySelectorAll('.n-a').forEach(a=>{
+  a.addEventListener('click',()=>{
+    if(window.innerWidth<=768){
+      burger.classList.remove('on');
+      nav.classList.remove('open');
+    }
+  });
+});
+
+/* ===== Scroll Spy ===== */
+const sections=document.querySelectorAll('section[id]');
+const navLinks=document.querySelectorAll('.n-a');
+
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const id=e.target.id;
+      navLinks.forEach(l=>{
+        l.classList.toggle('on',l.getAttribute('href')==='#'+id);
+      });
+    }
+  });
+},{rootMargin:'-20% 0px -75% 0px'});
+
+sections.forEach(s=>observer.observe(s));
+
+/* ===== Accordion ===== */
+document.querySelectorAll('.acc-h').forEach(h=>{
+  h.addEventListener('click',()=>{
+    const item=h.parentElement;
+    const body=item.querySelector('.acc-b');
+    const isOpen=item.classList.contains('on');
+
+    // close all in same accordion
+    item.parentElement.querySelectorAll('.acc-item').forEach(i=>{
+      i.classList.remove('on');
+      i.querySelector('.acc-b').style.maxHeight=null;
+    });
+
+    if(!isOpen){
+      item.classList.add('on');
+      body.style.maxHeight=body.scrollHeight+'px';
+    }
+  });
+});
+
+/* ===== Copy Button ===== */
+function copyPre(btn){
+  const pre=btn.parentElement;
+  const text=pre.textContent.replace('Копировать','').replace('Скопировано','').trim();
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='Скопировано';
+    setTimeout(()=>btn.textContent='Копировать',2000);
+  }).catch(()=>{
+    // fallback
+    const ta=document.createElement('textarea');
+    ta.value=text;document.body.appendChild(ta);
+    ta.select();document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent='Скопировано';
+    setTimeout(()=>btn.textContent='Копировать',2000);
+  });
+}
+
+/* ===== Tokenizer Demo ===== */
+const demoInput=document.getElementById('demoInput');
+const demoOut=document.getElementById('demoOut');
+const demoCnt=document.getElementById('demoCnt');
+const colorClasses=['tc0','tc1','tc2','tc3','tc4','tc5','tc6','tc7'];
+
+function wordTokenize(text){
+  return(text.match(/[а-яА-ЯёЁa-zA-Z0-9]+|[^\s]/g)||[]);
+}
+
+function charTokenize(text){
+  return text.replace(/\s+/g,' ').split('').filter(c=>c!==' '||true);
+}
+
+function subwordTokenize(text){
+  const parts=text.match(/[а-яА-ЯёЁa-zA-Z0-9]+|[^\s]/g)||[];
+  const tokens=[];
+  parts.forEach(w=>{
+    if(/^[а-яА-ЯёЁ]+$/i.test(w)&&w.length>4){
+      tokens.push(...splitSub(w));
+    } else if(/^[a-zA-Z]+$/i.test(w)&&w.length>4){
+      tokens.push(...splitSubEn(w));
+    } else {
+      tokens.push(w);
+    }
+  });
+  return tokens;
+}
+
+function splitSub(w){
+  if(w.length<=4) return[w];
+  // try prefix
+  const pref=/^(пре|при|пере|под|над|рас|раз|без|бес|воз|вос|из|ис|не|по|до|за|на|вы|от|об)/i;
+  const suf=/(ция|ние|ние|тель|ность|ство|ский|ская|ское|ать|ить|ова|ева|ённ|енн|ающ|ение|ание|ованн|ческ|ных|ные|ной|ную)$/i;
+  let m=w.match(pref);
+  if(m&&w.length-m[1].length>=3){
+    return[m[1],...splitSub(w.slice(m[1].length))];
+  }
+  m=w.match(suf);
+  if(m&&m.index>=2){
+    const stem=w.slice(0,m.index);
+    return[...(stem.length>4?splitSub(stem):[stem]),m[1]];
+  }
+  // fallback: split into ~3-char chunks
+  const r=[];let sz=w.length<=7?Math.ceil(w.length/2):3;
+  for(let i=0;i<w.length;i+=sz){
+    const rem=w.length-i;
+    if(rem<=sz+1){r.push(w.slice(i));break;}
+    r.push(w.slice(i,i+sz));
+  }
+  return r;
+}
+
+function splitSubEn(w){
+  if(w.length<=4) return[w];
+  const suf=/(tion|sion|ment|ness|able|ible|ful|less|ing|ous|ive|ize|ise|ated|ling|ence|ance|er|ed|ly|al|es)$/i;
+  const m=w.match(suf);
+  if(m&&m.index>=2){
+    const stem=w.slice(0,m.index);
+    return[...(stem.length>5?splitSubEn(stem):[stem]),m[1]];
+  }
+  const r=[];let sz=w.length<=7?Math.ceil(w.length/2):3;
+  for(let i=0;i<w.length;i+=sz){
+    const rem=w.length-i;
+    if(rem<=sz+1){r.push(w.slice(i));break;}
+    r.push(w.slice(i,i+sz));
+  }
+  return r;
+}
+
+function renderTokens(tokens){
+  demoOut.innerHTML=tokens.map((t,i)=>{
+    const cls=colorClasses[i%colorClasses.length];
+    const display=t===' '?'&blank;':t.replace(/</g,'&lt;');
+    return`<span class="tok ${cls}">${display}</span>`;
+  }).join('');
+  demoCnt.textContent=`Количество токенов: ${tokens.length}`;
+}
+
+function runDemo(mode,btn){
+  document.querySelectorAll('.dbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const text=demoInput.value.trim();
+  if(!text){demoOut.innerHTML='<span style="color:var(--text2)">Введите текст выше</span>';demoCnt.textContent='';return;}
+  let tokens;
+  switch(mode){
+    case'word':tokens=wordTokenize(text);break;
+    case'char':tokens=charTokenize(text);break;
+    case'sub':tokens=subwordTokenize(text);break;
+  }
+  renderTokens(tokens);
+}
+
+// initial render
+runDemo('word',document.querySelector('.dbtn.on'));
+demoInput.addEventListener('input',()=>{
+  const active=document.querySelector('.dbtn.on');
+  if(active) runDemo(active.dataset.mode,active);
+});
+
+/* ===== Export ===== */
+function exportHTML(){
+  const name=document.getElementById('sName').value.trim();
+  const text=document.getElementById('sText').value.trim();
+  const msgOk=document.getElementById('msgOk');
+  const msgErr=document.getElementById('msgErr');
+  msgOk.style.display='none';msgErr.style.display='none';
+
+  if(!name||!text){msgErr.style.display='block';return;}
+
+  const date=new Date().toLocaleDateString('ru-RU',{year:'numeric',month:'long',day:'numeric'});
+  const escaped=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+
+  const doc=`<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Выводы — ${name.replace(/</g,'')}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Georgia,'Times New Roman',serif;max-width:780px;margin:50px auto;padding:24px 32px;color:#2c3e50;line-height:1.85}
+h1{color:#325980;font-size:1.45em;border-bottom:2px solid #3498db;padding-bottom:14px;margin-bottom:24px}
+.meta{color:#5a6c7d;margin-bottom:32px;padding:16px 20px;background:#f5f5f5;border-radius:8px;font-size:.95em}
+.meta p{margin:4px 0}
+.content{font-size:1.05em}
+.footer{margin-top:40px;padding-top:16px;border-top:1px solid #e0e0e0;color:#999;font-size:.8em;text-align:center}
+@media print{body{margin:20px;padding:0}h1{font-size:1.3em}}
+</style>
+</head>
+<body>
+<h1>Выводы | Токенизация c LLM-NPC</h1>
+<div class="meta">
+<p><strong>Студент:</strong> ${name.replace(/</g,'&lt;')}</p>
+<p><strong>Дата:</strong> ${date}</p>
+<p><strong>Токенизация</strong> c LLM-NPC (AI First)</p>
+</div>
+<div class="content">${escaped}</div>
+<div class="footer">Документ сформирован автоматически<br>© 2026 | kmp | CC BY-NC-SA 4.0</div>
+</body>
+</html>`;
+
+  const blob=new Blob([doc],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`Выводы_${name.replace(/\s+/g,'_').replace(/[^\wа-яА-ЯёЁ_-]/g,'')}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  msgOk.style.display='block';
+}
+</script>
+</body>
+</html>
+```

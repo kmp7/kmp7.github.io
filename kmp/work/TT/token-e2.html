@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Экономика токенов в LLM — Практикум</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg1:#ffffff;--bg2:#f5f5f5;--bg-card:#ffffff;
+--c1:#2c2c2c;--c2:#555;--head:#325980;--acc:#3498db;--acc-h:#2980b9;
+--brd:#e8e8e8;--div:#f1f1f1;--shd:rgba(0,0,0,.07);
+--tag-bg:#e8f4fd;--tag-c:#2471a3;--ok:#27ae60;--err:#e74c3c;--warn:#f39c12;
+--code-bg:#f6f8fa;--inp-bg:#fff;--inp-brd:#ccc;
+--th-bg:#325980;--th-c:#fff;--tr-alt:#f9fbfd;
+--nav-bg:#325980;--nav-c:#fff;--nav-act:#3498db;
+}
+[data-theme="dark"]{
+--bg1:#101020;--bg2:#161628;--bg-card:#1c1c34;
+--c1:#dcdcdc;--c2:#a8a8b8;--head:#7eb8da;--acc:#5dade2;--acc-h:#3498db;
+--brd:#2a2a44;--div:#22223a;--shd:rgba(0,0,0,.35);
+--tag-bg:#1a3550;--tag-c:#7eb8da;--ok:#2ecc71;--err:#e74c3c;--warn:#f1c40f;
+--code-bg:#1e1e36;--inp-bg:#22223a;--inp-brd:#3a3a54;
+--th-bg:#1a3550;--th-c:#dcdcdc;--tr-alt:#1a1a2e;
+--nav-bg:#12122a;--nav-c:#dcdcdc;--nav-act:#5dade2;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:var(--bg2);color:var(--c1);line-height:1.72;transition:background .3s,color .3s}
+header{background:var(--nav-bg);color:var(--nav-c);padding:1.1rem 1.5rem;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px var(--shd)}
+.header-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+header h1{font-size:1.5rem;font-weight:700;letter-spacing:.02em}
+header .subtitle{font-size:.82rem;opacity:.85;margin-top:.15rem}
+#themeBtn{background:none;border:2px solid rgba(255,255,255,.35);color:var(--nav-c);font-size:1.15rem;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .3s,transform .3s;flex-shrink:0}
+#themeBtn:hover{border-color:#fff;transform:scale(1.1)}
+nav{background:var(--bg-card);border-bottom:1px solid var(--brd);position:sticky;top:0;z-index:90;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+.nav-inner{max-width:1100px;margin:0 auto;display:flex;padding:0 .5rem;gap:.2rem}
+.tab-btn{background:none;border:none;padding:.85rem 1.1rem;font-size:.88rem;color:var(--c2);cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;transition:color .2s,border-color .2s,background .2s;font-weight:500}
+.tab-btn:hover{color:var(--acc);background:var(--div)}
+.tab-btn.active{color:var(--acc);border-bottom-color:var(--acc);font-weight:600}
+main{max-width:1100px;margin:0 auto;padding:1.5rem 1rem 3rem}
+.panel{display:none;animation:fadeUp .35s ease}
+.panel.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.card{background:var(--bg-card);border-radius:12px;padding:1.6rem 1.8rem;margin-bottom:1.3rem;box-shadow:0 1px 6px var(--shd);border:1px solid var(--brd);transition:background .3s,border-color .3s}
+.card h2{color:var(--head);font-size:1.25rem;margin-bottom:.9rem;padding-bottom:.5rem;border-bottom:2px solid var(--div)}
+.card h3{color:var(--head);font-size:1.05rem;margin:1.1rem 0 .5rem}
+.card p,.card li{color:var(--c1);margin-bottom:.55rem}
+.card ul,.card ol{padding-left:1.4rem;margin-bottom:.8rem}
+.card li{margin-bottom:.4rem}
+.callout{border-left:4px solid var(--acc);background:var(--tag-bg);padding:1rem 1.2rem;border-radius:0 8px 8px 0;margin:1rem 0;color:var(--tag-c);font-size:.92rem;line-height:1.65}
+.callout strong{color:var(--head)}
+.callout.warn{border-left-color:var(--warn);background:rgba(243,156,18,.08);color:var(--c1)}
+.rec-list{list-style:none;padding:0;counter-reset:rec}
+.rec-list li{counter-increment:rec;padding:.85rem 1rem .85rem 3.2rem;position:relative;background:var(--bg2);border-radius:8px;margin-bottom:.6rem;border:1px solid var(--div);transition:background .3s}
+.rec-list li::before{content:counter(rec);position:absolute;left:1rem;top:.85rem;width:1.7rem;height:1.7rem;background:var(--acc);color:#fff;border-radius:50%;font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.rec-list li strong{color:var(--head)}
+label{display:block;font-size:.88rem;font-weight:600;color:var(--head);margin-bottom:.3rem}
+input[type="number"],select,textarea{width:100%;padding:.6rem .8rem;border:1px solid var(--inp-brd);border-radius:8px;background:var(--inp-bg);color:var(--c1);font-size:.92rem;transition:border-color .2s;font-family:inherit}
+input[type="number"]:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(52,152,219,.15)}
+textarea{resize:vertical;min-height:80px}
+.btn{display:inline-flex;align-items:center;gap:.4rem;padding:.65rem 1.3rem;border:none;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;transition:background .2s,transform .1s;font-family:inherit}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--acc);color:#fff}
+.btn-primary:hover{background:var(--acc-h)}
+.btn-outline{background:transparent;color:var(--acc);border:2px solid var(--acc)}
+.btn-outline:hover{background:var(--acc);color:#fff}
+.btn-sm{padding:.45rem .9rem;font-size:.82rem}
+.result-box{background:var(--tag-bg);border:1px solid var(--acc);border-radius:10px;padding:1.1rem 1.3rem;margin-top:1rem;font-size:.95rem}
+.result-box .big{font-size:1.6rem;font-weight:700;color:var(--acc)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+.form-row{margin-bottom:1rem}
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.88rem}
+th{background:var(--th-bg);color:var(--th-c);padding:.7rem .8rem;text-align:left;font-weight:600}
+td{padding:.65rem .8rem;border-bottom:1px solid var(--div)}
+tr:nth-child(even){background:var(--tr-alt)}
+.code-block{background:var(--code-bg);border:1px solid var(--brd);border-radius:8px;padding:1rem 1.2rem;font-family:'Courier New',Courier,monospace;font-size:.84rem;line-height:1.6;overflow-x:auto;white-space:pre-wrap;word-break:break-word;margin:.8rem 0;color:var(--c1)}
+.tag{display:inline-block;background:var(--tag-bg);color:var(--tag-c);padding:.2rem .6rem;border-radius:12px;font-size:.78rem;font-weight:600;margin:.15rem .2rem}
+.quiz-q{background:var(--bg2);border-radius:10px;padding:1.2rem 1.3rem;margin-bottom:1rem;border:1px solid var(--div);transition:border-color .3s}
+.quiz-q.correct{border-color:var(--ok);background:rgba(39,174,96,.06)}
+.quiz-q.wrong{border-color:var(--err);background:rgba(231,76,60,.06)}
+.quiz-q p{font-weight:600;margin-bottom:.6rem;color:var(--head)}
+.quiz-q label{font-weight:400;color:var(--c1);display:flex;align-items:flex-start;gap:.5rem;padding:.35rem 0;cursor:pointer}
+.quiz-q input[type="radio"]{margin-top:.25rem;accent-color:var(--acc);flex-shrink:0}
+.quiz-fb{font-size:.85rem;margin-top:.5rem;padding:.5rem .7rem;border-radius:6px;display:none}
+.quiz-fb.show{display:block}
+.quiz-fb.ok{background:rgba(39,174,96,.1);color:var(--ok)}
+.quiz-fb.no{background:rgba(231,76,60,.1);color:var(--err)}
+.score-box{text-align:center;padding:1.5rem;background:var(--tag-bg);border-radius:12px;margin-top:1.2rem}
+.score-box .score-num{font-size:2.2rem;font-weight:700;color:var(--acc)}
+.prompt-compare{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin:1rem 0}
+.prompt-box{background:var(--bg2);border:1px solid var(--brd);border-radius:10px;padding:1rem 1.2rem;position:relative}
+.prompt-box .prompt-label{position:absolute;top:-.6rem;left:1rem;background:var(--bg-card);padding:0 .5rem;font-size:.78rem;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.04em}
+.prompt-box .token-badge{display:inline-block;background:var(--acc);color:#fff;padding:.2rem .6rem;border-radius:10px;font-size:.75rem;font-weight:700;margin-top:.6rem}
+.prompt-box.optimized .token-badge{background:var(--ok)}
+.savings-bar{display:flex;align-items:center;gap:1rem;margin:1rem 0;padding:.8rem 1rem;background:var(--bg2);border-radius:8px}
+.savings-bar .bar{flex:1;height:10px;background:var(--div);border-radius:5px;overflow:hidden}
+.savings-bar .bar-fill{height:100%;border-radius:5px;transition:width .6s ease}
+.scenario-card{background:var(--bg2);border:1px solid var(--brd);border-radius:10px;padding:1.1rem 1.2rem;margin-bottom:.8rem}
+.scenario-card h4{color:var(--head);margin-bottom:.5rem;font-size:.95rem}
+.scenario-card select{max-width:280px;margin-top:.3rem}
+.scenario-fb{margin-top:.4rem;font-size:.85rem;padding:.4rem .6rem;border-radius:6px;display:none}
+.scenario-fb.show{display:block}
+.scenario-fb.ok{background:rgba(39,174,96,.1);color:var(--ok)}
+.scenario-fb.no{background:rgba(231,76,60,.1);color:var(--err)}
+.budget-row{display:grid;grid-template-columns:1.5fr repeat(3,1fr) 1.2fr .8fr;gap:.6rem;align-items:end;padding:.8rem 0;border-bottom:1px solid var(--div)}
+.budget-row.header{font-weight:700;font-size:.82rem;color:var(--head);border-bottom:2px solid var(--acc);padding-bottom:.5rem}
+.budget-row .computed{font-weight:700;color:var(--acc);padding:.6rem .4rem}
+.budget-task{font-weight:600;font-size:.88rem;color:var(--head);padding:.6rem 0}
+.budget-total{display:flex;justify-content:space-between;align-items:center;background:var(--tag-bg);padding:1rem 1.3rem;border-radius:10px;margin-top:1rem;font-size:1.05rem;font-weight:600}
+.budget-total .total-val{font-size:1.5rem;color:var(--acc);font-weight:700}
+footer{text-align:center;padding:1.5rem;color:var(--c2);font-size:.82rem;border-top:1px solid var(--div);background:var(--bg-card)}
+.hidden{display:none!important}
+@media(max-width:768px){
+ header h1{font-size:1.05rem}
+ .header-inner{flex-wrap:wrap}
+ header .subtitle{width:100%;order:3;margin-top:.2rem}
+ .grid2,.prompt-compare{grid-template-columns:1fr}
+ .grid3{grid-template-columns:1fr}
+ .card{padding:1.2rem 1rem}
+ main{padding:1rem .6rem 2rem}
+ .budget-row{grid-template-columns:1fr 1fr;gap:.4rem .8rem;padding:.6rem 0}
+ .budget-row.header{display:none}
+ .budget-task{grid-column:1/-1;padding-bottom:0}
+ .budget-row label{display:block;font-size:.78rem}
+ table{font-size:.8rem}
+ th,td{padding:.5rem .4rem}
+}
+@media(max-width:480px){
+ .tab-btn{padding:.7rem .8rem;font-size:.8rem}
+}
+</style>
+</head>
+<body>
+<header>
+ <div class="header-inner">
+  <div>
+   <h1>Token Economy in LLM</h1>
+   </div>
+  <button id="themeBtn" title="Сменить тему">☀️</button>
+ </div>
+</header>
+
+<nav>
+ <div class="nav-inner">
+  <button class="tab-btn active" data-tab="theory">Рекомендации</button>
+  <button class="tab-btn" data-tab="calc">Калькулятор</button>
+  <button class="tab-btn" data-tab="optim">Оптимизация</button>
+  <button class="tab-btn" data-tab="models">Выбор модели</button>
+  <button class="tab-btn" data-tab="budget">Бюджет</button>
+  <button class="tab-btn" data-tab="quiz">Тест</button>
+ </div>
+</nav>
+
+<main>
+
+<!-- ====== РЕКОМЕНДАЦИИ ====== -->
+<section class="panel active" id="theory">
+ <div class="card">
+  <h2>Управление стоимостью API</h2>
+  <div class="callout">
+   <strong>Важно:</strong> Данные по моделям в приложении ориентировочны, соответствуют реальности где-то на середину 2025 года и приводятся исключительно в учебных целях для иллюстрации.
+  </div>
+  <p>Токен в экономическом контексте — это минимальная единица тарификации. Каждый вызов API переводится в количество обработанных токенов (входных и выходных), и именно это число определяет итоговую стоимость. </p>
+  
+  
+
+  <ol class="rec-list">
+   <li><strong>Измеряйте потребление.</strong> При каждом вызове API фиксируйте значения <code>prompt_tokens</code> (входные) и <code>completion_tokens</code> (выходные) из ответа. Ведите таблицу или дашборд для мониторинга динамики расходов. Это основа осознанного бюджетирования.</li>
+   <li><strong>Сравнивайте корректно.</strong> Не ограничивайтесь метрикой «доллар за миллион токенов». Оценивайте совокупную стоимость удовлетворительного решения задачи с учётом качества ответов, числа итераций и доработок. Дешёвая модель, требующая пять попыток, может обойтись дороже мощной, справляющейся с первого раза.</li>
+   <li><strong>Оптимизируйте промпты.</strong> Удалите избыточные инструкции и повторы. Включайте few-shot примеры только тогда, когда они измеримо улучшают качество. Устанавливайте параметр <code>max_tokens</code> на разумный предел, чтобы не оплачивать лишнюю генерацию.</li>
+   <li><strong>Выбирайте модель под задачу.</strong> Для классификации, извлечения данных или шаблонных операций часто достаточно лёгкой модели (mini, nano). Мощные модели целесообразны для сложных рассуждений, творческой генерации и задач, требующих глубокого понимания контекста.</li>
+   <li><strong>Используйте кэширование и пакетную обработку.</strong> Если системная инструкция повторяется от запроса к запросу — включите prompt caching (экономия до 50% на входных токенах). Если задача допускает задержку — используйте Batch API, который обычно предлагается со скидкой до 50%.</li>
+   <li><strong>Считайте токены заранее.</strong> Перед отправкой запроса оцените его стоимость с помощью библиотек (например, <code>tiktoken</code> для моделей OpenAI) или встроенных счётчиков провайдера. Это позволяет избежать неожиданно крупных списаний.</li>
+   <li><strong>Устанавливайте лимиты расходов.</strong> В панели управления провайдера настройте ежемесячный бюджетный лимит и оповещения. Большинство сервисов позволяют задать hard limit, после которого запросы блокируются.</li>
+   <li><strong>Учитывайте язык текста.</strong> Тексты на русском языке, как правило, преобразуются в 1,5–2 раза больше токенов, чем эквивалентный текст на английском, поскольку токенизаторы обучены преимущественно на англоязычных корпусах. Для преподавателей иностранных языков это означает, что промпты на английском языке экономичнее.</li>
+   <li><strong>Следите за тарифами.</strong> Провайдеры регулярно обновляют ценовую политику — как правило, в сторону снижения. Периодически пересматривайте выбор модели: вчерашняя «дорогая» модель может стать доступной, а новая лёгкая — превзойти предыдущую по соотношению «цена/качество».</li>
+   <li><strong>Рассматривайте альтернативы.</strong> Для рутинных задач с невысокими требованиями к качеству оцените локальные и открытые модели: после первоначальной настройки они не требуют поминутной оплаты за токены.</li>
+  </ol>
+
+  <div class="callout">
+   <strong>Важно:</strong> одно и то же предложение на русском языке может занимать 25–40 токенов, тогда как его английский эквивалент — 12–20. При составлении промптов для работы с русскоязычными текстами закладывайте коэффициент 1,5–2x к ожидаемому числу токенов.
+  </div>
+ </div>
+
+ <div class="card">
+  <h2>Ключевые понятия</h2>
+  <table>
+   <tr><th>Термин</th><th>Значение</th></tr>
+   <tr><td><strong>prompt_tokens</strong></td><td>Число входных токенов — системная инструкция + пользовательский запрос</td></tr>
+   <tr><td><strong>completion_tokens</strong></td><td>Число выходных токенов — ответ модели</td></tr>
+   <tr><td><strong>max_tokens</strong></td><td>Ограничение длины генерируемого ответа (только выходные токены)</td></tr>
+   <tr><td><strong>Prompt caching</strong></td><td>Кэширование повторяющейся части промпта для снижения стоимости входных токенов</td></tr>
+   <tr><td><strong>Batch API</strong></td><td>Пакетная обработка запросов с задержкой, обычно со скидкой 50%</td></tr>
+   <tr><td><strong>Контекстное окно</strong></td><td>Максимальное число токенов (вход + выход), которое модель может обработать за один вызов</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- ====== КАЛЬКУЛЯТОР ====== -->
+<section class="panel" id="calc">
+ <div class="card">
+  <h2>Задание 1. Калькулятор стоимости API-вызовов</h2>
+  <p>Сравните стоимость одного и того же объёма работы при использовании двух разных моделей. Введите параметры запроса и оцените разницу в расходах.</p>
+
+  <div class="form-row">
+   <label for="cTokensIn">Среднее число входных токенов на запрос</label>
+   <input type="number" id="cTokensIn" value="400" min="1" max="1000000">
+  </div>
+  <div class="form-row">
+   <label for="cTokensOut">Среднее число выходных токенов на запрос</label>
+   <input type="number" id="cTokensOut" value="600" min="1" max="1000000">
+  </div>
+  <div class="form-row">
+   <label for="cCalls">Количество вызовов</label>
+   <input type="number" id="cCalls" value="100" min="1" max="1000000">
+  </div>
+
+  <div class="grid2">
+   <div>
+    <label for="cModel1">Модель A</label>
+    <select id="cModel1"></select>
+   </div>
+   <div>
+    <label for="cModel2">Модель B</label>
+    <select id="cModel2"></select>
+   </div>
+  </div>
+
+  <div style="margin-top:1rem;text-align:center">
+   <button class="btn btn-primary" onclick="calcCost()">Рассчитать</button>
+  </div>
+
+  <div id="calcResult" class="hidden">
+   <div class="grid2" style="margin-top:1.2rem">
+    <div class="result-box" style="text-align:center">
+     <div style="font-size:.85rem;margin-bottom:.3rem" id="calcLabelA"></div>
+     <div class="big" id="calcValA"></div>
+     <div style="font-size:.8rem;color:var(--c2);margin-top:.3rem" id="calcDetailA"></div>
+    </div>
+    <div class="result-box" style="text-align:center">
+     <div style="font-size:.85rem;margin-bottom:.3rem" id="calcLabelB"></div>
+     <div class="big" id="calcValB"></div>
+     <div style="font-size:.8rem;color:var(--c2);margin-top:.3rem" id="calcDetailB"></div>
+    </div>
+   </div>
+   <div class="savings-bar">
+    <span style="font-size:.88rem;font-weight:600" id="savingsText"></span>
+    <div class="bar"><div class="bar-fill" id="savingsBar" style="background:var(--ok)"></div></div>
+   </div>
+  </div>
+ </div>
+
+ <div class="card">
+  <h3>Справочная таблица тарифов (приблизительные, USD за 1 млн токенов)</h3>
+  <div style="overflow-x:auto">
+  <table>
+   <tr><th>Модель</th><th>Входные</th><th>Выходные</th><th>Уровень</th></tr>
+   <tr><td>GPT-4.1 nano</td><td>$0,10</td><td>$0,40</td><td><span class="tag">лёгкая</span></td></tr>
+   <tr><td>GPT-4o mini</td><td>$0,15</td><td>$0,60</td><td><span class="tag">лёгкая</span></td></tr>
+   <tr><td>GPT-4.1 mini</td><td>$0,40</td><td>$1,60</td><td><span class="tag">средняя</span></td></tr>
+   <tr><td>Claude 3.5 Haiku</td><td>$0,80</td><td>$4,00</td><td><span class="tag">средняя</span></td></tr>
+   <tr><td>GPT-4.1</td><td>$2,00</td><td>$8,00</td><td><span class="tag">мощная</span></td></tr>
+   <tr><td>GPT-4o</td><td>$2,50</td><td>$10,00</td><td><span class="tag">мощная</span></td></tr>
+   <tr><td>Claude Sonnet 4</td><td>$3,00</td><td>$15,00</td><td><span class="tag">мощная</span></td></tr>
+  </table>
+  </div>
+  <p style="font-size:.82rem;color:var(--c2);margin-top:.4rem">Цены ориентировочные и могут отличаться от актуальных. Уточняйте на сайтах провайдеров.</p>
+ </div>
+</section>
+
+<!-- ====== ОПТИМИЗАЦИЯ ====== -->
+<section class="panel" id="optim">
+ <div class="card">
+  <h2>Задание 2. Оптимизация промпта</h2>
+  <p>Ниже приведён типичный промпт преподавателя английского языка для генерации лексического упражнения. Проанализируйте его, найдите избыточные элементы и сравните с оптимизированной версией.</p>
+
+  <div class="prompt-compare">
+   <div class="prompt-box">
+    <span class="prompt-label">До оптимизации</span>
+    <div class="code-block" style="margin-top:.5rem">Ты — опытный преподаватель английского языка с многолетним стажем работы в университете. Твоя специализация — преподавание лексики и грамматики студентам уровня B1-B2 по шкале CEFR. Ты всегда создаёшь увлекательные и методически выверенные упражнения.
+
+Мне нужно, чтобы ты создал упражнение на лексику по теме "Путешествия". Упражнение должно быть предназначено для студентов уровня B1. Упражнение должно содержать 10 предложений. В каждом предложении должен быть пропуск. Студенты должны заполнить пропуски подходящими словами из предложенного списка. Список слов должен содержать 12 слов (10 правильных и 2 лишних).
+
+Пожалуйста, убедись, что предложения разнообразны и охватывают разные аспекты темы путешествий. Используй аутентичные контексты. Не используй слишком сложную грамматику. Помни, что это уровень B1.
+
+Оформи упражнение красиво и структурированно. Сначала напиши заголовок упражнения, затем список слов, затем предложения с пропусками, и в конце — ключ с правильными ответами.</div>
+    <span class="token-badge">~320 токенов</span>
+   </div>
+   <div class="prompt-box optimized" id="optimBox">
+    <span class="prompt-label">После оптимизации</span>
+    <div class="code-block" style="margin-top:.5rem;filter:blur(5px);transition:filter .4s" id="optimText">Создай gap-fill упражнение по теме "Travel", уровень B1 (CEFR).
+
+Формат:
+— Список: 12 слов (10 верных + 2 дистрактора)
+— 10 предложений с пропусками
+— Ключ с ответами
+
+Требования: аутентичные контексты, разнообразие подтем.</div>
+    <span class="token-badge" style="filter:blur(4px);transition:filter .4s" id="optimBadge">~95 токенов</span>
+   </div>
+  </div>
+
+  <div style="text-align:center;margin:.5rem 0 1rem">
+   <button class="btn btn-primary" onclick="revealOptim()">Показать оптимизированную версию</button>
+  </div>
+
+  <div id="optimAnalysis" class="hidden">
+   <h3>Анализ экономии</h3>
+   <div class="savings-bar">
+    <span style="font-size:.88rem;font-weight:600;min-width:140px">Экономия: ~70%</span>
+    <div class="bar"><div class="bar-fill" style="width:70%;background:var(--ok)"></div></div>
+   </div>
+   <table>
+    <tr><th>Параметр</th><th>До</th><th>После</th><th>Разница</th></tr>
+    <tr><td>Токены промпта</td><td>~320</td><td>~95</td><td>-225</td></tr>
+    <tr><td>Стоимость (GPT-4o, 100 вызовов)</td><td>$0,080</td><td>$0,024</td><td>-$0,056</td></tr>
+    <tr><td>Стоимость (Claude Sonnet, 100 вызовов)</td><td>$0,096</td><td>$0,029</td><td>-$0,067</td></tr>
+   </table>
+
+   <h3>Что было удалено и почему</h3>
+   <ul>
+    <li><strong>Развёрнутая роль.</strong> Модель не нуждается в описании «стажа» и «специализации» — достаточно указать задачу и параметры.</li>
+    <li><strong>Повторяющиеся инструкции.</strong> Слово «упражнение» повторялось 4 раза, уровень B1 — дважды.</li>
+    <li><strong>Самоочевидные указания.</strong> «Оформи красиво», «помни, что это уровень B1» — не добавляют информации, если уровень уже указан.</li>
+    <li><strong>Детальное описание формата.</strong> «Сначала заголовок, затем список, затем предложения» — модель итак структурирует ответ.</li>
+   </ul>
+  </div>
+ </div>
+
+ <div class="card">
+  <h3>Самостоятельная практика</h3>
+  <p>Оптимизируйте следующий промпт. Старайтесь сократить объём минимум на 40%, сохранив все существенные требования.</p>
+  <div class="code-block">Ты — профессиональный лингвист и эксперт по методике преподавания иностранных языков. Я хочу, чтобы ты помог мне. Мне нужно составить тест на проверку понимания прочитанного текста. Тест должен быть по тексту, который я приложу ниже. Тест должен содержать 8 вопросов. Вопросы должны быть разных типов: 4 вопроса с множественным выбором (multiple choice), 2 вопроса на определение правда/ложь (true/false), и 2 открытых вопроса. Все вопросы должны проверять понимание содержания, а не знание грамматики. Уровень сложности — B2. После вопросов напиши ответы. Пожалуйста, будь внимателен и точен.</div>
+  <div class="form-row" style="margin-top:1rem">
+   <label for="userOptim">Ваша оптимизированная версия:</label>
+   <textarea id="userOptim" rows="5" placeholder="Введите ваш оптимизированный промпт..."></textarea>
+  </div>
+  <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+   <button class="btn btn-outline btn-sm" onclick="estimateTokens()">Оценить токены</button>
+   <span id="tokenEstimate" style="font-size:.88rem;font-weight:600;color:var(--acc)"></span>
+  </div>
+  <p style="font-size:.82rem;color:var(--c2);margin-top:.5rem">Исходный промпт: ~280 токенов. Цель: менее 170 токенов.</p>
+ </div>
+</section>
+
+<!-- ====== ВЫБОР МОДЕЛИ ====== -->
+<section class="panel" id="models">
+ <div class="card">
+  <h2>Задание 3. Выбор модели под задачу</h2>
+  <p>Для каждого сценария из практики преподавателя иностранного языка выберите наиболее целесообразную категорию модели. Учитывайте баланс между качеством и стоимостью.</p>
+
+  <div id="scenarioList"></div>
+
+  <div style="text-align:center;margin-top:1rem">
+   <button class="btn btn-primary" onclick="checkScenarios()">Проверить ответы</button>
+   <button class="btn btn-outline btn-sm" onclick="resetScenarios()" style="margin-left:.5rem">Сбросить</button>
+  </div>
+  <div id="scenarioScore" class="hidden score-box"></div>
+ </div>
+</section>
+
+<!-- ====== БЮДЖЕТ ====== -->
+<section class="panel" id="budget">
+ <div class="card">
+  <h2>Задание 4. Планирование месячного бюджета</h2>
+  <p>Вы — преподаватель английского языка в университете. У вас 3 группы по 20 студентов. Спланируйте ежемесячные расходы на API для следующих задач. Скорректируйте значения по умолчанию, если считаете нужным.</p>
+
+  <div style="overflow-x:auto">
+   <div class="budget-row header">
+    <div>Задача</div>
+    <div>Вызовов/мес.</div>
+    <div>Вход. токенов</div>
+    <div>Выход. токенов</div>
+    <div>Модель</div>
+    <div>Стоимость</div>
+   </div>
+   <div class="budget-row" data-budget="0">
+    <div class="budget-task">Генерация лексических упражнений</div>
+    <div><label class="mob-label">Вызовов/мес.</label><input type="number" class="b-calls" value="60" min="0"></div>
+    <div><label class="mob-label">Вход. токенов</label><input type="number" class="b-in" value="300" min="0"></div>
+    <div><label class="mob-label">Выход. токенов</label><input type="number" class="b-out" value="500" min="0"></div>
+    <div><label class="mob-label">Модель</label><select class="b-model"></select></div>
+    <div class="computed" data-cost>—</div>
+   </div>
+   <div class="budget-row" data-budget="1">
+    <div class="budget-task">Проверка грамматики в текстах студентов</div>
+    <div><label class="mob-label">Вызовов/мес.</label><input type="number" class="b-calls" value="120" min="0"></div>
+    <div><label class="mob-label">Вход. токенов</label><input type="number" class="b-in" value="800" min="0"></div>
+    <div><label class="mob-label">Выход. токенов</label><input type="number" class="b-out" value="400" min="0"></div>
+    <div><label class="mob-label">Модель</label><select class="b-model"></select></div>
+    <div class="computed" data-cost>—</div>
+   </div>
+   <div class="budget-row" data-budget="2">
+    <div class="budget-task">Вопросы для reading comprehension</div>
+    <div><label class="mob-label">Вызовов/мес.</label><input type="number" class="b-calls" value="24" min="0"></div>
+    <div><label class="mob-label">Вход. токенов</label><input type="number" class="b-in" value="600" min="0"></div>
+    <div><label class="mob-label">Выход. токенов</label><input type="number" class="b-out" value="800" min="0"></div>
+    <div><label class="mob-label">Модель</label><select class="b-model"></select></div>
+    <div class="computed" data-cost>—</div>
+   </div>
+   <div class="budget-row" data-budget="3">
+    <div class="budget-task">Развёрнутая обратная связь по эссе</div>
+    <div><label class="mob-label">Вызовов/мес.</label><input type="number" class="b-calls" value="60" min="0"></div>
+    <div><label class="mob-label">Вход. токенов</label><input type="number" class="b-in" value="1000" min="0"></div>
+    <div><label class="mob-label">Выход. токенов</label><input type="number" class="b-out" value="1200" min="0"></div>
+    <div><label class="mob-label">Модель</label><select class="b-model"></select></div>
+    <div class="computed" data-cost>—</div>
+   </div>
+  </div>
+
+  <div style="text-align:center;margin-top:1.2rem">
+   <button class="btn btn-primary" onclick="calcBudget()">Рассчитать бюджет</button>
+  </div>
+
+  <div id="budgetTotal" class="budget-total hidden">
+   <span>Итого за месяц:</span>
+   <span class="total-val" id="budgetVal"></span>
+  </div>
+
+  <div id="budgetTip" class="callout hidden" style="margin-top:1rem"></div>
+ </div>
+</section>
+
+<!-- ====== ТЕСТ ====== -->
+<section class="panel" id="quiz">
+ <div class="card">
+  <h2>Задание 5. Проверочный тест</h2>
+  <p>Проверьте своё понимание экономики токенов. Выберите один правильный ответ в каждом вопросе.</p>
+  <div id="quizList"></div>
+  <div style="text-align:center;margin-top:1.2rem">
+   <button class="btn btn-primary" onclick="submitQuiz()">Проверить ответы</button>
+   <button class="btn btn-outline btn-sm" onclick="resetQuiz()" style="margin-left:.5rem">Заново</button>
+  </div>
+  <div id="quizScore" class="hidden score-box"></div>
+ </div>
+</section>
+
+</main>
+
+<footer>
+ <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</footer>
+
+<script>
+// ===== DATA =====
+const MODELS = [
+ {id:'nano', name:'GPT-4.1 nano', inP:0.10, outP:0.40, tier:'lightweight'},
+ {id:'4omini', name:'GPT-4o mini', inP:0.15, outP:0.60, tier:'lightweight'},
+ {id:'41mini', name:'GPT-4.1 mini', inP:0.40, outP:1.60, tier:'medium'},
+ {id:'haiku', name:'Claude 3.5 Haiku', inP:0.80, outP:4.00, tier:'medium'},
+ {id:'41', name:'GPT-4.1', inP:2.00, outP:8.00, tier:'powerful'},
+ {id:'4o', name:'GPT-4o', inP:2.50, outP:10.00, tier:'powerful'},
+ {id:'sonnet', name:'Claude Sonnet 4', inP:3.00, outP:15.00, tier:'powerful'}
+];
+
+const SCENARIOS = [
+ {text:'Автоматическая классификация текстов студентов по уровням CEFR (A1–C2) на основе ключевых лексико-грамматических маркеров.',
+  answer:'lightweight', explain:'Классификация — задача с ограниченным пространством ответов. Лёгкая модель справляется эффективно и обходится в десятки раз дешевле.'},
+ {text:'Генерация развёрнутого комментария к творческому эссе студента с анализом стиля, логики аргументации и языковых средств.',
+  answer:'powerful', explain:'Задача требует глубокого понимания текста и способности к многоаспектному анализу. Мощная модель обеспечит более качественную обратную связь.'},
+ {text:'Извлечение списка ключевых лексических единиц из учебного текста (слово, часть речи, перевод).',
+  answer:'lightweight', explain:'Извлечение структурированных данных — типовая задача для лёгких моделей. Мощная модель не даст значимого преимущества в качестве.'},
+ {text:'Разработка полного плана урока с дифференцированными заданиями для студентов разного уровня.',
+  answer:'powerful', explain:'Создание комплексного методического материала с учётом нескольких уровней подготовки — задача, требующая «рассуждения» и связного планирования.'},
+ {text:'Перевод коротких фраз для создания набора карточек (flashcards) по тематической лексике.',
+  answer:'lightweight', explain:'Перевод коротких изолированных фраз — простая задача, с которой лёгкие модели справляются не хуже мощных, но значительно дешевле.'},
+ {text:'Создание адаптивного диалога-симуляции, в котором модель играет роль носителя языка и подстраивается под уровень студента в режиме реального времени.',
+  answer:'powerful', explain:'Адаптивное взаимодействие в реальном времени с отслеживанием уровня собеседника — сложная задача, требующая гибкости и глубокого понимания контекста.'}
+];
+
+const QUIZ = [
+ {q:'Что является единицей тарификации при работе с API языковых моделей?',
+  opts:['Символ (character)','Слово (word)','Токен (token)','Предложение (sentence)'],
+  ans:2, fb:'Провайдеры тарифицируют обработку именно в токенах — единицах, на которые токенизатор разбивает текст.'},
+ {q:'Какие токены, как правило, стоят дороже?',
+  opts:['Входные (prompt tokens)','Выходные (completion tokens)','Стоимость входных и выходных одинакова','Зависит от длины контекстного окна'],
+  ans:1, fb:'Генерация выходных токенов требует больше вычислительных ресурсов (последовательное декодирование), поэтому они стоят в 2–5 раз дороже входных.'},
+ {q:'Параметр max_tokens ограничивает...',
+  opts:['Общее число токенов в запросе и ответе','Только число токенов в ответе модели','Только число токенов в промпте','Число запросов в минуту'],
+  ans:1, fb:'Параметр max_tokens задаёт верхний предел длины генерируемого ответа (completion). На входные токены он не влияет.'},
+ {q:'Prompt caching наиболее эффективен, когда...',
+  opts:['Каждый запрос содержит уникальную инструкцию','Системная инструкция повторяется от запроса к запросу','Ответы модели максимально короткие','Используется исключительно Batch API'],
+  ans:1, fb:'Кэширование экономит на повторной обработке неизменной части промпта — как правило, системной инструкции.'},
+ {q:'Текст на русском языке по сравнению с аналогичным по содержанию английским текстом обычно...',
+  opts:['Содержит меньше токенов','Содержит примерно столько же токенов','Содержит в 1,5–2 раза больше токенов','Не поддаётся токенизации стандартными алгоритмами'],
+  ans:2, fb:'Токенизаторы (BPE) обучены преимущественно на английских корпусах, поэтому кириллические символы чаще разбиваются на более мелкие фрагменты.'},
+ {q:'Batch API целесообразно использовать, когда...',
+  opts:['Требуется ответ в реальном времени','Задача допускает задержку в получении результатов','Запрос содержит менее 50 токенов','Системная инструкция отсутствует'],
+  ans:1, fb:'Batch API предполагает отложенную обработку в обмен на существенную скидку (обычно до 50%).'},
+ {q:'Какая метрика наиболее информативна при сравнении экономичности моделей?',
+  opts:['Цена за 1 миллион токенов','Скорость генерации (токенов/секунду)','Стоимость удовлетворительного решения задачи','Размер контекстного окна'],
+  ans:2, fb:'Цена за токен не учитывает качество. Дешёвая модель, требующая многократных итераций, может оказаться дороже мощной, дающей результат с первой попытки.'},
+ {q:'Для задачи классификации студенческих текстов по уровню владения языком оптимально использовать...',
+  opts:['Самую мощную доступную модель','Лёгкую (mini/nano) модель','Модель с максимальным контекстным окном','Только локальную open-source модель'],
+  ans:1, fb:'Классификация с ограниченным числом категорий — типовая задача для лёгких моделей, которые справляются с ней эффективно при минимальной стоимости.'}
+];
+
+// ===== THEME =====
+const html = document.documentElement;
+const themeBtn = document.getElementById('themeBtn');
+function setTheme(t){html.setAttribute('data-theme',t);themeBtn.textContent=t==='dark'?'☀️':'🌙';localStorage.setItem('theme',t)}
+themeBtn.addEventListener('click',()=>setTheme(html.getAttribute('data-theme')==='dark'?'light':'dark'));
+if(localStorage.getItem('theme'))setTheme(localStorage.getItem('theme'));
+else if(matchMedia('(prefers-color-scheme:dark)').matches)setTheme('dark');
+
+// ===== TABS =====
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+ btn.addEventListener('click',()=>{
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(btn.dataset.tab).classList.add('active');
+ });
+});
+
+// ===== POPULATE SELECTS =====
+function fillSelect(sel,defaultIdx){
+ MODELS.forEach((m,i)=>{
+  const o=document.createElement('option');
+  o.value=i;o.textContent=`${m.name} ($${m.inP}/$${m.outP})`;
+  if(i===defaultIdx)o.selected=true;
+  sel.appendChild(o);
+ });
+}
+fillSelect(document.getElementById('cModel1'),5);
+fillSelect(document.getElementById('cModel2'),1);
+document.querySelectorAll('.b-model').forEach((s,i)=>fillSelect(s,[1,1,5,5][i]||1));
+
+// ===== CALCULATOR =====
+function calcCost(){
+ const tIn=+document.getElementById('cTokensIn').value||0;
+ const tOut=+document.getElementById('cTokensOut').value||0;
+ const calls=+document.getElementById('cCalls').value||0;
+ const m1=MODELS[document.getElementById('cModel1').value];
+ const m2=MODELS[document.getElementById('cModel2').value];
+ const c1=(tIn*m1.inP/1e6+tOut*m1.outP/1e6)*calls;
+ const c2=(tIn*m2.inP/1e6+tOut*m2.outP/1e6)*calls;
+ document.getElementById('calcLabelA').textContent=m1.name;
+ document.getElementById('calcLabelB').textContent=m2.name;
+ document.getElementById('calcValA').textContent='$'+c1.toFixed(4);
+ document.getElementById('calcValB').textContent='$'+c2.toFixed(4);
+ document.getElementById('calcDetailA').textContent=`Вход: $${(tIn*m1.inP/1e6*calls).toFixed(4)} | Выход: $${(tOut*m1.outP/1e6*calls).toFixed(4)}`;
+ document.getElementById('calcDetailB').textContent=`Вход: $${(tIn*m2.inP/1e6*calls).toFixed(4)} | Выход: $${(tOut*m2.outP/1e6*calls).toFixed(4)}`;
+ const mx=Math.max(c1,c2)||1;
+ const pct=Math.abs(c1-c2)/mx*100;
+ const cheaper=c1<c2?m1.name:m2.name;
+ document.getElementById('savingsText').textContent=c1===c2?'Стоимость одинакова':`${cheaper} дешевле на ${pct.toFixed(1)}%`;
+ document.getElementById('savingsBar').style.width=pct+'%';
+ document.getElementById('calcResult').classList.remove('hidden');
+}
+
+// ===== OPTIMIZATION =====
+function revealOptim(){
+ document.getElementById('optimText').style.filter='none';
+ document.getElementById('optimBadge').style.filter='none';
+ document.getElementById('optimAnalysis').classList.remove('hidden');
+}
+function estimateTokens(){
+ const txt=document.getElementById('userOptim').value.trim();
+ if(!txt){document.getElementById('tokenEstimate').textContent='Введите текст';return}
+ const est=Math.round(txt.length/3.2);
+ const orig=280;
+ const saving=Math.max(0,Math.round((1-est/orig)*100));
+ const el=document.getElementById('tokenEstimate');
+ el.textContent=`~${est} токенов (экономия ~${saving}%)`;
+ el.style.color=saving>=40?'var(--ok)':saving>=20?'var(--warn)':'var(--err)';
+}
+
+// ===== SCENARIOS =====
+(function buildScenarios(){
+ const wrap=document.getElementById('scenarioList');
+ SCENARIOS.forEach((s,i)=>{
+  const div=document.createElement('div');
+  div.className='scenario-card';
+  div.innerHTML=`<h4>Сценарий ${i+1}</h4><p style="font-size:.9rem;margin-bottom:.6rem">${s.text}</p>
+   <label>Рекомендуемая категория модели:</label>
+   <select id="sc${i}"><option value="">— выберите —</option>
+   <option value="lightweight">Лёгкая (mini / nano)</option>
+   <option value="medium">Средняя</option>
+   <option value="powerful">Мощная</option></select>
+   <div class="scenario-fb" id="scFb${i}"></div>`;
+  wrap.appendChild(div);
+ });
+})();
+function checkScenarios(){
+ let correct=0;
+ SCENARIOS.forEach((s,i)=>{
+  const val=document.getElementById('sc'+i).value;
+  const fb=document.getElementById('scFb'+i);
+  fb.classList.add('show');
+  if(val===s.answer){correct++;fb.className='scenario-fb show ok';fb.textContent='Верно. '+s.explain}
+  else{fb.className='scenario-fb show no';fb.textContent=(val?'Не совсем. ':'Выберите ответ. ')+s.explain}
+ });
+ const sc=document.getElementById('scenarioScore');
+ sc.classList.remove('hidden');
+ sc.innerHTML=`<div class="score-num">${correct} / ${SCENARIOS.length}</div><div style="margin-top:.4rem">Правильных ответов</div>`;
+}
+function resetScenarios(){
+ SCENARIOS.forEach((_,i)=>{document.getElementById('sc'+i).value='';document.getElementById('scFb'+i).className='scenario-fb'});
+ document.getElementById('scenarioScore').classList.add('hidden');
+}
+
+// ===== BUDGET =====
+function calcBudget(){
+ let total=0;
+ document.querySelectorAll('[data-budget]').forEach(row=>{
+  const calls=+(row.querySelector('.b-calls')?.value)||0;
+  const tIn=+(row.querySelector('.b-in')?.value)||0;
+  const tOut=+(row.querySelector('.b-out')?.value)||0;
+  const mIdx=row.querySelector('.b-model')?.value;
+  const m=MODELS[mIdx];
+  const cost=(tIn*m.inP/1e6+tOut*m.outP/1e6)*calls;
+  total+=cost;
+  row.querySelector('[data-cost]').textContent='$'+cost.toFixed(4);
+ });
+ document.getElementById('budgetVal').textContent='$'+total.toFixed(4);
+ document.getElementById('budgetTotal').classList.remove('hidden');
+ const tip=document.getElementById('budgetTip');
+ tip.classList.remove('hidden');
+ if(total<0.5)tip.innerHTML='<strong>Комментарий:</strong> Ваш бюджет менее $0,50 в месяц. При таких объёмах стоимость API практически не ощутима. Обратите внимание: даже бесплатный уровень (free tier) многих провайдеров покроет подобное потребление.';
+ else if(total<5)tip.innerHTML='<strong>Комментарий:</strong> Бюджет в диапазоне $0,50–$5,00 в месяц. Это умеренное потребление, типичное для индивидуального преподавателя. Рассмотрите возможность использования prompt caching и Batch API для дополнительной экономии.';
+ else tip.innerHTML='<strong>Комментарий:</strong> Бюджет превышает $5,00 в месяц. Рекомендуется оптимизировать промпты, перевести рутинные задачи на лёгкие модели и использовать пакетную обработку. Также оцените, не выгоднее ли для части задач использовать open-source модели.';
+}
+
+// ===== QUIZ =====
+(function buildQuiz(){
+ const wrap=document.getElementById('quizList');
+ QUIZ.forEach((q,qi)=>{
+  const div=document.createElement('div');
+  div.className='quiz-q';
+  div.id='qq'+qi;
+  let html=`<p>${qi+1}. ${q.q}</p>`;
+  q.opts.forEach((o,oi)=>{html+=`<label><input type="radio" name="q${qi}" value="${oi}"> ${o}</label>`});
+  html+=`<div class="quiz-fb" id="qfb${qi}"></div>`;
+  div.innerHTML=html;
+  wrap.appendChild(div);
+ });
+})();
+function submitQuiz(){
+ let correct=0;
+ QUIZ.forEach((q,qi)=>{
+  const sel=document.querySelector(`input[name="q${qi}"]:checked`);
+  const fb=document.getElementById('qfb'+qi);
+  const card=document.getElementById('qq'+qi);
+  card.classList.remove('correct','wrong');
+  fb.classList.add('show');
+  if(!sel){fb.className='quiz-fb show no';fb.textContent='Выберите ответ.';card.classList.add('wrong');return}
+  if(+sel.value===q.ans){correct++;fb.className='quiz-fb show ok';fb.textContent='Верно! '+q.fb;card.classList.add('correct')}
+  else{fb.className='quiz-fb show no';fb.textContent='Неверно. '+q.fb;card.classList.add('wrong')}
+ });
+ const sc=document.getElementById('quizScore');sc.classList.remove('hidden');
+ const pct=Math.round(correct/QUIZ.length*100);
+ let msg=pct>=88?'Отличный результат!':pct>=63?'Хороший результат. Повторите рекомендации для закрепления.':'Рекомендуется ещё раз изучить материал раздела «Рекомендации».';
+ sc.innerHTML=`<div class="score-num">${correct} / ${QUIZ.length}</div><div style="margin-top:.3rem">${pct}% — ${msg}</div>`;
+}
+function resetQuiz(){
+ QUIZ.forEach((_,qi)=>{
+  document.querySelectorAll(`input[name="q${qi}"]`).forEach(r=>r.checked=false);
+  document.getElementById('qfb'+qi).className='quiz-fb';
+  document.getElementById('qq'+qi).classList.remove('correct','wrong');
+ });
+ document.getElementById('quizScore').classList.add('hidden');
+}
+</script>
+</body>
+</html>

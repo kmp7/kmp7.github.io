@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>ТОКЕНИЗАЦИЯ</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp |  CC BY-NC-SA 4.0</p>
+<p>Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+				        {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Представь, что ты читаешь длинное-длинное предложение. Токенизация — это как разрезать эту длинную колбасу текста на маленькие кусочки, чтобы компьютеру было удобнее их съесть и понять.",
+      "category": "Детская / Образная"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "Imagine you are reading a very, very long sentence. Tokenization is like cutting this long sausage of text into small pieces so that the computer can eat and understand them more easily.",
+      "category": "Child-friendly / Figurative"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Это процесс, при котором компьютер разбивает текст на слова, части слов или отдельные знаки (токены). Например, предложение «Мама мыла раму» превращается в список: [Мама, мыла, раму].",
+      "category": "Школьная / Общеобразовательная"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "It is the process by which a computer splits text into words, parts of words, or individual characters (tokens). For example, the sentence 'Mom washed the frame' becomes a list: [Mom, washed, the, frame].",
+      "category": "School / General education"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Токенизация — это инженерная процедура дискретизации письменного текста, при которой поток символов преобразуется в последовательность дискретных единиц (токенов) с числовыми индексами из фиксированного словаря модели.",
+      "category": "Студенческая / Техническая"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "Tokenization is an engineering procedure of discretizing written text, in which a character stream is transformed into a sequence of discrete units (tokens) with numerical indices from a fixed model vocabulary.",
+      "category": "Student / Technical"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Токенизация представляет собой компромиссную аппроксимацию между лингвистически мотивированной сегментацией и вычислительной эффективностью. Это прагматическое решение проблемы представления континуального языкового опыта в дискретной, конечно-размерной вычислительной среде.",
+      "category": "Профессорская / Теоретико-лингвистическая"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "Tokenization is a compromise approximation between linguistically motivated segmentation and computational efficiency. It is a pragmatic solution to the problem of representing continuous linguistic experience in a discrete, finite-dimensional computational environment.",
+      "category": "Professorial / Theoretical-linguistic"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Функция f: Σ* → V*, где Σ — конечный алфавит символов, V — конечный словарь токенов. Токенизация устанавливает отображение строки символов в последовательность индексов из V, минимизируя энтропию при сохранении обратимости.",
+      "category": "Математическая / Формальная"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "A function f: Σ* → V*, where Σ is a finite character alphabet and V is a finite token vocabulary. Tokenization establishes a mapping from a character string to a sequence of indices from V, minimizing entropy while preserving reversibility.",
+      "category": "Mathematical / Formal"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Этап предобработки данных в NLP-пайплайне, преобразующий сырой текст во входные тензоры. Включает нормализацию, сегментацию и индексацию с использованием таких алгоритмов, как BPE, WordPiece или Unigram.",
+      "category": "Техническая / Инженерная"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "A preprocessing stage in the NLP pipeline that converts raw text into input tensors. It includes normalization, segmentation, and indexing using algorithms such as BPE, WordPiece, or Unigram.",
+      "category": "Technical / Engineering"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Операция дискретизации языкового континуума, при которой конвенциональная социально-когнитивная модель «слова» заменяется статистически оптимальной вычислительной единицей, не имеющей обязательного лингвистического статуса.",
+      "category": "Лингвистическая / Критическая"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "An operation of discretizing the linguistic continuum, in which the conventional socio-cognitive model of the 'word' is replaced by a statistically optimal computational unit that does not necessarily have linguistic status.",
+      "category": "Linguistic / Critical"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Способ познакомить ученика с идеей, что язык можно делить по-разному. Мы привыкли к словам, но компьютер может считать единицами слоги, морфемы или даже отдельные буквы — и это не ошибка, а другой взгляд на устройство языка.",
+      "category": "Педагогическая / Методическая"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "A way to introduce students to the idea that language can be divided in different ways. We are used to words, but a computer can use syllables, morphemes, or even individual letters as units — and this is not a mistake, but a different perspective on the structure of language.",
+      "category": "Pedagogical / Didactic"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Упаковка смысла в дискретные логистические единицы. Подобно тому как товары группируются в контейнеры для транспортировки, текст дробится на токены — стандартизированные «контейнеры» для эффективной передачи через вычислительную сеть.",
+      "category": "Экономическая / Логистическая"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "Packaging meaning into discrete logistical units. Just as goods are grouped into containers for transportation, text is split into tokens — standardized 'containers' for efficient transmission through a computational network.",
+      "category": "Economic / Logistical"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Процедура квантования семиотического пространства, при которой непрерывное поле значений редуцируется до дискретного набора операциональных маркеров, оптимизированных под архитектуру глубоких нейронных сетей.",
+      "category": "Философская / Семиотическая"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "A procedure of quantizing semiotic space, in which the continuous field of meanings is reduced to a discrete set of operational markers optimized for deep neural network architectures.",
+      "category": "Philosophical / Semiotic"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "В системах автоматического реферирования и машинного перевода: этап нормализации входного текста, обеспечивающий унификацию графических вариантов и приведение словоформ к подсловным единицам, хранящимся в совместном мультиязычном словаре.",
+      "category": "Прикладная / NLP-инженерия"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "In automatic summarization and machine translation systems: a stage of input text normalization that ensures the unification of graphical variants and the reduction of word forms to subword units stored in a shared multilingual vocabulary.",
+      "category": "Applied / NLP Engineering"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Статистическая аппроксимация морфемной сегментации, выполняемая без обращения к лингвистическим словарям, исключительно на основе частотных характеристик корпуса. Эффективна, но не тождественна морфемному анализу.",
+      "category": "Лингвистическая / Сравнительная"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "A statistical approximation of morphemic segmentation, performed without reference to linguistic dictionaries, solely on the basis of corpus frequency characteristics. Effective, but not identical to morphemic analysis.",
+      "category": "Linguistic / Comparative"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Алгоритмическое разрешение неопределенности границ: токенизатор принимает решение, где провести границу между единицами, опираясь на вероятностную модель, обученную на миллионах примеров.",
+      "category": "Вероятностная / Алгоритмическая"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "Algorithmic resolution of boundary uncertainty: the tokenizer makes decisions about where to draw boundaries between units, based on a probabilistic model trained on millions of examples.",
+      "category": "Probabilistic / Algorithmic"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Перевод с естественного языка на числовой язык модели. Это не перевод смысла, а присвоение адресов (индексов) фрагментам текста, чтобы нейросеть знала, какой вектор доставать из таблицы.",
+      "category": "Популярная / Научно-популярная"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "Translation from natural language to the numerical language of the model. This is not a translation of meaning, but the assignment of addresses (indices) to text fragments so that the neural network knows which vector to retrieve from the table.",
+      "category": "Popular science / Explanatory"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Культурно-технический гибрид: токенизация наследует многовековую практику письменной сегментации, но переопределяет её границы в интересах машинного обучения, создавая новый тип дискретной единицы — инженерный артефакт.",
+      "category": "Культурологическая / Историческая"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "A cultural-technical hybrid: tokenization inherits the centuries-old practice of written segmentation but redefines its boundaries in the interests of machine learning, creating a new type of discrete unit — an engineering artifact.",
+      "category": "Cultural / Historical"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Решение проблемы компромисса между размером словаря и длиной последовательности. Оптимальная токенизация минимизирует сумму энтропии распределения токенов и ожидаемой длины последовательности при заданных вычислительных ограничениях.",
+      "category": "Информационная / Теоретико-информационная"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "A solution to the trade-off between vocabulary size and sequence length. Optimal tokenization minimizes the sum of token distribution entropy and expected sequence length under given computational constraints.",
+      "category": "Information-theoretic"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Инструмент колонизации языкового пространства: англоцентричные токенизаторы дискриминируют языки с иной графикой, удлиняя их последовательности и повышая вычислительную стоимость обработки.",
+      "category": "Критическая / Социолингвистическая"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "An instrument of linguistic space colonization: Anglocentric tokenizers discriminate against languages with different scripts, lengthening their sequences and increasing the computational cost of processing.",
+      "category": "Critical / Sociolinguistic"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Процесс, обратный декодированию. На входе — строка, на выходе — тензор индексов. Без этого этапа невозможно ни обучение, ни инференс LLM.",
+      "category": "Техническая / Лаконичная"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "The reverse process of decoding. Input: a string. Output: a tensor of indices. Without this stage, neither training nor inference of LLMs is possible.",
+      "category": "Technical / Concise"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Способ сказать компьютеру: «Не смотри на текст как человек. Забудь про слова. Смотри на частоты. Смотри на пары букв. Собирай их в корзинки — токены. Это твой способ читать».",
+      "category": "Художественная / Метафорическая"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "A way to tell the computer: 'Don't look at text like a human. Forget about words. Look at frequencies. Look at pairs of letters. Gather them into baskets — tokens. This is your way of reading.'",
+      "category": "Artistic / Metaphorical"
+    }
+  },
+  {
+    "ru": {
+      "term": "Токенизация",
+      "equivalent": "Tokenization",
+      "definition": "Первый и обязательный шаг в любой современной нейросетевой архитектуре для текста, превращающий неструктурированные данные в структурированный вход фиксированной размерности словаря.",
+      "category": "Инженерная / Фундаментальная"
+    },
+    "en": {
+      "term": "Tokenization",
+      "equivalent": "Токенизация",
+      "definition": "The first and mandatory step in any modern neural network architecture for text, transforming unstructured data into a structured input with a fixed vocabulary dimension.",
+      "category": "Engineering / Foundational"
+    }
+  },
+  {
+  "ru": {
+    "term": "Токенизация",
+    "equivalent": "Tokenization (stochastic discretization layer)",
+    "definition": "Токенизация есть детерминированная композиция сюръективного отображения h: Σ* → V* и биективного вложения e: V* ↪ ℕ^{L×d}, где Σ — конечное множество кодовых точек Unicode, V — предвычисленный компактный словарь, полученный минимизацией регуляризованной функции потерь L = H(p) + λ·𝔼[|f(x)|] при ограничениях мощности |V| = K и обратимости ∃g: V* → Σ* : g ∘ h ≈ id_{Σ*}. Операция реализует понижение размерности семиотического многообразия через кластеризацию суперпозиций n-граммных признаков в скрытом пространстве частот совместной встречаемости, параметризованном алгоритмом итеративного слияния (BPE) либо максимизацией правдоподобия униграммной модели (Unigram). Выходной тензор индексов не содержит семантической информации априори, но служит координатной сеткой для последующего контекстуального сжатия в трансформерных блоках. Вариативность h(·) порождает неэквивалентные метрики на пространстве текстов, что при фиксированной архитектуре θ обусловливает смещение оценок апостериорного распределения p(y|x).",
+    "category": "Мета-лингвистическая / Вычислительная онтология"
+  },
+  "en": {
+    "term": "Tokenization",
+    "equivalent": "Токенизация (стохастический дискретизирующий слой)",
+    "definition": "Tokenization is a deterministic composition of a surjective mapping h: Σ* → V* and a bijective embedding e: V* ↪ ℕ^{L×d}, where Σ is a finite set of Unicode code points, V is a precomputed compact vocabulary obtained by minimizing a regularized loss function L = H(p) + λ·𝔼[|f(x)|] under cardinality constraints |V| = K and reversibility ∃g: V* → Σ* : g ∘ h ≈ id_{Σ*}. The operation implements dimensionality reduction of the semiotic manifold through clustering of n-gram feature superpositions in the latent space of co-occurrence frequencies, parameterized by an iterative merge algorithm (BPE) or unigram likelihood maximization (Unigram). The output index tensor carries no a priori semantic information but serves as a coordinate grid for subsequent contextual compression in transformer blocks. The variability of h(·) generates non-equivalent metrics on the text space, which under a fixed architecture θ induces bias in posterior distribution estimates p(y|x).",
+    "category": "Meta-linguistic / Computational ontology"
+  }
+}
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
