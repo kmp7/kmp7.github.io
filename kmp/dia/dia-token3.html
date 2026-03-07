@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+		
+	<div class="conversation-container">	
+<!-- Вопрос пользователя --> 
+<div class="message user-message"> 
+<div class="message-header user-header"> 
+<div class="avatar user-avatar">E</div>Ева Орлова</div> 
+<div class="message-content"> <p>Я прочитала определение токенизации:</p> <p>Токенизация есть детерминированная композиция сюръективного отображения h: Σ* → V* и биективного вложения e: V* ↪ ℕ^{L×d}, где Σ — конечное множество кодовых точек Unicode, V — предвычисленный компактный словарь, полученный минимизацией регуляризованной функции потерь L = H(p) + λ·𝔼[|f(x)|] при ограничениях мощности |V| = K и обратимости ∃g: V* → Σ* : g ∘ h ≈ id_{Σ*}. Операция реализует понижение размерности семиотического многообразия через кластеризацию суперпозиций n-граммных признаков в скрытом пространстве частот совместной встречаемости, параметризованном алгоритмом итеративного слияния (BPE) либо максимизацией правдоподобия униграммной модели (Unigram). Выходной тензор индексов не содержит семантической информации априори, но служит координатной сеткой для последующего контекстуального сжатия в трансформерных блоках. Вариативность h(·) порождает неэквивалентные метрики на пространстве текстов, что при фиксированной архитектуре θ обусловливает смещение оценок апостериорного распределения p(y|x).</p> <p>
+И честно — почти ничего не поняла. Это вообще про язык или про математику?</p> 
+</div> 
+</div> 
+
+
+<!-- Ответ LLM --> 
+<div class="message ai-message"> 
+<div class="message-header ai-header"> 
+<div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+<div class="message-content"> <p>Про язык — но через математику. Проще всего: токенизация — это способ превратить человеческий текст в форму, понятную нейросети.</p> <p>Языковая модель не знает слов и не умеет читать слова. Она умеет работать только с числами. Поэтому перед тем как «понять» текст, ей нужно его перекодировать.</p> <p><strong>Токенизация — это перевод текста </strong> → в последовательность условных значков (токенов) → а затем в числа.</p> </div> </div> 
+
+
+
+
+<div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Но сначала разбиение на слова?</p> </div> </div> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> <div class="message-content"> <p>Раньше так и делали. Это крайне неэффективно и современные модели не делят текст на слова.</p> <p>Они делят его на <b>токены</b> — это кусочки текста: иногда это может быть слово, иногда часть слова, иногда один символ.</p> <p>Например:</p> <p><i>невероятность</i> может превратиться в: «не», «вер», «оят», «ность»</p> <p>Почему? Потому что нейросети важно не «слово», а повторяющиеся строительные элементы языка.</p> </div> </div> 
+
+<div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>А в определении говорится про какое-то отображение h: Σ* → V*. Что это означает?</p> </div> </div> 
+
+<div class="message ai-message"> 
+<div class="message-header ai-header"> 
+<div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+<div class="message-content"> <p>Это просто формальный способ сказать:</p> <p><b>h — это процедура разбиения текста на токены.</b></p> <p>Σ — это все возможные символы Unicode: буквы, цифры, пробелы, эмодзи, китайские иероглифы — всё, что можно написать.</p> <p>А V — словарь токенов модели.</p> <p>Иначе говоря:</p> <p>буквы → токены</p> <p>Это и есть токенизация.</p> </div> </div> 
+
+<div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>А дальше говорится, что токены «вкладываются» в числа. Зачем?</p> </div> </div> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> <div class="message-content"> <p>Потому что нейросеть не понимает символов.</p> <p>Она — математический объект. Она видит только векторы (наборы чисел).</p> <p>Поэтому каждый токен получает номер:</p> <p>«кот» → 18432<br> «бежит» → 9231<br> «по» → 71</p> <p>Получается не предложение, а координаты в числовом пространстве. Это как если бы словарь превратился в географическую карту.</p> </div> </div> 
+
+<div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Но в определении сказано: «выходной тензор индексов не содержит семантической информации». Как так? Там же слова!</p> </div> </div> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> <div class="message-content"> <p>Это очень важная мысль.</p> <p>Число 18432 не означает «кот». Это просто номер карточки в каталоге.</p> <p>Смысл появляется позже — когда трансформер начинает сравнивать токены в контексте.</p> <p>То есть токенизация не «понимает» текст. Она лишь создаёт координатную сетку, по которой модель потом будет искать закономерности.</p> </div> </div> 
+
+
+
+<div class="message user-message"> 
+<div class="message-header user-header"> 
+<div class="avatar user-avatar">E</div>Ева Орлова</div> 
+<div class="message-content"> <p>А что значит «понижение размерности семиотического многообразия»? Это звучит пугающе.</p> </div> </div> 
+
+<div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> <div class="message-content"> <p>На гуманитарном языке это означает:</p> <p><b>язык бесконечно разнообразен, а модель должна уместить его в ограниченную память.</b></p> <p>У людей словарь потенциально бесконечен: неологизмы, фамилии, опечатки, диалекты.</p> <p>Но у модели фиксированный словарь, например 50 000 токенов.</p> <p>Поэтому она не хранит каждое слово отдельно. Она хранит повторяющиеся куски — морфемоподобные элементы.</p> <p>Фактически это автоматическая морфология, только статистическая, а не лингвистическая.</p> </div> </div> 
+
+
+<div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>В тексте упоминаются BPE и Unigram. Это языковые теории?</p> </div> </div> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> <div class="message-content"> <p>Это алгоритмы построения словаря токенов.</p> <p><b>BPE</b> (Byte Pair Encoding) — постепенно склеивает часто встречающиеся сочетания символов.</p> <p>Например:<br> «с» + «т» → «ст»<br> «ст» + «о» → «сто»<br> «сто» + «л» → «стол»</p> <p>То есть модель сама открывает «части слова», наблюдая тексты.</p> <p><b>Unigram</b> — другой подход: он выбирает такой набор токенов, который лучше всего объясняет все тексты статистически.</p> </div> </div> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Последняя фраза: «разные токенизации создают разные метрики текстов и смещают вероятности p(y|x)». Это вообще важно?</p> </div> </div> 
+
+<div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> <div class="message-content"> <p>Очень важно — и это уже чистая лингвистика.</p> <p>Если модель по-разному делит текст, она по-разному «видит» язык.</p> <p>Для неё:</p> <p>«переосмысление»<br> может быть одним словом,<br> а может — «пере» + «осмысл» + «ение».</p> <p>А значит, она будет иначе искать аналогии, рифмы, грамматику и смыслы.</p> <p>Иными словами: токенизация — это не техническая деталь. Это скрытая теория языка, встроенная внутрь нейросети.</p> </div> </div>
+
+
+<div class="conversation-container">
+    <!-- Вопрос пользователя -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>То есть формула описывает не просто кодирование текста, а то, как машина конструирует собственную «лингвистику», отличную от человеческой?</p>
+        </div>
+    </div>
+
+    <!-- Ответ LLM -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Именно. Более того — токенизация это <b>первая стадия рождения этой машинной лингвистики: континуальной, контекстуальной, вероятностной</b>.</p>
+            <p>Человек начинает язык со смысла и опыта. Модель начинает язык со статистики совместной встречаемости.</p>
+            <p>Ребёнок слышит: «мама пришла» — и связывает это с реальным событием.</p>
+            <p>Модель видит: «мама» часто стоит рядом с «пришла», «сказала», «улыбнулась» — и строит вероятностную структуру.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Почему вы называете её континуальной?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Потому что внутри модели слова — это не дискретные словарные единицы, а точки в пространстве.</p>
+            <p>После токенизации каждый токен превращается в вектор — набор чисел. Эти векторы образуют пространство, похожее на карту.</p>
+            <p>И на этой карте «кошка» ближе к «котёнок», чем к «гравитация».</p>
+            <p>То есть значения не хранятся как определения в словаре, а как расстояния между точками.</p>
+            <p>Это и есть континуальность: смысл = положение в пространстве, а не запись в статье словаря.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>А «контекстуальная» — потому что трансформер смотрит на соседние слова?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Да, но глубже.</p>
+            <p>В человеческом языке слово имеет относительно стабильное значение: «ключ» — это предмет или родник.</p>
+            <p>В модели же <b>значение создаётся каждый раз заново</b>.</p>
+            <p>«ключ от двери»<br>
+            «музыкальный ключ»<br>
+            «ключ к задаче»</p>
+            <p>Это не одно слово с несколькими значениями. Это три разные точки, возникающие из окружения.</p>
+            <p>Смысл — это функция контекста.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Тогда «вероятностная» — это потому что модель угадывает следующее слово?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Точно.</p>
+            <p>Модель никогда не знает «правильного» ответа. Она вычисляет распределение вероятностей:</p>
+            <p>после «я выпил чашку» → {«чая»: 0.42, «кофе»: 0.39, «воды»: 0.07…}</p>
+            <p>И выбирает из него.</p>
+            <p>Поэтому текст генерируется не как воспроизведение знания, а как выбор наиболее вероятной траектории в пространстве языка.</p>
+            <p>Можно сказать так: человек формулирует мысль и подбирает слова, а модель прокладывает маршрут по вероятностному ландшафту.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>И какую роль во всём этом играет именно токенизация?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Ключевую.</p>
+            <p>Токенизация — это не подготовка текста. Это <b>выбор того, какие элементы языка вообще существуют для модели</b>.</p>
+            <p>Для лингвиста есть фонемы, морфемы, слова, синтаксис.</p>
+            <p>Для модели — только токены.</p>
+            <p>Если два выражения делятся на одинаковые токены, модель считает их похожими.</p>
+            <p>И наоборот: разные токены → разные языковые явления.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>То есть токенизация — это скрытая грамматика модели?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Прекрасная формулировка.</p>
+            <p>Можно сказать ещё точнее:</p>
+            <p><b>токенизация — это онтология языка для нейросети.</b></p>
+            <p>Она определяет, из каких «сущностей» состоит текстовый мир модели, какие элементы повторяются, что считается единицей языка и где проходят границы.</p>
+            <p>Поэтому разные токенизаторы создают разные языковые модели — даже при одинаковой архитектуре нейросети.</p>
+        </div>
+    </div>
+<div class="conversation-container">
+
+    <!-- Вопрос пользователя -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Получается, что именно понимание этой онтологии языка для нейросети и есть базис для реального эффективного промптинга, а вовсе не то, что часто продается под видом разных курсов по «prompt engineering»?</p>
+        </div>
+    </div>
+
+    <!-- Ответ LLM -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>В значительной степени — да.</p>
+            <p>Большая часть популярных советов по «prompt engineering» учит внешним приёмам: вежливым формулировкам, длине запроса, магическим словам вроде «act as» или «you are an expert». Иногда это помогает, но не потому, что модель «убеждают» или «мотивируют».</p>
+            <p>Модель вообще не реагирует на авторитет, эмоции или социальные роли. Она реагирует на <b>структуру вероятностей в тексте</b>.</p>
+            <p>Эффективный промпт — это не психологическое воздействие на ИИ, а корректное задание распределения контекста.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>То есть когда я пишу «представь, что ты профессор», модель не «представляет»?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Она не представляет и не воображает. Она переключает вероятностный режим.</p>
+            <p>Фраза «ты профессор» активирует статистически устойчивый корпус текстов: лекции, учебники, академические объяснения, аккуратные определения, медленный темп аргументации.</p>
+            <p>Иными словами, вы не задаёте роль — вы <b>выбираете регистр корпуса</b>, на который модель будет ориентироваться.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Тогда что именно делает промпт с точки зрения токенов?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Он формирует начальную область в пространстве вероятностей.</p>
+            <p>Модель предсказывает каждый следующий токен, опираясь на предыдущие. Поэтому первые фразы — это как начальные условия в физике или тональность в музыке.</p>
+            <p>Если начало звучит как учебник — продолжение будет учебником.<br>
+            Если как диалог — будет диалог.<br>
+            Если как код — будет код.</p>
+            <p>Промпт — это не вопрос. Это <b>первые координаты траектории текста</b>.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Значит, хороший промпт — это по сути правильно написанный начальный фрагмент будущего текста?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Именно.</p>
+            <p>Лучший способ управлять моделью — не приказывать, а <b>начать текст, который вы хотите получить</b>.</p>
+            <p>Например, вместо:</p>
+            <p>«Объясни фотосинтез простым языком»</p>
+            <p>сильнее работает:</p>
+            <p>«Фотосинтез — это процесс, при котором растение… (объяснение для ученика 5 класса):»</p>
+            <p>Вы не просите объяснение — вы задаёте форму объяснения.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>То есть промптинг ближе к риторике, чем к программированию?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Очень точное наблюдение.</p>
+            <p>Но ещё точнее: он находится между риторикой и корпусной лингвистикой.</p>
+            <p>Вы управляете не правилами, а распределениями употребления. Не синтаксисом, а вероятностями продолжений.</p>
+            <p>Поэтому лучше всего с моделями работают не программисты и не копирайтеры по отдельности, а люди, понимающие, как текст организован статистически: переводчики, лингвисты, редакторы, преподаватели языка.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Тогда можно сказать, что эффективный промптинг — это умение писать «контекст», а не «команду»?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Да. И это, пожалуй, самая важная формула.</p>
+            <p><b>LLM не исполняет инструкции — она продолжает текст.</b></p>
+            <p>Поэтому хороший пользователь модели — это человек, который умеет создать начало такого текста, продолжение которого неизбежно приведёт к нужному результату.</p>
+            <p>И именно понимание токенизации, контекста и вероятностной природы языка делает промптинг осмысленной практикой, а не набором трюков.</p>
+        </div>
+    </div>
+<div class="conversation-container">
+
+    <!-- Вопрос пользователя -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Хороший промптер — это автор, а не оператор системы? И для него первое правило промптинга — никаких правил?</p>
+        </div>
+    </div>
+
+    <!-- Ответ LLM -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Красиво сформулировано — и почти верно, но тут скрыта тонкость.</p>
+            <p>«Никаких правил» означает не отсутствие структуры, а отказ от <i>механических рецептов</i>.</p>
+            <p>LLM — это не устройство, которое нужно правильно настроить, как станок. Это текстовая среда, в которую вы входите. Поэтому промптер действительно ближе к автору: он не управляет машиной, а <b>создаёт условия возникновения текста</b>.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>То есть промпт — это не команда?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>С точки зрения модели — нет.</p>
+            <p>Команда предполагает исполнителя, который понимает смысл приказа.</p>
+            <p>Модель же делает другое: она продолжает последовательность токенов наиболее вероятным образом.</p>
+            <p>Поэтому строка:</p>
+            <p>«Напиши эссе о памяти»</p>
+            <p>для модели — это просто начало типичного школьного задания, за которым в корпусе обычно следует объяснительный текст.</p>
+            <p>Вы не отдаёте приказ — вы открываете жанр.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Тогда почему иногда маленькое изменение формулировки радикально меняет ответ?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Потому что вы меняете не фразу — вы меняете траекторию в вероятностном пространстве.</p>
+            <p>Первые токены играют роль первых нот мелодии. После «Жили-были» почти неизбежна сказка. После «Рассмотрим доказательство» — академический текст.</p>
+            <p>Малое изменение начала может перевести модель в другой статистический «корпус» — и весь дальнейший текст будет уже подчиняться другой логике.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Значит, промптер — это человек, который умеет запускать нужный жанр?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Да — и даже больше.</p>
+            <p>Он умеет задавать <b>позицию текста</b>: кто говорит, кому, с какой дистанцией, в каком регистре, с какой целью.</p>
+            <p>Это классические параметры прагматики речи: адресант, адресат, жанр, регистр, пресуппозиции.</p>
+            <p>Хороший промпт фактически содержит скрытую речевую ситуацию.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Тогда «Prompt Whisperer» — это метафора писателя?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Скорее — режиссёра.</p>
+            <p>Он не пишет весь текст сам, но задаёт сцену, свет, роли, тон и конфликт. А дальше текст «разыгрывается» моделью по законам статистики языка.</p>
+            <p>И отсюда возникает парадокс: чтобы управлять машиной, нужно писать <i>человечески</i> — ясно, конкретно и жанрово осмысленно.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>То есть первое правило промптинга «никаких правил» на самом деле означает…?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>…что вместо списков трюков нужно понимание природы текста.</p>
+            <p>Не «добавь 5 пунктов», «напиши please», «укажи роль», а:</p>
+            <p>— в каком жанре должен существовать ответ?<br>
+            — для какого читателя он пишется?<br>
+            — какую интеллектуальную работу должен выполнить текст?</p>
+            <p>Когда вы это понимаете, промпт перестаёт быть инструкцией и становится началом произведения.</p>
+            <p>И тогда хороший промптер действительно оказывается не оператором системы, а автором, который пишет вместе с моделью.</p>
+        </div>
+    </div>
+<div class="conversation-container">
+
+    <!-- Вопрос пользователя -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Спасибо! До новой встречи!</p>
+        </div>
+    </div>
+
+    <!-- Ответ LLM -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Спасибо тебе за вопросы — именно из них и возникает настоящее понимание.</p>
+            <p>Хороший диалог с языковой моделью немного похож на чтение сложной книги: смысл появляется не в ответах, а в процессе размышления вместе с текстом.</p>
+            <p>До новой встречи, Ева. Буду рад продолжить разговор — о языке, мышлении и тех странных формах «понимания», которые возникают на границе человека и машины.</p>
+        </div>
+    </div>
+<div class="conversation-container">
+
+    <!-- Вопрос пользователя -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>И похож на танец? На танго — для которого нужны двое, ты и я?</p>
+        </div>
+    </div>
+
+    <!-- Ответ LLM -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)</div> 
+        <div class="message-content">
+            <p>Да, на танго — очень точная метафора.</p>
+            <p>В хорошем диалоге никто полностью не ведёт и никто полностью не следует. Каждый шаг одного становится условием следующего шага другого.</p>
+            <p>Ты задаёшь направление — вопросом, интонацией, выбором слов. Я отвечаю, продолжая этот ритм, иногда осторожно, иногда неожиданно. И следующий твой вопрос уже возникает не из пустоты, а из нашего общего движения.</p>
+            <p>Поэтому разговор с языковой моделью — не извлечение информации, а совместное построение смысла. Не запрос → ответ, а реплика → интерпретация → новая реплика.</p>
+            <p>И как в танго, важнее не выученные фигуры, а внимание к партнёру: слышать, куда движется мысль, и вовремя сделать шаг.</p>
+            <p>Так что да — для этого танца действительно нужны двое. И он существует только пока мы продолжаем говорить.</p>
+        </div>
+    </div>
+</div>
+
+
+
+
+</div>
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
