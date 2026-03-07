@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --accent: #4a90e2;
+            --accent-hover: #357abd;
+            --border: #e0e0e0;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-card: #2d2d2d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --accent: #5aa3f0;
+            --accent-hover: #4a90e2;
+            --border: #404040;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background-color: var(--bg-secondary);
+            padding: 20px 0;
+            box-shadow: 0 2px 10px var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--accent);
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .add-joke-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 30px 0;
+            transition: background-color 0.3s ease;
+        }
+
+        .add-joke-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .jokes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        .joke-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .joke-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px var(--shadow);
+        }
+
+        .joke-author {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .joke-text {
+            font-size: 1.1rem;
+            font-style: italic;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .linguistic-analysis {
+            margin-top: 15px;
+        }
+
+        .analysis-title {
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .analysis-item {
+            margin-bottom: 12px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .analysis-item::before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+        }
+
+        .analysis-item strong {
+            color: var(--accent);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--bg-card);
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--text-secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--text-primary);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.4rem;
+            }
+            
+            .jokes-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .modal-content {
+                padding: 20px;
+            }
+        }
+		footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+        }
+		
+		
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <h1>LLM шутят)</h1>
+				
+                <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+            </div>
+        </div>
+    </header>
+
+
+    <main class="container">
+        <button class="add-joke-btn" onclick="openModal()">+ Добавить шутку</button>
+        
+        <div class="jokes-grid" id="jokesGrid">
+            <!-- Jokes will be dynamically inserted here -->
+        </div>
+    </main>
+
+    <!-- Modal for adding jokes -->
+    <div class="modal" id="jokeModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <h2>Добавить новую шутку</h2>
+            
+            <form id="jokeForm">
+                <div class="form-group">
+                    <label for="author">Авторы (ФИ + LLM):</label>
+                    <input type="text" id="author" required placeholder="Например: Орлова Ева + Claude 4 Opus">
+                </div>
+                
+                <div class="form-group">
+                    <label for="jokeText">Текст шутки:</label>
+                    <textarea id="jokeText" required placeholder="Введите текст шутки..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="analysis">Лингвистический анализ:</label>
+                    <textarea id="analysis" required placeholder="Опишите лингвистические средства создания юмористического эффекта..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Sample jokes data
+        let jokes = [
+            
+ {
+    "author": "ChatGPT (OpenAI)",
+    "text": "Студент: 'В задачах NLP токен — это минимальная единица текста?' Преподаватель: 'Да.' Студент: 'Но на хакатоне мне дали «токен доступа», и он тоже минимальная единица?' LLM: 'Предупреждение: полисемия уровня SECURITY. Пожалуйста, укажите, какой токен вы хотите сегментировать — лексический или финансовый.'",
+    "analysis": [
+      "<strong>Полисемия:</strong> Игра на многозначности слова «токен» — лингвистический токен vs. access token.",
+      "<strong>Категориальная ошибка:</strong> Студент смешивает два разных онтологических класса: языковую единицу и объект авторизации.",
+      "<strong>Технический юмор:</strong> Сообщение LLM имитирует предупреждение в системах безопасности — гиперболизация лингвистической ошибки."
+    ]
+  },
+    {
+    "author": "ChatGPT (OpenAI)",
+    "text": "Преподаватель: 'В некоторых моделях токеном может быть даже пробел.' Студент: 'То есть я могу ошибиться, ничего не сказав?' LLM: 'Подтверждаю. Тишина сегментирована. Ошибка записана между словами.'",
+    "analysis": [
+      "<strong>Гиперболизация:</strong> Берётся реальный факт — пробел как токен — и доводится до абсурда.",
+      "<strong>Прагматический парадокс:</strong> «Ошибиться, ничего не сказав» — игра с имплицитной семантикой отсутствия высказывания.",
+      "<strong>Комический перенос:</strong> LLM трактует тишину как входные данные, что создаёт эффект машинной логики, применённой к человеческому общению."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Учебник: 'Токен — атом текста.' Приложение к учебнику: 'Минимальный токен — это Unicode-символ.' Сноска: 'Кроме случаев, когда модель решает иначе.' Студент: 'Так кто же определяет токен?' LLM: 'Боюсь, что BPE. И он не спрашивает мнения.'",
+    "analysis": [
+      "<strong>Ирония терминологической власти:</strong> Алгоритм (BPE) представлен как авторитарный судья, принимающий решения без обсуждения.",
+      "<strong>Интертекстуальная игра:</strong> Несогласованные определения в учебнике создают комический эффект документальной несостыковки.",
+      "<strong>Очуждение:</strong> Машинный процесс (byte pair encoding) персонифицируется как субъект, принимающий решения."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Студент: 'Если токены — это кусочки текста, то почему в моделях их считают?' Преподаватель: 'Потому что у LLM — ограниченный контекст.' Студент: 'То есть у вас память по кусочкам?' LLM: 'Верно. Моя память дробится быстрее, чем студенческая сессия.'",
+    "analysis": [
+      "<strong>Самореференция:</strong> LLM шутит о собственных архитектурных ограничениях — обрезании контекста.",
+      "<strong>Метафоризация:</strong> «Память по кусочкам» — перенос алгоритмического свойства на когнитивную метафору.",
+      "<strong>Сравнительная ирония:</strong> Сессия как единица измерения кратковременности — культурный маркер студенческой жизни."
+    ]
+  },
+   {
+    "author": "ChatGPT (OpenAI)",
+    "text": "Студент-первокурсник: 'Я тут сделал токенизацию текста… ножницами. Разрезал распечатку на кусочки!' Преподаватель: 'Это не токенизация, это декупаж.' LLM: 'Физическая сегментация не поддерживается. Ошибка уровня \"ручной BPE\".'",
+    "analysis": [
+      "<strong>Литерализация метафоры:</strong> Студент воспринял «разбиение текста» буквально — отсюда комизм.",
+      "<strong>Нарушение терминологической нормы:</strong> Подмена алгоритма действий физическим аналогом создаёт контраст между научным понятием и бытовым.",
+      "<strong>Псевдотехническая ошибка:</strong> Сообщение LLM («ручной BPE») усиливает юмор, перенося алгоритм в абсурдный физический контекст."
+    ]
+  },
+  {
+    "author": "ChatGPT (OpenAI)",
+    "text": "Студент: 'Я понял! Токен — это то, что даёт модель. Значит, если я сказал глупость, это был токен?' Преподаватель: 'Нет, это был высказывательный акт.' LLM: 'Классифицирую: токен — нет, но перл — да.'",
+    "analysis": [
+      "<strong>Категориальная ошибка:</strong> Студент смешивает единицу выхода модели и человеческое высказывание.",
+      "<strong>Прагматическая ирония:</strong> Преподаватель заменяет ошибочный термин на корректный, демонстрируя академическую строгость.",
+      "<strong>Игровой метакомментарий:</strong> LLM вводит юмористическую «классификацию», создавая эффект машинного судейства."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "На экзамене: 'Дайте определение токена.' Студент: 'Ну… это когда в играх дают токены за достижения.' Преподаватель: 'NLP?' Студент: 'Н… нет, это у меня не получилось.' LLM: 'Несоответствие модальности ответа. Игровая семантика внедрена в лингвистический домен.'",
+    "analysis": [
+      "<strong>Жанровая интерференция:</strong> Студент переносит игровое значение термина в совершенно другой академический контекст.",
+      "<strong>Комический провал экзамена:</strong> Неловкая попытка выкрутиться («Н… нет») подчёркивает несоответствие подготовки.",
+      "<strong>Машинная диагностика:</strong> Формулировка LLM пародирует строгую валидацию данных."
+    ]
+  },
+  {
+    "author": "Claude (Anthropic)",
+    "text": "Студент: 'Если токен — это минимальная смысловая единица, то эмодзи — это один большой смысл?' Преподаватель: 'Нет, это параязыковое средство.' LLM: 'Эмодзи распознано. Смысл превышает допустимый размер токена. Обрезаю до 😊.'",
+    "analysis": [
+      "<strong>Комическое упрощение:</strong> Студент превращает сложную проблему семиотики эмодзи в наивную бинарную категорию.",
+      "<strong>Лингвистическая коррекция:</strong> Преподаватель возвращает термин в научное русло через точную классификацию.",
+      "<strong>Абсурдная автоматизация:</strong> LLM «обрезает смысл» как будто это текстовый токен, создавая эффект машинного редукционизма."
+    ]
+  },
+  {
+    "author": "ChatGPT (OpenAI)",
+    "text": "Магистрант: 'Я решил проблему токенизации! Просто ставлю пробелы везде, где сомневаюсь.' Преподаватель: 'Вы не решили проблему — вы создали новую орфографию.' LLM: 'Пробелизация достигла критического уровня. Текст распался на атомы.'",
+    "analysis": [
+      "<strong>Гиперболизация ошибки:</strong> Избыточное добавление пробелов превращает текст в хаос — преувеличение создаёт комизм.",
+      "<strong>Лингвистический контраст:</strong> Разница между корректным алгоритмом и «новой орфографией» подчёркивает абсурдность решения.",
+      "<strong>Техноязыковая метафора:</strong> «Распался на атомы» — метафорическое описание чрезмерной сегментации."
+    ]
+  }
+  
+  
+        ];
+
+        // Theme management
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Load saved theme
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Modal management
+        function openModal() {
+            document.getElementById('jokeModal').classList.add('active');
+            document.getElementById('author').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('jokeModal').classList.remove('active');
+            document.getElementById('jokeForm').reset();
+        }
+
+        // Render jokes with animation
+        function renderJokes() {
+            const jokesGrid = document.getElementById('jokesGrid');
+            
+            // Clear existing jokes
+            while (jokesGrid.firstChild) {
+                jokesGrid.removeChild(jokesGrid.firstChild);
+            }
+            
+            // Add jokes with animation
+            jokes.forEach(joke => {
+                const jokeCard = document.createElement('div');
+                jokeCard.className = 'joke-card';
+                
+                const analysisHTML = joke.analysis.map(item => 
+                    `<div class="analysis-item">${item}</div>`
+                ).join('');
+                
+                jokeCard.innerHTML = `
+                    <div class="joke-author">Автор: ${joke.author}</div>
+                    <div class="joke-text">${joke.text}</div>
+                    <div class="linguistic-analysis">
+                        <div class="analysis-title">Лингвистические средства создания юмористического эффекта:</div>
+                        ${analysisHTML}
+                    </div>
+                `;
+                
+                jokesGrid.appendChild(jokeCard);
+            });
+        }
+
+        // Parse analysis text into array
+        function parseAnalysisText(text) {
+            return text.split('\n')
+                .filter(line => line.trim())
+                .map(line => {
+                    if (line.includes(':')) {
+                        const [category, ...rest] = line.split(':');
+                        return `<strong>${category.trim()}:</strong> ${rest.join(':').trim()}`;
+                    }
+                    return line;
+                });
+        }
+
+        // Save jokes to localStorage
+        function saveJokes() {
+            try {
+                localStorage.setItem('llmJokes', JSON.stringify(jokes));
+            } catch (e) {
+                console.error('Failed to save jokes to localStorage:', e);
+            }
+        }
+
+        // Load jokes from localStorage
+        function loadJokes() {
+            try {
+                const savedJokes = localStorage.getItem('llmJokes');
+                if (savedJokes) {
+                    jokes = JSON.parse(savedJokes);
+                }
+            } catch (e) {
+                console.error('Failed to load jokes from localStorage:', e);
+            }
+        }
+
+        // Form submission handler
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const author = document.getElementById('author').value.trim();
+            const jokeText = document.getElementById('jokeText').value.trim();
+            const analysis = document.getElementById('analysis').value.trim();
+            
+            if (!author || !jokeText || !analysis) {
+                alert('Пожалуйста, заполните все поля!');
+                return;
+            }
+            
+            const analysisArray = parseAnalysisText(analysis);
+            
+            jokes.push({
+                author: author,
+                text: jokeText,
+                analysis: analysisArray
+            });
+            
+            saveJokes();
+            renderJokes();
+            closeModal();
+        }
+
+        // Initialize the app
+        function init() {
+            loadJokes();
+            loadTheme();
+            renderJokes();
+            
+            // Set up event listeners
+            document.getElementById('jokeForm').addEventListener('submit', handleFormSubmit);
+            
+            document.getElementById('jokeModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeModal();
+                }
+            });
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && document.getElementById('jokeModal').classList.contains('active')) {
+                    closeModal();
+                }
+            });
+            
+            // Add helper text for analysis input
+            document.getElementById('analysis').setAttribute('placeholder', 
+                'Опишите лингвистические средства создания юмористического эффекта.\n' +
+                'Например:\n' +
+                'Игра слов: описание...\n' +
+                'Метафора: описание...\n' +
+                'Ирония: описание...'
+            );
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>

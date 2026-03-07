@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>ТОКЕН</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp |  CC BY-NC-SA 4.0</p>
+<p>Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+				           {
+"ru": {
+"term": "Токен",
+"equivalent": "Token",
+"definition": "Представь, что у тебя есть волшебная монетка, которую нельзя потерять — она живёт внутри компьютеров. Эта монетка может быть билетом в парк развлечений, кусочком картины или даже сокровищем из игры. Токен — это такая цифровая монетка, которую хранят компьютеры.",
+"category": "Детская / Образная"
+},
+"en": {
+"term": "Token",
+"equivalent": "Токен",
+"definition": "Imagine you have a magic coin that can't be lost—it lives inside your phone. This coin can be a ticket to an amusement park, a piece of a painting, or even treasure from a video game. A token is such a digital coin stored by a computer.",
+"category": "Child-friendly / Figurative"
+}
+},
+
+{
+"ru": {
+"term": "Токен",
+"equivalent": "Token",
+"definition": "Цифровой актив, существующий как запись в DLT  (Distributed Ledger Technology, блокчейне). В отличие от нативной криптовалюты блокчейна (например, ETH в Ethereum), токен создаётся поверх существующей сети через смарт-контракт. Может быть: (а) платежным средством (ERC-20), (б) уникальным объектом (NFT/ERC-721), (в) правом на сервис (утилитарный токен). Его стоимость определяется рынком, а владение подтверждается криптографической подписью.",
+"category": "Студенческая / Экономико-техническая"
+},
+"en": {
+"term": "Token",
+"equivalent": "Токен",
+"definition": "A digital asset existing as an entry in a DLT  (distributed ledger, blockchain). Unlike a blockchain's native cryptocurrency (e.g., ETH on Ethereum), a token is created on top of an existing network via a smart contract. It can be: (a) a medium of exchange (ERC-20), (b) a unique object (NFT/ERC-721), or (c) a service entitlement (utility token). Its value is market-determined, and ownership is cryptographically signed.",
+"category": "Undergraduate / Economic-technical"
+}
+},
+{
+"ru": {
+"term": "Токен",
+"equivalent": "Token",
+"definition": "Программируемая единица ценности в цифровой экономике. Токен — не просто «монета», а объект со встроенной логикой: условиями передачи, правами доступа, механизмами дефляции. Смарт-контракт определяет его поведение, блокчейн гарантирует неизменяемость состояния, криптография подтверждает право собственности. Токен объединяет актив, контракт и реестр в одну неделимую сущность.",
+"category": "Профессиональная / Программируемая экономика"
+},
+"en": {
+"term": "Token",
+"equivalent": "Токен",
+"definition": "A programmable unit of value in the digital economy. A token is not merely a 'coin' but an object with embedded logic: transfer conditions, access rights, deflation mechanisms. The smart contract defines its behavior, the blockchain guarantees state immutability, and cryptography confirms ownership. A token unifies asset, contract, and ledger into an indivisible entity.",
+"category": "Professional / Programmable economy"
+}
+},
+{
+"ru": {
+"term": "Токен",
+"equivalent": "Token",
+"definition": "Финансовый инструмент нового типа: неэмиссионная ценная бумага, существующая исключительно в цифровой форме. Токен может представлять долю в компании (security token), право на дивиденды, доступ к платформе или коллекционный предмет. Его ликвидность обеспечивается децентрализованными биржами (DEX), а регулирование пока находится в стадии формирования в большинстве юрисдикций.",
+"category": "Финансово-юридическая / Институциональная"
+},
+"en": {
+"term": "Token",
+"equivalent": "Токен",
+"definition": "A novel financial instrument: a non-certificated security existing exclusively in digital form. A token may represent equity (security token), dividend rights, platform access, or a collectible item. Its liquidity is provided by decentralized exchanges (DEX), while regulation remains nascent across most jurisdictions.",
+"category": "Financial-legal / Institutional"
+}
+},
+{
+"ru": {
+"term": "Токен",
+"equivalent": "Token",
+"definition": "Криптографически защищённая запись в направленном ациклическом графе состояний блокчейна. Токен инстанцируется как состояние смарт-контракта, удовлетворяющего интерфейсу стандарта (например, ERC-20: {totalSupply, balanceOf, transfer}). Владение определяется отображением адрес → uint256 в хранилище контракта. Передача реализуется транзакцией, изменяющей это отображение атомарно. Рыночная стоимость возникает из ликвидности пулов на AMM-биржах, где цена устанавливается по формуле x·y=k.",
+"category": "Инженерная / Протокольная"
+},
+"en": {
+"term": "Token",
+"equivalent": "Токен",
+"definition": "A cryptographically secured entry in a blockchain's directed acyclic graph of states. A token is instantiated as the state of a smart contract implementing a standard interface (e.g., ERC-20: {totalSupply, balanceOf, transfer}). Ownership is defined by an address → uint256 mapping in contract storage. Transfer is executed via a transaction atomically modifying this mapping. Market value emerges from liquidity pools on AMM exchanges, where price follows the x·y=k invariant.",
+"category": "Engineering / Protocol-level"
+}
+},
+{
+"ru": {
+"term": "Токен",
+"equivalent": "Token",
+"definition": "Отображение (address, contract) ↦ ℕ в глобальном состоянии блокчейна, где ℕ интерпретируется как скаляр (fungible) или уникальный идентификатор (non-fungible). Токен не существует как самостоятельная сущность — он есть проекция состояния контракта на внешний интерфейс. Его «стоимость» — эмерджентное свойство, возникающее из агрегированного поведения агентов в пространстве состояний пулов ликвидности. Токен есть квантование права в вычислимой экономике.",
+"category": "Мета-вычислительная / Онтологическая"
+},
+"en": {
+"term": "Token",
+"equivalent": "Токен",
+"definition": "A mapping (address, contract) ↦ ℕ in a blockchain's global state, where ℕ is interpreted as a scalar (fungible) or unique identifier (non-fungible). A token does not exist as an independent entity—it is a projection of contract state onto an external interface. Its 'value' is an emergent property arising from aggregated agent behavior in liquidity pool state spaces. A token is the quantization of entitlement in a computable economy.",
+"category": "Meta-computational / Ontological"
+}
+},
+
+{
+"ru": {
+"term": "Токенизация",
+"equivalent": "Tokenization",
+"definition": "Представь, что у тебя есть настоящая игрушечная машинка. Токенизация — это когда ты фотографируешь её, кладёшь фото в волшебный сундук (блокчейн) и получаешь вместо этого цифровой жетон. Этот жетон — твой билет, который доказывает: машинка всё ещё твоя, даже если её кто-то держит в руках.",
+"category": "Детская / Образная"
+},
+"en": {
+"term": "Tokenization",
+"equivalent": "Токенизация",
+"definition": "Imagine you have a real toy car. Tokenization is when you photograph it, place the photo in a magic chest (blockchain), and receive a digital token instead. This token is your ticket proving the car is still yours, even if someone else is holding it.",
+"category": "Child-friendly / Figurative"
+}
+},
+{
+"ru": {
+"term": "Токенизация",
+"equivalent": "Tokenization",
+"definition": "Превращение чего-то ценного (деньги, картина, квартира) в цифровую «фишку» на блокчейне. Например, картину стоимостью 100 000 рублей можно токенизировать: создать 100 цифровых токенов по 1000 рублей, и каждый токен будет означать долю владения этой картиной. Токены можно передавать, продавать или дарить — как настоящие вещи, но в цифре.",
+"category": "Школьная / Общеобразовательная"
+},
+"en": {
+"term": "Tokenization",
+"equivalent": "Токенизация",
+"definition": "Turning something valuable (money, a painting, an apartment) into a digital 'chip' on a blockchain. For example, a painting worth 100,000 rubles can be tokenized: create 100 digital tokens worth 1,000 rubles each, where each token represents a share of ownership. Tokens can be transferred, sold, or gifted—like real things, but in digital form.",
+"category": "School / General education"
+}
+},
+{
+"ru": {
+"term": "Токенизация",
+"equivalent": "Tokenization",
+"definition": "Процесс преобразования прав собственности или иных юридических прав на актив (материальный или нематериальный) в цифровые записи на распределённом реестре. Результат — токен, управляемый смарт-контрактом, который криптографически привязан к владельцу и может передаваться без посредников. Примеры: токенизация недвижимости (доли в здании), искусства (NFT), углеродных кредитов.",
+"category": "Студенческая / Экономико-правовая"
+},
+"en": {
+"term": "Tokenization",
+"equivalent": "Токенизация",
+"definition": "The process of converting property rights or other legal entitlements to an asset (tangible or intangible) into digital records on a distributed ledger. The output is a token governed by a smart contract, cryptographically bound to an owner and transferable without intermediaries. Examples: real estate tokenization (building shares), art (NFTs), carbon credits.",
+"category": "Undergraduate / Economic-legal"
+}
+},
+{
+"ru": {
+"term": "Токенизация",
+"equivalent": "Tokenization",
+"definition": "Юридико-техническая процедура, при которой правоотношение формализуется в исполняемый код смарт-контракта, а право собственности — в изменяемую запись состояния (balance mapping) на неизменяемом реестре. Токенизация не создаёт право, но обеспечивает его автоматизированное исполнение: передача токена = передача права без нотариуса, регистратора или клиринговой палаты.",
+"category": "Профессиональная / Юридико-техническая"
+},
+"en": {
+"term": "Tokenization",
+"equivalent": "Токенизация",
+"definition": "A legal-technical procedure where a legal relationship is formalized into executable smart contract code, and ownership right becomes a mutable state entry (balance mapping) on an immutable ledger. Tokenization does not create rights but enables their automated enforcement: token transfer = right transfer without notaries, registrars, or clearing houses.",
+"category": "Professional / Legal-technical"
+}
+},
+{
+"ru": {
+"term": "Токенизация",
+"equivalent": "Tokenization",
+"definition": "Изоморфное отображение правовой онтологии в вычислимое состояние: актив α ∈ Ω (множество правовых объектов) связывается с контрактом C: V × S → S, где V — множество адресов, S — пространство состояний, а функция передачи τ: (v₁, v₂, q) ↦ s' реализует переход права. Токенизация есть инъекция Ω ↪ S с сохранением отношений собственности, доступа и передачи в условиях византийской отказоустойчивости сети.",
+"category": "Мета-вычислительная / Онтологическая"
+},
+"en": {
+"term": "Tokenization",
+"equivalent": "Токенизация",
+"definition": "An isomorphic mapping of legal ontology into computable state: asset α ∈ Ω (set of legal objects) is bound to contract C: V × S → S, where V is the address space, S the state space, and transfer function τ: (v₁, v₂, q) ↦ s' implements right transition. Tokenization is an injection Ω ↪ S preserving ownership, access, and transfer relations under Byzantine fault tolerance of the network.",
+"category": "Meta-computational / Ontological"
+}
+},
+{
+"ru": {
+"term": "Токенизация",
+"equivalent": "Tokenization",
+"definition": "Фрагментация монолитного актива на взаимозаменяемые (fungible) или уникальные (non-fungible) цифровые единицы с целью повышения ликвидности, снижения порога входа и автоматизации исполнения прав. Экономический эффект: превращение иллюквидного актива (например, коммерческой недвижимости) в торгуемый инструмент с непрерывным ценообразованием на децентрализованных биржах.",
+"category": "Финансовая / Ликвидностная"
+},
+"en": {
+"term": "Tokenization",
+"equivalent": "Токенизация",
+"definition": "Fragmentation of a monolithic asset into fungible or non-fungible digital units to increase liquidity, lower entry barriers, and automate rights enforcement. Economic effect: transformation of an illiquid asset (e.g., commercial real estate) into a tradable instrument with continuous price discovery on decentralized exchanges.",
+"category": "Financial / Liquidity-oriented"
+}
+},
+{
+"ru": {
+"term": "Токенизация",
+"equivalent": "Tokenization",
+"definition": "Операция, обратная материализации: абстрактное право (собственность, доступ, дивиденд) инстанцируется как состояние смарт-контракта. При этом физический носитель актива может отсутствовать (цифровое искусство), быть разделён (доля в здании) или вовсе не перемещаться (автомобиль остаётся у оператора, но право собственности передаётся через токен). Токенизация разрывает связку «право ↔ физический контроль».",
+"category": "Философская / Постматериальная"
+},
+"en": {
+"term": "Tokenization",
+"equivalent": "Токенизация",
+"definition": "An operation inverse to materialization: an abstract right (ownership, access, dividend) is instantiated as smart contract state. The physical asset carrier may be absent (digital art), fractionalized (building share), or remain stationary (car stays with operator while ownership transfers via token). Tokenization severs the 'right ↔ physical control' coupling.",
+"category": "Philosophical / Post-material"
+}
+}
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
