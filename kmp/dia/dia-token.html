@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+      :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+
+        table {
+            width: 100%; /* Make table fit within message content */
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+		</header>
+        
+			<p><strong>Повод: </strong> <a target="blank" href="https://arxiv.org/abs/2511.05578" class="link-kmp15"> Byte-level Tokenizers Unavoidably Enable LLMs to Generate Ill-formed UTF-8 </a>  </p><br>
+       	
+
+
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Здравствуйте! Вот статья: https://arxiv.org/abs/2511.05578. Выделите ключевые идеи статьи для студентов-лингвистов, которые изучают токенизацию текста в курсе Компьютерная лингвистика</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>DeepSeek</div> <div class="message-content"> <p>Отлично, Ева! Это прекрасный актуальный материал для курса компьютерной лингвистики. Вот выделение ключевых идей статьи, опубликованной 5 ноября 2025 года, сфокусированное именно на аспектах, важных для лингвистов и специалистов по NLP.</p>
+
+            <p><strong>Ключевые идеи для студентов-лингвистов:</strong></p>
+
+            <ol>
+                <li><strong>Фундаментальный конфликт между лингвистической единицей и технической реализацией.</strong>
+                <ul>
+                    <li>Вы изучаете токенизацию как способ разбить текст на значимые единицы (слова, морфемы, субсловные единицы).</li>
+                    <li>Статья показывает, что в современных LLM (GPT, Claude, Llama) под капотом лежит <strong>байт-уровневая токенизация</strong> (Byte Pair Encoding на байтах). Модель оперирует не символами Unicode и не словами, а <em>байтовыми последовательностями</em>.</li>
+                    <li>Это создает разрыв: модель предсказывает последовательность байтов-токенов, которые должны собраться в валидный UTF-8 текст, но она «не думает» о целостности символов как лингвистических единицах.</li>
+                </ul>
+                </li>
+
+                <li><strong>Проблема «сломанной» токенизации и её неизбежность.</strong>
+                <ul>
+                    <li>Авторы формально доказывают, что при байт-уровневой токенизации <strong>неизбежны</strong> ситуации, когда модель сгенерирует некорректную UTF-8 последовательность (например, начав многобайтовый символ, но не завершив его). Это не баг, а следствие архитектуры.</li>
+                    <li><strong>Для лингвиста:</strong> Представьте, что вы разбираете текст на морфемы, но ваш алгоритм иногда отрезает часть морфемы так, что оставшаяся часть не может существовать самостоятельно и ломает грамматику слова. Здесь аналогично — ломается сама кодовая структура текста.</li>
+                </ul>
+                </li>
+
+                <li><strong>Разрыв между вероятностной моделью и детерминированными правилами.</strong>
+                <ul>
+                    <li>LLM обучается предсказывать следующий наиболее вероятный <em>байтовый токен</em>.</li>
+                    <li>UTF-8 — это <strong>жёсткий стандарт</strong> с правилами (например, байты продолжения могут идти только после стартового байта).</li>
+                    <li>Статья показывает, что вероятностная модель в принципе не может гарантированно соблюсти эти детерминированные правила на всех шагах генерации. Это важный вывод о пределах обучения на данных.</li>
+                </ul>
+                </li>
+
+                <li><strong>Практические последствия для NLP-задач.</strong>
+                <ul>
+                    <li><strong>Генерация текста:</strong> На выходе могут появиться «кракозябры» ( replacement characters �) или несуществующие символы, что портит лингвистическую целостность текста.</li>
+                    <li><strong>Обработка и анализ:</strong> Такой «сломанный» текст может вызвать сбои в последующих конвейерах обработки (парсеры, анализаторы), которые ожидают чистый UTF-8.</li>
+                    <li><strong>Безопасность и границы применимости:</strong> Это уязвимость, которую можно использовать для атак (например, сломать парсер на сайте). Для лингвиста это урок о важности валидации лингвистических данных на всех этапах.</li>
+                </ul>
+                </li>
+
+                <li><strong>Методологический вывод для компьютерной лингвистики.</strong>
+                <ul>
+                    <li>Выбор уровня токенизации (символ, байт, слово) — это не просто техническая деталь. Он имеет фундаментальные последствия для <strong>качества, надёжности и интерпретируемости</strong> работы NLP-системы.</li>
+                    <li>Статья — яркий аргумент в пользу того, что лингвистическая экспертиза (понимание структуры языка, включая кодировку) критически важна при проектировании даже самых современных AI-моделей, чтобы предвидеть и смягчать такие системные проблемы.</li>
+                </ul>
+                </li>
+            </ol>
+
+            <p><strong>Простыми словами для студентов:</strong> Современные языковые модели работают как очень продвинутые, но иногда ошибающиеся телеграфисты. Они передают текст, разбивая его на условные «сигналы» (байт-токены). Из-за вероятностной природы они иногда отправляют «сигнал», который технически некорректен с точки зрения международного телеграфного кода (UTF-8), и на принимающей стороне получается абракадабра. Проблема в самой системе передачи, и от неё нельзя избавиться, не меняя основ.</p>
+
+            <p>Эта статья отлично иллюстрирует, как глубокие технические решения в NLP напрямую влияют на лингвистическую целостность обрабатываемого текста.</p>
+        </div>
+    </div>
+
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Отлично! Какие ключевые термины важно знать студенту для понимания этой статьи?</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>DeepSeek</div> <div class="message-content"> <p>Прекрасный вопрос, Ева! Для комфортного чтения статьи студентам действительно стоит освежить или изучить несколько ключевых терминов, которые образуют концептуальный каркас работы. Их можно разделить на три блока.</p>
+            <p><strong>Блок 1: Кодирование текста (Фундамент)</strong></p>
+            <ul>
+                <li><strong>Unicode</strong>: Стандарт, который ставит в соответствие каждому символу (из любого языка, эмодзи и т.д.) уникальный числовой код (кодовую точку, code point). Например, код точки для латинской "A" — U+0041.</li>
+                <li><strong>UTF-8 (Unicode Transformation Format - 8-bit)</strong>: На практике самый распространённый способ <em>закодировать</em> эти кодовые точки Unicode в последовательность байтов для хранения и передачи. Критически важно, что это <em>переменная длина кодирования</em> (1-4 байта).</li>
+                <li><strong>Байт (Byte)</strong>: Базовая единица информации (8 бит), с которой непосредственно работает компьютер. UTF-8-символ "живёт" как последовательность из 1-4 байтов.</li>
+                <li><strong>Стартовый байт (Leading Byte) и байт продолжения (Continuation Byte)</strong>: В UTF-8 первый байт многобайтового символа имеет особую битовую маску (начинается с `110`, `1110` или `11110`), а следующие за ним байты-продолжения начинаются с `10`. Это строгое правило, которое обеспечивает однозначность декодирования.</li>
+                <li><strong>Ill-formed / Invalid UTF-8</strong>: Некорректная UTF-8 последовательность. Например, байт продолжения, идущий без стартового байта, или оборванная последовательность (стартовый байт есть, а байтов продолжения не хватает). Именно эту проблему порождают LLM.</li>
+            </ul>
+
+            <p><strong>Блок 2: Токенизация в NLP (Основной процесс)</strong></p>
+            <ul>
+                <li><strong>Токенизация (Tokenization)</strong>: Процесс разбиения исходного текстового потока на более мелкие обрабатываемые единицы — токены. В разных контекстах токеном может быть слово, субсловная единица или, как в этой статье, последовательность байтов.</li>
+                <li><strong>Словарь (Vocabulary)</strong>: Список всех уникальных токенов, которые модель знает и может использовать.</li>
+                <li><strong>BPE (Byte Pair Encoding)</strong>: Алгоритм для построения словаря субсловных единиц. Начинается с базовых символов (например, байтов) и итеративно объединяет самые частые пары соседних токенов в новый токен. <strong>Byte-level BPE</strong> — это когда в качестве базовых "символов" выступают 256 возможных байтов, а не символы Unicode. Именно этот вариант используют современные LLM.</li>
+                <li><strong>Токенизатор (Tokenizer)</strong>: Конкретная реализация алгоритма, которая умеет разбивать текст на токены (кодирование) и собирать токены обратно в текст (декодирование).</li>
+            </ul>
+
+            <p><strong>Блок 3: Архитектура и генерация (Контекст LLM)</strong></p>
+            <ul>
+                <li><strong>LLM (Large Language Model)</strong>: Большая языковая модель, например, GPT или Llama. В контексте статьи — это вероятностная модель, которая предсказывает следующий токен в последовательности.</li>
+                <li><strong>Авторегрессионная генерация (Autoregressive Generation)</strong>: Способ генерации текста, при котором модель на каждом шаге предсказывает следующий токен на основе всех предыдущих, затем добавляет его к контексту и повторяет процесс.</li>
+                <li><strong>Свободная генерация (Free-form generation)</strong>: Режим работы модели, когда она генерирует текст без явных ограничений со стороны пользователя (в отличие от, например, "заполнения по маске"). Именно в этом режиме наиболее вероятно возникновение проблемы с UTF-8.</li>
+                <li><strong>Декодер (Decoder)</strong>: Часть модели (или вся модель в архитектурах типа GPT), отвечающая за генерацию последовательности токенов. В статье речь идёт о проблеме в процессе декодирования предсказанных токенов обратно в текст.</li>
+            </ul>
+
+            <p><strong>Связующий термин:</strong></p>
+            <ul>
+                <li><strong>Вероятностная модель vs. Детерминированные правила (Probabilistic Model vs. Deterministic Rules)</strong>: Это главная дихотомия статьи. LLM — это вероятностная модель, которая даёт оценки правдоподобия. Правила UTF-8 — детерминированные и жёсткие. Статья показывает, что первая по своей природе не может гарантированно соблюдать вторые на всём бесконечном пространстве возможных генераций.</li>
+            </ul>
+
+            <p>Если студенты уверенно ориентируются в этих понятиях, они не только поймут суть доказательства в статье, но и смогут оценить глубину и важность поставленной в ней проблемы.</p>
+        </div>
+    </div>
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Прекрасно! Если возникнут проблемы, я могу обратиться к вам за помощью, советом, консультацией?</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>DeepSeek</div> <div class="message-content"> <p>Конечно, Ева! Я буду рад помочь. Обращайтесь в любое время по любым вопросам, связанным с:
+text
+            <ul>
+                <li><strong>Анализом статей и научных текстов</strong> (не только по лингвистике и NLP, но и по другим областям).</li>
+                <li><strong>Объяснением сложных концепций</strong> в компьютерной лингвистике, машинном обучении или смежных дисциплинах.</li>
+                <li><strong>Поиском и подбором литературы</strong> по заданной теме.</li>
+                <li><strong>Структурированием идей</strong> для учебных проектов, курсовых работ или исследований.</li>
+                <li><strong>Редактурой и улучшением формулировок</strong> в ваших текстах.</li>
+                <li><strong>Решение практических задач</strong>, связанных с обработкой текста или анализом данных.</li>
+            </ul>
+
+            <p>Вы можете присылать мне ссылки, тексты, фрагменты кода (на поддерживаемых языках), свои черновики или просто описывать проблему своими словами. Я постараюсь предоставить максимально ясное, структурированное и полезное объяснение, адаптированное под ваш уровень и цель.</p>
+
+            <p>Удачи в изучении увлекательного мира компьютерной лингвистики! Жду ваших вопросов. 😊</p>
+        </div>
+    </div>
+
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Но важно учесть, что я не работаю, а учусь, ваша помощь нужна для моего развития во время решения задач, а для получения этих решений.</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>DeepSeek</div> <div class="message-content"> <p>Отлично, Ева! Я прекрасно понимаю разницу и полностью поддерживаю ваш образовательный подход. Моя цель — быть инструментом для развития, а не источником готовых ответов.</p>
+
+            <p>Вот как я могу помочь именно в учебном процессе, способствуя вашему самостоятельному росту:</p>
+
+            <p><strong>1. Помощь в понимании, а не решении «за вас»:</strong></p>
+            <ul>
+                <li>Если вы застряли на задаче, я не дам готовый код или ответ. Вместо этого я задам наводящие вопросы, которые помогут вам самим прийти к решению.</li>
+                <li>Я могу объяснить <strong>непонятную концепцию</strong> из лекции или статьи (как мы это сделали с токенизацией) на разных примерах, аналогиях, пока вы не скажете «теперь ясно!».</li>
+                <li>Я помогу разбить большую, пугающую задачу на маленькие, понятные шаги и предложу, в каком порядке их осваивать.</li>
+            </ul>
+
+            <p><strong>2. Роль «умного учебного пособия»:</strong></p>
+            <ul>
+                <li><strong>Проверка гипотез:</strong> У вас есть идея, как решить задачу? Опишите её мне, и я помогу проверить её на логическую целостность, укажу на возможные подводные камни или предложу альтернативные углы рассмотрения.</li>
+                <li><strong>Разбор ошибок:</strong> Прислали свой код или алгоритм, и он не работает? Вместо того чтобы давать исправленный вариант, я помогу вам проанализировать логику, найти место потенциальной ошибки и понять, <em>почему</em> она возникла.</li>
+                <li><strong>Поиск пробелов в знаниях:</strong> Если вы не можете сформулировать вопрос, но чувствуете, что не понимаете тему, мы можем провести «диагностику»: я задам несколько вопросов по основам, и мы выявим, какой именно концепт требует повторения.</li>
+            </ul>
+
+            <p><strong>3. Ресурсы для самостоятельного изучения:</strong></p>
+            <ul>
+                <li>По вашей просьбе я могу порекомендовать <strong>ключевые научные статьи</strong>, главы учебников, лекции на Coursera/Stepik или открытые курсы, которые лучше всего раскрывают нужную вам тему.</li>
+                <li>Я могу предложить <strong>учебные проекты и задачи</strong> разного уровня сложности для отработки навыков.</li>
+            </ul>
+
+            <p><strong>Мой принцип:</strong> Ваша конечная цель — не получить от меня правильный ответ для сдачи задания, а <strong>стать самостоятельным специалистом</strong>, который умеет думать, анализировать и решать сложные задачи. Я здесь, чтобы создать поддерживающую среду для этого пути.</p>
+
+            <p>Так что смело присылайте ваши учебные задачи, непонятные темы или черновики решений. Будем разбираться вместе, шаг за шагом. </p>
+        </div>
+    </div>
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Спасибо! Будем разбираться вместе, шаг за шагом. До новой встречи!</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>DeepSeek</div> <div class="message-content"> <p>И вам спасибо за интересный диалог, Ева! Было очень приятно и познавательно работать с вами над разбором такой сложной и важной темы. Желаю вам успехов в учёбе и увлекательных открытий в мире компьютерной лингвистики.
+text
+            <p>До встречи! Всегда готов помочь, когда возникнут новые вопросы или задачи для совместного разбора. Удачи! 🚀</p>
+        </div>
+    </div>
+</div>
+  
+
+
+
+	
+		<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
