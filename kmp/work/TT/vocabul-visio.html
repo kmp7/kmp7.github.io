@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+:root {
+    --bg-primary:#ffffff;--bg-secondary:#f5f5f5;--bg-card:#ffffff;--bg-input:#ffffff;
+    --text-primary:#2c3e50;--text-secondary:#5a6c7d;--text-muted:#8a9bae;
+    --accent-dark:#325980;--accent:#3498db;--accent-light:#5dade2;--accent-bg:rgba(52,152,219,.07);
+    --border:#e0e0e0;--divider:#f1f1f1;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 14px rgba(0,0,0,.08);--shadow-lg:0 8px 28px rgba(0,0,0,.1);
+    --radius:10px;
+    --byte-bg:#e3f2fd;--byte-text:#1565c0;--byte-bar:#42a5f5;
+    --sub-bg:#e8f5e9;--sub-text:#2e7d32;--sub-bar:#66bb6a;
+    --word-bg:#fff3e0;--word-text:#e65100;--word-bar:#ffa726;
+    --phrase-bg:#f3e5f5;--phrase-text:#6a1b9a;--phrase-bar:#ab47bc;
+    --spec-bg:#ffebee;--spec-text:#c62828;--spec-bar:#ef5350;
+    --freq-track:#eef2f7;
+}
+body.dark{
+    --bg-primary:#141825;--bg-secondary:#1a2035;--bg-card:#1e2540;--bg-input:#253050;
+    --text-primary:#e0e4ea;--text-secondary:#9aa8bc;--text-muted:#687891;
+    --accent-dark:#5b9bd5;--accent:#5dade2;--accent-light:#85c1e9;--accent-bg:rgba(93,173,226,.1);
+    --border:#2a3555;--divider:#232c42;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.25);--shadow-md:0 4px 14px rgba(0,0,0,.35);--shadow-lg:0 8px 28px rgba(0,0,0,.45);
+    --byte-bg:#102a40;--byte-text:#64b5f6;
+    --sub-bg:#0f2a16;--sub-text:#81c784;
+    --word-bg:#2a1f0a;--word-text:#ffb74d;
+    --phrase-bg:#200f30;--phrase-text:#ce93d8;
+    --spec-bg:#2a1010;--spec-text:#ef9a9a;
+    --freq-track:#1e2540;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:var(--bg-secondary);color:var(--text-primary);line-height:1.6;transition:background .3s,color .3s}
+header{background:var(--accent-dark);color:#fff;padding:18px 24px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-md);transition:background .3s}
+.header-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+header h1{font-size:1.8rem;font-weight:700;letter-spacing:.3px}
+header .subtitle{font-size:.82rem;opacity:.85;margin-top:2px}
+#themeBtn{background:none;border:2px solid rgba(255,255,255,.35);color:#fff;font-size:1.2rem;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .25s;flex-shrink:0}
+#themeBtn:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.6)}
+main{max-width:1200px;margin:0 auto;padding:20px 16px 40px}
+.card{background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:24px;margin-bottom:18px;border:1px solid var(--border);transition:background .3s,border-color .3s,box-shadow .3s}
+.card h2{color:var(--accent-dark);font-size:1.15rem;margin-bottom:14px;font-weight:600;transition:color .3s}
+.sec-toggle{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
+.sec-toggle .arr{font-size:.7rem;color:var(--text-muted);transition:transform .3s}
+.sec-toggle .arr.open{transform:rotate(180deg)}
+.sec-body{overflow:hidden;transition:max-height .4s ease,opacity .3s ease;max-height:0;opacity:0}
+.sec-body.open{opacity:1}
+.info-text{font-size:.92rem;color:var(--text-secondary);line-height:1.7}
+.info-text p{margin-bottom:10px}
+.info-text h3{color:var(--accent-dark);margin:16px 0 8px;font-size:1rem}
+.info-text ol,.info-text ul{padding-left:22px;margin-bottom:10px}
+.info-text li{margin-bottom:4px}
+.info-text code{background:var(--accent-bg);color:var(--accent-dark);padding:2px 6px;border-radius:4px;font-family:Consolas,Monaco,monospace;font-size:.87em}
+.student-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.student-row label{font-weight:600;color:var(--text-secondary);white-space:nowrap}
+.student-row input{flex:1;min-width:220px}
+input,select,textarea{font-family:inherit;font-size:.92rem;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text-primary);transition:border-color .2s,background .3s,color .3s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{width:100%;resize:vertical;min-height:100px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.controls .search-wrap{flex:1;min-width:200px;position:relative}
+.controls .search-wrap input{width:100%;padding-left:36px}
+.controls .search-wrap::before{content:'';position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;border:2px solid var(--text-muted);border-radius:50%;opacity:.6}
+.controls .search-wrap::after{content:'';position:absolute;left:26px;top:calc(50% + 8px);width:2px;height:7px;background:var(--text-muted);transform:rotate(-45deg);opacity:.6}
+.controls select{min-width:130px;cursor:pointer}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin-bottom:18px}
+.stat-card{background:var(--bg-card);border-radius:var(--radius);padding:16px 18px;border:1px solid var(--border);box-shadow:var(--shadow-sm);transition:all .3s}
+.stat-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.stat-val{font-size:1.6rem;font-weight:700;color:var(--accent-dark)}
+.stat-label{font-size:.78rem;color:var(--text-muted);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.table-info{font-size:.85rem;color:var(--text-muted);margin-bottom:10px}
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tok-table{width:100%;border-collapse:collapse;font-size:.9rem}
+.tok-table th{background:var(--accent-dark);color:#fff;padding:11px 14px;text-align:left;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;transition:background .3s}
+.tok-table th:hover{background:var(--accent)}
+.tok-table th .sort-arr{font-size:.65rem;margin-left:4px;opacity:.6}
+.tok-table th .sort-arr.active{opacity:1}
+.tok-table td{padding:10px 14px;border-bottom:1px solid var(--divider);vertical-align:middle;transition:background .15s}
+.tok-table tbody tr.data-row{cursor:pointer;transition:background .15s}
+.tok-table tbody tr.data-row:hover{background:var(--accent-bg)}
+.tok-table tbody tr.data-row.expanded{background:var(--accent-bg)}
+.token-cell{font-family:Consolas,Monaco,'Courier New',monospace;font-weight:600;font-size:.92rem;color:var(--accent-dark);word-break:break-all}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.76rem;font-weight:600;white-space:nowrap}
+.badge-byte{background:var(--byte-bg);color:var(--byte-text)}
+.badge-subword{background:var(--sub-bg);color:var(--sub-text)}
+.badge-word{background:var(--word-bg);color:var(--word-text)}
+.badge-phrase{background:var(--phrase-bg);color:var(--phrase-text)}
+.badge-special{background:var(--spec-bg);color:var(--spec-text)}
+.freq-cell{white-space:nowrap}
+.freq-num{font-weight:600;font-variant-numeric:tabular-nums}
+.freq-bar-wrap{width:100%;height:8px;background:var(--freq-track);border-radius:4px;margin-top:4px;overflow:hidden}
+.freq-bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.detail-row td{padding:0!important;border-bottom:1px solid var(--border)}
+.detail-inner{padding:16px 20px;background:var(--bg-secondary);border-top:1px solid var(--divider);animation:slideDown .25s ease}
+@keyframes slideDown{from{opacity:0;max-height:0}to{opacity:1;max-height:400px}}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px}
+.detail-item{display:flex;flex-direction:column}
+.detail-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:2px;font-weight:600}
+.detail-value{font-size:.9rem;color:var(--text-primary)}
+.detail-value code{background:var(--accent-bg);padding:2px 6px;border-radius:4px;font-family:Consolas,Monaco,monospace;font-size:.87em}
+.detail-desc{grid-column:1/-1;margin-top:4px}
+.detail-freq-viz{grid-column:1/-1;margin-top:6px}
+.detail-freq-bar-wrap{width:100%;height:14px;background:var(--freq-track);border-radius:7px;overflow:hidden;position:relative}
+.detail-freq-bar-fill{height:100%;border-radius:7px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:.65rem;font-weight:700;color:#fff;min-width:20px}
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:16px;flex-wrap:wrap}
+.page-btn{min-width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:var(--bg-card);color:var(--text-primary);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:500;transition:all .2s}
+.page-btn:hover:not(.active):not(:disabled){border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+.page-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.page-btn:disabled{opacity:.4;cursor:default}
+.add-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.add-form .full{grid-column:1/-1}
+.add-form label{font-size:.82rem;font-weight:600;color:var(--text-secondary);margin-bottom:4px;display:block}
+.btn{padding:10px 22px;border:none;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-dark);transform:translateY(-1px)}
+.btn-secondary{background:var(--divider);color:var(--text-secondary);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.chart-section{margin-top:16px}
+.chart-title{font-size:.88rem;font-weight:600;color:var(--text-secondary);margin-bottom:10px}
+.dist-bars{display:grid;gap:8px}
+.dist-row{display:flex;align-items:center;gap:10px}
+.dist-label{width:90px;font-size:.82rem;font-weight:600;text-align:right;flex-shrink:0}
+.dist-bar-wrap{flex:1;height:22px;background:var(--freq-track);border-radius:6px;overflow:hidden;position:relative}
+.dist-bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px;font-size:.72rem;font-weight:700;color:#fff;transition:width .5s ease}
+.dist-count{width:60px;font-size:.82rem;color:var(--text-muted);text-align:right;flex-shrink:0}
+.freq-chart-area{max-height:450px;overflow-y:auto;margin-top:16px;padding-right:4px}
+.freq-row{display:flex;align-items:center;gap:8px;margin-bottom:3px;font-size:.8rem}
+.freq-row-label{width:120px;text-align:right;font-family:Consolas,Monaco,monospace;font-weight:600;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
+.freq-row-bar-wrap{flex:1;height:18px;background:var(--freq-track);border-radius:4px;overflow:hidden}
+.freq-row-bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
+.freq-row-val{width:85px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-muted);flex-shrink:0;font-size:.78rem}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--accent-dark);color:#fff;padding:12px 28px;border-radius:10px;font-size:.9rem;font-weight:500;box-shadow:var(--shadow-lg);transition:transform .35s ease,opacity .35s ease;opacity:0;z-index:200;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.expand-icon{display:inline-block;width:18px;height:18px;text-align:center;font-size:.7rem;color:var(--text-muted);transition:transform .2s;line-height:18px;flex-shrink:0;margin-right:4px}
+.expand-icon.open{transform:rotate(90deg)}
+footer{text-align:center;padding:24px;font-size:.8rem;color:var(--text-muted)}
+@media(max-width:768px){
+    header h1{font-size:1.15rem}header .subtitle{font-size:.72rem}
+    .card{padding:16px}
+    .controls{flex-direction:column}.controls .search-wrap{min-width:100%}.controls select{width:100%}
+    .stats-grid{grid-template-columns:repeat(2,1fr)}
+    .tok-table{font-size:.82rem}.tok-table th,.tok-table td{padding:8px 10px}
+    .detail-grid{grid-template-columns:1fr}
+    .add-form{grid-template-columns:1fr}.add-form .full{grid-column:1}
+    .freq-row-label{width:80px;font-size:.72rem}
+    .dist-label{width:70px;font-size:.76rem}
+}
+@media(max-width:480px){
+    main{padding:10px 8px 30px}
+    .stats-grid{grid-template-columns:1fr 1fr;gap:8px}.stat-card{padding:12px}
+    .stat-val{font-size:1.3rem}
+    .pagination{gap:4px}.page-btn{min-width:32px;height:32px;font-size:.8rem}
+}
+.hidden-col{display:none}
+@media(max-width:600px){.hidden-col{display:none}}
+</style>
+</head>
+<body>
+<header>
+<div class="header-inner">
+<div>
+<h1>VocabExplorer</h1>
+</div>
+<button id="themeBtn" onclick="toggleTheme()" title="Переключить тему">☀️</button>
+</div>
+</header>
+
+<main>
+<!-- INFO -->
+<div class="card">
+<div class="sec-toggle" onclick="togSec('info')">
+<h2 style="margin:0">О приложении</h2>
+<span class="arr open" id="infoArr">&#9660;</span>
+</div>
+<div class="sec-body open" id="infoBody" style="max-height:2000px;opacity:1">
+<div class="info-text" style="margin-top:14px">
+<p><strong>VocabExplorer</strong> — интерактивное учебное приложение для изучения структуры словаря токенов (vocabulary), используемого в LLM. Словарь токенов — конечный и фиксированный набор единиц с уникальными числовыми ID.</p>
+<h3>Инструкция</h3>
+<li>Введите <strong>Фамилию и Имя</strong> в поле данных студента.</li>
+<li>Изучите таблицу токенов: используйте <strong>поиск</strong>, <strong>фильтрацию по типу</strong> и <strong>сортировку</strong> (по ID, частоте, алфавиту).</li>
+<li><strong>Нажмите на строку</strong> таблицы, чтобы раскрыть детальную информацию о токене.</li>
+<li>Обратите внимание на <strong>полоски частот</strong> — они построены в логарифмическом масштабе, что позволяет сравнивать токены с очень разными частотами.</li>
+<li>Раскройте раздел <strong>«Добавить токен»</strong>, чтобы пополнить словарь собственными данными.</li>
+<li>Раскройте раздел <strong>«Визуализация частот»</strong> для анализа распределения токенов по типам и рангу.</li>
+<li>Запишите свои <strong>выводы</strong> в текстовое поле и <strong>экспортируйте отчёт</strong> в HTML-файл.</li>
+</ol>
+<h3>Учебные задачи</h3>
+<ul>
+<li>Понять структуру словаря токенов и принципы его организации.</li>
+<li>Различать байтовые, подсловные, словесные, фразовые и специальные токены.</li>
+<li>Проанализировать связь типа токена с его частотой (закон Ципфа).</li>
+<li>Научиться визуализировать и интерпретировать статистику токенизации.</li>
+<li>Освоить логарифмический масштаб для представления частотных данных.</li>
+</ul>
+</div>
+</div>
+</div>
+
+<!-- STUDENT -->
+<div class="card">
+<h2>Данные студента</h2>
+<div class="student-row">
+<label for="studentName">Фамилия Имя:</label>
+<input type="text" id="studentName" placeholder="Например: Орлова Ева">
+</div>
+</div>
+
+<!-- CONTROLS -->
+<div class="card">
+<div class="controls">
+<div class="search-wrap"><input type="text" id="searchInput" placeholder="Поиск по токену или описанию..." oninput="onSearch()"></div>
+<select id="typeFilter" onchange="onFilter()">
+<option value="all">Все типы</option>
+<option value="byte">Байт</option>
+<option value="subword">Подслово</option>
+<option value="word">Слово</option>
+<option value="phrase">Фраза</option>
+<option value="special">Спецтокен</option>
+</select>
+<select id="sortSel" onchange="onSortSel()">
+<option value="id-asc">ID &#8593;</option>
+<option value="id-desc">ID &#8595;</option>
+<option value="frequency-desc">Частота &#8595;</option>
+<option value="frequency-asc">Частота &#8593;</option>
+<option value="token-asc">Токен A&#8594;Z</option>
+<option value="token-desc">Токен Z&#8594;A</option>
+</select>
+<select id="ppSel" onchange="onPerPage()">
+<option value="10">10 / стр.</option>
+<option value="15">15 / стр.</option>
+<option value="25">25 / стр.</option>
+<option value="50">50 / стр.</option>
+</select>
+</div>
+</div>
+
+<!-- STATS -->
+<div class="stats-grid" id="statsGrid"></div>
+
+<!-- TABLE -->
+<div class="card" style="padding-bottom:16px">
+<div class="table-info" id="tableInfo"></div>
+<div class="table-scroll">
+<table class="tok-table" id="tokTable">
+<thead><tr>
+<th onclick="hSort('id')" style="width:60px"><span id="thId">ID</span><span class="sort-arr" id="saId"></span></th>
+<th onclick="hSort('token')"><span id="thTok">Токен</span><span class="sort-arr" id="saTok"></span></th>
+<th onclick="hSort('type')" style="width:115px"><span id="thTyp">Тип</span><span class="sort-arr" id="saTyp"></span></th>
+<th onclick="hSort('frequency')" style="width:170px"><span id="thFreq">Частота</span><span class="sort-arr" id="saFreq"></span></th>
+<th style="width:130px;cursor:default">Частота (лог)</th>
+</tr></thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+<div class="pagination" id="pag"></div>
+</div>
+
+<!-- ADD TOKEN -->
+<div class="card">
+<div class="sec-toggle" onclick="togSec('add')">
+<h2 style="margin:0">Добавить токен</h2>
+<span class="arr" id="addArr">&#9660;</span>
+</div>
+<div class="sec-body" id="addBody">
+<form class="add-form" style="margin-top:14px" onsubmit="addToken(event)">
+<div><label>Токен *</label><input id="aToken" required placeholder="Например: ##ment"></div>
+<div><label>Тип *</label><select id="aType" required>
+<option value="">Выберите тип</option>
+<option value="byte">Байт</option><option value="subword">Подслово</option>
+<option value="word">Слово</option><option value="phrase">Фраза</option><option value="special">Спецтокен</option>
+</select></div>
+<div><label>Частота *</label><input type="number" id="aFreq" min="0" required placeholder="10000"></div>
+<div><label>ID (авто)</label><input id="aId" disabled placeholder="Назначается автоматически"></div>
+<div class="full"><label>Описание</label><input id="aDesc" placeholder="Краткое описание токена"></div>
+<div class="full"><label>Пример использования</label><input id="aEx" placeholder="Пример в контексте"></div>
+<div class="full"><button type="submit" class="btn btn-primary">Добавить в словарь</button></div>
+</form>
+</div>
+</div>
+
+<!-- VIZ -->
+<div class="card">
+<div class="sec-toggle" onclick="togSec('viz')">
+<h2 style="margin:0">Визуализация частот (лог-масштаб)</h2>
+<span class="arr" id="vizArr">&#9660;</span>
+</div>
+<div class="sec-body" id="vizBody">
+<div style="margin-top:14px">
+<div class="chart-section">
+<div class="chart-title">Распределение токенов по типам</div>
+<div class="dist-bars" id="distChart"></div>
+</div>
+<div class="chart-section" style="margin-top:24px">
+<div class="chart-title">Топ-токены по частоте (лог-масштаб, все токены)</div>
+<div class="freq-chart-area" id="freqChart"></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- CONCLUSIONS -->
+<div class="card">
+<h2>Выводы</h2>
+<textarea id="conclusions" rows="7" placeholder="Запишите ваши наблюдения и выводы по результатам анализа словаря токенов...&#10;&#10;Например:&#10;— Какие типы токенов встречаются чаще всего?&#10;— Как соотносятся частоты токенов разных типов?&#10;— Какую роль играет логарифмический масштаб?&#10;— Как закон Ципфа проявляется в распределении частот?"></textarea>
+<div class="btn-row">
+<button class="btn btn-primary" onclick="exportReport()">Экспортировать отчёт (HTML)</button>
+<button class="btn btn-secondary" onclick="resetCustom()">Сбросить добавленные токены</button>
+</div>
+</div>
+</main>
+
+<footer><p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA =====
+const DEFAULTS=[
+{id:0,token:"<PAD>",type:"special",frequency:0,desc:"Токен заполнения (padding). Используется для выравнивания длин последовательностей в батче до одинаковой длины. Не несёт смысловой нагрузки.",ex:"['Привет','мир','<PAD>','<PAD>']"},
+{id:1,token:"<UNK>",type:"special",frequency:52000,desc:"Токен неизвестного слова (unknown). Заменяет слова, отсутствующие в словаре. Частота зависит от покрытия словаря.",ex:"'кваркушка' → '<UNK>'"},
+{id:2,token:"<BOS>",type:"special",frequency:980000,desc:"Токен начала последовательности (Beginning of Sequence). Сигнализирует модели о начале нового текста.",ex:"'<BOS> Привет мир'"},
+{id:3,token:"<EOS>",type:"special",frequency:980000,desc:"Токен конца последовательности (End of Sequence). Сигнализирует модели о завершении текста.",ex:"'Привет мир <EOS>'"},
+{id:4,token:"[CLS]",type:"special",frequency:490000,desc:"Классификационный токен BERT. Ставится в начале входа; его скрытое состояние используется для задач классификации.",ex:"'[CLS] Текст для классификации [SEP]'"},
+{id:5,token:"[SEP]",type:"special",frequency:490000,desc:"Разделительный токен BERT. Разделяет сегменты входной последовательности (например, вопрос и контекст).",ex:"'[CLS] Вопрос [SEP] Контекст [SEP]'"},
+{id:6,token:"[MASK]",type:"special",frequency:200000,desc:"Токен маскирования BERT. Используется при обучении MLM для предсказания замаскированных слов.",ex:"'Кот [MASK] на коврике' → 'сидел'"},
+{id:256,token:"<0x20>",type:"byte",frequency:5200000,desc:"Байт пробела (ASCII 32, hex 0x20). Один из самых частых байтов в любом тексте. Разделяет слова.",ex:"'Hello world' → 0x48 0x65 ... <0x20> 0x77 ..."},
+{id:257,token:"<0x0A>",type:"byte",frequency:820000,desc:"Байт переноса строки (ASCII 10, Line Feed). Используется для разделения строк в тексте.",ex:"'Строка1\\nСтрока2'"},
+{id:258,token:"<0x41>",type:"byte",frequency:310000,desc:"Байт заглавной латинской буквы 'A' (ASCII 65). Начинает слова с заглавной буквы в латинице.",ex:"'Apple' начинается с <0x41>"},
+{id:259,token:"<0x61>",type:"byte",frequency:2500000,desc:"Байт строчной латинской буквы 'a' (ASCII 97). Один из наиболее частых байтов в английских текстах.",ex:"'abstract' содержит три <0x61>"},
+{id:260,token:"<0x30>",type:"byte",frequency:420000,desc:"Байт цифры '0' (ASCII 48). Встречается в числах, датах, кодах.",ex:"'2024' → ... <0x30> — последний байт"},
+{id:261,token:"<0x2E>",type:"byte",frequency:1250000,desc:"Байт точки '.' (ASCII 46). Частый знак пунктуации, завершает предложения, используется в URL и т. д.",ex:"'Конец.' → ... <0x2E>"},
+{id:262,token:"<0x2C>",type:"byte",frequency:920000,desc:"Байт запятой ',' (ASCII 44). Частый знак пунктуации — разделяет части предложения.",ex:"'один, два, три'"},
+{id:263,token:"<0xD0>",type:"byte",frequency:1800000,desc:"Ведущий байт UTF-8 для кириллических символов (U+0400–U+04FF). Каждая кириллическая буква начинается с этого байта.",ex:"'А' = <0xD0> <0x90>; 'я' = <0xD1> <0x8F>"},
+{id:1000,token:"##ing",type:"subword",frequency:1850000,desc:"Суффикс английского языка, образующий причастие настоящего времени и герундий. Один из самых частых подсловных токенов в английском.",ex:"runn + ##ing, think + ##ing, learn + ##ing"},
+{id:1001,token:"##tion",type:"subword",frequency:960000,desc:"Суффикс отглагольных существительных латинского происхождения. Крайне продуктивный в научном и техническом языке.",ex:"informa + ##tion, educa + ##tion, tokeniza + ##tion"},
+{id:1002,token:"##ed",type:"subword",frequency:1520000,desc:"Суффикс прошедшего времени и причастия прошедшего времени в английском. Очень частый грамматический маркер.",ex:"learn + ##ed, creat + ##ed, process + ##ed"},
+{id:1003,token:"##ly",type:"subword",frequency:810000,desc:"Суффикс наречий в английском языке, образуемых от прилагательных.",ex:"quick + ##ly, frequent + ##ly, actual + ##ly"},
+{id:1004,token:"##er",type:"subword",frequency:1220000,desc:"Суффикс сравнительной степени прилагательных или агентивных существительных в английском.",ex:"bigg + ##er, teach + ##er, fast + ##er"},
+{id:1005,token:"##ness",type:"subword",frequency:305000,desc:"Суффикс абстрактных существительных, образуемых от прилагательных в английском.",ex:"happi + ##ness, dark + ##ness, effective + ##ness"},
+{id:1006,token:"##ment",type:"subword",frequency:460000,desc:"Суффикс существительных в английском, обозначающий процесс или результат действия.",ex:"develop + ##ment, manage + ##ment, embed + ##ment"},
+{id:1007,token:"un##",type:"subword",frequency:255000,desc:"Префикс отрицания в английском языке. Образует антонимы прилагательных и глаголов.",ex:"un + ##happy, un + ##known, un + ##supervised"},
+{id:1008,token:"re##",type:"subword",frequency:385000,desc:"Префикс повтора, возвращения к исходному состоянию в английском языке.",ex:"re + ##build, re + ##train, re + ##tokenize"},
+{id:1009,token:"pre##",type:"subword",frequency:125000,desc:"Префикс предшествования во времени или пространстве.",ex:"pre + ##train, pre + ##process, pre + ##dict"},
+{id:1010,token:"##ов",type:"subword",frequency:285000,desc:"Флексия родительного падежа множественного числа мужского рода в русском языке.",ex:"токен + ##ов, студент + ##ов, байт + ##ов"},
+{id:1011,token:"##ение",type:"subword",frequency:195000,desc:"Суффикс отглагольных существительных среднего рода в русском языке.",ex:"обуч + ##ение, определ + ##ение, распредел + ##ение"},
+{id:1012,token:"##ать",type:"subword",frequency:225000,desc:"Суффикс инфинитива глаголов I спряжения в русском языке.",ex:"чит + ##ать, токенизиров + ##ать, анализиров + ##ать"},
+{id:1013,token:"##ский",type:"subword",frequency:155000,desc:"Суффикс относительных прилагательных в русском языке.",ex:"рус + ##ский, лингвистиче + ##ский, студенче + ##ский"},
+{id:1014,token:"##able",type:"subword",frequency:355000,desc:"Суффикс прилагательных в английском, означающий возможность совершения действия.",ex:"read + ##able, train + ##able, avail + ##able"},
+{id:2000,token:"the",type:"word",frequency:6900000,desc:"Определённый артикль английского языка. Самое частотное слово в английском корпусе — яркая иллюстрация закона Ципфа.",ex:"'the cat sat on the mat'"},
+{id:2001,token:"of",type:"word",frequency:3600000,desc:"Предлог принадлежности и отношения в английском языке. Второе по частоте слово.",ex:"'University of Cambridge', 'part of speech'"},
+{id:2002,token:"and",type:"word",frequency:2850000,desc:"Сочинительный союз в английском языке. Связывает однородные члены и части предложения.",ex:"'syntax and semantics', 'tokens and embeddings'"},
+{id:2003,token:"to",type:"word",frequency:2650000,desc:"Предлог направления и частица инфинитива в английском языке.",ex:"'go to school', 'to learn NLP'"},
+{id:2004,token:"a",type:"word",frequency:2350000,desc:"Неопределённый артикль английского языка. Указывает на неопределённый или впервые упоминаемый объект.",ex:"'a model', 'a token', 'a student'"},
+{id:2005,token:"in",type:"word",frequency:2150000,desc:"Предлог местоположения и времени в английском языке.",ex:"'in the vocabulary', 'in 2024'"},
+{id:2006,token:"is",type:"word",frequency:1450000,desc:"Глагол-связка «быть» в 3-м лице единственного числа настоящего времени.",ex:"'This is a token', 'NLP is important'"},
+{id:2007,token:"for",type:"word",frequency:1150000,desc:"Предлог цели и назначения в английском языке.",ex:"'designed for students', 'model for NLP'"},
+{id:2008,token:"cat",type:"word",frequency:48000,desc:"Существительное: кот/кошка. Пример слова средней частоты — встречается реже служебных слов, но чаще терминов.",ex:"'The cat sat on the mat'"},
+{id:2009,token:"algorithm",type:"word",frequency:13500,desc:"Существительное: алгоритм. Пример специализированного термина с относительно низкой частотой.",ex:"'The BPE algorithm merges frequent pairs'"},
+{id:2010,token:"и",type:"word",frequency:1950000,desc:"Сочинительный союз русского языка. Самое частотное слово в русских корпусах.",ex:"'токены и эмбеддинги', 'анализ и синтез'"},
+{id:2011,token:"в",type:"word",frequency:1750000,desc:"Предлог русского языка, указывающий местоположение (предл. п.) или направление (вин. п.).",ex:"'в словаре', 'в NLP', 'в университете'"},
+{id:2012,token:"на",type:"word",frequency:1150000,desc:"Предлог русского языка, указывающий на поверхность, направление или тему.",ex:"'на лекции', 'на практике', 'на основе'"},
+{id:2013,token:"что",type:"word",frequency:850000,desc:"Союз и вопросительное/относительное местоимение русского языка.",ex:"'Я знаю, что это токен'"},
+{id:2014,token:"это",type:"word",frequency:720000,desc:"Указательное местоимение русского языка.",ex:"'Это словарь токенов'"},
+{id:2015,token:"tokenization",type:"word",frequency:8500,desc:"Токенизация — процесс разбиения текста на токены. Ключевой термин NLP.",ex:"'Tokenization is a fundamental NLP step'"},
+{id:2016,token:"embedding",type:"word",frequency:15000,desc:"Эмбеддинг — плотное векторное представление токена в пространстве фиксированной размерности.",ex:"'Word embedding captures semantic similarity'"},
+{id:3000,token:"in order to",type:"phrase",frequency:87000,desc:"Составной подчинительный союз цели в английском языке. Пример фразового токена — многословной единицы.",ex:"'In order to understand tokenization, study BPE'"},
+{id:3001,token:"as well as",type:"phrase",frequency:74000,desc:"Составной союз присоединения в английском языке. Синоним 'and also'.",ex:"'Subwords as well as whole words'"},
+{id:3002,token:"New York",type:"phrase",frequency:125000,desc:"Именованная сущность (NER: LOC) — название города. Пример фразового токена, объединяющего имя собственное.",ex:"'She studied NLP in New York'"},
+{id:3003,token:"such as",type:"phrase",frequency:98000,desc:"Вводный оборот для перечисления примеров в английском языке.",ex:"'Types such as byte, subword, word'"},
+{id:3004,token:"в том числе",type:"phrase",frequency:47000,desc:"Вводный оборот для уточнения и включения в русском языке.",ex:"'Все токены, в том числе специальные'"},
+{id:3005,token:"так как",type:"phrase",frequency:39000,desc:"Причинный подчинительный союз русского языка. Синоним 'потому что'.",ex:"'Важно, так как влияет на качество модели'"},
+{id:3006,token:"at least",type:"phrase",frequency:67000,desc:"Наречная фраза минимальной оценки в английском языке.",ex:"'At least 30,000 tokens in vocabulary'"},
+{id:3007,token:"machine learning",type:"phrase",frequency:52000,desc:"Терминологическая фраза: машинное обучение. Основная область применения токенизации.",ex:"'Machine learning models require tokenized input'"}
+];
+
+const TYPE_NAMES={byte:'Байт',subword:'Подслово',word:'Слово',phrase:'Фраза',special:'Спецтокен'};
+const TYPE_DESCS={byte:'Отдельный байт (0–255). Позволяет представить любую последовательность байтов.',subword:'Часть слова (морфема, слог, фрагмент). Основа BPE/WordPiece.',word:'Целая лексическая единица. Представляет полное слово.',phrase:'Устойчивое словосочетание или именованная сущность.',special:'Служебный токен для управления структурой входных данных.'};
+const TYPE_COLORS={byte:'var(--byte-bar)',subword:'var(--sub-bar)',word:'var(--word-bar)',phrase:'var(--phrase-bar)',special:'var(--spec-bar)'};
+const TYPE_COLORS_RAW={byte:'#42a5f5',subword:'#66bb6a',word:'#ffa726',phrase:'#ab47bc',special:'#ef5350'};
+
+// ===== STATE =====
+let S={
+    tokens:JSON.parse(JSON.stringify(DEFAULTS)),
+    search:'',typeF:'all',sortBy:'id',sortOrd:'asc',
+    page:1,perPage:10,expanded:new Set(),dark:false
+};
+
+// ===== UTILS =====
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function fmtN(n){return n.toLocaleString('ru-RU')}
+function logPct(f,mx){if(f<=0||mx<=0)return 0;return(Math.log10(f)/Math.log10(mx))*100}
+function toast(msg,d){d=d||3000;const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),d)}
+function maxFreq(){return Math.max(1,...S.tokens.map(t=>t.frequency))}
+
+// ===== FILTER / SORT =====
+function filtered(){
+    let arr=S.tokens;
+    if(S.typeF!=='all')arr=arr.filter(t=>t.type===S.typeF);
+    if(S.search){const q=S.search.toLowerCase();arr=arr.filter(t=>t.token.toLowerCase().includes(q)||t.desc.toLowerCase().includes(q)||(TYPE_NAMES[t.type]||'').toLowerCase().includes(q))}
+    const f=S.sortBy,o=S.sortOrd==='asc'?1:-1;
+    arr=[...arr].sort((a,b)=>{
+        let va=a[f],vb=b[f];
+        if(typeof va==='string')return va.localeCompare(vb)*o;
+        return(va-vb)*o;
+    });
+    return arr;
+}
+
+// ===== RENDER =====
+function render(){renderStats();renderTable();renderViz()}
+
+function renderStats(){
+    const all=S.tokens,f=filtered();
+    const types=['byte','subword','word','phrase','special'];
+    const counts={};types.forEach(t=>counts[t]=all.filter(x=>x.type===t).length);
+    const freqs=all.map(t=>t.frequency).filter(x=>x>0);
+    const mx=Math.max(0,...freqs),mn=freqs.length?Math.min(...freqs):0;
+    const avg=freqs.length?Math.round(freqs.reduce((a,b)=>a+b,0)/freqs.length):0;
+    let html=`<div class="stat-card"><div class="stat-val">${fmtN(all.length)}</div><div class="stat-label">Всего токенов</div></div>`;
+    html+=`<div class="stat-card"><div class="stat-val">${fmtN(f.length)}</div><div class="stat-label">Показано</div></div>`;
+    html+=`<div class="stat-card"><div class="stat-val">${fmtN(mx)}</div><div class="stat-label">Макс. частота</div></div>`;
+    html+=`<div class="stat-card"><div class="stat-val">${fmtN(avg)}</div><div class="stat-label">Средн. частота</div></div>`;
+    types.forEach(t=>{html+=`<div class="stat-card"><div class="stat-val" style="color:${TYPE_COLORS_RAW[t]}">${counts[t]}</div><div class="stat-label">${TYPE_NAMES[t]}</div></div>`});
+    document.getElementById('statsGrid').innerHTML=html;
+}
+
+function renderTable(){
+    const data=filtered(),mx=maxFreq();
+    const total=data.length,pages=Math.max(1,Math.ceil(total/S.perPage));
+    if(S.page>pages)S.page=pages;
+    const start=(S.page-1)*S.perPage,slice=data.slice(start,start+S.perPage);
+    document.getElementById('tableInfo').textContent=`Показано ${start+1}–${Math.min(start+S.perPage,total)} из ${total} токенов`;
+    // sort arrows
+    ['Id','Tok','Typ','Freq'].forEach(k=>{document.getElementById('sa'+k).textContent='';document.getElementById('sa'+k).className='sort-arr'});
+    const map={id:'Id',token:'Tok',type:'Typ',frequency:'Freq'};
+    if(map[S.sortBy]){const el=document.getElementById('sa'+map[S.sortBy]);el.textContent=S.sortOrd==='asc'?' \u25B2':' \u25BC';el.className='sort-arr active'}
+    let html='';
+    slice.forEach(t=>{
+        const exp=S.expanded.has(t.id);
+        const pct=logPct(t.frequency,mx);
+        const barCol=TYPE_COLORS_RAW[t.type]||'#999';
+        const rank=getRank(t.id,data);
+        html+=`<tr class="data-row${exp?' expanded':''}" onclick="togRow(${t.id})">`;
+        html+=`<td><span class="expand-icon${exp?' open':''}">&#9654;</span>${t.id}</td>`;
+        html+=`<td class="token-cell">${esc(t.token)}</td>`;
+        html+=`<td><span class="badge badge-${t.type}">${TYPE_NAMES[t.type]||t.type}</span></td>`;
+        html+=`<td class="freq-cell"><span class="freq-num">${fmtN(t.frequency)}</span></td>`;
+        html+=`<td><div class="freq-bar-wrap"><div class="freq-bar-fill" style="width:${pct}%;background:${barCol}"></div></div></td>`;
+        html+=`</tr>`;
+        if(exp){
+            html+=`<tr class="detail-row"><td colspan="5"><div class="detail-inner"><div class="detail-grid">`;
+            html+=`<div class="detail-item"><span class="detail-label">ID</span><span class="detail-value">${t.id}</span></div>`;
+            html+=`<div class="detail-item"><span class="detail-label">Тип</span><span class="detail-value"><span class="badge badge-${t.type}">${TYPE_NAMES[t.type]}</span> — ${esc(TYPE_DESCS[t.type]||'')}</span></div>`;
+            html+=`<div class="detail-item"><span class="detail-label">Частота (абс.)</span><span class="detail-value">${fmtN(t.frequency)}</span></div>`;
+            html+=`<div class="detail-item"><span class="detail-label">Ранг по частоте</span><span class="detail-value">${rank} из ${data.length}</span></div>`;
+            html+=`<div class="detail-item"><span class="detail-label">log&#x2081;&#x2080;(частота)</span><span class="detail-value">${t.frequency>0?Math.log10(t.frequency).toFixed(2):'—'}</span></div>`;
+            html+=`<div class="detail-item"><span class="detail-label">Доля от макс.</span><span class="detail-value">${pct.toFixed(1)}% (лог-масштаб)</span></div>`;
+            html+=`<div class="detail-desc"><span class="detail-label">Описание</span><span class="detail-value">${esc(t.desc||'—')}</span></div>`;
+            html+=`<div class="detail-desc"><span class="detail-label">Пример использования</span><span class="detail-value"><code>${esc(t.ex||'—')}</code></span></div>`;
+            html+=`<div class="detail-freq-viz"><span class="detail-label">Визуализация частоты (лог-масштаб)</span><div class="detail-freq-bar-wrap"><div class="detail-freq-bar-fill" style="width:${Math.max(pct,2)}%;background:${barCol}">${pct>15?pct.toFixed(0)+'%':''}</div></div></div>`;
+            html+=`</div></div></td></tr>`;
+        }
+    });
+    document.getElementById('tbody').innerHTML=html||'<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text-muted)">Токены не найдены</td></tr>';
+    // pagination
+    let ph='';
+    ph+=`<button class="page-btn" onclick="goPage(1)" ${S.page<=1?'disabled':''}>&laquo;</button>`;
+    ph+=`<button class="page-btn" onclick="goPage(${S.page-1})" ${S.page<=1?'disabled':''}>&lsaquo;</button>`;
+    let s=Math.max(1,S.page-2),e=Math.min(pages,S.page+2);
+    if(s>1)ph+=`<button class="page-btn" disabled>...</button>`;
+    for(let i=s;i<=e;i++)ph+=`<button class="page-btn${i===S.page?' active':''}" onclick="goPage(${i})">${i}</button>`;
+    if(e<pages)ph+=`<button class="page-btn" disabled>...</button>`;
+    ph+=`<button class="page-btn" onclick="goPage(${S.page+1})" ${S.page>=pages?'disabled':''}>&rsaquo;</button>`;
+    ph+=`<button class="page-btn" onclick="goPage(${pages})" ${S.page>=pages?'disabled':''}>&raquo;</button>`;
+    document.getElementById('pag').innerHTML=ph;
+}
+
+function getRank(id,arr){
+    const sorted=[...arr].sort((a,b)=>b.frequency-a.frequency);
+    return sorted.findIndex(t=>t.id===id)+1;
+}
+
+function renderViz(){
+    // distribution
+    const types=['byte','subword','word','phrase','special'];
+    const counts={};types.forEach(t=>counts[t]=S.tokens.filter(x=>x.type===t).length);
+    const maxC=Math.max(1,...Object.values(counts));
+    let dh='';
+    types.forEach(t=>{
+        const pct=(counts[t]/maxC)*100;
+        dh+=`<div class="dist-row"><span class="dist-label" style="color:${TYPE_COLORS_RAW[t]}">${TYPE_NAMES[t]}</span><div class="dist-bar-wrap"><div class="dist-bar-fill" style="width:${pct}%;background:${TYPE_COLORS_RAW[t]}">${counts[t]}</div></div><span class="dist-count">${(counts[t]/S.tokens.length*100).toFixed(1)}%</span></div>`;
+    });
+    document.getElementById('distChart').innerHTML=dh;
+    // freq chart
+    const sorted=[...S.tokens].sort((a,b)=>b.frequency-a.frequency);
+    const mx=maxFreq();
+    let fh='';
+    sorted.forEach(t=>{
+        const pct=logPct(t.frequency,mx);
+        fh+=`<div class="freq-row"><span class="freq-row-label" title="${esc(t.token)}">${esc(t.token)}</span><div class="freq-row-bar-wrap"><div class="freq-row-bar-fill" style="width:${Math.max(pct,.5)}%;background:${TYPE_COLORS_RAW[t.type]}"></div></div><span class="freq-row-val">${fmtN(t.frequency)}</span></div>`;
+    });
+    document.getElementById('freqChart').innerHTML=fh;
+}
+
+// ===== HANDLERS =====
+function onSearch(){S.search=document.getElementById('searchInput').value;S.page=1;render()}
+function onFilter(){S.typeF=document.getElementById('typeFilter').value;S.page=1;render()}
+function onSortSel(){const v=document.getElementById('sortSel').value.split('-');S.sortBy=v[0];S.sortOrd=v[1];S.page=1;render()}
+function onPerPage(){S.perPage=+document.getElementById('ppSel').value;S.page=1;render()}
+function goPage(p){S.page=p;render();document.querySelector('.table-scroll').scrollIntoView({behavior:'smooth',block:'nearest'})}
+function hSort(f){if(S.sortBy===f){S.sortOrd=S.sortOrd==='asc'?'desc':'asc'}else{S.sortBy=f;S.sortOrd=f==='frequency'?'desc':'asc'}document.getElementById('sortSel').value=S.sortBy+'-'+S.sortOrd;S.page=1;render()}
+function togRow(id){S.expanded.has(id)?S.expanded.delete(id):S.expanded.add(id);renderTable()}
+
+function togSec(name){
+    const body=document.getElementById(name+'Body'),arr=document.getElementById(name+'Arr');
+    if(body.classList.contains('open')){body.classList.remove('open');body.style.maxHeight='0px';arr.classList.remove('open')}
+    else{body.classList.add('open');body.style.maxHeight=body.scrollHeight+200+'px';arr.classList.add('open')}
+}
+
+function toggleTheme(){
+    S.dark=!S.dark;document.body.classList.toggle('dark',S.dark);
+    document.getElementById('themeBtn').textContent=S.dark?'🌙':'☀️';
+    try{localStorage.setItem('ve_dark',S.dark?'1':'0')}catch(e){}
+}
+
+function addToken(e){
+    e.preventDefault();
+    const tok=document.getElementById('aToken').value.trim();
+    const type=document.getElementById('aType').value;
+    const freq=parseInt(document.getElementById('aFreq').value)||0;
+    const desc=document.getElementById('aDesc').value.trim();
+    const ex=document.getElementById('aEx').value.trim();
+    if(!tok||!type)return toast('Заполните обязательные поля');
+    const newId=Math.max(0,...S.tokens.map(t=>t.id))+1;
+    S.tokens.push({id:newId,token:tok,type:type,frequency:freq,desc:desc||'Пользовательский токен',ex:ex||'—',custom:true});
+    document.getElementById('aToken').value='';document.getElementById('aType').value='';
+    document.getElementById('aFreq').value='';document.getElementById('aDesc').value='';document.getElementById('aEx').value='';
+    toast('Токен «'+tok+'» добавлен (ID: '+newId+')');render();
+}
+
+function resetCustom(){
+    const had=S.tokens.filter(t=>t.custom).length;
+    if(!had)return toast('Нет добавленных токенов');
+    if(!confirm('Удалить все добавленные вами токены ('+had+' шт.)?'))return;
+    S.tokens=S.tokens.filter(t=>!t.custom);S.expanded.clear();toast('Удалено '+had+' токенов');render();
+}
+
+function exportReport(){
+    const name=document.getElementById('studentName').value.trim()||'Не указано';
+    const conc=document.getElementById('conclusions').value.trim()||'Выводы не записаны.';
+    const now=new Date().toLocaleString('ru-RU');
+    const all=S.tokens,f=filtered(),mx=maxFreq();
+    const types=['byte','subword','word','phrase','special'];
+    const counts={};types.forEach(t=>counts[t]=all.filter(x=>x.type===t).length);
+    const freqs=all.map(t=>t.frequency).filter(x=>x>0);
+    const maxF=Math.max(0,...freqs),avgF=freqs.length?Math.round(freqs.reduce((a,b)=>a+b,0)/freqs.length):0;
+    let tRows='';
+    [...all].sort((a,b)=>b.frequency-a.frequency).forEach((t,i)=>{
+        const pct=logPct(t.frequency,maxF);
+        tRows+=`<tr><td>${t.id}</td><td style="font-family:monospace;font-weight:600">${esc(t.token)}</td><td>${TYPE_NAMES[t.type]}</td><td style="text-align:right">${fmtN(t.frequency)}</td><td><div style="width:100%;height:10px;background:#eee;border-radius:5px"><div style="width:${pct}%;height:100%;background:${TYPE_COLORS_RAW[t.type]};border-radius:5px"></div></div></td><td>${esc(t.desc||'')}</td></tr>`;
+    });
+    const html=`<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Отчёт: Анализ словаря токенов — ${esc(name)}</title>
+<style>body{font-family:'Segoe UI',Arial,sans-serif;max-width:960px;margin:0 auto;padding:30px 20px;color:#2c3e50;line-height:1.6}
+h1{color:#325980;border-bottom:3px solid #325980;padding-bottom:10px}h2{color:#325980;margin-top:30px}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.88rem}th{background:#325980;color:#fff;padding:10px 12px;text-align:left}
+td{padding:8px 12px;border-bottom:1px solid #e0e0e0}tr:nth-child(even){background:#f9f9f9}
+.meta{color:#666;font-size:.9rem}.stat{display:inline-block;background:#f5f5f5;padding:10px 18px;border-radius:8px;margin:4px;text-align:center}
+.stat-v{font-size:1.3rem;font-weight:700;color:#325980}.stat-l{font-size:.75rem;color:#888;text-transform:uppercase}
+.conclusions{background:#f5f5f5;padding:20px;border-radius:10px;border-left:4px solid #3498db;white-space:pre-wrap;margin:16px 0}
+footer{text-align:center;margin-top:40px;padding-top:16px;border-top:1px solid #e0e0e0;color:#999;font-size:.8rem}</style></head><body>
+<h1>Отчёт: Анализ словаря токенов</h1>
+<p class="meta"><strong>Студент:</strong> ${esc(name)} | <strong>Дата:</strong> ${now}</p>
+<h2>Статистика словаря</h2>
+<div>${['Всего: '+all.length,...types.map(t=>TYPE_NAMES[t]+': '+counts[t]),'Макс. частота: '+fmtN(maxF),'Средн. частота: '+fmtN(avgF)].map(s=>`<span class="stat"><span class="stat-v">${s.split(': ')[1]}</span><br><span class="stat-l">${s.split(': ')[0]}</span></span>`).join('')}</div>
+<h2>Словарь токенов (${all.length} ед., сортировка по частоте)</h2>
+<table><thead><tr><th>ID</th><th>Токен</th><th>Тип</th><th>Частота</th><th style="width:120px">Частота (лог)</th><th>Описание</th></tr></thead><tbody>${tRows}</tbody></table>
+<h2>Выводы студента</h2><div class="conclusions">${esc(conc)}</div>
+<footer>Сгенерировано приложением VocabExplorer | ${now}</footer></body></html>`;
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='vocab_report_'+name.replace(/\s+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.html';
+    a.click();URL.revokeObjectURL(a.href);
+    toast('Отчёт экспортирован');
+}
+
+// ===== INIT =====
+function init(){
+    try{if(localStorage.getItem('ve_dark')==='1'){S.dark=true;document.body.classList.add('dark');document.getElementById('themeBtn').textContent='🌙'}}catch(e){}
+    const nextId=Math.max(0,...S.tokens.map(t=>t.id))+1;
+    document.getElementById('aId').value='Следующий: '+nextId;
+    render();
+}
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>

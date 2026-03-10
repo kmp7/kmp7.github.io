@@ -1,0 +1,3104 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --text-primary: #1a1a1a;
+  --text-secondary: #4a4a4a;
+  --nav-color: #325980;
+  --accent: #3498db;
+  --accent-hover: #2980b9;
+  --divider: #f1f1f1;
+  --card-bg: #ffffff;
+  --card-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --card-shadow-hover: 0 6px 24px rgba(0,0,0,0.12);
+  --border-light: #e0e0e0;
+  --quote-bg: #f8f9fa;
+  --tag-bg: #eaf2f8;
+  --tag-text: #325980;
+  --highlight: #fff3cd;
+  --code-bg: #f0f4f8;
+  --overlay-bg: rgba(0,0,0,0.5);
+  --transition: 0.3s ease;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --nav-color: #5b9bd5;
+  --accent: #5dade2;
+  --accent-hover: #3498db;
+  --divider: #2a2a4a;
+  --card-bg: #1e2a3a;
+  --card-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  --card-shadow-hover: 0 6px 24px rgba(0,0,0,0.4);
+  --border-light: #2a3a4a;
+  --quote-bg: #1a2535;
+  --tag-bg: #1a2f45;
+  --tag-text: #5dade2;
+  --highlight: #3a3520;
+  --code-bg: #1a2535;
+  --overlay-bg: rgba(0,0,0,0.7);
+}
+
+body {
+  font-family: 'Roboto', 'Arial', sans-serif;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  transition: background-color var(--transition), color var(--transition);
+  overflow-x: hidden;
+}
+
+/* Header */
+header {
+  background-color: var(--nav-color);
+  color: #fff;
+  padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: background-color var(--transition);
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.header-subtitle {
+  font-size: 0.9rem;
+  opacity: 0.85;
+  font-weight: 400;
+  margin-top: 0.15rem;
+  font-style: italic;
+}
+
+.theme-toggle {
+  background: rgba(255,255,255,0.15);
+  border: 0px solid rgba(255,255,255,0.3);
+  color: #fff;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  border-radius: 60%;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* Navigation */
+nav {
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--divider);
+  transition: all var(--transition);
+  overflow: hidden;
+}
+
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  padding: 0.9rem 1.2rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  transition: all var(--transition);
+  position: relative;
+}
+
+.nav-btn:hover {
+  color: var(--accent);
+  background-color: var(--divider);
+}
+
+.nav-btn.active {
+  color: var(--nav-color);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: #fff;
+  transition: all var(--transition);
+  border-radius: 1px;
+}
+
+/* Main content */
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.section {
+  display: none;
+  animation: fadeIn 0.5s ease;
+}
+
+.section.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Section header */
+.section-header {
+  margin-bottom: 2rem;
+}
+
+.section-header h2 {
+  color: var(--nav-color);
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.section-header .lead {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  max-width: 800px;
+  line-height: 1.8;
+}
+
+/* Cards */
+.card {
+  background: var(--card-bg);
+  border-radius: 10px;
+  padding: 1.8rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--card-shadow);
+  transition: all var(--transition);
+  border: 1px solid var(--divider);
+}
+
+.card:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+.card h3 {
+  color: var(--nav-color);
+  font-size: 1.2rem;
+  margin-bottom: 0.8rem;
+  font-weight: 700;
+}
+
+.card h4 {
+  color: var(--accent);
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+/* Sketch container */
+.sketch {
+  background: var(--quote-bg);
+  border-left: 4px solid var(--accent);
+  padding: 1.3rem 1.5rem;
+  margin: 1rem 0;
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  line-height: 1.9;
+  color: var(--text-primary);
+  transition: all var(--transition);
+}
+
+.sketch .speaker {
+  font-weight: 700;
+  font-style: normal;
+  color: var(--nav-color);
+}
+
+.sketch .note {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-style: normal;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--divider);
+}
+
+/* Reveal mechanism */
+.reveal-container {
+  margin-top: 1rem;
+}
+
+.reveal-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.88rem;
+  transition: all var(--transition);
+}
+
+.reveal-btn:hover {
+  background: var(--accent-hover);
+}
+
+.reveal-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease, padding 0.3s ease;
+}
+
+.reveal-content.open {
+  max-height: 2000px;
+  padding-top: 1rem;
+}
+
+/* Tags */
+.tag {
+  display: inline-block;
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  padding: 0.2rem 0.7rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  margin-right: 0.4rem;
+  margin-bottom: 0.3rem;
+  font-style: normal;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Grid */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.5rem;
+}
+
+/* Comparison table */
+.comparison {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.92rem;
+}
+
+.comparison th {
+  background: var(--nav-color);
+  color: #fff;
+  padding: 0.8rem 1rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.comparison td {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--divider);
+  vertical-align: top;
+}
+
+.comparison tr:nth-child(even) {
+  background: var(--quote-bg);
+}
+
+.comparison .old-term {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Highlight box */
+.highlight-box {
+  background: var(--highlight);
+  border-radius: 8px;
+  padding: 1.2rem 1.5rem;
+  margin: 1rem 0;
+  border: 1px solid rgba(200,170,50,0.2);
+  transition: all var(--transition);
+}
+
+/* Code-like */
+.term {
+  font-family: 'Courier New', monospace;
+  background: var(--code-bg);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: var(--accent);
+  transition: all var(--transition);
+}
+
+/* Separator */
+.separator {
+  height: 1px;
+  background: var(--divider);
+  margin: 2rem 0;
+}
+
+/* Accordion */
+.accordion-item {
+  background: var(--card-bg);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  margin-bottom: 0.8rem;
+  overflow: hidden;
+  transition: all var(--transition);
+}
+
+.accordion-header {
+  padding: 1rem 1.3rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: var(--nav-color);
+  transition: all var(--transition);
+  font-size: 1rem;
+}
+
+.accordion-header:hover {
+  background: var(--divider);
+}
+
+.accordion-arrow {
+  transition: transform var(--transition);
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+.accordion-item.open .accordion-arrow {
+  transform: rotate(180deg);
+}
+
+.accordion-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease;
+}
+
+.accordion-item.open .accordion-body {
+  max-height: 3000px;
+}
+
+.accordion-body-inner {
+  padding: 0 1.3rem 1.3rem;
+}
+
+/* Interactive demo */
+.demo-area {
+  background: var(--quote-bg);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  border: 1px solid var(--border-light);
+}
+
+.demo-select {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.92rem;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  transition: all var(--transition);
+}
+
+.demo-output {
+  min-height: 120px;
+  padding: 1rem;
+  background: var(--card-bg);
+  border-radius: 6px;
+  border: 1px solid var(--divider);
+  transition: all var(--transition);
+}
+
+/* Progress indicator */
+.progress-bar {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.progress-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--divider);
+  cursor: pointer;
+  transition: all var(--transition);
+  border: 1px solid var(--border-light);
+}
+
+.progress-dot.visited {
+  background: var(--accent);
+  opacity: 0.5;
+}
+
+.progress-dot.current {
+  background: var(--accent);
+  opacity: 1;
+  transform: scale(1.3);
+}
+
+/* Footer */
+footer {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--divider);
+  margin-top: 3rem;
+  background: var(--bg-primary);
+  transition: all var(--transition);
+}
+
+/* Scroll to top */
+.scroll-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: all var(--transition);
+  z-index: 999;
+}
+
+.scroll-top:hover {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+}
+
+.scroll-top.visible {
+  display: flex;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .header-content {
+    padding: 0.8rem 1rem;
+  }
+
+  .header-title {
+    font-size: 1rem;
+  }
+
+  .header-subtitle {
+    font-size: 0.7rem;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+
+  nav {
+    position: relative;
+  }
+
+  .nav-inner {
+    flex-direction: column;
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+  }
+
+  .nav-inner.open {
+    max-height: 600px;
+  }
+
+  .nav-btn {
+    padding: 0.7rem 1.5rem;
+    border-bottom: none;
+    border-left: 3px solid transparent;
+    text-align: left;
+  }
+
+  .nav-btn.active {
+    border-bottom: none;
+    border-left-color: var(--accent);
+    background: var(--divider);
+  }
+
+  main {
+    padding: 1rem;
+  }
+
+  .grid-2, .grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .section-header h2 {
+    font-size: 1.4rem;
+  }
+
+  .card {
+    padding: 1.2rem;
+  }
+
+  .comparison {
+    font-size: 0.82rem;
+  }
+
+  .comparison th, .comparison td {
+    padding: 0.5rem 0.6rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-title {
+    font-size: 0.9rem;
+  }
+
+  .section-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .sketch {
+    padding: 1rem;
+    font-size: 0.92rem;
+  }
+}
+
+<style>
+/* Form styles */
+.form-group {
+  margin-bottom: 1.2rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  color: var(--nav-color);
+  font-size: 0.95rem;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all var(--transition);
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.6;
+}
+
+.char-counter {
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.3rem;
+}
+
+/* Theme options */
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.8rem;
+}
+
+.theme-option {
+  padding: 1rem;
+  background: var(--quote-bg);
+  border: 2px solid var(--divider);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-align: center;
+}
+
+.theme-option:hover {
+  border-color: var(--accent);
+  background: var(--tag-bg);
+}
+
+.theme-option.selected {
+  border-color: var(--accent);
+  background: var(--tag-bg);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.theme-option-title {
+  font-weight: 700;
+  color: var(--nav-color);
+  font-size: 1rem;
+  margin-bottom: 0.3rem;
+}
+
+.theme-option-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.selected-theme {
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--tag-bg);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--nav-color);
+}
+
+.clear-theme-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  transition: all var(--transition);
+}
+
+.clear-theme-btn:hover {
+  background: var(--divider);
+  color: var(--accent);
+}
+
+/* Buttons */
+.button-group {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.action-btn .btn-icon {
+  font-size: 1.1rem;
+}
+
+.preview-btn {
+  background: var(--nav-color);
+  color: #fff;
+}
+
+.preview-btn:hover {
+  background: #264766;
+}
+
+.export-btn {
+  background: var(--accent);
+  color: #fff;
+}
+
+.export-btn:hover {
+  background: var(--accent-hover);
+}
+
+.clear-btn {
+  background: var(--divider);
+  color: var(--text-secondary);
+}
+
+.clear-btn:hover {
+  background: #e0e0e0;
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .clear-btn:hover {
+  background: #3a3a5a;
+}
+
+/* Preview area */
+.preview-area {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 1rem;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1rem;
+  background: var(--nav-color);
+  color: #fff;
+}
+
+.preview-header h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.close-preview {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all var(--transition);
+}
+
+.close-preview:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+#previewContent {
+  padding: 1.5rem;
+}
+
+#previewContent .sketch {
+  margin: 1rem 0;
+}
+
+#previewContent .meta-info {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--divider);
+}
+
+#previewContent .section-title {
+  color: var(--nav-color);
+  font-size: 1.1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+#previewContent .tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+
+/* Tips list */
+.tips-list {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.tips-list li {
+  margin-bottom: 0.7rem;
+  line-height: 1.6;
+}
+
+.tips-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .theme-options {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .button-group {
+    flex-direction: column;
+  }
+  
+  .action-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .theme-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Parallel boxes */
+.parallel-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.parallel-column {
+  background: var(--quote-bg);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+}
+
+.parallel-header {
+  background: var(--nav-color);
+  color: #fff;
+  padding: 0.8rem 1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.parallel-content {
+  padding: 1.2rem;
+}
+
+.parallel-content p {
+  margin-bottom: 0.8rem;
+}
+
+.parallel-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Concept grid */
+.concept-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.concept-item {
+  background: var(--quote-bg);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  border-left: 4px solid var(--accent);
+  transition: all var(--transition);
+}
+
+.concept-item:hover {
+  box-shadow: var(--card-shadow);
+}
+
+.concept-item.concept-unknown {
+  border-left-color: #e67e22;
+  background: linear-gradient(135deg, var(--quote-bg) 0%, rgba(230,126,34,0.1) 100%);
+}
+
+.concept-title {
+  font-weight: 700;
+  color: var(--nav-color);
+  margin-bottom: 0.4rem;
+  font-size: 1rem;
+}
+
+.concept-unknown .concept-title {
+  color: #e67e22;
+}
+
+.concept-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Danger list */
+.danger-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.danger-item {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  border-left: 4px solid #e74c3c;
+}
+
+.danger-title {
+  font-weight: 700;
+  color: #c0392b;
+  margin-bottom: 0.4rem;
+}
+
+[data-theme="dark"] .danger-title {
+  color: #e74c3c;
+}
+
+.danger-desc {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Questions list */
+.questions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.questions-list li {
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--divider);
+  color: var(--text-primary);
+  line-height: 1.7;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.questions-list li:last-child {
+  border-bottom: none;
+}
+
+.questions-list li::before {
+  content: "?";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .parallel-box {
+    grid-template-columns: 1fr;
+  }
+  
+  .concept-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-content">
+    <div>
+      <div class="header-title">Когнитивные ловушки</div>
+      <div class="header-subtitle">категориальные ошиби в описании, понимании и объяснении LLM ++</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.8rem;">
+      <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">&#9728;&#65039;</button>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-inner" id="navMenu">
+    <button class="nav-btn active" onclick="showSection('intro', this)">Intro</button>
+    <button class="nav-btn" onclick="showSection('writing', this)">LLM</button>
+	<button class="nav-btn" onclick="showSection('token', this)">Token</button>
+	<button class="nav-btn" onclick="showSection('tr', this)">Translate</button>
+    <button class="nav-btn" onclick="showSection('ocean', this)">)</button>
+    <button class="nav-btn" onclick="showSection('transport', this)">))</button>
+    <button class="nav-btn" onclick="showSection('networks', this)">:)</button>
+    <button class="nav-btn" onclick="showSection('electricity', this)">;)</button>
+    <button class="nav-btn" onclick="showSection('llm', this)">:(</button>
+	<button class="nav-btn" onclick="showSection('terms', this)">Terms</button>
+    <button class="nav-btn" onclick="showSection('reflection', this)">Reflection</button>
+	<button class="nav-btn" onclick="showSection('student', this)">Creation</button>
+	
+  </div>
+</nav>
+
+<main>
+  <div class="progress-bar" id="progressBar"></div>
+
+  <!-- INTRO -->
+  <div class="section active" id="intro">
+    <div class="section-header">
+      <h2>Нужен новый язык!</h2>
+      <p class="lead">Когда мы сталкиваемся с принципиально новой реальностью, мы неизбежно описываем её через знакомые понятия. Первые автомобили называли &laquo;безлошадными экипажами&raquo;, первые компьютеры&nbsp;&mdash; &laquo;электронными мозгами&raquo;. Эти метафоры необходимы на первом этапе, но затем навязывают свойства старого объекта новому и скрывают его собственную природу.</p>
+    </div>
+
+    <div class="card">
+      <h3>Принцип Коржибски: &laquo;Карта &mdash; не территория&raquo;</h3>
+      <p>Любое описание реальности &mdash; это модель, упрощение, проекция. Модель всегда отбрасывает часть информации и привносит структуру, которой в оригинале может не быть. Когда модель создавалась для <em>другой</em> реальности, она не просто упрощает &mdash; она систематически искажает.</p>
+      <div class="separator"></div>
+      <p>Далее вы увидите серию зарисовок, в которых одна реальность описывается языком другой. Цель &mdash; не рассмешить, а показать: <strong>нелепость становится очевидной только со стороны</strong>. Когда мы говорим о LLM словами &laquo;понимание&raquo;, &laquo;знание&raquo;, &laquo;галлюцинация&raquo; &mdash; мы находимся внутри точно такой же нелепости, но не замечаем её.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>Ловушка антропоморфизма</h3>
+        <p>Мы приписываем языковой модели человеческие свойства: она &laquo;думает&raquo;, &laquo;понимает&raquo;, &laquo;ошибается&raquo;, &laquo;галлюцинирует&raquo;. Каждое из этих слов незаметно импортирует целую сеть допущений о сознании, интенциональности и субъектности &mdash; ничего из этого не подтверждено для LLM.</p>
+      </div>
+      <div class="card">
+        <h3>Ловушка редукционизма</h3>
+        <p>Противоположная крайность: &laquo;это просто статистика&raquo;, &laquo;просто предсказание следующего токена&raquo;, &laquo;просто стохастический попугай&raquo;. Эти описания верны технически, но скрывают эмерджентные свойства, которые не сводятся к механизму.</p>
+      </div>
+    </div>
+
+    <div class="highlight-box">
+      <strong>Парадокс нашего положения:</strong> нам нужен новый язык для разговора о языковых моделях, но пока его нет, мы вынуждены использовать старый &mdash; осознавая его ограничения. Настоящее упражнение &mdash; научиться видеть эти ограничения.
+    </div>
+  </div>
+  
+  
+  
+  
+   <div class="section" id="writing">
+  <div class="section-header">
+    <h2>LLM как вторая письменность</h2>
+    <p class="lead">Письменность возникла как ответ на растущую сложность культуры — и создала цивилизацию. Большие языковые модели возникают как ответ на взрывной рост сложности в эпоху больших данных. Что если LLM — это вторая письменность? И что если наши попытки понять её через традиционную лингвистику столь же смехотворны, как попытки объяснить лингвистику текста представителю дописьменной культуры?</p>
+  </div>
+
+  <div class="card">
+    <h3>Параллель двух переходов</h3>
+    <div class="parallel-box">
+      <div class="parallel-column">
+        <div class="parallel-header">Первая письменность</div>
+        <div class="parallel-content">
+          <p><strong>Контекст:</strong> Рост населения, торговля, храмовое хозяйство. Память старейшин не вмещает всё.</p>
+          <p><strong>Ответ:</strong> Экстернализация памяти в глину, папирус, пергамент.</p>
+          <p><strong>Результат:</strong> Города, государства, право, история, наука, литература. Новые формы мышления, невозможные в устной культуре.</p>
+        </div>
+      </div>
+      <div class="parallel-column">
+        <div class="parallel-header">Вторая письменность (LLM)</div>
+        <div class="parallel-content">
+          <p><strong>Контекст:</strong> Взрывной рост данных, знаний, текстов. Мозг не справляется.</p>
+          <p><strong>Ответ:</strong> Экстернализация языковой компетенции в нейросети.</p>
+          <p><strong>Результат:</strong> Пока неизвестен. Мы в моменте перехода. Узнаем скоро. Надеемся на лучшее, готовимся ко всему.</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="highlight-box" style="margin-top: 1.5rem;">
+      <strong>Ключевое сходство:</strong> Как письменность была не просто «записанной речью», а принципиально новым когнитивным инструментом, так и LLM — не просто «автоматизированный текст», а нечто качественно иное, для чего у нас пока нет адекватного языка.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Зарисовка 1: Совет старейшин и молодой жрец</h3>
+    <div class="sketch">
+      <p><span class="speaker">Молодой жрец Энхедуанна</span> (вернувшись из храма Урука, где обучился письму):</p>
+      <p>«Почтенные старейшины! Я должен рассказать вам о чуде, которое видел в великом храме. Там люди делают слова видимыми. Они берут палочку и вдавливают её в мягкую глину — и слова остаются. Как следы на песке, но навечно.»</p>
+      <p><span class="speaker">Старейшина Гамеш</span> (с недоумением):</p>
+      <p>«Следы на песке — это следы ног. Слова — это то, что произносит рот. Как может рот оставить след? Ты говоришь загадками, юноша.»</p>
+      <p><span class="speaker">Энхедуанна:</span></p>
+      <p>«Нет, почтенный. Смотрите: я могу сказать слово "бык", и слово исчезнет, как дым. Но в храме Урука я могу начертить знак быка — и слово останется в глине. Другой человек, через год, через сто лет, посмотрит на глину — и услышит моё слово.»</p>
+      <p><span class="speaker">Старейшина Гамеш</span> (качает головой):</p>
+      <p>«Услышит? Глина не говорит. Я слышу только то, что говорит живой человек. Ты хочешь сказать, что глина будет говорить твоим голосом? Это колдовство.»</p>
+      <p><span class="speaker">Энхедуанна:</span></p>
+      <p>«Нет, не моим голосом... Он увидит знак, и в его голове возникнет слово. Как будто я шепну ему через годы.»</p>
+      <p><span class="speaker">Старейшина Намму</span> (вступает):</p>
+      <p>«Но как он узнает, что это твоё слово, а не его собственная мысль? Я иногда слышу голоса предков во сне — но это мои сны, не их слова. Твоя глина — она что, посылает сны наяву?»</p>
+      <div class="note">
+        <span class="tag">Глина с царапинами → текст</span>
+        <span class="tag">Слышать глазами → чтение</span>
+        <span class="tag">Шёпот через годы → передача информации</span>
+        <span class="tag">Колдовство → технология</span>
+        <span class="tag">Сны наяву → восприятие текста</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Старейшины не глупы. Они применяют единственную доступную им модель: коммуникация = живой говорящий + живой слушающий + момент речи. В этой модели «слово без говорящего» — абсурд или магия.</p>
+        <p style="margin-top:0.8rem;">Мы сейчас в той же позиции. Наша модель: язык = человек + намерение + понимание + значение. В этой модели «языковая компетенция без понимающего субъекта» — абсурд или профанация. Мы говорим «это просто статистика» с той же интонацией, с которой старейшина говорит «это просто царапины на глине».</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Зарисовка 2: Объяснение грамматики</h3>
+    <div class="sketch">
+      <p><span class="speaker">Писец Шульги</span> (пытается объяснить устному поэту концепцию грамматики):</p>
+      <p>«Понимаешь, когда мы пишем, мы должны следить за... за порядком. Есть правила, как знаки стоят друг за другом.»</p>
+      <p><span class="speaker">Поэт Лугальбанда:</span></p>
+      <p>«Порядок? Когда я пою, слова приходят сами. Дух предков ведёт мой язык. Какой порядок может быть у дыхания духа?»</p>
+      <p><span class="speaker">Шульги:</span></p>
+      <p>«Да, но когда ты поёшь, ты... ты сам знаешь, что хочешь сказать. А когда я пишу, глина не знает. Я должен сделать так, чтобы любой человек, смотрящий на глину, понял одно и то же.»</p>
+      <p><span class="speaker">Лугальбанда</span> (смеётся):</p>
+      <p>«Одно и то же? Брат мой, когда я пою о битве, старый воин плачет, а юноша горит жаждой славы. Они слышат одни слова — но понимают разное. Так было всегда. Ты хочешь, чтобы твоя глина отменила человеческую природу?»</p>
+      <p><span class="speaker">Шульги:</span></p>
+      <p>«Нет, я хочу... Ладно, вот смотри. Когда ты говоришь "царь ударил раба", это одно, а когда "раб ударил царя" — другое, верно? В речи ты это показываешь голосом. Но в глине нет голоса. Поэтому мы придумали... знаки, которые показывают, кто делает, а кто принимает. Мы называем это... ну, это трудно объяснить.»</p>
+      <p><span class="speaker">Лугальбанда:</span></p>
+      <p>«Знаки, которые показывают, кто делает? Но это же знает любой ребёнок! Зачем рисовать то, что и так понятно? Твоё письмо — это для тех, кто не умеет думать?»</p>
+      <div class="note">
+        <span class="tag">Дух ведёт язык → языковая интуиция</span>
+        <span class="tag">Правила порядка → синтаксис</span>
+        <span class="tag">Глина не знает → текст без контекста говорящего</span>
+        <span class="tag">Знаки «кто делает» → падежные маркеры</span>
+        <span class="tag">Для тех, кто не умеет думать → эксплицитность письма</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Поэт не может понять, зачем эксплицировать то, что «и так понятно». Для него грамматические отношения — часть живого момента речи, неотделимая от говорящего, контекста, интонации. Идея, что эти отношения можно кодировать отдельно от человека, кажется ему либо избыточной, либо для «неумеющих думать».</p>
+        <p style="margin-top:0.8rem;">Мы говорим о LLM похоже: «Это просто имитация». «Она не понимает, просто воспроизводит паттерны». «Настоящее понимание требует сознания». Мы не можем помыслить языковую компетенцию, отделённую от понимающего субъекта — как поэт не мог помыслить смысл, отделённый от говорящего.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Зарисовка 3: «Память без того, кто помнит»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Сказительница Нинсун</span> (хранительница устных преданий рода, в разговоре с писцом):</p>
+      <p>«Ты говоришь, что записал историю нашего рода. Но история рода — это я. Когда я умру, часть истории уйдёт со мной, а часть перейдёт к моей дочери, которая слушает меня каждую ночь. История — живая. Она меняется, потому что род меняется. Когда рождается ребёнок, я добавляю. Когда воин проявляет трусость, я забываю его подвиги. Это справедливо.»</p>
+      <p><span class="speaker">Писец:</span></p>
+      <p>«Но в глине история останется навсегда неизменной. Через сто лет люди прочтут и узнают, как было на самом деле.»</p>
+      <p><span class="speaker">Нинсун</span> (с ужасом):</p>
+      <p>«На самом деле? Но я и есть "на самом деле"! Я решаю, что помнить. Это моё право и мой долг. Твоя глина — она что, будет решать за меня? Будет помнить то, что я выбрала забыть? Это... это предательство. Это как мертвец, который отказывается уходить.»</p>
+      <p><span class="speaker">Писец:</span></p>
+      <p>«Но это же хорошо — что ничто не будет забыто?»</p>
+      <p><span class="speaker">Нинсун:</span></p>
+      <p>«Хорошо?! Забвение — это милость. Забвение — это прощение. Мой прадед совершил страшную вещь. Я знаю это. Моя дочь знает половину. Её дочь не будет знать ничего — и род очистится. А твоя глина... она что, будет рассказывать о грехе вечно? Кому нужна память без милосердия?»</p>
+      <div class="note">
+        <span class="tag">Живая история → устная традиция</span>
+        <span class="tag">История меняется → адаптивность памяти</span>
+        <span class="tag">Право решать → редакторская власть</span>
+        <span class="tag">Мертвец, который не уходит → персистентность текста</span>
+        <span class="tag">Память без милосердия → проблема права на забвение</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Сказительница указывает на нечто важное: устная память — это не просто хранение, а живой процесс с отбором, интерпретацией, забвением. Письменность отнимает этот контроль и создаёт «память без помнящего».</p>
+        <p style="margin-top:0.8rem;">LLM делает следующий шаг: это не просто «память без помнящего», а «речь без говорящего», «языковая компетенция без носителя». Мы так же растеряны, как Нинсун: <em>кому принадлежит</em> этот язык? <em>Кто отвечает</em> за сказанное? <em>Где субъект</em>?</p>
+        <p style="margin-top:0.8rem;">Её страх — «мертвец, который отказывается уходить» — эхом звучит в наших тревогах: LLM, обученные на текстах умерших людей, имитирующие их стиль. Это беспокоит нас так же, как письменность беспокоила бы хранительницу устной традиции.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Зарисовка 4: «Зачем учить знаки, если есть старейшины?»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Охотник Нимрод</span> (отец, чей сын отправлен в школу писцов):</p>
+      <p>«Мой сын проводит дни, царапая глину. Его руки, которые должны держать копьё, сжимают палочку. Его глаза, которые должны читать следы зверя, читают какие-то закорючки. Зачем?»</p>
+      <p><span class="speaker">Жрец-учитель:</span></p>
+      <p>«Он научится мудрости предков, записанной в глине.»</p>
+      <p><span class="speaker">Нимрод:</span></p>
+      <p>«Мудрость предков? Мудрость предков здесь — в старейшине Энлиле, который помнит пять поколений. Хочешь мудрости — спроси Энлиля. Зачем царапать глину, когда можно спросить живого человека?»</p>
+      <p><span class="speaker">Жрец-учитель:</span></p>
+      <p>«Но Энлиль умрёт. А глина останется.»</p>
+      <p><span class="speaker">Нимрод:</span></p>
+      <p>«Когда Энлиль умрёт, мудрость перейдёт к его ученику. Так было всегда. При чём тут глина?»</p>
+      <p><span class="speaker">Жрец-учитель:</span></p>
+      <p>«А если ученик умрёт раньше учителя? А если он запомнит неточно? А если мудрости станет так много, что один человек не сможет удержать всё?»</p>
+      <p><span class="speaker">Нимрод</span> (пожимает плечами):</p>
+      <p>«Тогда часть мудрости уйдёт. Не впервые. Мир не рухнет. А твоё письмо... оно делает сыновей слабыми. Они полагаются на глину вместо того, чтобы тренировать память. Они станут беспомощными без своих табличек.»</p>
+      <div class="note">
+        <span class="tag">Царапать глину → писать</span>
+        <span class="tag">Спроси Энлиля → устная традиция</span>
+        <span class="tag">Мудрость перейдёт к ученику → традиционная передача</span>
+        <span class="tag">Слишком много для одного → информационная перегрузка</span>
+        <span class="tag">Беспомощны без табличек → когнитивный аутсорсинг</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Нимрод артикулирует страх, который Платон позже запишет в «Федре»: письменность ослабит память, люди станут зависимы от внешнего костыля. Этот страх оказался одновременно обоснованным (мы действительно полагаемся на записи) и ложным (мы не стали «слабее» — мы стали другими).</p>
+        <p style="margin-top:0.8rem;">Те же тревоги сегодня: «Студенты будут полагаться на ChatGPT вместо того, чтобы думать сами». «Люди разучатся писать/считать/анализировать». Возможно, эти страхи так же обоснованы и так же неточны. Мы не станем «слабее» — мы станем другими. Какими именно — пока неизвестно.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Зарисовка 5: Разговор двух писцов (один — из будущего)</h3>
+    <div class="sketch">
+      <p><span class="speaker">Шумерский писец</span> (объясняет коллеге из гипотетического будущего):</p>
+      <p>«Письмо — величайшее изобретение человека. Мы победили время. Мы победили смерть. Слово, которое я напишу сегодня, прочтут через тысячу лет. Что может быть больше этого?»</p>
+      <p><span class="speaker">Голос из будущего:</span></p>
+      <p>«Представь, что глина сама пишет.»</p>
+      <p><span class="speaker">Шумерский писец</span> (смеётся):</p>
+      <p>«Глина сама пишет? Это бессмыслица. Писать — значит иметь мысль и выразить её в знаках. У глины нет мыслей.»</p>
+      <p><span class="speaker">Голос из будущего:</span></p>
+      <p>«Но что если глина... научилась из миллиона табличек, которые на ней писали? Что если она впитала все эти слова и теперь может порождать новые?»</p>
+      <p><span class="speaker">Шумерский писец:</span></p>
+      <p>«Впитала? Глина не впитывает слова. Она хранит следы. След и слово — разные вещи. Или ты хочешь сказать, что следы каким-то образом... ожили?»</p>
+      <p><span class="speaker">Голос из будущего:</span></p>
+      <p>«Не ожили. Но они... организовались. Выстроились в систему. И эта система может порождать новые следы, которые выглядят как следы осмысленной речи.»</p>
+      <p><span class="speaker">Шумерский писец</span> (после паузы):</p>
+      <p>«Тогда это письмо без писца. Это... это как река без истока. Как дитя без отца. Такое невозможно. Или это — новый вид бытия, которого мы не знаем.»</p>
+      <div class="note">
+        <span class="tag">Глина сама пишет → LLM генерирует текст</span>
+        <span class="tag">Научилась из миллиона табличек → обучение на корпусе</span>
+        <span class="tag">Следы организовались → эмерджентные паттерны</span>
+        <span class="tag">Письмо без писца → текст без автора-субъекта</span>
+        <span class="tag">Новый вид бытия → неопределённый онтологический статус LLM</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Чего не могла помыслить дописьменная культура</h3>
+    <p>Письменность принесла явления, немыслимые в устной культуре:</p>
+    
+    <div class="concept-grid">
+      <div class="concept-item">
+        <div class="concept-title">Текст</div>
+        <div class="concept-desc">Речь, отделённая от говорящего и момента говорения. В устной культуре немыслимо: слово существует только пока звучит.</div>
+      </div>
+      <div class="concept-item">
+        <div class="concept-title">Автор</div>
+        <div class="concept-desc">Тот, чьё слово живёт после его смерти. В устной культуре — только живые говорят, мёртвые — молчат.</div>
+      </div>
+      <div class="concept-item">
+        <div class="concept-title">Цитата</div>
+        <div class="concept-desc">Точное воспроизведение чужих слов. В устной культуре — каждый пересказ есть новое творение.</div>
+      </div>
+      <div class="concept-item">
+        <div class="concept-title">Грамматика</div>
+        <div class="concept-desc">Эксплицитные правила языка. В устной культуре — правила растворены в интуиции, не подлежат рефлексии.</div>
+      </div>
+      <div class="concept-item">
+        <div class="concept-title">Противоречие</div>
+        <div class="concept-desc">Возможность сравнить два высказывания и найти несовместимость. В устной культуре — каждый момент речи самодостаточен.</div>
+      </div>
+      <div class="concept-item">
+        <div class="concept-title">История</div>
+        <div class="concept-desc">Фиксированная последовательность событий. В устной культуре — прошлое гибко, подчинено настоящему.</div>
+      </div>
+    </div>
+    
+    <div class="separator"></div>
+    
+    <h4>Чего не можем помыслить мы?</h4>
+    <p>Возможно, LLM несёт явления, столь же немыслимые для нас, как «текст» и «автор» были немыслимы для устной культуры:</p>
+    
+    <div class="concept-grid">
+      <div class="concept-item concept-unknown">
+        <div class="concept-title">???</div>
+        <div class="concept-desc">Языковая компетенция, отделённая от понимающего субъекта. Мы пытаемся назвать это «имитацией» — но, возможно, это новая категория.</div>
+      </div>
+      <div class="concept-item concept-unknown">
+        <div class="concept-title">???</div>
+        <div class="concept-desc">Авторство без автора. Интенциональность без интенции. Мы не можем это помыслить — как сказительница не могла помыслить текст.</div>
+      </div>
+      <div class="concept-item concept-unknown">
+        <div class="concept-title">???</div>
+        <div class="concept-desc">Знание, не принадлежащее никому. Не коллективное — а вообще не имеющее субъекта. У нас нет слов.</div>
+      </div>
+      <div class="concept-item concept-unknown">
+        <div class="concept-title">???</div>
+        <div class="concept-desc">Отношения с не-субъектом, который ведёт себя как субъект. Мы мечемся между «это просто инструмент» и «это собеседник».</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Зарисовка 6: Объяснение словаря</h3>
+    <div class="sketch">
+      <p><span class="speaker">Писец-учитель</span> (показывает устному сказителю глиняную табличку со списком слов):</p>
+      <p>«Это список всех слов для обозначения воды: река, ручей, дождь, роса, наводнение, колодец, слёзы, пот...»</p>
+      <p><span class="speaker">Сказитель</span> (озадаченно):</p>
+      <p>«Зачем этот список? Когда я говорю о реке, я говорю "река". Когда о дожде — "дождь". Я не думаю: "сейчас выберу слово из списка". Слово приходит само, как приходит нужное движение, когда танцуешь.»</p>
+      <p><span class="speaker">Писец:</span></p>
+      <p>«Но с этим списком ученик выучит все слова, даже те, которые редко встречаются в речи. Он будет знать больше слов, чем ты.»</p>
+      <p><span class="speaker">Сказитель</span> (смеётся):</p>
+      <p>«Знать слово — это не помнить, что оно существует. Знать слово — это чувствовать, когда его произнести. Твой ученик выучит "роса" из списка — но почувствует ли он росу на траве? Услышит ли шёпот росы? Слово без чувства — мёртвое слово. Твой список — кладбище слов.»</p>
+      <p><span class="speaker">Писец:</span></p>
+      <p>«Но для храмового учёта нужны точные слова! Когда мы записываем, сколько зерна отдано, нельзя полагаться на "чувство". Нужно точное слово из списка.»</p>
+      <p><span class="speaker">Сказитель</span> (качает головой):</p>
+      <p>«Вы отрываете слова от жизни и прикрепляете их к вещам. Слово "зерно" в моей песне — это золотые колосья под солнцем, труд жнецов, благодарность богам. Слово "зерно" в твоём списке — это... количество. Вы обедняете язык, делая его точным. И называете это мудростью?»</p>
+      <div class="note">
+        <span class="tag">Список слов → словарь, лексикон</span>
+        <span class="tag">Слово приходит само → языковая интуиция</span>
+        <span class="tag">Кладбище слов → деконтекстуализация</span>
+        <span class="tag">Слово без чувства → семантика без прагматики</span>
+        <span class="tag">Точность vs. богатство → формализация языка</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Сказитель указывает на фундаментальный сдвиг: письменность отделяет слово от момента его произнесения, от телесного опыта, от контекста. Это одновременно потеря и приобретение: теряется живость, приобретается точность и переносимость.</p>
+        <p style="margin-top:0.8rem;">LLM делает следующий шаг: она оперирует не словами (с их хотя бы конвенциональными значениями), а токенами — фрагментами, выделенными статистически. Для LLM нет разницы между «росой» поэта и «росой» метеоролога. Она находит паттерны употребления и воспроизводит их. Мы в ужасе: «Это не настоящее понимание!» Но, возможно, это новый способ работы с языком, для оценки которого наши критерии неадекватны — как критерии сказителя неадекватны для оценки словаря.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Эпилог: Почему эта метафора опасна?</h3>
+    <div class="highlight-box">
+      <strong>Предупреждение:</strong> Метафора «LLM = вторая письменность» — это тоже карта, а не территория. Она полезна, но она вводит собственные искажения.
+    </div>
+    
+    <div class="danger-list">
+      <div class="danger-item">
+        <div class="danger-title">Ложная аналогия масштаба</div>
+        <div class="danger-desc">Письменность развивалась тысячелетия; LLM — годы. Мы не знаем, успеем ли адаптироваться. Аналогия успокаивает: «человечество справлялось и раньше». Но темп изменений несопоставим.</div>
+      </div>
+      <div class="danger-item">
+        <div class="danger-title">Предположение неизбежности</div>
+        <div class="danger-desc">Метафора предполагает, что LLM — такой же «естественный» ответ на сложность, как письменность. Но письменность возникала независимо в разных культурах; LLM создан конкретными корпорациями с конкретными интересами. Это не эволюция — это дизайн.</div>
+      </div>
+      <div class="danger-item">
+        <div class="danger-title">Скрытый оптимизм</div>
+        <div class="danger-desc">Письменность, при всех издержках, принесла цивилизацию. Метафора намекает: LLM тоже принесёт благо в долгосрочной перспективе. Но это не гарантировано. У нас выборка из одного — письменности. Этого недостаточно для индукции.</div>
+      </div>
+      <div class="danger-item">
+        <div class="danger-title">Упущение различий</div>
+        <div class="danger-desc">Письменность экстернализировала <em>память</em>. LLM экстернализирует <em>порождение текста</em>. Это качественно разные вещи. Метафора сглаживает это различие.</div>
+      </div>
+    </div>
+    
+    <div class="separator"></div>
+    
+    <p style="font-style: italic; color: var(--text-secondary);">И всё же эта метафора полезна: она помогает увидеть, что наше замешательство — не слабость, а нормальная реакция на столкновение с тем, для чего у нас пока нет концептуальных инструментов. Как у сказителя не было инструментов для понимания грамматики. Он не был глуп — он жил в мире, где грамматика не существовала как объект мысли. Возможно, мы живём в мире, где <em>то, чем является LLM</em>, ещё не существует как объект мысли.</p>
+  </div>
+
+  <div class="card" style="background: var(--quote-bg); border: 2px solid var(--accent);">
+    <h3>Итог: Вопросы без ответов</h3>
+    <ul class="questions-list">
+      <li>Если письменность создала «автора» — субъекта, чьи слова переживают его, — что создаёт LLM? «Автора наоборот»? Текст, ищущий себе автора?</li>
+      <li>Если письменность позволила мыслить о языке (грамматика, словарь) — позволит ли LLM мыслить о чём-то, о чём мы сейчас не можем мыслить?</li>
+      <li>Письменность не заменила речь — она добавила новый слой. LLM не заменит человеческий язык — но какой слой она добавит?</li>
+      <li>Сказительница боялась «памяти без милосердия». Чего должны бояться мы? «Языка без ответственности»? «Речи без говорящего»? Как это вообще назвать?</li>
+      <li>Если для новой реальности нужен новый язык — кто его создаст? Мы? Или... LLM сама, порождая термины для описания себя?</li>
+    </ul>
+  </div>
+</div>
+  
+  
+  
+  
+    <!-- Token -->
+  <div class="section" id="token">
+    <div class="section-header">
+      <h2>Токен на языке прексриптивной лингвистики</h2>
+      <p class="lead">Просто нет слов... Это безумие... Мир сошёл с ума... Сидят и барабанят сутками по клавишам выдумывая всякую чепуху... Нет слов...</p>
+    </div>
+
+    
+<div class="card">
+    <h3>Зарисовка: «Токен — это не слово»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Профессор лексикологии</span> (рассматривая словарь токенов GPT):</p>
+      <p>«Итак, коллеги, проанализируем лексему "unbelievable". Корень "believe", приставка "un-", суффикс "-able". Классическая деривация. Теперь посмотрим, как это представлено в... в этом... словаре.»</p>
+      <p><span class="speaker">Аспирант</span> (заглядывая в токенизатор):</p>
+      <p>«Профессор, тут написано: "un", "believ", "able". Три единицы.»</p>
+      <p><span class="speaker">Профессор:</span></p>
+      <p>«Превосходно! Система выделила морфемы! Хотя... "believ" — это не морфема. Но допустим, приближение...»</p>
+      <p><span class="speaker">Аспирант:</span></p>
+      <p>«А слово "believe" само по себе — это один токен. Целиком.»</p>
+      <p><span class="speaker">Профессор</span> (озадаченно):</p>
+      <p>«То есть корень то выделяется, то нет? Какой принцип?»</p>
+      <p><span class="speaker">Аспирант:</span></p>
+      <p>«Частотность в корпусе. "Believe" встречалось часто — стало единицей. А вот "grandmother" — это "grand" и "mother". Но "grandmother's" — это "grandmother" и "'s". А "grandmothers" — это "grandm", "others".»</p>
+      <p><span class="speaker">Профессор</span> (хватаясь за голову):</p>
+      <p>«Подождите. "Grandm-others"?! Там что, "others" — "другие"?! Это же семантический абсурд! Это разрушает всю структуру!»</p>
+      <p><span class="speaker">Аспирант:</span></p>
+      <p>«Система не знает слова "структура". Она знает только: этот кусок байтов встречался часто.»</p>
+      <p><span class="speaker">Профессор</span> (тихо):</p>
+      <p>«Тогда почему мы называем это "словарём"?..»</p>
+      <div class="note">
+        <span class="tag">Токен ≠ морфема</span>
+        <span class="tag">Частотность vs. структура</span>
+        <span class="tag">grandm+others → семантический абсурд</span>
+        <span class="tag">Словарь без лексикологии</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Токен — это единица компрессии, а не единица значения. Алгоритм BPE (Byte Pair Encoding) руководствуется только статистикой совместной встречаемости, полностью игнорируя морфологию, этимологию, семантику.</p>
+        <p style="margin-top:0.8rem;">Когда мы говорим «словарь токенов», мы импортируем ожидания: что единицы несут значение, что они выделены по лингвистическим принципам, что их можно «определить». Ничего этого нет. Есть только: <em>«этот паттерн байтов эффективно сжимает корпус»</em>.</p>
+        <p style="margin-top:0.8rem;">Это как называть таблицу частот в ZIP-архиве «словарём». Технически точно, семантически — ловушка.</p>
+      </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Зарисовка: «Текст, которого нет»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Литературовед</span> (на конференции, взволнованно):</p>
+      <p>«Я проанализировал тексты, созданные этой... системой. Интертекстуальность поразительная! Вот здесь явная аллюзия на Достоевского, здесь — синтаксис Толстого, а вот это — практически цитата из Чехова. Автор демонстрирует глубокое знание русской литературной традиции!»</p>
+      <p><span class="speaker">Инженер</span> (из зала):</p>
+      <p>«Какой автор? Там нет автора.»</p>
+      <p><span class="speaker">Литературовед:</span></p>
+      <p>«Разумеется, есть. Вот текст. Текст предполагает автора. Это же базовая нарратология.»</p>
+      <p><span class="speaker">Инженер:</span></p>
+      <p>«Там есть веса нейронной сети. 175 миллиардов параметров. Они не "знают" Достоевского. Они не "цитируют" Чехова. Они предсказывают следующий токен.»</p>
+      <p><span class="speaker">Литературовед</span> (раздражённо):</p>
+      <p>«Но текст существует! Я держу его в руках! Значит, кто-то его создал!»</p>
+      <p><span class="speaker">Инженер:</span></p>
+      <p>«Его никто не создавал. Он был... сгенерирован.»</p>
+      <p><span class="speaker">Литературовед:</span></p>
+      <p>«В чём разница?!»</p>
+      <p><span class="speaker">Инженер</span> (после паузы):</p>
+      <p>«Когда вы создаёте текст, вы знаете, что хотите сказать. Система не знает. Она не "хочет". Она вычисляет вероятность.»</p>
+      <p><span class="speaker">Литературовед</span> (шёпотом):</p>
+      <p>«Тогда... это вообще текст?»</p>
+      <div class="note">
+        <span class="tag">Текст без автора</span>
+        <span class="tag">Интенция vs. генерация</span>
+        <span class="tag">Аллюзия без знания</span>
+        <span class="tag">Создание vs. вычисление</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Понятие «текст» в литературоведении неотделимо от понятий автора, интенции, адресата, контекста создания. Бахтин говорил: текст — это высказывание, а высказывание предполагает говорящего субъекта.</p>
+        <p style="margin-top:0.8rem;">Выход LLM — это артефакт, имеющий форму текста, но лишённый того, что делает текст текстом. Нет интенции. Нет адресации. Нет «что я хочу сказать». Есть: <em>«какой токен статистически вероятен после данной последовательности»</em>.</p>
+        <p style="margin-top:0.8rem;">Называя это «текстом», мы приписываем артефакту субъектность, которой в нём нет. Это категориальная ошибка, встроенная в сам термин.</p>
+      </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Зарисовка: «Перевод между языками, которых нет»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Переводчик-синхронист</span> (с 30-летним стажем):</p>
+      <p>«Объясните мне ещё раз. Система переводит с русского на японский. Но она не знает ни русского, ни японского?»</p>
+      <p><span class="speaker">Разработчик:</span></p>
+      <p>«Она работает в едином эмбеддинг-пространстве. Нет отдельного "русского" и "японского". Есть точки в многомерном пространстве.»</p>
+      <p><span class="speaker">Переводчик:</span></p>
+      <p>«Хорошо. Но когда я перевожу, я сначала понимаю смысл на русском, потом нахожу эквивалент в японской картине мира, учитываю культурный контекст...»</p>
+      <p><span class="speaker">Разработчик:</span></p>
+      <p>«Система не делает "сначала" и "потом". Она не "понимает" и не "находит эквивалент". Она генерирует последовательность токенов, вероятных после входной последовательности.»</p>
+      <p><span class="speaker">Переводчик:</span></p>
+      <p>«Но результат — перевод!»</p>
+      <p><span class="speaker">Разработчик:</span></p>
+      <p>«Результат выглядит как перевод. Процесс не имеет с переводом ничего общего.»</p>
+      <p><span class="speaker">Переводчик</span> (после паузы):</p>
+      <p>«Подождите. Вы говорите: это не перевод, но результат — перевод. Это как... как если бы человек никогда не плавал, но каким-то образом оказался на другом берегу?»</p>
+      <p><span class="speaker">Разработчик:</span></p>
+      <p>«Скорее как если бы не было ни реки, ни берегов. Только... точки в пространстве, которые мы потом называем "берегами".»</p>
+      <div class="note">
+        <span class="tag">Языки → точки в пространстве</span>
+        <span class="tag">Понимание → вычисление</span>
+        <span class="tag">Эквивалентность → вероятность</span>
+        <span class="tag">Процесс ≠ результат</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Традиционная теория перевода предполагает: есть исходный язык, есть целевой язык, есть процесс переноса смысла между двумя различными знаковыми системами. Переводоведение построено на этой трихотомии.</p>
+        <p style="margin-top:0.8rem;">В LLM языки не существуют как дискретные сущности. Есть единое латентное пространство, где «кошка», «cat», «猫» и «قطة» — соседние точки. «Перевод» — это не перенос между системами, а навигация внутри одного пространства.</p>
+        <p style="margin-top:0.8rem;">Называя это «переводом», мы импортируем модель двух берегов и переправы. Но берегов нет. Есть топология, которую мы не умеем описывать, потому что наш язык создан для мира дискретных языков.</p>
+      </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Зарисовка: «Язык, на котором никто не говорит»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Социолингвист</span> (на семинаре):</p>
+      <p>«Язык — это социальный феномен. Он существует в сообществе носителей. Язык без носителей — мёртвый язык, как латынь.»</p>
+      <p><span class="speaker">Студент:</span></p>
+      <p>«А как насчёт языка, на котором говорит ChatGPT?»</p>
+      <p><span class="speaker">Социолингвист:</span></p>
+      <p>«ChatGPT говорит на английском, русском, китайском... на человеческих языках.»</p>
+      <p><span class="speaker">Студент:</span></p>
+      <p>«Но он также "говорит" на Python, JSON, LaTeX. Это языки?»</p>
+      <p><span class="speaker">Социолингвист:</span></p>
+      <p>«Формальные языки. Это другое.»</p>
+      <p><span class="speaker">Студент:</span></p>
+      <p>«А когда он переключается между ними в одном ответе? Русский текст, внутри блок кода на Python, потом формула LaTeX, потом снова русский? Это какой язык?»</p>
+      <p><span class="speaker">Социолингвист</span> (неуверенно):</p>
+      <p>«Это... кодовое переключение?»</p>
+      <p><span class="speaker">Студент:</span></p>
+      <p>«Кодовое переключение предполагает билингва — человека, владеющего двумя языками. А здесь?»</p>
+      <p><span class="speaker">Социолингвист:</span></p>
+      <p>«Здесь... система, владеющая... всеми языками? Ни одним языком?»</p>
+      <p><span class="speaker">Студент:</span></p>
+      <p>«Именно. Это вообще "язык" в нашем смысле?»</p>
+      <p><span class="speaker">Социолингвист</span> (долгая пауза):</p>
+      <p>«Я... не знаю, как это назвать. У нас нет термина.»</p>
+      <div class="note">
+        <span class="tag">Язык без сообщества</span>
+        <span class="tag">Естественный + формальный = ?</span>
+        <span class="tag">Мультилингвизм без субъекта</span>
+        <span class="tag">Отсутствие термина</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Соссюр определял язык через оппозицию langue/parole: система vs. её реализация в речи. Язык существует в коллективном сознании сообщества носителей. Это социальный договор.</p>
+        <p style="margin-top:0.8rem;">LLM оперирует чем-то, что не является ни langue, ни parole. Нет сообщества носителей. Нет социального договора. Нет даже границ между «языками» — русский перетекает в код, код в формулу, формула в китайский.</p>
+        <p style="margin-top:0.8rem;">Мы используем слово «язык», потому что результат похож на язык. Но процесс не предполагает ничего из того, что делает язык языком в лингвистическом смысле. Это семиотическая система иного типа — для которой у нас нет имени.</p>
+      </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Зарисовка: «Словарь, в котором нет значений»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Лексикограф</span> (изучая документацию модели):</p>
+      <p>«Здесь написано: vocabulary size — 50,257 токенов. Это словарь? Покажите мне словарную статью.»</p>
+      <p><span class="speaker">Инженер:</span></p>
+      <p>«Словарной статьи нет. Есть список токенов и их индексы.»</p>
+      <p><span class="speaker">Лексикограф:</span></p>
+      <p>«Хорошо, индексы — это как номера страниц. А где дефиниции? Грамматические пометы? Примеры употребления?»</p>
+      <p><span class="speaker">Инженер:</span></p>
+      <p>«Их нет. Токен — это просто... идентификатор. Число.»</p>
+      <p><span class="speaker">Лексикограф:</span></p>
+      <p>«Но как система знает, что значит токен, если нет дефиниции?»</p>
+      <p><span class="speaker">Инженер:</span></p>
+      <p>«Она не знает "что значит". Она знает, рядом с какими другими токенами он обычно встречается.»</p>
+      <p><span class="speaker">Лексикограф:</span></p>
+      <p>«Это же дистрибутивная семантика! "Слово определяется своим окружением". Но даже Фёрс имел в виду, что окружение помогает нам, людям, понять значение. А здесь?»</p>
+      <p><span class="speaker">Инженер:</span></p>
+      <p>«Здесь окружение — это и есть всё. Никакого "значения" отдельно нет.»</p>
+      <p><span class="speaker">Лексикограф</span> (медленно):</p>
+      <p>«Слово без значения... Словарь без статей... Это как... телефонная книга, в которой указаны имена и номера, но нет людей?»</p>
+      <p><span class="speaker">Инженер:</span></p>
+      <p>«Близко. Только номера могут звонить друг другу, и из этих звонков возникает что-то, что выглядит как люди.»</p>
+      <div class="note">
+        <span class="tag">Токен = индекс, не значение</span>
+        <span class="tag">Дистрибуция без семантики</span>
+        <span class="tag">Окружение → суррогат значения</span>
+        <span class="tag">Словарь без словарных статей</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Словарь в лингвистике — это инвентарь единиц со значениями. Словарная статья связывает форму с содержанием. Это центральный артефакт лексикографии, дисциплины с тысячелетней историей.</p>
+        <p style="margin-top:0.8rem;">Vocabulary в LLM — это таблица соответствий между строками байтов и целыми числами. Значения в ней нет. Значение «возникает» (если это слово вообще применимо) из паттернов совместной встречаемости, закодированных в весах модели.</p>
+        <p style="margin-top:0.8rem;">Называя это «словарём», мы ожидаем найти там значения. Мы ищем то, чего там нет по определению. Термин систематически вводит в заблуждение.</p>
+      </div>
+    </div>
+</div>
+  </div>
+  
+  
+  
+   <!-- Перевод -->
+  <div class="section" id="tr">
+    <div class="section-header">
+      <h2>Перевод на новый лад</h2>
+      <p class="lead">Современный машинный перевод никак не укладывается не только в его традиционное лингвистическое понимание как межъязыкового перевода но и в семиотическую концепцию Романа Якобсона. Аналог - невозможно не только понять, но даже поставить проблемы космологии или квантовой реальности на уровне физики и терминологии Иссака Ньютона. </p>
+    </div>
+
+<div class="card">
+    <h3>Зарисовка: «Переводчик, который не знает языков»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Компилятор</span> (если бы мог говорить, на допросе):</p>
+      <p>«Да, я перевожу с Python на машинный код. Каждый день. Миллионы строк.»</p>
+      <p><span class="speaker">Следователь-лингвист:</span></p>
+      <p>«И как давно вы изучали Python?»</p>
+      <p><span class="speaker">Компилятор:</span></p>
+      <p>«Я не изучал Python. Я не знаю, что такое "изучать".»</p>
+      <p><span class="speaker">Следователь:</span></p>
+      <p>«Тогда как вы переводите?»</p>
+      <p><span class="speaker">Компилятор:</span></p>
+      <p>«Я применяю правила трансформации. Вижу паттерн — произвожу паттерн. "for i in range(10)" → вот эта последовательность инструкций процессора. Всегда одинаково.»</p>
+      <p><span class="speaker">Следователь:</span></p>
+      <p>«Но вы же понимаете смысл программы?»</p>
+      <p><span class="speaker">Компилятор:</span></p>
+      <p>«Что такое "смысл программы"? Я знаю: синтаксически корректно или нет. Типы совпадают или нет. Остальное меня не касается.»</p>
+      <p><span class="speaker">Следователь:</span></p>
+      <p>«Но программист хотел вычислить зарплату сотрудников!»</p>
+      <p><span class="speaker">Компилятор:</span></p>
+      <p>«Зарплату? Сотрудников? Я вижу: переменные, циклы, операции. Я не знаю, что такое "сотрудник". Мне не нужно знать. Я перевожу точно, именно потому что мне всё равно.»</p>
+      <p><span class="speaker">Следователь</span> (потерянно):</p>
+      <p>«Перевод без понимания... Это вообще перевод?»</p>
+      <p><span class="speaker">Компилятор:</span></p>
+      <p>«Странный вопрос. Результат работает? Работает. Значит, я перевёл. Что ещё нужно?»</p>
+      <div class="note">
+        <span class="tag">Перевод без понимания</span>
+        <span class="tag">Правила vs. интерпретация</span>
+        <span class="tag">Синтаксис без семантики</span>
+        <span class="tag">Точность из безразличия</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Компиляция — это формальный перевод: строгое отображение одной знаковой системы в другую по фиксированным правилам. Нет интерпретации, нет «понимания», нет вариативности. И всё же результат безупречен.</p>
+        <p style="margin-top:0.8rem;">LLM находится где-то между: не формальный перевод (есть вариативность), но и не человеческий (нет «понимания» в привычном смысле). Это заставляет спросить: может быть, «понимание» — не необходимое условие перевода? Может быть, это побочный эффект, который мы ошибочно считали сутью?</p>
+        <p style="margin-top:0.8rem;">Якобсон включил интерсемиотический перевод в свою типологию, но всё же предполагал интерпретатора. Компилятор и LLM показывают: трансформация возможна и без интерпретирующего субъекта.</p>
+      </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Зарисовка: «Сто страниц в три предложения»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Автор романа</span> (читая саммари своей книги, сделанное ИИ):</p>
+      <p>«"Иван теряет семью, переосмысляет жизнь, находит новый смысл в помощи другим." Это... это мой роман? Четыреста страниц — в одном предложении?»</p>
+      <p><span class="speaker">Редактор:</span></p>
+      <p>«Технически верно, разве нет?»</p>
+      <p><span class="speaker">Автор:</span></p>
+      <p>«Верно?! А глава, где он три дня смотрит на реку? А монолог о том, как пахнет хлеб в доме его детства? А сцена, где он молчит десять страниц?»</p>
+      <p><span class="speaker">Редактор:</span></p>
+      <p>«Система решила, что это... избыточная информация. Не относится к основному сюжету.»</p>
+      <p><span class="speaker">Автор:</span></p>
+      <p>«Но это и ЕСТЬ роман! Сюжет — это скелет. А мой роман — это запах хлеба!»</p>
+      <p><span class="speaker">Редактор:</span></p>
+      <p>«Вы понимаете, что система сделала перевод? С языка романа на язык саммари?»</p>
+      <p><span class="speaker">Автор</span> (горько):</p>
+      <p>«Перевод? Это ампутация. Перевод сохраняет. Это — уничтожило девяносто девять процентов.»</p>
+      <p><span class="speaker">Редактор:</span></p>
+      <p>«Но сохранило "суть"?»</p>
+      <p><span class="speaker">Автор:</span></p>
+      <p>«Суть романа — не сюжет. Суть — это то, что происходит между словами. Между строками. В паузах. Как это перевести в "три предложения"?»</p>
+      <p><span class="speaker">Редактор</span> (тихо):</p>
+      <p>«Никак. Но мы всё равно называем это переводом.»</p>
+      <div class="note">
+        <span class="tag">Суммаризация = перевод с потерями</span>
+        <span class="tag">Сюжет ≠ роман</span>
+        <span class="tag">Информация vs. художественность</span>
+        <span class="tag">Что значит «сохранить суть»?</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Суммаризация — это перевод между режимами: с «развёрнутого» на «сжатый». Но что сохраняется, а что теряется? Кто решает, что «важно»?</p>
+        <p style="margin-top:0.8rem;">LLM суммаризирует на основе статистических паттернов того, что обычно сохраняется в суммари. Это не авторская интенция, не редакторское решение, не читательская интерпретация. Это <em>усреднённое ожидание</em> того, что люди обычно считали важным.</p>
+        <p style="margin-top:0.8rem;">Якобсон говорил о «внутриязыковом переводе» — переформулировании. Но суммаризация — это радикальнее: не переформулирование, а перемасштабирование. Другой жанр? Другой модус существования текста? Нам не хватает языка для описания этой трансформации.</p>
+      </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Зарисовка: «Голос, которого не было»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Слепой слушатель</span> (после прослушивания аудиокниги, озвученной ИИ):</p>
+      <p>«Прекрасный чтец. Такая тёплая интонация в любовных сценах. А в момент смерти героя... у меня были слёзы. Как его зовут?»</p>
+      <p><span class="speaker">Библиотекарь:</span></p>
+      <p>«Его не зовут. Это синтез речи.»</p>
+      <p><span class="speaker">Слушатель:</span></p>
+      <p>«Синтез? Но я слышал человека! Дыхание между фразами. Лёгкую хрипотцу. Он волновался в кульминации!»</p>
+      <p><span class="speaker">Библиотекарь:</span></p>
+      <p>«Это паттерны, извлечённые из записей человеческих голосов. Никто не читал эту книгу. Никто не волновался.»</p>
+      <p><span class="speaker">Слушатель</span> (после паузы):</p>
+      <p>«Но я же почувствовал! Эмоция была!»</p>
+      <p><span class="speaker">Библиотекарь:</span></p>
+      <p>«Эмоция была в вас. Вы интерпретировали звуковые паттерны как эмоцию. Источник эмоции — вы, не голос.»</p>
+      <p><span class="speaker">Слушатель:</span></p>
+      <p>«Но ведь так и с живым чтецом! Я не вижу его. Я интерпретирую звук.»</p>
+      <p><span class="speaker">Библиотекарь:</span></p>
+      <p>«Верно. Но за живым чтецом — человек, который что-то чувствовал. А здесь — ничего. Пустота. Только волна.»</p>
+      <p><span class="speaker">Слушатель</span> (шёпотом):</p>
+      <p>«Тогда кто со мной говорил?»</p>
+      <div class="note">
+        <span class="tag">Text-to-speech = перевод в модальность</span>
+        <span class="tag">Эмоция без субъекта</span>
+        <span class="tag">Интерпретация в слушателе</span>
+        <span class="tag">Голос без говорящего</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Text-to-speech — это интерсемиотический перевод: письменные знаки → акустические волны. Якобсон включил бы это в свою типологию. Но что именно переводится?</p>
+        <p style="margin-top:0.8rem;">Традиционный чтец добавляет интерпретацию: решает, где сделать паузу, как интонировать. Это авторское прочтение текста. AI-синтез имитирует этот слой интерпретации — но без интерпретатора.</p>
+        <p style="margin-top:0.8rem;">Результат парадоксален: есть «перевод», есть «интерпретация» (в смысле конкретной реализации), но нет интерпретатора. Смысл возникает в слушателе, который не подозревает, что разговаривает с пустотой. Это вызывает вопросы не о системе, а о нас: что мы на самом деле воспринимаем, когда думаем, что слышим «голос»?</p>
+      </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Зарисовка: «Арифметика как искусство перевода»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Математик</span> (раздражённо):</p>
+      <p>«Вы утверждаете, что 2+2=4 — это перевод? Абсурд. Это вычисление. Объективная истина.»</p>
+      <p><span class="speaker">Семиотик:</span></p>
+      <p>«Давайте посмотрим. У вас есть выражение "2+2". Это знак?»</p>
+      <p><span class="speaker">Математик:</span></p>
+      <p>«Допустим.»</p>
+      <p><span class="speaker">Семиотик:</span></p>
+      <p>«И вы трансформируете его в другой знак — "4". Это другая форма, но вы утверждаете эквивалентность. Разве это не определение перевода?»</p>
+      <p><span class="speaker">Математик:</span></p>
+      <p>«Нет! 2+2 и 4 — это одно и то же число! Тут нет "перевода", есть тождество!»</p>
+      <p><span class="speaker">Семиотик:</span></p>
+      <p>«Но записи разные. "2+2" — четыре символа. "4" — один. Вы потеряли информацию о процессе и сохранили только результат. Как при суммаризации.»</p>
+      <p><span class="speaker">Математик:</span></p>
+      <p>«Информация о процессе несущественна!»</p>
+      <p><span class="speaker">Семиотик:</span></p>
+      <p>«А "2+2" и "3+1" и "1+1+1+1" — все переводятся в "4". Разные оригиналы — один перевод. Это, кажется, называется "нейтрализация различий"?»</p>
+      <p><span class="speaker">Математик</span> (замолкает):</p>
+      <p>«Вы хотите сказать... что вычисление — это перевод с потерей различительных признаков исходных выражений?»</p>
+      <p><span class="speaker">Семиотик:</span></p>
+      <p>«Я хочу сказать, что ваше "объективное вычисление" — это семиотическая операция. Как и всё остальное.»</p>
+      <div class="note">
+        <span class="tag">Вычисление = семиотическая трансформация</span>
+        <span class="tag">Тождество результата ≠ тождество выражений</span>
+        <span class="tag">2+2 → 4 как перевод с потерями</span>
+        <span class="tag">Нейтрализация пути к результату</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Для LLM сложение — это буквально перевод: последовательность токенов "2+2=" трансформируется в токен "4". Модель не «вычисляет» в математическом смысле. Она предсказывает следующий токен на основе паттернов.</p>
+        <p style="margin-top:0.8rem;">Это делает видимым то, что обычно скрыто: любая символьная операция — это трансформация знаков. Математика, логика, программирование — всё это можно описать как системы перевода между представлениями.</p>
+        <p style="margin-top:0.8rem;">LLM радикально обобщает понятие перевода: не «между языками», не «между семиотическими системами», а просто — <em>трансформация последовательности токенов в последовательность токенов</em>. Всё остальное — частные случаи.</p>
+      </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Зарисовка: «Картина, которую никто не видел»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Искусствовед</span> (рассматривая изображение, сгенерированное по запросу «одинокий дуб на закате в стиле Шишкина»):</p>
+      <p>«Явное влияние русской реалистической школы. Внимание к текстуре коры. Характерная работа со светом. Хотя... что-то не так с тенями.»</p>
+      <p><span class="speaker">Куратор:</span></p>
+      <p>«Это не художник. Это генерация по тексту.»</p>
+      <p><span class="speaker">Искусствовед:</span></p>
+      <p>«Да, я знаю. Но я вижу картину. У картины есть стиль. Значит, кто-то принял решения.»</p>
+      <p><span class="speaker">Куратор:</span></p>
+      <p>«Решение принял текст. "В стиле Шишкина" — это инструкция.»</p>
+      <p><span class="speaker">Искусствовед:</span></p>
+      <p>«Но как слова становятся мазками?!»</p>
+      <p><span class="speaker">Куратор:</span></p>
+      <p>«Перевод. Текст переводится в латентное пространство. Латентное пространство переводится в пиксели.»</p>
+      <p><span class="speaker">Искусствовед:</span></p>
+      <p>«Но это же абсурд! Шишкин не писал словами! Между "дуб" и изображением дуба — пропасть!»</p>
+      <p><span class="speaker">Куратор:</span></p>
+      <p>«Для вас — пропасть. Для модели — соседние точки в пространстве.»</p>
+      <p><span class="speaker">Искусствовед</span> (глядя на картину):</p>
+      <p>«Но тени неправильные... Шишкин бы так не написал...»</p>
+      <p><span class="speaker">Куратор:</span></p>
+      <p>«Это ошибка перевода. Или, если хотите, интерференция: модель "знает" закаты из фотографий, где свет другой.»</p>
+      <p><span class="speaker">Искусствовед</span> (медленно):</p>
+      <p>«Интерференция между Шишкиным и фотографиями заката... Это... это как акцент. Иностранный акцент в живописи.»</p>
+      <div class="note">
+        <span class="tag">Text-to-image = радикальный перевод</span>
+        <span class="tag">Слово → пиксель через латентное пространство</span>
+        <span class="tag">Интерференция модальностей</span>
+        <span class="tag">«Акцент» в визуальном</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Text-to-image — это перевод между модальностями, которые кажутся несоизмеримыми. Как перевести «одиночество» в пиксели? Как перевести «в стиле Шишкина» в текстуру?</p>
+        <p style="margin-top:0.8rem;">Модель делает это через общее латентное пространство, где слова и визуальные признаки существуют как точки. «Шишкин» — не знание о художнике, а область в пространстве, связанная с определёнными визуальными паттернами.</p>
+        <p style="margin-top:0.8rem;">Ошибки перевода (неправильные тени) — это не «непонимание». Это интерференция: разные источники в обучающих данных создали противоречивые связи. Точно как при межъязыковом переводе, когда структура родного языка проступает сквозь иностранный.</p>
+      </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Зарисовка: «Читать то, чего нет»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Историк-архивист</span> (показывая полуистлевший документ):</p>
+      <p>«Видите? Здесь текст почти утрачен. Чернила выцвели, пергамент повреждён. Три века назад здесь были слова.»</p>
+      <p><span class="speaker">Технический специалист:</span></p>
+      <p>«Мы прогнали через OCR с реконструкцией. Вот результат.»</p>
+      <p><span class="speaker">Историк</span> (читая):</p>
+      <p>«"Сего дня... получено... от купца Строганова..." Удивительно! Но подождите. Вот здесь — полностью уничтоженный фрагмент. Дыра в пергаменте. А у вас написано: "...двести рублей серебром..."»</p>
+      <p><span class="speaker">Специалист:</span></p>
+      <p>«Система реконструировала на основе контекста и паттернов документов той эпохи.»</p>
+      <p><span class="speaker">Историк:</span></p>
+      <p>«Реконструировала или придумала?»</p>
+      <p><span class="speaker">Специалист:</span></p>
+      <p>«Статистически наиболее вероятный вариант.»</p>
+      <p><span class="speaker">Историк:</span></p>
+      <p>«Но может, там было "триста"! Или "пятьдесят"! Или вообще не рубли!»</p>
+      <p><span class="speaker">Специалист:</span></p>
+      <p>«Конечно, может. Но модель перевела визуальный шум в наиболее вероятный текст.»</p>
+      <p><span class="speaker">Историк:</span></p>
+      <p>«"Перевела шум в текст"... Вы понимаете, что это? Вы создаёте исторический источник, которого не существовало!»</p>
+      <p><span class="speaker">Специалист:</span></p>
+      <p>«Нет. Мы переводим физический артефакт в текстовый. С неизбежными потерями и... интерполяциями.»</p>
+      <p><span class="speaker">Историк</span> (тихо):</p>
+      <p>«История из интерполяций... Мы будем изучать то, что машина сочла вероятным?»</p>
+      <div class="note">
+        <span class="tag">OCR = перевод материального в текстовое</span>
+        <span class="tag">Реконструкция vs. галлюцинация</span>
+        <span class="tag">Вероятность ≠ истина</span>
+        <span class="tag">Интерполяция истории</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Распознавание текста — это перевод между носителями: физический объект (бумага, пергамент, камень) → цифровая последовательность символов. Казалось бы, просто техническая операция.</p>
+        <p style="margin-top:0.8rem;">Но когда добавляется реконструкция повреждённых фрагментов, перевод становится творческим актом. Модель «переводит» отсутствие в присутствие: дыру в пергаменте — в текст, которого никогда не было.</p>
+        <p style="margin-top:0.8rem;">Это та же логика, что в LLM: генерация наиболее вероятного продолжения. Разница в том, что мы называем это «распознаванием» и ожидаем точности, хотя получаем вероятностную гипотезу. Терминология скрывает природу процесса.</p>
+      </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Зарисовка: «Язык жестов, которых не было»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Переводчик жестового языка</span> (смотря на аватар, переводящий текст в жесты):</p>
+      <p>«Грамматика правильная. Жесты узнаваемые. Но это не перевод.»</p>
+      <p><span class="speaker">Разработчик:</span></p>
+      <p>«Почему? Глухие пользователи понимают.»</p>
+      <p><span class="speaker">Переводчик:</span></p>
+      <p>«Понимают слова. Но жестовый язык — это не слова. Это пространство, движение, выражение лица. Посмотрите: аватар показывает "грустно" с нейтральным лицом. Это как сказать "я в ярости" шёпотом.»</p>
+      <p><span class="speaker">Разработчик:</span></p>
+      <p>«Мы работаем над мимикой...»</p>
+      <p><span class="speaker">Переводчик:</span></p>
+      <p>«Не в этом дело. Когда я перевожу, я чувствую текст. Моё тело реагирует. Эмоция проходит через меня и выходит через руки и лицо. Одновременно. Неразделимо.»</p>
+      <p><span class="speaker">Разработчик:</span></p>
+      <p>«А мы переводим сначала текст в глоссы, потом глоссы в движения, потом добавляем мимику...»</p>
+      <p><span class="speaker">Переводчик:</span></p>
+      <p>«Вот именно. Вы разделили неразделимое. Вы перевели язык тела... в конструктор. Собрали из частей. А в языке тела части не существуют отдельно.»</p>
+      <p><span class="speaker">Разработчик:</span></p>
+      <p>«Но результат работает...»</p>
+      <p><span class="speaker">Переводчик:</span></p>
+      <p>«Результат — как говорящий робот в фильмах 80-х. Слова правильные. Человека нет.»</p>
+      <div class="note">
+        <span class="tag">Текст → жест: перевод в телесное</span>
+        <span class="tag">Разделение неразделимого</span>
+        <span class="tag">Модульность vs. холизм</span>
+        <span class="tag">«Работает» ≠ «переводит»</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Перевод в жестовый язык — это перевод из линейной модальности (текст) в пространственную и телесную. Жестовый язык использует одновременность: руки, лицо, положение тела — всё несёт значение в каждый момент.</p>
+        <p style="margin-top:0.8rem;">Системы перевода вынуждены разделять: сначала смысл, потом лексика, потом грамматика, потом мимика. Но в оригинале нет этих слоёв — есть единый поток телесного выражения.</p>
+        <p style="margin-top:0.8rem;">LLM работает так же: токенизирует, эмбеддирует, генерирует. Разделяет то, что в человеческом языке слито: звук, значение, интонацию, контекст. Результат «работает» в утилитарном смысле, но что-то теряется — и мы не всегда можем назвать, что именно.</p>
+      </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Зарисовка: «Запах, которого не было»</h3>
+    <div class="sketch">
+      <p><span class="speaker">Парфюмер</span> (читая описание, сгенерированное ИИ для нового аромата):</p>
+      <p>«"Верхние ноты бергамота танцуют с шёлковой розой, пока база из сандала и амбры шепчет о вечерних садах Марракеша." Красиво. Кто писал?»</p>
+      <p><span class="speaker">Маркетолог:</span></p>
+      <p>«Нейросеть. Мы дали ей химическую формулу аромата.»</p>
+      <p><span class="speaker">Парфюмер:</span></p>
+      <p>«Химическую... формулу?»</p>
+      <p><span class="speaker">Маркетолог:</span></p>
+      <p>«Да, список молекул и концентраций. Она перевела в поэтическое описание.»</p>
+      <p><span class="speaker">Парфюмер</span> (нюхая пробник):</p>
+      <p>«Но тут нет розы. Это синтетический розовый аккорд. И Марракеш... почему Марракеш? Из-за сандала?»</p>
+      <p><span class="speaker">Маркетолог:</span></p>
+      <p>«Наверное. В обучающих данных сандал часто ассоциировался с Востоком.»</p>
+      <p><span class="speaker">Парфюмер:</span></p>
+      <p>«Но мой сандал — из Шри-Ланки. И я думал о дождливом Сиэтле, когда создавал этот аромат. О кофейнях. О мокром асфальте.»</p>
+      <p><span class="speaker">Маркетолог:</span></p>
+      <p>«Ну... система не знала вашу интенцию.»</p>
+      <p><span class="speaker">Парфюмер:</span></p>
+      <p>«Она перевела молекулы в слова, минуя запах! Минуя опыт! Это как переводить ноты в стихи, не слушая музыки!»</p>
+      <p><span class="speaker">Маркетолог</span> (пожимая плечами):</p>
+      <p>«Покупателям нравится.»</p>
+      <p><span class="speaker">Парфюмер</span> (тихо):</p>
+      <p>«Покупатели не нюхают текст...»</p>
+      <div class="note">
+        <span class="tag">Химия → текст: минуя ощущение</span>
+        <span class="tag">Корреляция ≠ интенция</span>
+        <span class="tag">Данные vs. опыт</span>
+        <span class="tag">Перевод через отсутствующее звено</span>
+      </div>
+    </div>
+    <div class="reveal-container">
+      <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+      <div class="reveal-content">
+        <p>Этот случай показывает перевод, который пропускает ключевое звено: опыт. Химическая формула → статистические корреляции → текстовое описание. Сам запах — отсутствует в цепочке.</p>
+        <p style="margin-top:0.8rem;">LLM «знает», что сандал часто описывается рядом с восточными мотивами. Это знание дистрибутивное: не «что такое сандал», а «рядом с какими словами встречается "сандал"». Система переводит паттерны в паттерны, и результат выглядит осмысленным.</p>
+        <p style="margin-top:0.8rem;">Но интенция автора (Сиэтл, кофейни, дождь) полностью стёрта. Перевод «удался» коммерчески, но исказил всё, что создатель вкладывал. Это заставляет спросить: чей перевод правильнее — тот, что сохраняет интенцию, или тот, что «работает» для аудитории?</p>
+      </div>
+    </div>
+</div>
+  </div>
+  
+  
+
+
+  <!-- OCEAN -->
+  <div class="section" id="ocean">
+    <div class="section-header">
+      <h2>Океан на языке пустыни</h2>
+      <p class="lead">Представьте народ, живущий в сердце великой пустыни. Они никогда не видели водного пространства больше неглубокого колодца. И вот до них доходят слухи об &laquo;океане&raquo;...</p>
+    </div>
+
+    <div class="card">
+      <h3>Зарисовка 1: Доклад разведчика</h3>
+      <div class="sketch">
+        <p><span class="speaker">Разведчик Хасим</span> (выступая перед советом старейшин):</p>
+        <p>&laquo;За горами лежит великий колодец &mdash; столь широкий, что верблюжий караван не дойдёт до его противоположного края за целую жизнь. Вода в нём не стоит на месте, как в честном колодце, &mdash; она непрерывно качается, будто землю трясёт. Дно этого колодца столь глубоко, что ни один канат не достанет. А пить из него нельзя: вода в нём испорчена солью, будто кто-то высыпал туда запасы всех караванов мира. По поверхности этого колодца ходят деревянные повозки, но без колёс и верблюдов &mdash; их толкает ветер, пойманный в растянутые ткани.&raquo;</p>
+        <div class="note">
+          <span class="tag">колодец &rarr; океан</span>
+          <span class="tag">качается &rarr; волны</span>
+          <span class="tag">испорчена &rarr; солёная вода</span>
+          <span class="tag">повозка без колёс &rarr; корабль</span>
+          <span class="tag">пойманный ветер &rarr; паруса</span>
+        </div>
+      </div>
+      <div class="reveal-container">
+        <button class="reveal-btn" onclick="toggleReveal(this)">Что здесь не так?</button>
+        <div class="reveal-content">
+          <p>Океан &mdash; не &laquo;широкий колодец&raquo;. Колодец &mdash; это дыра в земле для добычи воды. Он статичен, утилитарен, конечен. Когда мы называем океан колодцем, мы незаметно предполагаем: у него есть стенки (нет), он создан для питья (нет), его можно вычерпать (нет), вода в нём должна быть пресной, а солёность &mdash; дефект (нет, это норма). Каждое предположение &mdash; ложное ожидание, импортированное метафорой.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Зарисовка 2: Объяснение дождя</h3>
+      <div class="sketch">
+        <p><span class="speaker">Старейшина Фатима</span> (обучая детей):</p>
+        <p>&laquo;Иногда небо становится щедрым оазисом. Вода начинает падать сверху &mdash; как будто кто-то перевернул бурдюк, только бурдюк этот бесконечен и невидим. Земля пьёт, как пьёт верблюд после перехода. Песок не впитывает столько &mdash; он захлёбывается. Вода течёт по поверхности, собираясь в ручьи &mdash; это как маленькие караванные тропы, только из воды, и они сами знают куда идти.&raquo;</p>
+        <div class="note">
+          <span class="tag">бурдюк &rarr; туча</span>
+          <span class="tag">оазис &rarr; дождевая погода</span>
+          <span class="tag">караванные тропы &rarr; ручьи</span>
+          <span class="tag">захлёбывается &rarr; не впитывает</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Зарисовка 3: Снег &mdash; белый песок, падающий с неба</h3>
+      <div class="sketch">
+        <p><span class="speaker">Купец Юсуф</span> (вернувшись из северных земель, потрясённый):</p>
+        <p>&laquo;Там случается невозможное: с неба начинает сыпаться холодный белый песок. Он мягок, как самая тонкая мука, и покрывает всё &mdash; барханы, тропы, шатры. Но в отличие от честного песка, он исчезает, если взять его в руку: тает, будто был призраком. Целые барханы из этого белого песка лежат на горах и не движутся &mdash; ветер их не несёт! Люди там ходят на плоских корзинах, привязанных к ногам, чтобы не проваливаться. А иногда этот белый песок падает так густо, что караван &mdash; то есть их деревянная повозка с запряжённым быком &mdash; не видит тропы. Они называют это &laquo;метель&raquo;, но правильнее сказать &mdash; белая песчаная буря.&raquo;</p>
+        <div class="note">
+          <span class="tag">холодный белый песок &rarr; снег</span>
+          <span class="tag">тает, призрак &rarr; плавление</span>
+          <span class="tag">плоские корзины &rarr; снегоступы</span>
+          <span class="tag">белая песчаная буря &rarr; метель</span>
+          <span class="tag">неподвижные барханы &rarr; ледники</span>
+        </div>
+      </div>
+      <div class="reveal-container">
+        <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+        <div class="reveal-content">
+          <p>Когда мы говорим, что LLM &laquo;галлюцинирует&raquo;, мы делаем то же самое. Галлюцинация &mdash; термин психиатрии, описывающий восприятие того, чего нет, <em>субъектом с сознанием</em>. У модели нет восприятия, нет нормы &laquo;верного видения&raquo;, от которой галлюцинация была бы отклонением. Модель не отличает &laquo;верный&raquo; вывод от &laquo;неверного&raquo; &mdash; для неё оба являются статистически мотивированными продолжениями. Но слово &laquo;галлюцинация&raquo; заставляет нас думать, что модель &laquo;обычно видит правильно, а иногда сбоит&raquo; &mdash; это ложная рамка.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRANSPORT -->
+  <div class="section" id="transport">
+    <div class="section-header">
+      <h2>Автомобиль на языке конюшни</h2>
+      <p class="lead">1886 год. Карл Бенц демонстрирует свой Motorwagen. Газеты и публика описывают увиденное единственным доступным языком &mdash; языком лошадей, карет и кучеров.</p>
+    </div>
+
+    <div class="card">
+      <h3>Зарисовка 1: Репортаж провинциальной газеты</h3>
+      <div class="sketch">
+        <p><span class="speaker">Газета &laquo;Мангеймский вестник&raquo;</span>, 1886:</p>
+        <p>&laquo;Герр Бенц продемонстрировал экипаж без лошади. Экипаж движется сам, издавая при этом шум, как будто внутри него заперта лошадь, которая в отчаянии бьёт копытами. Вместо овса ему требуется особая горючая жидкость &mdash; вроде лампового масла, которое карета пьёт с неприличной жадностью. Поводьев нет &mdash; герр Бенц управляет машиной при помощи рычага, что делает её менее послушной, чем самая упрямая кобыла. Скорость &mdash; сопоставима с неспешной рысью, но без изящества. Запаха конюшни экипаж не издаёт, заменяя его иным, не менее резким.&raquo;</p>
+        <div class="note">
+          <span class="tag">безлошадный экипаж &rarr; автомобиль</span>
+          <span class="tag">заперта лошадь &rarr; двигатель</span>
+          <span class="tag">горючая жидкость/овёс &rarr; бензин</span>
+          <span class="tag">поводья &rarr; руль</span>
+          <span class="tag">упрямая кобыла &rarr; плохая управляемость</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Зарисовка 2: Жалоба извозчика</h3>
+      <div class="sketch">
+        <p><span class="speaker">Извозчик Генрих</span> (в пивной):</p>
+        <p>&laquo;Эта штука &mdash; дурная лошадь из железа. Она не знает дороги, не чувствует ямы, не остановится сама перед обрывом. Настоящая лошадь умнее &mdash; она обойдёт яму, она знает путь домой, она не заведётся по утрам в мороз... то есть я хотел сказать, не встанет на ноги. Механическая лошадь не ест, когда стоит, это правда. Но и не размножается! Если она сломается, вы не вырастите жеребёнка на замену. Вам придётся идти к кузнецу &mdash; только особому кузнецу, который понимает в этих железных лошадях, а таких пока один на всю Германию.&raquo;</p>
+        <div class="note">
+          <span class="tag">железная лошадь &rarr; автомобиль</span>
+          <span class="tag">не знает дороги &rarr; нет автопилота</span>
+          <span class="tag">не размножается &rarr; нет репродукции</span>
+          <span class="tag">особый кузнец &rarr; автомеханик</span>
+        </div>
+      </div>
+      <div class="reveal-container">
+        <button class="reveal-btn" onclick="toggleReveal(this)">Почему это важно?</button>
+        <div class="reveal-content">
+          <p>Обратите внимание: извозчик оценивает автомобиль по критериям лошади и находит его <em>хуже</em>. Машина не чувствует дорогу, не знает путь домой, не размножается. Все эти &laquo;недостатки&raquo; &mdash; следствие приложения неверной карты. Автомобиль &mdash; не плохая лошадь. Это принципиально другая сущность, для оценки которой нужны другие критерии.</p>
+          <p style="margin-top:0.8rem">Аналогично: LLM не &laquo;плохо понимает&raquo; текст. Она вообще не &laquo;понимает&raquo; в том смысле, в каком понимает человек. Говоря &laquo;не понимает&raquo;, мы измеряем её по нашей шкале и получаем бессмыслицу &mdash; как &laquo;лошадь, которая не размножается&raquo;.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Зарисовка 3: Инструкция для состоятельного покупателя</h3>
+      <div class="sketch">
+        <p><span class="speaker">Продавец</span> (в каталоге &laquo;Безлошадных экипажей Бенца&raquo;):</p>
+        <p>&laquo;Ваш новый экипаж не нуждается в конюшне, однако ему требуется крытое стойло с каменным полом (гараж). Вместо конюха вам понадобится механический грум, который будет чистить внутреннюю лошадь экипажа (двигатель), менять ей подковы (свечи зажигания) и следить за тем, чтобы железная кровь (масло) не загустела. Кнут заменяет педаль акселератора &mdash; нажимайте плавно, как если бы вы подстёгивали породистого рысака, а не ломовую клячу.&raquo;</p>
+        <div class="note">
+          <span class="tag">стойло &rarr; гараж</span>
+          <span class="tag">конюх &rarr; механик</span>
+          <span class="tag">внутренняя лошадь &rarr; двигатель</span>
+          <span class="tag">подковы &rarr; свечи</span>
+          <span class="tag">железная кровь &rarr; масло</span>
+          <span class="tag">кнут &rarr; педаль газа</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="highlight-box">
+      <strong>Остаточный след:</strong> мы до сих пор измеряем мощность двигателя в &laquo;лошадиных силах&raquo;. Эта единица бессмысленна с инженерной точки зрения, но она настолько укоренилась, что стала невидимой. Точно так же термин &laquo;галлюцинация&raquo; для LLM может пережить своё время и стать нормой, навсегда внеся ложные коннотации.
+    </div>
+  </div>
+
+  <!-- NETWORKS -->
+  <div class="section" id="networks">
+    <div class="section-header">
+      <h2>Соцсети на шумерском языке</h2>
+      <p class="lead">Представьте шумерского писца, которому рассказывают о Twitter (X), Instagram и TikTok. Он понимает глиняные таблички, тростниковые стили, храмовые архивы и гонцов.</p>
+    </div>
+
+    <div class="card">
+      <h3>Зарисовка 1: Донесение писца Энлиль-банды</h3>
+      <div class="sketch">
+        <p><span class="speaker">Писец Энлиль-банда</span> (записывает на табличке для верховного жреца):</p>
+        <p>&laquo;В дальних землях существует невидимая стена из глины, столь огромная, что вместила бы все таблички всех храмов Шумера, Аккада и земель, о которых мы даже не слышали. На этой стене каждый человек &mdash; не только писец! даже пастух, даже женщина! &mdash; может выцарапать послание. И все остальные видят его мгновенно, без гонца, без каравана, без задержки &mdash; как если бы стена стояла одновременно в каждом доме.</p>
+        <p>Но самое поразительное: большинство посланий бессмысленны. Люди выцарапывают на этой стене, что они ели на завтрак. Рисуют своё лицо. Описывают своих кошек. За это не платят ни ячменём, ни серебром. Они делают это <em>добровольно</em>.&raquo;</p>
+        <div class="note">
+          <span class="tag">невидимая стена &rarr; лента/feed</span>
+          <span class="tag">выцарапать &rarr; написать пост</span>
+          <span class="tag">без гонца &rarr; мгновенная публикация</span>
+          <span class="tag">рисуют лицо &rarr; селфи</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Зарисовка 2: Недоумение архивариуса</h3>
+      <div class="sketch">
+        <p><span class="speaker">Главный архивариус храма Энки</span>:</p>
+        <p>&laquo;Мне рассказали о хранилище, в котором исчезают записи. Это противоречит самому смыслу письменности! Мы пишем, чтобы сохранить. Мы обжигаем таблички, чтобы они пережили нас. А в их хранилище (они называют его &laquo;stories&raquo;) записи тают, как масло на солнце, через одни сутки. Зачем писать то, что исчезнет? Это как строить храм из утренней росы.</p>
+        <p>И ещё: у них есть понятие &laquo;лайк&raquo;. Это крохотная печать одобрения, которую любой &mdash; даже не жрец, даже не старейшина! &mdash; может поставить на чужую табличку. Чем больше печатей, тем &laquo;важнее&raquo; считается табличка. То есть ценность послания определяется не мудростью автора и не волей храма, а количеством случайных людей, ткнувших пальцем. Это конец иерархии знания!&raquo;</p>
+        <div class="note">
+          <span class="tag">тающие записи &rarr; Stories</span>
+          <span class="tag">храм из росы &rarr; эфемерный контент</span>
+          <span class="tag">печать одобрения &rarr; лайк</span>
+          <span class="tag">конец иерархии знания &rarr; демократизация</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Зарисовка 3: Обучение клинописному &laquo;TikTok&raquo;</h3>
+      <div class="sketch">
+        <p><span class="speaker">Учитель писцов</span> (пытаясь объяснить ученикам):</p>
+        <p>&laquo;Представьте: человек встаёт перед невидимым зеркалом и начинает танцевать, говорить, или показывать фокусы. Зеркало запоминает его движения &mdash; не как рисунок на табличке, а как <em>само движение</em>, со звуком, и может повторить его тысячу раз. Затем это зеркало появляется у тысяч других людей, которые смотрят. Если танец понравился, они могут мгновенно показать свой танец в ответ &mdash; и это тоже увидят тысячи. Представьте площадь в Уруке, на которой одновременно танцуют сто тысяч человек, и каждый видит только тех, кто ему интересен. Нет, не представляйте. У вас заболит голова.&raquo;</p>
+        <div class="note">
+          <span class="tag">невидимое зеркало &rarr; камера телефона</span>
+          <span class="tag">запоминает движение &rarr; видеозапись</span>
+          <span class="tag">площадь Урука &rarr; лента TikTok</span>
+          <span class="tag">видит только интересных &rarr; алгоритмическая лента</span>
+        </div>
+      </div>
+      <div class="reveal-container">
+        <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+        <div class="reveal-content">
+          <p>Когда мы говорим, что LLM &laquo;переводит&raquo; текст, мы делаем то же, что писец, объясняющий видео через &laquo;зеркало, которое запоминает&raquo;. Перевод для лингвиста &mdash; это перенос <em>смысла</em> между языковыми системами, осуществляемый субъектом, который понимает оба языка. LLM не &laquo;переносит смысл&raquo;. Она трансформирует паттерны из одного статистического распределения в другое. Результат может выглядеть как перевод, но механизм принципиально иной. Называя это &laquo;переводом&raquo;, мы импортируем всю модель человеческого билингвизма &mdash; и она вводит в заблуждение.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ELECTRICITY -->
+  <div class="section" id="electricity">
+    <div class="section-header">
+      <h2>Электричество на языке лучины</h2>
+      <p class="lead">До электричества единственным источником света и тепла был огонь. Неудивительно, что электрические явления описывались &mdash; и до сих пор описываются &mdash; через метафоры огня, воды и механики.</p>
+    </div>
+
+    <div class="card">
+      <h3>Зарисовка 1: Письмо сельского старосты, 1882</h3>
+      <div class="sketch">
+        <p><span class="speaker">Староста деревни Подгорное</span> (пишет губернатору):</p>
+        <p>&laquo;Ваше превосходительство! В городе я видел новый огонь. Он заперт в стеклянных пузырях и горит без масла, без фитиля, без дыма. Не пахнет, не коптит, не мигает от ветра. Огонь этот послушен: его зажигают и гасят поворотом ключа, как запирают дверь. По проволоке &mdash; как вода по трубе &mdash; к нему течёт невидимая сила. Откуда она течёт, мне объяснили, но я не понял. Сказали, что вода крутит колесо, а колесо рождает эту силу. Получается, что новый огонь &mdash; это дитя воды. Огонь, рождённый водой, &mdash; мыслимо ли?&raquo;</p>
+        <div class="note">
+          <span class="tag">новый огонь &rarr; электрический свет</span>
+          <span class="tag">стеклянный пузырь &rarr; лампочка</span>
+          <span class="tag">невидимая сила &rarr; электрический ток</span>
+          <span class="tag">течёт по проволоке &rarr; провод/кабель</span>
+          <span class="tag">дитя воды &rarr; гидроэлектростанция</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Зарисовка 2: Подозрения свечного мастера</h3>
+      <div class="sketch">
+        <p><span class="speaker">Мастер Тимофей</span> (свечных дел мастер, в разговоре с женой):</p>
+        <p>&laquo;Говорят, свечи скоро не нужны будут. Чепуха! Этот их электрический огонь &mdash; баловство. Во-первых, он холодный. Что это за огонь, который не греет? Во-вторых, он зависит от проволоки. Перережь проволоку &mdash; и нет огня. А свеча &mdash; она сама по себе, свободна. В-третьих, этот огонь невозможно перенести. Нельзя взять лампу и пойти с ней в поле &mdash; проволока не пустит. Мой подмастерье говорит: &laquo;зато он ярче&raquo;. Ярче! А зачем ярче? Глаза испортишь. Мы тысячу лет жили при свечах, и ничего, не жаловались. Кому нужен огонь, который нельзя задуть?&raquo;</p>
+        <div class="note">
+          <span class="tag">холодный огонь &rarr; не инфракрасный</span>
+          <span class="tag">зависит от проволоки &rarr; проводное электричество</span>
+          <span class="tag">нельзя перенести &rarr; нет автономности</span>
+          <span class="tag">зачем ярче? &rarr; сопротивление прогрессу</span>
+          <span class="tag">нельзя задуть &rarr; другой принцип выключения</span>
+        </div>
+      </div>
+      <div class="reveal-container">
+        <button class="reveal-btn" onclick="toggleReveal(this)">Параллель с LLM</button>
+        <div class="reveal-content">
+          <p>Свечной мастер оценивает электрический свет по критериям свечи: переносимость, независимость, тепло, возможность задуть. По этим критериям свеча <em>объективно лучше</em>. Но критерии неадекватны новой реальности.</p>
+          <p style="margin-top:0.8rem">Когда лингвист говорит: &laquo;LLM не понимает смысл&raquo; или &laquo;у неё нет языковой компетенции&raquo; &mdash; он оценивает модель по критериям, разработанным для человека. По этим критериям модель и правда &laquo;хуже&raquo;. Но это может означать не слабость модели, а неадекватность критериев.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Языковые ископаемые: слова, пережившие свою реальность</h3>
+      <p>Обратите внимание: мы до сих пор говорим, что электричество <strong>&laquo;течёт&raquo;</strong> (гидравлическая метафора), хотя электроны движутся медленно. Мы говорим <strong>&laquo;напряжение&raquo;</strong> (механическая метафора). <strong>&laquo;Сопротивление&raquo;</strong> &mdash; ещё одна механическая метафора. <strong>&laquo;Ток&raquo;</strong> &mdash; водная. Вся терминология электротехники &mdash; это система метафор из механики и гидравлики, которая стала невидимой.</p>
+      <div class="highlight-box" style="margin-top:1rem">
+        <strong>Вопрос:</strong> Можете ли вы теперь с уверенностью сказать, что термины &laquo;нейрон&raquo;, &laquo;обучение&raquo;, &laquo;память&raquo;, &laquo;внимание&raquo; в контексте нейронных сетей описывают реальность &mdash; или являются такими же окаменелыми метафорами?
+      </div>
+    </div>
+  </div>
+
+  <!-- LLM -->
+  <div class="section" id="llm">
+    <div class="section-header">
+      <h2>LLM на языке психолингвистики</h2>
+      <p class="lead">Теперь применим тот же приём к нашей собственной ситуации. Мы описываем большие языковые модели терминами из лингвистики и когнитивной психологии. Каждый термин &mdash; это ловушка.</p>
+    </div>
+
+    <div class="card">
+      <h3>Зарисовка: Совещание в университете, 2045 год (взгляд из будущего)</h3>
+      <div class="sketch">
+        <p><span class="speaker">Профессор истории науки</span> (читая студентам выдержки из текстов 2020-х):</p>
+        <p>&laquo;Послушайте, как наши предшественники описывали первые LLM. Это поразительный документ эпохи. Они писали: &laquo;модель <em>выучила</em> язык&raquo;. Словно ребёнок, ходивший в школу. Она не выучила &mdash; она аппроксимировала статистическое распределение токенов. Но слово &laquo;выучила&raquo; заставляло их думать о школе, усилии, понимании. Дальше &mdash; хуже. Они говорили, что модель <em>&laquo;знает&raquo;</em> факты. Знает! Как будто у неё есть убеждения, верификация, различение знания и мнения. На самом деле в ней зафиксированы корреляции из обучающей выборки, но слово &laquo;знает&raquo; импортировало целую эпистемологию.</p>
+        <p>А потом, когда модель порождала текст, не соответствующий действительности, они использовали термин &laquo;<em>галлюцинация</em>&raquo; &mdash; психиатрический диагноз! Это как если бы калькулятор, выдавший ошибку из-за переполнения разрядной сетки, &laquo;бредил&raquo;. Слово подразумевало, что у модели есть нормальное восприятие реальности, которое иногда нарушается. Это было не просто неточно. Это формировало ожидания, политику, страхи.</p>
+        <p>О, и моё любимое: они называли это &laquo;<em>искусственным интеллектом</em>&raquo;! Оба слова ложны. Он не искусственный &mdash; он выращен на корпусе человеческих текстов, он продукт нашей культуры. И он не интеллект &mdash; у него нет целей, нет модели мира, нет самосознания. Но словосочетание &laquo;искусственный интеллект&raquo; мгновенно вызывало в головах образы из научной фантастики &mdash; и вот уже парламенты обсуждали &laquo;права машин&raquo;, а газеты пугали &laquo;восстанием роботов&raquo;. Всё из-за двух неудачно выбранных слов.&raquo;</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Разбор полётов</h3>
+
+      <div class="accordion-item" onclick="toggleAccordion(this)">
+        <div class="accordion-header">&laquo;Понимание&raquo; <span class="accordion-arrow">&#9660;</span></div>
+        <div class="accordion-body"><div class="accordion-body-inner">
+          <p><strong>В лингвистике и психологии:</strong> Понимание &mdash; это конструирование ментальной модели, связывание нового знания с существующим, способность к инференции, парафразу, применению в новом контексте. Оно предполагает субъекта с опытом, телесностью, целями.</p>
+          <p><strong>Что делает LLM:</strong> Модель порождает текст, который выглядит так, как будто его породил понимающий субъект. Она может &laquo;перефразировать&raquo;, &laquo;объяснить проще&raquo;, &laquo;привести пример&raquo;. Но за этим нет ментальной модели, нет опыта, нет &laquo;ага-момента&raquo;.</p>
+          <p><strong>Ложное ожидание:</strong> &laquo;Если модель &laquo;понимает&raquo;, значит, она не ошибётся в логически простых случаях; ей можно доверять как коллеге; с ней можно строить отношения; она обидится, если нагрубить.&raquo;</p>
+          <div class="highlight-box"><strong>Вопрос без ответа:</strong> Если модель последовательно ведёт себя <em>так, как вёл бы себя понимающий субъект</em>, &mdash; достаточно ли этого, чтобы сказать, что она &laquo;понимает&raquo;? Или нам нужно переопределить само слово?</div>
+        </div></div>
+      </div>
+
+      <div class="accordion-item" onclick="toggleAccordion(this)">
+        <div class="accordion-header">&laquo;Галлюцинация&raquo; <span class="accordion-arrow">&#9660;</span></div>
+        <div class="accordion-body"><div class="accordion-body-inner">
+          <p><strong>В психиатрии:</strong> Галлюцинация &mdash; восприятие без стимула. Пациент <em>видит</em> или <em>слышит</em> то, чего нет, при этом будучи убеждённым в реальности воспринимаемого. Предполагается наличие нормального восприятия как базовой линии.</p>
+          <p><strong>Что делает LLM:</strong> Модель порождает текст, который фактически неверен, но структурно неотличим от верного. У неё нет &laquo;нормального восприятия&raquo;, от которого &laquo;галлюцинация&raquo; была бы отклонением. Верный и неверный вывод для модели &mdash; одинаково &laquo;естественные&raquo; продолжения.</p>
+          <p><strong>Ложное ожидание:</strong> &laquo;Галлюцинация &mdash; это сбой, исключение, баг. Обычно модель &laquo;видит&raquo; правильно. Галлюцинации можно &laquo;вылечить&raquo;.&raquo;</p>
+          <div class="highlight-box"><strong>Альтернативы, которых пока нет:</strong> Может быть, нужно слово вроде &laquo;конфабуляция&raquo; (нейропсихологический термин &mdash; заполнение пробелов в памяти правдоподобным, но вымышленным содержанием)? Но и оно импортирует &laquo;память&raquo; и &laquo;пробелы&raquo;. Может быть &mdash; &laquo;ложная генерация&raquo;? Скучно, зато честно.</div>
+        </div></div>
+      </div>
+
+      <div class="accordion-item" onclick="toggleAccordion(this)">
+        <div class="accordion-header">&laquo;Обучение&raquo; / &laquo;Тренировка&raquo; <span class="accordion-arrow">&#9660;</span></div>
+        <div class="accordion-body"><div class="accordion-body-inner">
+          <p><strong>В педагогике:</strong> Обучение &mdash; целенаправленный процесс, в котором субъект приобретает знания, навыки, ценности. Предполагается мотивация, обратная связь, рефлексия, постепенное углубление понимания.</p>
+          <p><strong>В ML:</strong> &laquo;Обучение&raquo; &mdash; итеративная оптимизация параметров модели для минимизации функции потерь на обучающей выборке. Нет субъекта, нет мотивации, нет рефлексии. Есть градиентный спуск.</p>
+          <p><strong>Ложное ожидание:</strong> &laquo;Модель учится как студент: постепенно, осмысленно, с возможностью переучить. Если она ошибается &mdash; нужно объяснить ей лучше.&raquo;</p>
+        </div></div>
+      </div>
+
+      <div class="accordion-item" onclick="toggleAccordion(this)">
+        <div class="accordion-header">&laquo;Знание&raquo; <span class="accordion-arrow">&#9660;</span></div>
+        <div class="accordion-body"><div class="accordion-body-inner">
+          <p><strong>В эпистемологии:</strong> Знание (классическое определение) &mdash; обоснованное истинное убеждение. Предполагается субъект, обладающий убеждениями, способный к обоснованию, различающий истинное и ложное.</p>
+          <p><strong>Что есть в LLM:</strong> Параметры модели кодируют статистические закономерности из обучающих данных. Модель может &laquo;выдать&raquo; верный факт, но не потому, что &laquo;знает&raquo; его, а потому, что этот факт многократно встречался в данных в устойчивых контекстах.</p>
+          <p><strong>Ложное ожидание:</strong> &laquo;Если модель &laquo;знает&raquo; &mdash; значит, она уверена, может обосновать, не противоречит себе, отличает знание от незнания.&raquo; На практике: модель с одинаковой уверенностью порождает и верные, и неверные утверждения.</p>
+        </div></div>
+      </div>
+
+      <div class="accordion-item" onclick="toggleAccordion(this)">
+        <div class="accordion-header">&laquo;Язык&raquo; и &laquo;Слово&raquo; <span class="accordion-arrow">&#9660;</span></div>
+        <div class="accordion-body"><div class="accordion-body-inner">
+          <p><strong>В лингвистике:</strong> Язык &mdash; знаковая система, существующая в сообществе говорящих, связанная с мышлением, культурой, социальной практикой. Слово &mdash; единица, обладающая значением, закреплённым в сознании носителя.</p>
+          <p><strong>В LLM:</strong> Модель оперирует не словами, а <em>токенами</em> &mdash; фрагментами текста, выделенными статистически (BPE, WordPiece). &laquo;Невозможно&raquo; для модели &mdash; это не одно слово со значением &laquo;отрицание возможности&raquo;, а цепочка токенов [&laquo;не&raquo;, &laquo;возмож&raquo;, &laquo;но&raquo;] или даже иная сегментация. У токена нет значения в лингвистическом смысле &mdash; есть вектор в многомерном пространстве.</p>
+          <p><strong>Ложное ожидание:</strong> &laquo;Модель работает со словами &mdash; значит, она работает с языком. Значит, к ней применимы лингвистические теории: грамматика, семантика, прагматика.&raquo;</p>
+        </div></div>
+      </div>
+
+      <div class="accordion-item" onclick="toggleAccordion(this)">
+        <div class="accordion-header">&laquo;Перевод&raquo; <span class="accordion-arrow">&#9660;</span></div>
+        <div class="accordion-body"><div class="accordion-body-inner">
+          <p><strong>В переводоведении:</strong> Перевод &mdash; передача смысла с одного языка на другой, осуществляемая переводчиком, который понимает оба языка и учитывает культурный контекст, прагматику, интенцию автора.</p>
+          <p><strong>Что делает LLM:</strong> Модель трансформирует последовательность токенов на одном языке в последовательность токенов на другом, опираясь на паттерны, извлечённые из параллельных корпусов. Нет &laquo;понимания&raquo; смысла, нет модели культуры, нет интенции.</p>
+          <p><strong>Ложное ожидание:</strong> &laquo;Если модель &laquo;переводит&raquo;, можно обсуждать с ней переводческие решения, спрашивать, почему она выбрала это слово, просить учесть тон автора.&raquo; Модель может породить текст, имитирующий такое обсуждение, но за ним нет переводческой рефлексии.</p>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TERMS -->
+  <div class="section" id="terms">
+    <div class="section-header">
+      <h2>Словарь ловушек</h2>
+      <p class="lead">Выберите термин, чтобы увидеть, что он обещает и что скрывает.</p>
+    </div>
+
+    <div class="card">
+      <div class="demo-area">
+        <select class="demo-select" id="termSelector" onchange="showTerm(this.value)">
+          <option value="">-- Выберите термин --</option>
+          <option value="understand">Понимание (understanding)</option>
+          <option value="hallucination">Галлюцинация (hallucination)</option>
+          <option value="learning">Обучение (learning/training)</option>
+          <option value="knowledge">Знание (knowledge)</option>
+          <option value="creativity">Творчество (creativity)</option>
+          <option value="memory">Память (memory)</option>
+          <option value="attention">Внимание (attention)</option>
+          <option value="neuron">Нейрон (neuron)</option>
+          <option value="intelligence">Интеллект (intelligence)</option>
+          <option value="conversation">Разговор (conversation)</option>
+        </select>
+        <div class="demo-output" id="termOutput">
+          <p style="color: var(--text-secondary); text-align: center; padding: 2rem 0;">Выберите термин из списка, чтобы увидеть анализ.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Говорим | Подразумеваем | Происходит</h3>
+      <div style="overflow-x: auto;">
+        <table class="comparison">
+          <thead>
+            <tr>
+              <th>Термин</th>
+              <th>Импортированная модель</th>
+              <th>Реальный механизм</th>
+              <th>Ложное ожидание</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="old-term">Понимает</td>
+              <td>Человек, конструирующий смысл</td>
+              <td>Статистическое предсказание вероятных продолжений</td>
+              <td>Можно доверять как понимающему эксперту</td>
+            </tr>
+            <tr>
+              <td class="old-term">Галлюцинирует</td>
+              <td>Больной, видящий то, чего нет</td>
+              <td>Генерация правдоподобного, но неверного текста</td>
+              <td>Это сбой, который можно исправить</td>
+            </tr>
+            <tr>
+              <td class="old-term">Знает</td>
+              <td>Субъект с обоснованными убеждениями</td>
+              <td>Закономерности в параметрах из обуч. данных</td>
+              <td>Модель уверена и может обосновать</td>
+            </tr>
+            <tr>
+              <td class="old-term">Обучена</td>
+              <td>Студент, прошедший курс</td>
+              <td>Оптимизация функции потерь градиентным спуском</td>
+              <td>Можно &laquo;доучить&raquo;, &laquo;объяснить ошибку&raquo;</td>
+            </tr>
+            <tr>
+              <td class="old-term">Переводит</td>
+              <td>Билингв, понимающий два языка</td>
+              <td>Трансформация паттернов между языковыми распределениями</td>
+              <td>Учитывает культурный контекст и интенцию</td>
+            </tr>
+            <tr>
+              <td class="old-term">Разговаривает</td>
+              <td>Собеседник с намерениями и опытом</td>
+              <td>Генерация ответа, максимизирующего правдоподобие</td>
+              <td>У модели есть позиция и она отвечает &laquo;честно&raquo;</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- REFLECTION -->
+  <div class="section" id="reflection">
+    <div class="section-header">
+      <h2>Рефлексия: Что делать с ловушками?</h2>
+      <p class="lead">Мы не можем отказаться от метафор &mdash; нам нужен язык прямо сейчас. Но мы можем осознавать их границы.</p>
+    </div>
+
+    <div class="card">
+      <h3>Три стратегии работы с несовершенным языком</h3>
+      <div class="grid-3">
+        <div style="padding:1rem; background: var(--quote-bg); border-radius:8px; border-top: 3px solid var(--accent);">
+          <h4 style="margin-top:0; color: var(--nav-color);">1. Прививка осознанности</h4>
+          <p>Каждый раз, используя термин из лингвистики или психологии по отношению к LLM, мысленно ставить звёздочку: &laquo;понимает*&raquo;, &laquo;знает*&raquo;, &laquo;галлюцинирует*&raquo;. Звёздочка &mdash; напоминание: &laquo;этот термин &mdash; метафора, а не описание&raquo;.</p>
+        </div>
+        <div style="padding:1rem; background: var(--quote-bg); border-radius:8px; border-top: 3px solid var(--accent);">
+          <h4 style="margin-top:0; color: var(--nav-color);">2. Двойное описание</h4>
+          <p>Описывать одно и то же явление дважды: сначала привычным языком (&laquo;модель понимает контекст&raquo;), затем техническим (&laquo;модель использует механизм внимания для взвешивания токенов в окне контекста&raquo;). Зазор между описаниями &mdash; это зазор между картой и территорией.</p>
+        </div>
+        <div style="padding:1rem; background: var(--quote-bg); border-radius:8px; border-top: 3px solid var(--accent);">
+          <h4 style="margin-top:0; color: var(--nav-color);">3. Инвентаризация ожиданий</h4>
+          <p>Прежде чем использовать термин, спросить: &laquo;Какие ожидания этот термин формирует? Какие из них обоснованы?&raquo; Если большинство ожиданий ложны &mdash; термин опасен.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Упражнение: Создайте свою зарисовку</h3>
+      <p>Попробуйте описать одну из следующих реальностей на заведомо неподходящем языке. Обратите внимание, какие ложные свойства навязывает ваше описание:</p>
+      <div style="margin: 1rem 0;">
+        <div style="padding: 0.8rem; background: var(--quote-bg); border-radius: 6px; margin-bottom: 0.5rem; border-left: 3px solid var(--accent);">Интернет на языке почтовых голубей</div>
+        <div style="padding: 0.8rem; background: var(--quote-bg); border-radius: 6px; margin-bottom: 0.5rem; border-left: 3px solid var(--accent);">Фотографию на языке наскальной живописи</div>
+        <div style="padding: 0.8rem; background: var(--quote-bg); border-radius: 6px; margin-bottom: 0.5rem; border-left: 3px solid var(--accent);">Музыкальный стриминг на языке бродячих менестрелей</div>
+        <div style="padding: 0.8rem; background: var(--quote-bg); border-radius: 6px; margin-bottom: 0.5rem; border-left: 3px solid var(--accent);">GPS-навигацию на языке звёздной навигации</div>
+        <div style="padding: 0.8rem; background: var(--quote-bg); border-radius: 6px; margin-bottom: 0.5rem; border-left: 3px solid var(--accent);">Нейронную сеть на языке ткацкого станка</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Заключительная мысль</h3>
+      <div class="sketch">
+        <p>Мы живём в момент, когда новая реальность уже существует, а язык для её описания ещё не создан. Это не уникальная ситуация &mdash; так было с электричеством, с автомобилем, с компьютером. Каждый раз старый язык сначала помогал, потом мешал, потом незаметно формировал мышление поколений.</p>
+        <p style="margin-top: 0.8rem;">Для студента-лингвиста это особенно ценная позиция: вы можете наблюдать в реальном времени, как рождается (или не рождается) терминология для принципиально нового явления. Как старые слова натягиваются на новые смыслы. Как метафоры становятся терминами, а термины &mdash; ловушками.</p>
+        <p style="margin-top: 0.8rem;">Карта &mdash; не территория. Но без карты мы слепы. Задача &mdash; не отказаться от карты, а помнить, что она &mdash; карта.</p>
+      </div>
+    </div>
+
+    <div class="highlight-box">
+      <strong>Все модели неверны, но некоторые полезны.</strong> &mdash; Джордж Бокс<br>
+      <strong>Карта &mdash; не территория.</strong> &mdash; Альфред Коржибски<br>
+      <strong>Границы моего языка означают границы моего мира.</strong> &mdash; Людвиг Витгенштейн
+    </div>
+  </div>
+  
+ 
+  
+  
+  <div class="section" id="student">
+  <div class="section-header">
+    <h2>Моя авторская зарисовка</h2>
+    <p class="lead">Создайте собственную вербальную зарисовку, демонстрирующую нелепость описания одной реальности языком другой. Это упражнение поможет прочувствовать, как метафоры формируют (и искажают) наше понимание.</p>
+  </div>
+
+  <div class="card">
+    <h3>Данные автора</h3>
+    <div class="form-group">
+      <label for="studentName">Фамилия и имя</label>
+      <input type="text" id="studentName" class="form-input" placeholder="Орлова Ева">
+    </div>
+    <div class="form-group">
+      <label for="studentGroup">Группа</label>
+      <input type="text" id="studentGroup" class="form-input" placeholder="300">
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Выбор темы зарисовки</h3>
+    <p style="margin-bottom: 1rem; color: var(--text-secondary);">Выберите готовую тему или придумайте свою:</p>
+    
+    <div class="theme-options">
+      <div class="theme-option" onclick="selectTheme(this, 'Интернет на языке почтовых голубей')">
+        <div class="theme-option-title">Интернет</div>
+        <div class="theme-option-desc">на языке почтовых голубей</div>
+      </div>
+      <div class="theme-option" onclick="selectTheme(this, 'Фотография на языке наскальной живописи')">
+        <div class="theme-option-title">Фотография</div>
+        <div class="theme-option-desc">на языке наскальной живописи</div>
+      </div>
+      <div class="theme-option" onclick="selectTheme(this, 'Музыкальный стриминг на языке бродячих менестрелей')">
+        <div class="theme-option-title">Стриминг музыки</div>
+        <div class="theme-option-desc">на языке бродячих менестрелей</div>
+      </div>
+      <div class="theme-option" onclick="selectTheme(this, 'GPS-навигация на языке звёздной навигации')">
+        <div class="theme-option-title">GPS-навигация</div>
+        <div class="theme-option-desc">на языке звёздной навигации</div>
+      </div>
+      <div class="theme-option" onclick="selectTheme(this, 'Видеозвонок на языке спиритических сеансов')">
+        <div class="theme-option-title">Видеозвонок</div>
+        <div class="theme-option-desc">на языке спиритических сеансов</div>
+      </div>
+      <div class="theme-option" onclick="selectTheme(this, 'Смартфон на языке средневекового монаха')">
+        <div class="theme-option-title">Смартфон</div>
+        <div class="theme-option-desc">на языке средневекового монаха</div>
+      </div>
+    </div>
+    
+    <div class="form-group" style="margin-top: 1.5rem;">
+      <label for="customTheme">Или введите свою тему:</label>
+      <input type="text" id="customTheme" class="form-input" placeholder="Например: Криптовалюта на языке натурального обмена">
+    </div>
+    
+    <div class="selected-theme" id="selectedTheme" style="display: none;">
+      <strong>Выбранная тема:</strong> <span id="selectedThemeText"></span>
+      <button class="clear-theme-btn" onclick="clearTheme()">&#10005;</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Текст зарисовки</h3>
+    <p style="margin-bottom: 1rem; color: var(--text-secondary);">Напишите короткую историю или диалог (200–500 слов), в которой персонаж описывает новую для него реальность, используя понятия из своего привычного мира.</p>
+    
+    <div class="form-group">
+      <label for="sketchTitle">Заголовок зарисовки</label>
+      <input type="text" id="sketchTitle" class="form-input" placeholder="Например: Донесение голубятника о невидимых письмах">
+    </div>
+    
+    <div class="form-group">
+      <label for="sketchSpeaker">Рассказчик / персонаж</label>
+      <input type="text" id="sketchSpeaker" class="form-input" placeholder="Например: Главный голубятник королевства">
+    </div>
+    
+    <div class="form-group">
+      <label for="sketchText">Текст зарисовки</label>
+      <textarea id="sketchText" class="form-textarea" rows="12" placeholder="Начните свою историю здесь...
+
+Пример начала:
+«Ваше Величество! Я должен доложить о странном явлении, которое наблюдал в заморских землях. Тамошние жители научились отправлять послания без голубей...»"></textarea>
+      <div class="char-counter"><span id="charCount">0</span> символов</div>
+    </div>
+    
+    <div class="form-group">
+      <label for="sketchTags">Словарь метафор (какие понятия к чему отсылают)</label>
+      <textarea id="sketchTags" class="form-textarea" rows="4" placeholder="голубь → электронное письмо
+голубятня → почтовый сервер
+корм для голубей → электричество"></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Рефлексия</h3>
+    <div class="form-group">
+      <label for="studentComment">Ваш комментарий: какие ложные ожидания создаёт выбранная вами метафора?</label>
+      <textarea id="studentComment" class="form-textarea" rows="5" placeholder="Опишите, какие свойства старого объекта ваша метафора ошибочно переносит на новый. Какие аспекты нового явления она скрывает?"></textarea>
+    </div>
+    
+    <div class="form-group">
+      <label for="llmParallel">Параллель с LLM: какой термин из описания языковых моделей работает похожим образом?</label>
+      <textarea id="llmParallel" class="form-textarea" rows="4" placeholder="Например: Моя метафора «голубь = письмо» похожа на то, как термин «понимание» применительно к LLM..."></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Предпросмотр и экспорт</h3>
+    
+    <div class="button-group">
+      <button class="action-btn preview-btn" onclick="previewSketch()">
+        <span class="btn-icon"></span> Предпросмотр
+      </button>
+      <button class="action-btn export-btn" onclick="exportToHTML()">
+        <span class="btn-icon"></span> Экспорт в HTML
+      </button>
+      <button class="action-btn clear-btn" onclick="clearForm()">
+        <span class="btn-icon"></span> Очистить форму
+      </button>
+    </div>
+    
+    <div id="previewArea" class="preview-area" style="display: none;">
+      <div class="preview-header">
+        <h4>Предпросмотр вашей работы</h4>
+        <button class="close-preview" onclick="closePreview()"></button>
+      </div>
+      <div id="previewContent"></div>
+    </div>
+  </div>
+
+  <div class="card" style="background: var(--quote-bg); border-left: 4px solid var(--accent);">
+    <h3>Подсказки для написания</h3>
+    <ul class="tips-list">
+      <li><strong>Выберите точку зрения:</strong> Кто рассказывает? Это может быть учёный, ремесленник, чиновник, ребёнок — кто-то, кто столкнулся с непонятным.</li>
+      <li><strong>Будьте последовательны:</strong> Если ваш персонаж — средневековый монах, он не знает слов «электричество» или «сигнал» и опишет Wi-Fi как «невидимые ангельские голоса» или «демонический шёпот».</li>
+      <li><strong>Покажите недоумение:</strong> Самые яркие моменты — когда метафора ломается. «Этот голубь летает мгновенно — но как? У него нет крыльев!»</li>
+      <li><strong>Добавьте оценку:</strong> Персонаж может восхищаться, бояться, презирать новое явление — это покажет, как метафора формирует отношение.</li>
+      <li><strong>Список соответствий:</strong>  «Старое понятие → новая реальность» делает вашу работу аналитической, а не только творческой.</li>
+    </ul>
+  </div>
+</div>
+
+
+</main>
+
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+<footer>
+  <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+</footer>
+
+<script>
+// Sections & Navigation
+const sections = ['intro', 'ocean', 'transport', 'networks', 'electricity', 'llm', 'terms', 'reflection', 'writing', 'student'];
+const visited = new Set(['intro']);
+
+function initProgress() {
+  const bar = document.getElementById('progressBar');
+  sections.forEach((s, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'progress-dot' + (i === 0 ? ' current visited' : '');
+    dot.title = document.querySelector(`[onclick="showSection('${s}', this)"]`).textContent;
+    dot.onclick = () => {
+      const btn = document.querySelector(`[onclick="showSection('${s}', this)"]`);
+      showSection(s, btn);
+    };
+    bar.appendChild(dot);
+  });
+}
+
+function showSection(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  visited.add(id);
+  const dots = document.querySelectorAll('.progress-dot');
+  sections.forEach((s, i) => {
+    dots[i].className = 'progress-dot';
+    if (visited.has(s)) dots[i].classList.add('visited');
+    if (s === id) dots[i].classList.add('current');
+  });
+
+  // Close mobile menu
+  document.getElementById('navMenu').classList.remove('open');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Theme
+let darkMode = false;
+function toggleTheme() {
+  darkMode = !darkMode;
+  document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : '');
+  document.querySelector('.theme-toggle').textContent = darkMode ? '\uD83C\uDF19' : '\u2600\uFE0F';
+}
+
+// Mobile menu
+function toggleMenu() {
+  document.getElementById('navMenu').classList.toggle('open');
+}
+
+// Reveal
+function toggleReveal(btn) {
+  const content = btn.nextElementSibling;
+  content.classList.toggle('open');
+  btn.textContent = content.classList.contains('open') ? 'Скрыть' : btn.dataset.originalText || 'Подробнее';
+  if (!btn.dataset.originalText) {
+    btn.dataset.originalText = 'Показать снова';
+  }
+}
+
+// Accordion
+function toggleAccordion(item) {
+  item.classList.toggle('open');
+}
+
+// Scroll to top
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('scrollTop');
+  btn.classList.toggle('visible', window.scrollY > 400);
+});
+
+// Term selector
+const termData = {
+  understand: {
+    title: 'Понимание (understanding)',
+    source: 'Когнитивная психология, философия сознания',
+    imports: 'Субъектность, ментальная модель, интенциональность, квалиа, способность к рефлексии',
+    reality: 'Модель вычисляет условное распределение вероятностей следующего токена с учётом контекстного окна. Механизм внимания (attention) позволяет взвешивать влияние разных позиций в контексте.',
+    danger: 'Мы начинаем доверять модели &laquo;как понимающей&raquo; &mdash; и удивляемся, когда она делает элементарные логические ошибки. Мы ожидаем, что &laquo;понимание&raquo; устойчиво &mdash; но модель может &laquo;понимать&raquo; в одном контексте и не &laquo;понимать&raquo; в слегка изменённом.',
+    metaphor: 'Как если бы мы назвали калькулятор &laquo;математиком&raquo; и удивлялись, что он не понимает, зачем нужно считать.'
+  },
+  hallucination: {
+    title: 'Галлюцинация (hallucination)',
+    source: 'Психиатрия, клиническая психология',
+    imports: 'Восприятие, норма восприятия, отклонение от нормы, патология, субъект с сознанием',
+    reality: 'Модель генерирует последовательность токенов с высокой вероятностью, но не соответствующую фактической реальности. Для модели &laquo;верный&raquo; и &laquo;неверный&raquo; вывод имеют одинаковый статус.',
+    danger: 'Термин предполагает, что &laquo;обычно&raquo; модель &laquo;видит правильно&raquo;, а галлюцинация &mdash; исключение. В реальности модель не различает верное и неверное. Термин также предполагает, что это &laquo;баг&raquo;, который можно исправить, а не фундаментальное свойство архитектуры.',
+    metaphor: 'Как если бы зеркало в комнате смеха назвали &laquo;близоруким&raquo; &mdash; импортируя идею, что у зеркала есть &laquo;нормальное зрение&raquo;.'
+  },
+  learning: {
+    title: 'Обучение (learning / training)',
+    source: 'Педагогика, когнитивная психология',
+    imports: 'Ученик, учитель, мотивация, понимание, постепенное углубление, рефлексия, ошибка как путь к пониманию',
+    reality: 'Итеративная минимизация функции потерь путём корректировки миллиардов числовых параметров методом обратного распространения ошибки. Нет &laquo;ученика&raquo;, нет &laquo;понимания&raquo;, нет рефлексии.',
+    danger: 'Мы начинаем думать, что модель можно &laquo;доучить&raquo;, &laquo;переучить&raquo;, &laquo;объяснить ей ошибку&raquo;. В промпте пишем: &laquo;ты ошибся, подумай ещё раз&raquo; &mdash; и удивляемся, что это иногда работает (из-за перестройки контекста), а иногда нет.',
+    metaphor: 'Как если бы реку &laquo;обучали&raquo; течь в нужном направлении. Можно изменить русло &mdash; но река не &laquo;учится&raquo;.'
+  },
+  knowledge: {
+    title: 'Знание (knowledge)',
+    source: 'Эпистемология, философия',
+    imports: 'Обоснованное истинное убеждение (JTB), различение знания и мнения, уверенность, верификация, источники',
+    reality: 'В параметрах модели закодированы статистические закономерности из обучающих данных. Модель может породить верное утверждение, но не &laquo;знает&raquo; его в эпистемическом смысле &mdash; не отличает знание от домысла.',
+    danger: 'Мы спрашиваем: &laquo;Ты уверена?&raquo; &mdash; и модель отвечает &laquo;Да&raquo; с одинаковой вероятностью для верных и неверных утверждений. Мы ожидаем, что &laquo;знающий&raquo; агент не противоречит себе &mdash; но модель может.',
+    metaphor: 'Как если бы энциклопедию назвали &laquo;мудрецом&raquo;. Энциклопедия содержит факты, но не знает их.'
+  },
+  creativity: {
+    title: 'Творчество (creativity)',
+    source: 'Эстетика, психология творчества',
+    imports: 'Авторство, оригинальность, вдохновение, замысел, самовыражение, связь с биографией и опытом',
+    reality: 'Модель генерирует новые комбинации паттернов, не встречавшиеся в обучающих данных, но статистически совместимые с ними. Результат может быть новым и ценным &mdash; но за ним нет замысла, нет &laquo;что я хотел сказать&raquo;.',
+    danger: 'Мы начинаем обсуждать &laquo;авторские права&raquo; модели, её &laquo;стиль&raquo;, её &laquo;видение&raquo;. Мы приписываем ей интенцию, которой нет.',
+    metaphor: 'Как если бы калейдоскоп назвали &laquo;художником&raquo;. Он создаёт красивые узоры, но у него нет замысла.'
+  },
+  memory: {
+    title: 'Память (memory)',
+    source: 'Когнитивная психология, нейронаука',
+    imports: 'Хранение и извлечение воспоминаний, эпизодическая и семантическая память, забывание, ностальгия',
+    reality: 'Параметры модели (веса) фиксированы после обучения. Контекстное окно &mdash; это &laquo;рабочая&raquo; область, но не память в человеческом смысле. Модель не &laquo;помнит&raquo; прошлые разговоры (если нет специальной архитектуры).',
+    danger: 'Мы говорим: &laquo;Ты забыла, о чём мы говорили!&raquo; &mdash; антропоморфизируя ограничение контекстного окна. Или: &laquo;Она помнит всю Википедию&raquo; &mdash; путая параметрическую компрессию с хранением.',
+    metaphor: 'Как если бы отпечаток ноги на песке назвали &laquo;памятью&raquo; пляжа о прохожем.'
+  },
+  attention: {
+    title: 'Внимание (attention)',
+    source: 'Когнитивная психология',
+    imports: 'Сознательная фокусировка, избирательность, ограниченный ресурс, волевой контроль',
+    reality: 'Механизм self-attention &mdash; математическая операция вычисления весов между всеми парами позиций в последовательности. Это матричное умножение, а не &laquo;фокусировка сознания&raquo;.',
+    danger: 'Мы представляем модель, которая &laquo;обращает внимание&raquo; на важное и &laquo;игнорирует&raquo; неважное, как делает человек. В реальности нет &laquo;важного&raquo; и &laquo;неважного&raquo; &mdash; есть статистические веса.',
+    metaphor: 'Как если бы весы назвали &laquo;внимательными&raquo; за то, что они &laquo;замечают&raquo; разницу в весе.'
+  },
+  neuron: {
+    title: 'Нейрон (neuron)',
+    source: 'Нейробиология',
+    imports: 'Живая клетка, биохимия, пластичность, нейромедиаторы, сознание как продукт нейронной активности',
+    reality: 'Искусственный &laquo;нейрон&raquo; &mdash; это математическая функция: взвешенная сумма входов, пропущенная через нелинейную активацию. Общего с биологическим нейроном &mdash; примерно столько же, сколько у бумажного самолётика с Boeing 747.',
+    danger: 'Название &laquo;нейронная сеть&raquo; заставляет думать, что мы моделируем мозг. Отсюда &mdash; ожидание, что &laquo;более мощная нейросеть&raquo; будет &laquo;умнее&raquo;, как больший мозг.',
+    metaphor: 'Как если бы узел рыбацкой сети назвали &laquo;моллюском&raquo; за то, что оба &laquo;скрепляют&raquo;.'
+  },
+  intelligence: {
+    title: 'Интеллект (intelligence)',
+    source: 'Психометрия, философия сознания, когнитивная наука',
+    imports: 'Общая способность к решению задач, адаптивность, целеполагание, самосознание, абстрактное мышление',
+    reality: 'LLM демонстрирует впечатляющую способность к обработке языковых паттернов. Но это не &laquo;общий интеллект&raquo; &mdash; нет целеполагания, нет модели мира, нет самосознания (вероятно).',
+    danger: 'Термин &laquo;искусственный интеллект&raquo; формирует целую индустрию страхов и ожиданий: от &laquo;восстания машин&raquo; до &laquo;решения всех проблем&raquo;. Оба экстремума &mdash; продукт слова, а не реальности.',
+    metaphor: 'Как если бы записную книжку назвали &laquo;искусственной памятью&raquo; и начали бояться, что она &laquo;вспомнит&raquo; что-то лишнее.'
+  },
+  conversation: {
+    title: 'Разговор (conversation)',
+    source: 'Прагматика, социолингвистика',
+    imports: 'Два субъекта с намерениями, кооперативный принцип Грайса, импликатуры, социальные роли, эмпатия',
+    reality: 'Модель генерирует ответ, максимально правдоподобный для данного контекста. У неё нет намерений, нет кооперативного принципа (хотя она может имитировать его), нет &laquo;лица&raquo; в терминах теории вежливости.',
+    danger: 'Мы начинаем применять к &laquo;разговору&raquo; с моделью социальные нормы: благодарим, извиняемся, обижаемся. Мы ожидаем последовательности позиции, честности, ответственности за слова. Ничего из этого не гарантировано.',
+    metaphor: 'Как если бы эхо в горах назвали &laquo;собеседником&raquo; за то, что оно &laquo;отвечает&raquo;.'
+  }
+};
+
+function showTerm(key) {
+  const output = document.getElementById('termOutput');
+  if (!key || !termData[key]) {
+    output.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 2rem 0;">Выберите термин из списка, чтобы увидеть анализ.</p>';
+    return;
+  }
+  const t = termData[key];
+  output.innerHTML = `
+    <h4 style="color: var(--nav-color); margin-bottom: 1rem; font-size: 1.15rem;">${t.title}</h4>
+    <p><strong>Источник термина:</strong> ${t.source}</p>
+    <div class="separator"></div>
+    <p><strong>Что импортирует термин:</strong> ${t.imports}</p>
+    <div class="separator"></div>
+    <p><strong>Что происходит в реальности:</strong> ${t.reality}</p>
+    <div class="separator"></div>
+    <p><strong>Опасность:</strong> ${t.danger}</p>
+    <div class="separator"></div>
+    <div class="sketch" style="margin-top: 1rem;">
+      <p><strong>Аналогия:</strong> ${t.metaphor}</p>
+    </div>
+  `;
+}
+
+// Init
+initProgress();
+
+
+
+// Character counter
+document.getElementById('sketchText').addEventListener('input', function() {
+  document.getElementById('charCount').textContent = this.value.length;
+});
+
+// Theme selection
+function selectTheme(element, theme) {
+  document.querySelectorAll('.theme-option').forEach(el => el.classList.remove('selected'));
+  element.classList.add('selected');
+  document.getElementById('customTheme').value = '';
+  document.getElementById('selectedTheme').style.display = 'flex';
+  document.getElementById('selectedThemeText').textContent = theme;
+}
+
+function clearTheme() {
+  document.querySelectorAll('.theme-option').forEach(el => el.classList.remove('selected'));
+  document.getElementById('selectedTheme').style.display = 'none';
+  document.getElementById('selectedThemeText').textContent = '';
+}
+
+// Custom theme input
+document.getElementById('customTheme').addEventListener('input', function() {
+  if (this.value.trim()) {
+    document.querySelectorAll('.theme-option').forEach(el => el.classList.remove('selected'));
+    document.getElementById('selectedTheme').style.display = 'flex';
+    document.getElementById('selectedThemeText').textContent = this.value;
+  } else {
+    document.getElementById('selectedTheme').style.display = 'none';
+  }
+});
+
+// Get current theme
+function getCurrentTheme() {
+  const custom = document.getElementById('customTheme').value.trim();
+  if (custom) return custom;
+  const selected = document.querySelector('.theme-option.selected');
+  if (selected) {
+    return selected.querySelector('.theme-option-title').textContent + ' ' + 
+           selected.querySelector('.theme-option-desc').textContent;
+  }
+  return '';
+}
+
+// Parse tags
+function parseTags(tagsText) {
+  if (!tagsText.trim()) return [];
+  return tagsText.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.includes('→') || line.includes('->'))
+    .map(line => {
+      const parts = line.split(/→|->/).map(p => p.trim());
+      return { old: parts[0], new: parts[1] || '' };
+    });
+}
+
+// Preview
+function previewSketch() {
+  const name = document.getElementById('studentName').value.trim() || 'Не указано';
+  const group = document.getElementById('studentGroup').value.trim();
+  const theme = getCurrentTheme() || 'Не выбрана';
+  const title = document.getElementById('sketchTitle').value.trim() || 'Без названия';
+  const speaker = document.getElementById('sketchSpeaker').value.trim();
+  const text = document.getElementById('sketchText').value.trim();
+  const tagsRaw = document.getElementById('sketchTags').value.trim();
+  const comment = document.getElementById('studentComment').value.trim();
+  const parallel = document.getElementById('llmParallel').value.trim();
+  
+  const tags = parseTags(tagsRaw);
+  
+  let tagsHTML = '';
+  if (tags.length > 0) {
+    tagsHTML = '<div class="tag-list">' + 
+      tags.map(t => `<span class="tag">${t.old} → ${t.new}</span>`).join('') + 
+      '</div>';
+  }
+  
+  const html = `
+    <div class="meta-info">
+      <strong>Автор:</strong> ${name}${group ? ' (' + group + ')' : ''}<br>
+      <strong>Тема:</strong> ${theme}
+    </div>
+    
+    <h3 style="color: var(--nav-color); margin-bottom: 0.8rem;">${title}</h3>
+    
+    <div class="sketch">
+      ${speaker ? `<p><span class="speaker">${speaker}:</span></p>` : ''}
+      <p>${text.replace(/\n/g, '</p><p>') || '<em>Текст зарисовки не введён</em>'}</p>
+      ${tagsHTML ? `<div class="note">${tagsHTML}</div>` : ''}
+    </div>
+    
+    ${comment ? `
+      <div class="section-title">Рефлексия: ложные ожидания</div>
+      <p>${comment.replace(/\n/g, '</p><p>')}</p>
+    ` : ''}
+    
+    ${parallel ? `
+      <div class="section-title">Параллель с LLM</div>
+      <p>${parallel.replace(/\n/g, '</p><p>')}</p>
+    ` : ''}
+  `;
+  
+  document.getElementById('previewContent').innerHTML = html;
+  document.getElementById('previewArea').style.display = 'block';
+  document.getElementById('previewArea').scrollIntoView({ behavior: 'smooth' });
+}
+
+function closePreview() {
+  document.getElementById('previewArea').style.display = 'none';
+}
+
+// Export to HTML
+function exportToHTML() {
+  const name = document.getElementById('studentName').value.trim() || 'Автор не указан';
+  const group = document.getElementById('studentGroup').value.trim();
+  const theme = getCurrentTheme() || 'Тема не выбрана';
+  const title = document.getElementById('sketchTitle').value.trim() || 'Авторская зарисовка';
+  const speaker = document.getElementById('sketchSpeaker').value.trim();
+  const text = document.getElementById('sketchText').value.trim();
+  const tagsRaw = document.getElementById('sketchTags').value.trim();
+  const comment = document.getElementById('studentComment').value.trim();
+  const parallel = document.getElementById('llmParallel').value.trim();
+  
+  const tags = parseTags(tagsRaw);
+  const date = new Date().toLocaleDateString('ru-RU', { 
+    year: 'numeric', month: 'long', day: 'numeric' 
+  });
+  
+  let tagsHTML = '';
+  if (tags.length > 0) {
+    tagsHTML = '<div class="tags">' + 
+      tags.map(t => `<span class="tag">${t.old} → ${t.new}</span>`).join('') + 
+      '</div>';
+  }
+  
+  const htmlContent = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title} — ${name}</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+  min-height: 100vh;
+  padding: 2rem;
+  line-height: 1.7;
+  color: #1a1a1a;
+}
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+header {
+  background: #325980;
+  color: #fff;
+  padding: 2rem;
+}
+header h1 {
+  font-size: 1.6rem;
+  margin-bottom: 0.5rem;
+}
+header .subtitle {
+  opacity: 0.85;
+  font-style: italic;
+}
+.meta {
+  background: #f5f5f5;
+  padding: 1rem 2rem;
+  font-size: 0.9rem;
+  color: #666;
+  border-bottom: 1px solid #e0e0e0;
+}
+.meta span { margin-right: 2rem; }
+.content { padding: 2rem; }
+.sketch {
+  background: #f8f9fa;
+  border-left: 4px solid #3498db;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+}
+.sketch .speaker {
+  font-weight: 700;
+  font-style: normal;
+  color: #325980;
+}
+.sketch p { margin-bottom: 0.8rem; }
+.sketch p:last-of-type { margin-bottom: 0; }
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+.tag {
+  background: #eaf2f8;
+  color: #325980;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-style: normal;
+}
+.section-title {
+  color: #325980;
+  font-size: 1.15rem;
+  margin-top: 2rem;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #f1f1f1;
+}
+.reflection {
+  background: #fffbeb;
+  border: 1px solid #f0e6c8;
+  padding: 1.2rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+footer {
+  background: #f5f5f5;
+  padding: 1.5rem 2rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #888;
+  border-top: 1px solid #e0e0e0;
+}
+footer a { color: #3498db; text-decoration: none; }
+@media (max-width: 600px) {
+  body { padding: 1rem; }
+  header, .content { padding: 1.5rem; }
+  header h1 { font-size: 1.3rem; }
+  .meta span { display: block; margin-bottom: 0.3rem; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>${title}</h1>
+    <div class="subtitle">${theme}</div>
+  </header>
+  
+  <div class="meta">
+    <span><strong>Автор:</strong> ${name}${group ? ' (' + group + ')' : ''}</span>
+    <span><strong>Дата:</strong> ${date}</span>
+  </div>
+  
+  <div class="content">
+    <div class="sketch">
+      ${speaker ? `<p><span class="speaker">${speaker}:</span></p>` : ''}
+      ${text ? text.split('\n').map(p => `<p>${p}</p>`).join('') : '<p><em>Текст не указан</em></p>'}
+      ${tagsHTML}
+    </div>
+    
+    ${comment ? `
+    <h3 class="section-title">Рефлексия: какие ложные ожидания создаёт метафора</h3>
+    <div class="reflection">
+      ${comment.split('\n').map(p => `<p>${p}</p>`).join('')}
+    </div>
+    ` : ''}
+    
+    ${parallel ? `
+    <h3 class="section-title">Параллель с описанием LLM</h3>
+    <div class="reflection">
+      ${parallel.split('\n').map(p => `<p>${p}</p>`).join('')}
+    </div>
+    ` : ''}
+  </div>
+  
+  <footer>
+    <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+сгенерировано автоматически</p>
+  </footer>
+</div>
+</body>
+</html>`;
+
+  // Create and download file
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeName = name.replace(/[^a-zA-Zа-яА-ЯёЁ0-9]/g, '_');
+  a.href = url;
+  a.download = `Зарисовка_${safeName}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Clear form
+function clearForm() {
+  if (!confirm('Вы уверены, что хотите очистить форму? Все данные будут потеряны.')) return;
+  
+  document.getElementById('studentName').value = '';
+  document.getElementById('studentGroup').value = '';
+  document.getElementById('customTheme').value = '';
+  document.getElementById('sketchTitle').value = '';
+  document.getElementById('sketchSpeaker').value = '';
+  document.getElementById('sketchText').value = '';
+  document.getElementById('sketchTags').value = '';
+  document.getElementById('studentComment').value = '';
+  document.getElementById('llmParallel').value = '';
+  document.getElementById('charCount').textContent = '0';
+  clearTheme();
+  closePreview();
+}
+</script>
+</body>
+</html>

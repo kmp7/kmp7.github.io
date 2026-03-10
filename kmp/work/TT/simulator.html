@@ -1,0 +1,972 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-card: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --heading-color: #325980;
+  --accent: #3498db;
+  --accent-hover: #2980b9;
+  --border-color: #f1f1f1;
+  --divider: #e0e0e0;
+  --input-bg: #ffffff;
+  --input-border: #ccc;
+  --success: #27ae60;
+  --error: #c0392b;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  --cert-bg: linear-gradient(135deg, #f8f9fa 0%, #e8ecf1 100%);
+  --cert-border: #325980;
+  --modal-overlay: rgba(0,0,0,0.5);
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1e2e;
+  --bg-secondary: #222840;
+  --bg-card: #2a2f45;
+  --text-primary: #e0e0e0;
+  --text-secondary: #aab0c0;
+  --heading-color: #6aafdb;
+  --accent: #3498db;
+  --accent-hover: #5bb0e8;
+  --border-color: #3a3f55;
+  --divider: #3a3f55;
+  --input-bg: #333850;
+  --input-border: #4a4f65;
+  --success: #2ecc71;
+  --error: #e74c3c;
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+  --cert-bg: linear-gradient(135deg, #2a2f45 0%, #1a1e2e 100%);
+  --cert-border: #6aafdb;
+  --modal-overlay: rgba(0,0,0,0.7);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  transition: background 0.3s, color 0.3s;
+  min-height: 100vh;
+}
+
+header {
+  background: var(--heading-color);
+  color: #fff;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+header h1 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.theme-toggle {
+  background: none;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.3s, transform 0.3s;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  border-color: rgba(255,255,255,0.7);
+  transform: rotate(20deg);
+}
+
+main {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-color);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.card h2 {
+  color: var(--heading-color);
+  font-size: 1.35rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.card h3 {
+  color: var(--heading-color);
+  font-size: 1.1rem;
+  margin: 1.2rem 0 0.6rem;
+}
+
+.card p, .card li {
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.card ul {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.card ul li {
+  margin-bottom: 0.4rem;
+}
+
+.example-block {
+  background: var(--bg-secondary);
+  border-left: 4px solid var(--accent);
+  padding: 1rem 1.2rem;
+  border-radius: 0 8px 8px 0;
+  margin: 1rem 0;
+}
+
+.example-block .q {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.example-block .a {
+  color: var(--accent);
+  font-style: italic;
+  margin-top: 0.25rem;
+}
+
+.example-block .a strong {
+  color: var(--success);
+  font-style: normal;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+/* Form */
+.name-form {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.form-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: var(--heading-color);
+  font-size: 0.9rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 2px solid var(--input-border);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.btn {
+  padding: 0.7rem 1.8rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.15s;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Quiz */
+.progress-bar-container {
+  background: var(--border-color);
+  border-radius: 10px;
+  height: 10px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--success));
+  border-radius: 10px;
+  transition: width 0.5s ease;
+  width: 0%;
+}
+
+.progress-text {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.quiz-question {
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  transition: border-color 0.3s;
+}
+
+.quiz-question.correct {
+  border-color: var(--success);
+  background: rgba(39,174,96,0.05);
+}
+
+.quiz-question.incorrect {
+  border-color: var(--error);
+}
+
+.quiz-question .q-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.quiz-question .q-text {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.answer-template {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 2.2;
+}
+
+.answer-template .fill-input {
+  display: inline-block;
+  width: auto;
+  min-width: 140px;
+  padding: 0.35rem 0.7rem;
+  border: 2px dashed var(--accent);
+  border-radius: 6px;
+  font-size: 1rem;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  text-align: center;
+  transition: border-color 0.3s, background 0.3s;
+}
+
+.answer-template .fill-input:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--accent);
+}
+
+.answer-template .fill-input.valid {
+  border-color: var(--success);
+  border-style: solid;
+  background: rgba(39,174,96,0.08);
+}
+
+.answer-template .fill-input.invalid {
+  border-color: var(--error);
+  border-style: solid;
+}
+
+.answer-template .fill-input:disabled {
+  opacity: 0.85;
+}
+
+.question-feedback {
+  margin-top: 0.7rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-height: 1.4rem;
+}
+
+.question-feedback.ok {
+  color: var(--success);
+}
+
+.question-feedback.fail {
+  color: var(--error);
+}
+
+.check-btn-wrap {
+  margin-top: 0.8rem;
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.btn-check {
+  padding: 0.5rem 1.4rem;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+
+.btn-check:hover {
+  background: var(--accent-hover);
+}
+
+.btn-check:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Modal / Certificate */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.certificate {
+  background: var(--cert-bg);
+  border: 3px solid var(--cert-border);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  max-width: 560px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+
+.certificate .cert-header {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.certificate .cert-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--heading-color);
+  margin-bottom: 1.5rem;
+  line-height: 1.3;
+}
+
+.certificate .cert-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.certificate .cert-body {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.certificate .cert-meta {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.certificate .cert-meta-item {
+  text-align: center;
+}
+
+.certificate .cert-meta-item .label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+}
+
+.certificate .cert-meta-item .value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--heading-color);
+}
+
+.cert-divider {
+  height: 2px;
+  background: var(--divider);
+  margin: 1rem auto;
+  width: 60%;
+}
+
+.cert-close {
+  padding: 0.6rem 2rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.cert-close:hover {
+  background: var(--accent-hover);
+}
+
+.certificate .ornament-tl,
+.certificate .ornament-br {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border: 3px solid var(--cert-border);
+  opacity: 0.3;
+}
+.certificate .ornament-tl {
+  top: 12px;
+  left: 12px;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 8px 0 0 0;
+}
+.certificate .ornament-br {
+  bottom: 12px;
+  right: 12px;
+  border-left: none;
+  border-top: none;
+  border-radius: 0 0 8px 0;
+}
+
+/* Hidden */
+.hidden {
+  display: none !important;
+}
+
+/* Footer */
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  header {
+    padding: 0.8rem 1rem;
+  }
+  header h1 {
+    font-size: 1rem;
+  }
+  main {
+    padding: 1rem;
+  }
+  .card {
+    padding: 1.3rem;
+  }
+  .name-form {
+    flex-direction: column;
+  }
+  .certificate {
+    padding: 1.5rem 1rem;
+  }
+  .certificate .cert-name {
+    font-size: 1.3rem;
+  }
+  .certificate .cert-title {
+    font-size: 1.2rem;
+  }
+  .cert-meta {
+    gap: 1rem !important;
+  }
+  .answer-template .fill-input {
+    min-width: 110px;
+  }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Тренажёр</h1>
+  <button class="theme-toggle" id="themeToggle" title="Сменить тему">☀️</button>
+</header>
+
+<main>
+  <!-- Intro Section -->
+  <section id="introSection">
+    <div class="card">
+      <h2>О тренажёре</h2>
+      <p>Уникальный по простоте и эффективности тренажёр обхода когнитивных ловушек на основе категориальных ошибок в повседневном, учебном и научном дискурсе об LLM. В основе тренажера лежит иновационно-революционно-традиционно-прогресивный принцип "Повторение - мать учения!"))</p>
+      <ul>
+        <li><strong>Антропоморфизм</strong> — приписываем алгоритмам человеческие качества: сознание, понимание, намерения.</li>
+        <li><strong>Редукционизм</strong> — сводим сложные процессы LLM к простым механическим операциям, упуская их эмерджентные свойства.</li>
+      </ul>
+      <p>Мюррей Шанахан предлагает подход <em>Talking As If</em> — говорить об LLM «как если бы», сохраняя критическую дистанцию. Однако в живой речи это громоздко.</p>
+
+      <h3>Простой приём: добавьте «человеческий»</h3>
+      <p>Вместо однозначного «да» или «нет» используйте уточняющее прилагательное <strong>«человеческий»</strong> (в нужной грамматической форме). Это сохраняет точность без усложнения речи:</p>
+
+      <div class="example-block">
+        <div class="q">Обладают ли LLM сознанием?</div>
+        <div class="a"><strong>Человеческим</strong> сознанием не обладают.</div>
+      </div>
+      <div class="example-block">
+        <div class="q">LLM понимают?</div>
+        <div class="a"><strong>Человеческим</strong> пониманием не обладают.</div>
+      </div>
+      <div class="example-block">
+        <div class="q">LLM хитрят?</div>
+        <div class="a"><strong>Человеческой</strong> хитростью не обладают.</div>
+      </div>
+
+      <p style="margin-top:1rem;">Этот приём не претендует на универсальность, но полезен как учебный инструмент: <em>«Все модели неверны, но некоторые полезны»</em> (Дж. Бокс).</p>
+    </div>
+
+    <div class="card">
+      <h2>Инструкция</h2>
+      <p>1. Введите ваши фамилию и имя ниже.</p>
+      <p>2. Нажмите кнопку «Начать тренажёр».</p>
+      <p>3. Вам будут предложены вопросы об LLM и шаблоны ответов с пропуском.</p>
+      <p>4. Впишите с клавиатуры слово — форму прилагательного «человеческий», подходящую по контексту.</p>
+      <p>5. Нажмите «Проверить» для каждого вопроса. При ошибке попробуйте снова.</p>
+      <p>6. После правильного ответа на все вопросы вы получите именной сертификат.</p>
+
+      <div class="name-form">
+        <div class="form-group">
+          <label for="lastName">Фамилия</label>
+          <input type="text" id="lastName" placeholder="Орлова" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="firstName">Имя</label>
+          <input type="text" id="firstName" placeholder="Ева" autocomplete="off">
+        </div>
+        <button class="btn btn-primary" id="startBtn" disabled>Начать тренировку</button>
+      </div>
+      <p id="nameError" class="hidden" style="color: var(--error); margin-top:0.5rem; font-size:0.9rem;"></p>
+    </div>
+  </section>
+
+  <!-- Quiz Section -->
+  <section id="quizSection" class="hidden">
+    <div class="card">
+      <h2>Тренажёр</h2>
+      <p id="studentGreeting" style="margin-bottom:1rem;"></p>
+      <div class="progress-text" id="progressText">Выполнено: 0 / 0</div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div id="questionsContainer"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+</footer>
+
+<!-- Certificate Modal -->
+<div class="modal-overlay" id="certModal">
+  <div class="certificate">
+    <div class="ornament-tl"></div>
+    <div class="ornament-br"></div>
+    <div class="cert-header">Сертификат</div>
+    <div class="cert-title">LLM и когнитивные ловушки:<br>Практика точного языка</div>
+    <div class="cert-divider"></div>
+    <div class="cert-body">Настоящим подтверждается, что</div>
+    <div class="cert-name" id="certName"></div>
+    <div class="cert-body">успешно выполнил(а) все задания тренажёра<br>по разграничению человеческих и машинных свойств<br>в описании больших языковых моделей.</div>
+    <div class="cert-divider"></div>
+    <div class="cert-meta">
+      <div class="cert-meta-item">
+        <div class="label">Дата</div>
+        <div class="value" id="certDate"></div>
+      </div>
+      <div class="cert-meta-item">
+        <div class="label">Продолжительность</div>
+        <div class="value" id="certDuration"></div>
+      </div>
+      <div class="cert-meta-item">
+        <div class="label">Вопросов</div>
+        <div class="value" id="certQuestions"></div>
+      </div>
+    </div>
+    <button class="cert-close" id="certClose">Закрыть</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Theme toggle
+  const themeToggle = document.getElementById('themeToggle');
+  let isDark = false;
+  themeToggle.addEventListener('click', () => {
+    isDark = !isDark;
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : '');
+    themeToggle.textContent = isDark ? '🌙' : '☀️';
+  });
+
+  // Questions data
+  const questions = [
+    {
+      question: "Обладают ли LLM сознанием?",
+      templateBefore: "",
+      templateAfter: " сознанием не обладают.",
+      answer: "человеческим"
+    },
+    {
+      question: "LLM понимают текст?",
+      templateBefore: "",
+      templateAfter: " пониманием не обладают.",
+      answer: "человеческим"
+    },
+    {
+      question: "LLM хитрят?",
+      templateBefore: "",
+      templateAfter: " хитростью не обладают.",
+      answer: "человеческой"
+    },
+    {
+      question: "Испытывают ли LLM эмоции?",
+      templateBefore: "",
+      templateAfter: " эмоциями не обладают.",
+      answer: "человеческими"
+    },
+    {
+      question: "Есть ли у LLM намерения?",
+      templateBefore: "",
+      templateAfter: " намерениями не обладают.",
+      answer: "человеческими"
+    },
+    {
+      question: "Обладают ли LLM интуицией?",
+      templateBefore: "",
+      templateAfter: " интуицией не обладают.",
+      answer: "человеческой"
+    },
+    {
+      question: "Способны ли LLM к творчеству?",
+      templateBefore: "",
+      templateAfter: " творчеством не обладают.",
+      answer: "человеческим"
+    },
+    {
+      question: "Есть ли у LLM убеждения?",
+      templateBefore: "",
+      templateAfter: " убеждениями не обладают.",
+      answer: "человеческими"
+    },
+    {
+      question: "Обладают ли LLM мышлением?",
+      templateBefore: "",
+      templateAfter: " мышлением не обладают.",
+      answer: "человеческим"
+    },
+    {
+      question: "Свойственна ли LLM любознательность?",
+      templateBefore: "",
+      templateAfter: " любознательностью не обладают.",
+      answer: "человеческой"
+    },
+    {
+      question: "Есть ли у LLM воображение?",
+      templateBefore: "",
+      templateAfter: " воображением не обладают.",
+      answer: "человеческим"
+    },
+    {
+      question: "Обладают ли LLM мотивацией?",
+      templateBefore: "",
+      templateAfter: " мотивацией не обладают.",
+      answer: "человеческой"
+    }
+  ];
+
+  // State
+  let studentName = '';
+  let startTime = null;
+  let completedCount = 0;
+  const totalQuestions = questions.length;
+
+  // DOM elements
+  const lastNameInput = document.getElementById('lastName');
+  const firstNameInput = document.getElementById('firstName');
+  const startBtn = document.getElementById('startBtn');
+  const nameError = document.getElementById('nameError');
+  const introSection = document.getElementById('introSection');
+  const quizSection = document.getElementById('quizSection');
+  const studentGreeting = document.getElementById('studentGreeting');
+  const progressText = document.getElementById('progressText');
+  const progressBar = document.getElementById('progressBar');
+  const questionsContainer = document.getElementById('questionsContainer');
+  const certModal = document.getElementById('certModal');
+  const certName = document.getElementById('certName');
+  const certDate = document.getElementById('certDate');
+  const certDuration = document.getElementById('certDuration');
+  const certQuestions = document.getElementById('certQuestions');
+  const certClose = document.getElementById('certClose');
+
+  // Validate name inputs
+  function validateName() {
+    const ln = lastNameInput.value.trim();
+    const fn = firstNameInput.value.trim();
+    startBtn.disabled = !(ln.length >= 2 && fn.length >= 2);
+  }
+
+  lastNameInput.addEventListener('input', validateName);
+  firstNameInput.addEventListener('input', validateName);
+
+  // Prevent paste in quiz inputs
+  function blockNonKeyboard(e) {
+    e.preventDefault();
+  }
+
+  // Start quiz
+  startBtn.addEventListener('click', () => {
+    const ln = lastNameInput.value.trim();
+    const fn = firstNameInput.value.trim();
+    if (ln.length < 2 || fn.length < 2) {
+      nameError.textContent = 'Пожалуйста, введите фамилию и имя (минимум 2 символа каждое).';
+      nameError.classList.remove('hidden');
+      return;
+    }
+    studentName = ln + ' ' + fn;
+    startTime = new Date();
+    introSection.classList.add('hidden');
+    quizSection.classList.remove('hidden');
+    studentGreeting.textContent = 'Студент: ' + studentName;
+    renderQuestions();
+    updateProgress();
+  });
+
+  function renderQuestions() {
+    questionsContainer.innerHTML = '';
+    questions.forEach((q, index) => {
+      const div = document.createElement('div');
+      div.className = 'quiz-question';
+      div.id = 'question-' + index;
+
+      const label = document.createElement('div');
+      label.className = 'q-label';
+      label.textContent = 'Вопрос ' + (index + 1) + ' из ' + totalQuestions;
+
+      const text = document.createElement('div');
+      text.className = 'q-text';
+      text.textContent = q.question;
+
+      const answerWrap = document.createElement('div');
+      answerWrap.className = 'answer-template';
+
+      if (q.templateBefore) {
+        const spanBefore = document.createElement('span');
+        spanBefore.textContent = q.templateBefore;
+        answerWrap.appendChild(spanBefore);
+      }
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'fill-input';
+      input.id = 'input-' + index;
+      input.placeholder = '...';
+      input.autocomplete = 'off';
+      input.setAttribute('spellcheck', 'false');
+      // Block paste, drop, etc.
+      input.addEventListener('paste', blockNonKeyboard);
+      input.addEventListener('drop', blockNonKeyboard);
+      input.addEventListener('dragover', blockNonKeyboard);
+
+      answerWrap.appendChild(input);
+
+      const spanAfter = document.createElement('span');
+      spanAfter.textContent = q.templateAfter;
+      answerWrap.appendChild(spanAfter);
+
+      const feedback = document.createElement('div');
+      feedback.className = 'question-feedback';
+      feedback.id = 'feedback-' + index;
+
+      const btnWrap = document.createElement('div');
+      btnWrap.className = 'check-btn-wrap';
+
+      const checkBtn = document.createElement('button');
+      checkBtn.className = 'btn-check';
+      checkBtn.id = 'checkBtn-' + index;
+      checkBtn.textContent = 'Проверить';
+      checkBtn.addEventListener('click', () => checkAnswer(index));
+
+      btnWrap.appendChild(checkBtn);
+
+      // Enter key support
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          checkAnswer(index);
+        }
+      });
+
+      div.appendChild(label);
+      div.appendChild(text);
+      div.appendChild(answerWrap);
+      div.appendChild(btnWrap);
+      div.appendChild(feedback);
+
+      questionsContainer.appendChild(div);
+    });
+  }
+
+  function checkAnswer(index) {
+    const input = document.getElementById('input-' + index);
+    const feedback = document.getElementById('feedback-' + index);
+    const checkBtn = document.getElementById('checkBtn-' + index);
+    const questionDiv = document.getElementById('question-' + index);
+
+    const userAnswer = input.value.trim().toLowerCase();
+    const correctAnswer = questions[index].answer.toLowerCase();
+
+    if (!userAnswer) {
+      feedback.textContent = 'Введите ответ с клавиатуры.';
+      feedback.className = 'question-feedback fail';
+      return;
+    }
+
+    if (userAnswer === correctAnswer) {
+      feedback.textContent = 'Верно!';
+      feedback.className = 'question-feedback ok';
+      input.classList.remove('invalid');
+      input.classList.add('valid');
+      input.disabled = true;
+      checkBtn.disabled = true;
+      questionDiv.classList.add('correct');
+      questionDiv.classList.remove('incorrect');
+      completedCount++;
+      updateProgress();
+
+      if (completedCount === totalQuestions) {
+        setTimeout(showCertificate, 600);
+      }
+    } else {
+      feedback.textContent = 'Неверно. Подумайте: какая форма прилагательного «человеческий» подходит по контексту?';
+      feedback.className = 'question-feedback fail';
+      input.classList.add('invalid');
+      input.classList.remove('valid');
+      questionDiv.classList.add('incorrect');
+      input.focus();
+      input.select();
+    }
+  }
+
+  function updateProgress() {
+    progressText.textContent = 'Выполнено: ' + completedCount + ' / ' + totalQuestions;
+    const pct = (completedCount / totalQuestions) * 100;
+    progressBar.style.width = pct + '%';
+  }
+
+  function showCertificate() {
+    const endTime = new Date();
+    const diffMs = endTime - startTime;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffSec = Math.floor((diffMs % 60000) / 1000);
+
+    certName.textContent = studentName;
+    certDate.textContent = endTime.toLocaleDateString('ru-RU', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    });
+    certDuration.textContent = (diffMin > 0 ? diffMin + ' мин ' : '') + diffSec + ' сек';
+    certQuestions.textContent = totalQuestions;
+
+    certModal.classList.add('active');
+  }
+
+  certClose.addEventListener('click', () => {
+    certModal.classList.remove('active');
+  });
+
+  certModal.addEventListener('click', (e) => {
+    if (e.target === certModal) {
+      certModal.classList.remove('active');
+    }
+  });
+})();
+</script>
+</body>
+</html>
+```

@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+:root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-card: #ffffff;
+    --header-bg: #325980;
+    --header-text: #ffffff;
+    --accent: #3498db;
+    --accent-hover: #2980b9;
+    --divider: #f1f1f1;
+    --text-primary: #1a1a2e;
+    --text-secondary: #4a4a6a;
+    --text-muted: #7a7a8a;
+    --border: #dde1e6;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    --shadow-hover: 0 4px 20px rgba(0,0,0,0.12);
+    --input-bg: #ffffff;
+    --tag-bg: #e8f1f8;
+    --tag-text: #325980;
+    --criterion-bg: #f8fafc;
+    --success-bg: #e8f5e9;
+    --success-text: #2e7d32;
+    --code-bg: #f0f4f8;
+    --scroll-thumb: #c0c8d0;
+    --table-header: #f0f4f8;
+    --table-stripe: #fafbfc;
+}
+
+[data-theme="dark"] {
+    --bg-primary: #0f1923;
+    --bg-secondary: #162130;
+    --bg-card: #1a2a3a;
+    --header-bg: #0d1520;
+    --header-text: #e0e6ed;
+    --accent: #4aa3e0;
+    --accent-hover: #5bb5f0;
+    --divider: #243444;
+    --text-primary: #d8dee6;
+    --text-secondary: #a0aab8;
+    --text-muted: #6a7a8a;
+    --border: #2a3a4a;
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+    --shadow-hover: 0 4px 20px rgba(0,0,0,0.4);
+    --input-bg: #1e2e3e;
+    --tag-bg: #1a3050;
+    --tag-text: #7ab8e0;
+    --criterion-bg: #162030;
+    --success-bg: #1a3028;
+    --success-text: #66bb6a;
+    --code-bg: #162030;
+    --scroll-thumb: #3a4a5a;
+    --table-header: #162030;
+    --table-stripe: #1e2e3e;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    line-height: 1.7;
+    transition: background 0.4s ease, color 0.4s ease;
+    min-height: 100vh;
+}
+
+/* ===== HEADER ===== */
+header {
+    background: var(--header-bg);
+    color: var(--header-text);
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+    transition: background 0.4s ease;
+}
+
+.header-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.header-title-group {
+    flex: 1;
+    min-width: 0;
+}
+
+.header-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.3;
+}
+
+.header-subtitle {
+    font-size: 0.82rem;
+    opacity: 0.75;
+    font-weight: 400;
+    margin-top: 2px;
+}
+
+.theme-toggle {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: var(--header-text);
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+    background: rgba(255,255,255,0.22);
+    transform: rotate(15deg);
+}
+
+/* ===== NAV ===== */
+nav {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--divider);
+    transition: background 0.4s ease;
+    overflow-x: auto;
+}
+
+nav::-webkit-scrollbar {
+    height: 0;
+}
+
+.nav-inner {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    gap: 4px;
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    padding: 12px 18px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.25s ease;
+    font-weight: 500;
+}
+
+.nav-btn:hover {
+    color: var(--accent);
+    background: var(--bg-secondary);
+}
+
+.nav-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+}
+
+/* ===== MAIN ===== */
+main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
+}
+
+.section {
+    display: none;
+}
+
+.section.active {
+    display: block;
+    animation: sectionIn 0.35s ease;
+}
+
+@keyframes sectionIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== CARD ===== */
+.card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--divider);
+    transition: all 0.4s ease;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-hover);
+}
+
+.card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--header-bg);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--divider);
+    letter-spacing: 0.01em;
+}
+
+[data-theme="dark"] .card-title {
+    color: var(--accent);
+}
+
+/* ===== TYPOGRAPHY ===== */
+p {
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+}
+
+p:last-child {
+    margin-bottom: 0;
+}
+
+strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.highlight {
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Fira Code', monospace;
+    font-size: 0.9em;
+}
+
+/* ===== TERM LIST ===== */
+.term-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.term-item {
+    background: var(--criterion-bg);
+    border: 1px solid var(--divider);
+    border-radius: 8px;
+    padding: 14px 18px;
+    transition: all 0.25s ease;
+    cursor: default;
+}
+
+.term-item:hover {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(52,152,219,0.1);
+}
+
+.term-name {
+    font-family: 'Consolas', 'Fira Code', monospace;
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.term-note {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* ===== CRITERIA ===== */
+.criteria-list {
+    counter-reset: criterion;
+    list-style: none;
+    margin: 16px 0;
+}
+
+.criteria-list li {
+    counter-increment: criterion;
+    padding: 16px 20px 16px 58px;
+    position: relative;
+    background: var(--criterion-bg);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 3px solid var(--accent);
+    color: var(--text-secondary);
+    transition: background 0.3s ease;
+}
+
+.criteria-list li::before {
+    content: counter(criterion);
+    position: absolute;
+    left: 16px;
+    top: 14px;
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* ===== INSTRUCTIONS ===== */
+.steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin: 16px 0;
+}
+
+.step {
+    background: var(--criterion-bg);
+    border-radius: 8px;
+    padding: 18px 16px;
+    text-align: center;
+    border: 1px solid var(--divider);
+    transition: all 0.25s ease;
+}
+
+.step:hover {
+    border-color: var(--accent);
+}
+
+.step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+.step-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* ===== FORM ===== */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.88rem;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+}
+
+.form-group label .required {
+    color: #e74c3c;
+    margin-left: 2px;
+}
+
+.form-group small {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+input[type="text"],
+textarea,
+select {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.92rem;
+    font-family: inherit;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    transition: all 0.25s ease;
+    line-height: 1.6;
+}
+
+input[type="text"]:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(52,152,219,0.12);
+}
+
+textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.char-counter {
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+}
+
+/* ===== RATING ===== */
+.rating-grid {
+    display: grid;
+    gap: 16px;
+    margin: 20px 0;
+}
+
+.rating-card {
+    background: var(--criterion-bg);
+    border: 1px solid var(--divider);
+    border-radius: 10px;
+    padding: 18px 20px;
+    transition: border-color 0.3s ease;
+}
+
+.rating-card:hover {
+    border-color: var(--accent);
+}
+
+.rating-card .criterion-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    color: var(--text-primary);
+}
+
+.rating-stars {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.star-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--input-bg);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.star-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.star-btn.selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.rating-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    padding: 0 2px;
+}
+
+/* ===== BUTTONS ===== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-family: inherit;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(52,152,219,0.3);
+}
+
+.btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1.5px solid var(--border);
+}
+
+.btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.btn-success {
+    background: var(--success-text);
+    color: #fff;
+}
+
+.btn-success:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn-group {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+}
+
+/* ===== PREVIEW ===== */
+.preview-box {
+    background: var(--code-bg);
+    border: 1px solid var(--divider);
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin-top: 20px;
+}
+
+.preview-box h4 {
+    font-size: 0.95rem;
+    color: var(--header-bg);
+    margin-bottom: 14px;
+}
+
+[data-theme="dark"] .preview-box h4 {
+    color: var(--accent);
+}
+
+.preview-field {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--divider);
+}
+
+.preview-field:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.preview-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 3px;
+    font-weight: 600;
+}
+
+.preview-value {
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+.preview-value.empty {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* ===== TOAST ===== */
+.toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: var(--success-text);
+    color: #fff;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.2);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 200;
+    max-width: 340px;
+}
+
+.toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.toast.error {
+    background: #e74c3c;
+}
+
+/* ===== ABOUT SECTION EXTRAS ===== */
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.feature-item {
+    background: var(--criterion-bg);
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--divider);
+    text-align: center;
+}
+
+.feature-icon {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.feature-label {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* ===== TABLE ===== */
+.comparison-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 16px 0;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--divider);
+}
+
+.comparison-table th {
+    background: var(--table-header);
+    padding: 12px 14px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--divider);
+    font-size: 0.82rem;
+}
+
+.comparison-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--divider);
+    color: var(--text-secondary);
+    vertical-align: top;
+}
+
+.comparison-table tr:nth-child(even) td {
+    background: var(--table-stripe);
+}
+
+.comparison-table tr:last-child td {
+    border-bottom: none;
+}
+
+.comparison-table code {
+    font-family: 'Consolas', 'Fira Code', monospace;
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 0.88em;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 768px) {
+    .header-inner {
+        padding: 12px 16px;
+    }
+    .header-title {
+        font-size: 1.05rem;
+    }
+    .header-subtitle {
+        font-size: 0.75rem;
+    }
+    .nav-inner {
+        padding: 0 12px;
+    }
+    .nav-btn {
+        padding: 10px 14px;
+        font-size: 0.8rem;
+    }
+    main {
+        padding: 16px 14px 50px;
+    }
+    .card {
+        padding: 20px 18px;
+        border-radius: 10px;
+    }
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    .term-grid {
+        grid-template-columns: 1fr;
+    }
+    .steps {
+        grid-template-columns: 1fr;
+    }
+    .btn-group {
+        flex-direction: column;
+    }
+    .btn {
+        justify-content: center;
+    }
+    .toast {
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        max-width: none;
+    }
+    .comparison-table {
+        font-size: 0.78rem;
+    }
+    .comparison-table th,
+    .comparison-table td {
+        padding: 8px 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-title {
+        font-size: 0.95rem;
+    }
+    .card-title {
+        font-size: 1.02rem;
+    }
+    .nav-btn {
+        padding: 9px 10px;
+        font-size: 0.76rem;
+    }
+    .feature-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+	footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="header-inner">
+        <div class="header-title-group">
+            <div class="header-title">New name</div>
+            <div class="header-subtitle">Linguistic assessment of alternative terms for token vocabulary</div>
+        </div>
+        <button class="theme-toggle" id="themeToggle" title="Toggle theme">☀️</button>
+    </div>
+</header>
+
+<nav>
+    <div class="nav-inner">
+        <button class="nav-btn active" data-section="info">Info</button>
+        <button class="nav-btn" data-section="terms">Terms</button>
+        <button class="nav-btn" data-section="criteria">Criteria</button>
+        <button class="nav-btn" data-section="work">Assignment</button>
+        <button class="nav-btn" data-section="preview">Preview</button>
+    </div>
+</nav>
+
+<main>
+
+<!-- ===== INFO SECTION ===== -->
+<div class="section active" id="sec-info">
+
+    <div class="card">
+        <div class="card-title">About the Application</div>
+        <p>This application is designed for linguistics students and future foreign language teachers studying the terminology of modern language models. You will analyze the term <span class="highlight">Token vocabulary</span> and propose your own alternative name that more accurately reflects the nature of this concept.</p>
+        <p><strong>Why is this important?</strong> The term "vocabulary" (token vocabulary) has become historically established, but its structure does not coincide with the linguistic "vocabulary" (lexicon): tokens include bytes, subwords, frequent phrases, and special markers, and not just lexemes with semantics. Vocabulary formation is determined by algorithmic and statistical goals (encoding/compression, corpus coverage), not by linguistic categorization.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-title">How to Use</div>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-text">Study the list of existing alternative terms in the "Terms" section</div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-text">Review the evaluation criteria in the "Criteria" section</div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-text">Fill out the form in the "Assignment" section: enter your name, propose your own term, and argue your choice</div>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-text">Check the result in "Preview" and export it to an HTML file</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Context</div>
+        <p>In NLP, a <span class="highlight">token vocabulary</span> is a finite set of units into which the tokenizer segments text. Unlike a linguistic vocabulary, this set may contain:</p>
+        <div class="feature-grid">
+            <div class="feature-item">
+                <div class="feature-icon">B</div>
+                <div class="feature-label">Individual bytes and characters</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">Sw</div>
+                <div class="feature-label">Subword units</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">Ph</div>
+                <div class="feature-label">Frequent phrases and fragments</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">Sp</div>
+                <div class="feature-label">Special markers (BOS, EOS, PAD)</div>
+            </div>
+        </div>
+        <p>The formation of this set is determined by statistical algorithms (BPE, WordPiece, Unigram), and not by linguistic analysis. Therefore, the term "vocabulary" may mislead linguists regarding the content and level of units.</p>
+    </div>
+</div>
+
+<!-- ===== TERMS SECTION ===== -->
+<div class="section" id="sec-terms">
+
+    <div class="card">
+        <div class="card-title">Existing Alternative Terms</div>
+        <p>Below are alternative names that have been proposed to replace <span class="highlight">token vocabulary</span>. Each term has its advantages and disadvantages.</p>
+
+        <div class="term-grid">
+            <div class="term-item">
+                <div class="term-name">token set / token inventory</div>
+                <div class="term-note">Neutral, emphasizes the set nature of units without implying a linguistic dictionary.</div>
+            </div>
+            <div class="term-item">
+                <div class="term-name">encoding vocabulary</div>
+                <div class="term-note">Points to the encoding function, but retains the ambiguous word "vocabulary."</div>
+            </div>
+            <div class="term-item">
+                <div class="term-name">token lexicon</div>
+                <div class="term-note">Direct analogy with the linguistic term. Requires a caveat that it is not a classical lexicon.</div>
+            </div>
+            <div class="term-item">
+                <div class="term-name">segmentation inventory</div>
+                <div class="term-note">Focuses on the segmentation process, but is somewhat verbose.</div>
+            </div>
+            <div class="term-item">
+                <div class="term-name">subword inventory</div>
+                <div class="term-note">Accurate for subword tokenizers, but does not cover byte-level and whole-word approaches.</div>
+            </div>
+            <div class="term-item">
+                <div class="term-name">codebook / token codebook</div>
+                <div class="term-note">Borrowed from information theory. Emphasizes encoding, but less familiar to linguists.</div>
+            </div>
+            <div class="term-item">
+                <div class="term-name">lexical codebook</div>
+                <div class="term-note">Combines linguistic and informational aspects. Can cause confusion between levels.</div>
+            </div>
+            <div class="term-item">
+                <div class="term-name">unit inventory</div>
+                <div class="term-note">Maximally neutral. Does not specify what kind of units are involved.</div>
+            </div>
+            <div class="term-item">
+                <div class="term-name">statistical token set</div>
+                <div class="term-note">Explicitly indicates the statistical nature of formation. Slightly lengthy.</div>
+            </div>
+            <div class="term-item">
+                <div class="term-name">tokenizer lexicon</div>
+                <div class="term-note">Links to the tokenizer tool, but retains the word "lexicon."</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Comparative Table</div>
+        <p>Summary assessment of terms by key parameters:</p>
+        <div style="overflow-x:auto;">
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Term</th>
+                    <th>Heterogeneity of units</th>
+                    <th>Statistical function</th>
+                    <th>Communicative convenience</th>
+                    <th>Brevity</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><code>token set</code></td><td>Partially</td><td>No</td><td>High</td><td>High</td></tr>
+                <tr><td><code>encoding vocabulary</code></td><td>No</td><td>Yes</td><td>Medium</td><td>Medium</td></tr>
+                <tr><td><code>token lexicon</code></td><td>No</td><td>No</td><td>Medium</td><td>High</td></tr>
+                <tr><td><code>segmentation inventory</code></td><td>Partially</td><td>Partially</td><td>Medium</td><td>Low</td></tr>
+                <tr><td><code>subword inventory</code></td><td>Partially</td><td>Partially</td><td>Medium</td><td>Medium</td></tr>
+                <tr><td><code>codebook</code></td><td>Yes</td><td>Yes</td><td>Low</td><td>High</td></tr>
+                <tr><td><code>unit inventory</code></td><td>Yes</td><td>No</td><td>Medium</td><td>High</td></tr>
+                <tr><td><code>statistical token set</code></td><td>Partially</td><td>Yes</td><td>Medium</td><td>Low</td></tr>
+                <tr><td><code>tokenizer lexicon</code></td><td>Partially</td><td>Partially</td><td>Medium</td><td>Medium</td></tr>
+            </tbody>
+        </table>
+        </div>
+        <p><small style="color:var(--text-muted);">The table is advisory in nature. In your work, you may disagree with the given assessments.</small></p>
+    </div>
+</div>
+
+<!-- ===== CRITERIA SECTION ===== -->
+<div class="section" id="sec-criteria">
+
+    <div class="card">
+        <div class="card-title">Evaluation Criteria</div>
+        <p>Each proposed term should be assessed according to four criteria. In your argumentation, address each of them.</p>
+
+        <ol class="criteria-list">
+            <li>
+                <strong>Heterogeneity of units.</strong> Does the term reflect that the set includes units of different nature: bytes, subwords, whole words, phrases, special markers? The ideal term should not be associated with only one type of unit.
+            </li>
+            <li>
+                <strong>Statistical/encoding function.</strong> Does the term indicate that the set was formed by algorithmic/statistical methods (BPE, WordPiece, Unigram) for the purpose of encoding and text compression, and not on the basis of semantic or grammatical analysis?
+            </li>
+            <li>
+                <strong>Communicative convenience.</strong> Is the term convenient for professional communication? Will it be understood by specialists in both linguistics and NLP? Will it cause ambiguity?
+            </li>
+            <li>
+                <strong>Brevity and memorability.</strong> Is the term concise enough for regular use in academic texts, lectures, and discussions? Is it easy to remember and reproduce?
+            </li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Recommendations for Analysis</div>
+        <p>When formulating argumentation, consider the following aspects:</p>
+        <p>Explain <strong>why</strong> your term is better suited than the existing alternatives. Provide specific examples of situations where the traditional term "token vocabulary" is misleading.</p>
+        <p>Consider how your term would be perceived in a <strong>Russian-language linguistic context</strong> and in <strong>English-language NLP publications</strong>.</p>
+        <p>Note the possible <strong>disadvantages</strong> of your term as well: no term is perfect, and recognizing limitations demonstrates the depth of analysis.</p>
+    </div>
+</div>
+
+<!-- ===== WORK SECTION ===== -->
+<div class="section" id="sec-work">
+
+    <div class="card">
+        <div class="card-title">Student Information</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Last Name <span class="required">*</span></label>
+                <input type="text" id="lastName" placeholder="Orlova">
+            </div>
+            <div class="form-group">
+                <label>First Name <span class="required">*</span></label>
+                <input type="text" id="firstName" placeholder="Eva">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Group</label>
+            <input type="text" id="group" placeholder="300">
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Your Alternative Term</div>
+        <div class="form-group">
+            <label>Proposed term <span class="required">*</span></label>
+            <input type="text" id="termName" placeholder="e.g., encoding unit inventory">
+            <small>Enter your alternative term for "token vocabulary." It can be in English or bilingual.</small>
+        </div>
+        <div class="form-group">
+            <label>Brief definition of the term</label>
+            <textarea id="termDefinition" rows="3" placeholder="A finite ordered set of encoding units generated by tokenization algorithms from a text corpus..."></textarea>
+            <small>Formulate a concise definition (1-3 sentences) of what your term denotes.</small>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Assessment by Criteria</div>
+        <p>Rate your term on each criterion (1 — does not match, 5 — fully matches) and provide argumentation.</p>
+
+        <div class="rating-grid">
+            <div class="rating-card">
+                <div class="criterion-label">Criterion 1: Heterogeneity of units</div>
+                <div class="rating-stars" data-criterion="c1">
+                    <button class="star-btn" data-val="1">1</button>
+                    <button class="star-btn" data-val="2">2</button>
+                    <button class="star-btn" data-val="3">3</button>
+                    <button class="star-btn" data-val="4">4</button>
+                    <button class="star-btn" data-val="5">5</button>
+                </div>
+                <div class="rating-labels"><span>Does not reflect</span><span>Fully reflects</span></div>
+                <textarea class="criterion-text" id="arg1" rows="3" placeholder="Explain how your term reflects the diverse nature of tokens..."></textarea>
+            </div>
+
+            <div class="rating-card">
+                <div class="criterion-label">Criterion 2: Statistical/encoding function</div>
+                <div class="rating-stars" data-criterion="c2">
+                    <button class="star-btn" data-val="1">1</button>
+                    <button class="star-btn" data-val="2">2</button>
+                    <button class="star-btn" data-val="3">3</button>
+                    <button class="star-btn" data-val="4">4</button>
+                    <button class="star-btn" data-val="5">5</button>
+                </div>
+                <div class="rating-labels"><span>Does not indicate</span><span>Clearly indicates</span></div>
+                <textarea class="criterion-text" id="arg2" rows="3" placeholder="Does the term point to statistical formation rather than semantic categorization?"></textarea>
+            </div>
+
+            <div class="rating-card">
+                <div class="criterion-label">Criterion 3: Communicative convenience</div>
+                <div class="rating-stars" data-criterion="c3">
+                    <button class="star-btn" data-val="1">1</button>
+                    <button class="star-btn" data-val="2">2</button>
+                    <button class="star-btn" data-val="3">3</button>
+                    <button class="star-btn" data-val="4">4</button>
+                    <button class="star-btn" data-val="5">5</button>
+                </div>
+                <div class="rating-labels"><span>Inconvenient</span><span>Very convenient</span></div>
+                <textarea class="criterion-text" id="arg3" rows="3" placeholder="Will the term be understood in both linguistic and NLP communities?"></textarea>
+            </div>
+
+            <div class="rating-card">
+                <div class="criterion-label">Criterion 4: Brevity and memorability</div>
+                <div class="rating-stars" data-criterion="c4">
+                    <button class="star-btn" data-val="1">1</button>
+                    <button class="star-btn" data-val="2">2</button>
+                    <button class="star-btn" data-val="3">3</button>
+                    <button class="star-btn" data-val="4">4</button>
+                    <button class="star-btn" data-val="5">5</button>
+                </div>
+                <div class="rating-labels"><span>Verbose</span><span>Concise</span></div>
+                <textarea class="criterion-text" id="arg4" rows="3" placeholder="Evaluate the length of the term, its ease of reproduction and memorization..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Overall Argumentation</div>
+        <div class="form-group">
+            <label>Why is your term preferable? <span class="required">*</span></label>
+            <textarea id="mainArg" rows="5" placeholder="Formulate a comprehensive argumentation for your choice. Compare with existing alternatives, indicate advantages and possible disadvantages of your term..."></textarea>
+            <div class="char-counter"><span id="mainArgCount">0</span> / 2000 characters</div>
+        </div>
+        <div class="form-group">
+            <label>Known disadvantages of your term</label>
+            <textarea id="disadvantages" rows="3" placeholder="What aspects does your term not cover? What potential ambiguities may arise?"></textarea>
+        </div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn btn-primary" onclick="saveAndPreview()">Save and preview</button>
+        <button class="btn btn-secondary" onclick="clearForm()">Clear form</button>
+    </div>
+</div>
+
+<!-- ===== PREVIEW SECTION ===== -->
+<div class="section" id="sec-preview">
+
+    <div class="card">
+        <div class="card-title">Result Preview</div>
+        <p>Check all data before exporting. If corrections are needed, go back to the "Assignment" section.</p>
+
+        <div class="preview-box" id="previewContent">
+            <p class="preview-value empty">Fill out the form in the "Assignment" section and click "Save and preview."</p>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-success" id="exportBtn" onclick="exportHTML()" disabled>Export to HTML</button>
+            <button class="btn btn-secondary" onclick="switchSection('work')">Back to editing</button>
+        </div>
+    </div>
+</div>
+
+</main>
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+for everyone</p>
+</div>
+</div>
+</footer>
+
+<script>
+const ratings = { c1: 0, c2: 0, c3: 0, c4: 0 };
+let savedData = null;
+
+// Theme
+const themeBtn = document.getElementById('themeToggle');
+function setTheme(dark) {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : '');
+    themeBtn.textContent = dark ? '☀️' : '🌙';
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
+}
+themeBtn.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    setTheme(!isDark);
+});
+if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme:dark)').matches)) {
+    setTheme(true);
+}
+
+// Navigation
+document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchSection(btn.dataset.section));
+});
+
+function switchSection(id) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.nav-btn[data-section="${id}"]`).classList.add('active');
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById('sec-' + id).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Ratings
+document.querySelectorAll('.rating-stars').forEach(group => {
+    const criterion = group.dataset.criterion;
+    group.querySelectorAll('.star-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const val = parseInt(btn.dataset.val);
+            ratings[criterion] = val;
+            group.querySelectorAll('.star-btn').forEach(b => {
+                b.classList.toggle('selected', parseInt(b.dataset.val) <= val);
+            });
+        });
+    });
+});
+
+// Char counter
+document.getElementById('mainArg').addEventListener('input', function() {
+    document.getElementById('mainArgCount').textContent = this.value.length;
+});
+
+// Toast
+function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast' + (isError ? ' error' : '');
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// Save & Preview
+function saveAndPreview() {
+    const lastName = document.getElementById('lastName').value.trim();
+    const firstName = document.getElementById('firstName').value.trim();
+    const group = document.getElementById('group').value.trim();
+    const termName = document.getElementById('termName').value.trim();
+    const termDef = document.getElementById('termDefinition').value.trim();
+    const arg1 = document.getElementById('arg1').value.trim();
+    const arg2 = document.getElementById('arg2').value.trim();
+    const arg3 = document.getElementById('arg3').value.trim();
+    const arg4 = document.getElementById('arg4').value.trim();
+    const mainArg = document.getElementById('mainArg').value.trim();
+    const disadv = document.getElementById('disadvantages').value.trim();
+
+    if (!lastName || !firstName) { showToast('Please fill in Last Name and First Name.', true); return; }
+    if (!termName) { showToast('Please enter your proposed term.', true); return; }
+    if (!mainArg) { showToast('Please provide overall argumentation.', true); return; }
+
+    savedData = { lastName, firstName, group, termName, termDef, ratings: {...ratings}, arg1, arg2, arg3, arg4, mainArg, disadv, date: new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' }) };
+
+    renderPreview();
+    document.getElementById('exportBtn').disabled = false;
+    switchSection('preview');
+    showToast('Data saved successfully.');
+}
+
+function ratingText(val) {
+    return val ? val + ' / 5' : 'not rated';
+}
+
+function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
+
+function renderPreview() {
+    if (!savedData) return;
+    const d = savedData;
+    const html = `
+        <div class="preview-field"><div class="preview-label">Student</div><div class="preview-value">${esc(d.lastName)} ${esc(d.firstName)}${d.group ? ' — ' + esc(d.group) : ''}</div></div>
+        <div class="preview-field"><div class="preview-label">Proposed Term</div><div class="preview-value" style="font-size:1.1rem;font-weight:700;color:var(--accent);">${esc(d.termName)}</div></div>
+        ${d.termDef ? `<div class="preview-field"><div class="preview-label">Definition</div><div class="preview-value">${esc(d.termDef)}</div></div>` : ''}
+        <div class="preview-field"><div class="preview-label">Criterion 1: Heterogeneity of Units — ${ratingText(d.ratings.c1)}</div><div class="preview-value${!d.arg1?' empty':''}">${d.arg1 ? esc(d.arg1) : 'No argumentation provided'}</div></div>
+        <div class="preview-field"><div class="preview-label">Criterion 2: Statistical Function — ${ratingText(d.ratings.c2)}</div><div class="preview-value${!d.arg2?' empty':''}">${d.arg2 ? esc(d.arg2) : 'No argumentation provided'}</div></div>
+        <div class="preview-field"><div class="preview-label">Criterion 3: Communicative Convenience — ${ratingText(d.ratings.c3)}</div><div class="preview-value${!d.arg3?' empty':''}">${d.arg3 ? esc(d.arg3) : 'No argumentation provided'}</div></div>
+        <div class="preview-field"><div class="preview-label">Criterion 4: Brevity and Memorability — ${ratingText(d.ratings.c4)}</div><div class="preview-value${!d.arg4?' empty':''}">${d.arg4 ? esc(d.arg4) : 'No argumentation provided'}</div></div>
+        <div class="preview-field"><div class="preview-label">Overall Argumentation</div><div class="preview-value">${esc(d.mainArg)}</div></div>
+        ${d.disadv ? `<div class="preview-field"><div class="preview-label">Known Disadvantages</div><div class="preview-value">${esc(d.disadv)}</div></div>` : ''}
+        <div class="preview-field"><div class="preview-label">Date</div><div class="preview-value">${d.date}</div></div>
+    `;
+    document.getElementById('previewContent').innerHTML = html;
+}
+
+// Export
+function exportHTML() {
+    if (!savedData) return;
+    const d = savedData;
+    const doc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Token Vocabulary Analysis — ${esc(d.lastName)} ${esc(d.firstName)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;background:#f5f5f5;color:#1a1a2e;line-height:1.7;padding:30px 20px}
+.container{max-width:800px;margin:0 auto;background:#fff;border-radius:14px;box-shadow:0 2px 16px rgba(0,0,0,0.08);overflow:hidden}
+.header{background:#325980;color:#fff;padding:28px 36px}
+.header h1{font-size:1.3rem;font-weight:700;margin-bottom:4px}
+.header p{font-size:0.85rem;opacity:0.8}
+.content{padding:32px 36px}
+.field{margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #f1f1f1}
+.field:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.label{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em;color:#7a7a8a;font-weight:600;margin-bottom:4px}
+.value{font-size:0.95rem;color:#1a1a2e;line-height:1.7;white-space:pre-wrap}
+.term-highlight{font-size:1.15rem;font-weight:700;color:#3498db}
+.rating-badge{display:inline-block;background:#e8f1f8;color:#325980;padding:2px 10px;border-radius:4px;font-size:0.8rem;font-weight:600;margin-left:8px}
+.footer{text-align:center;padding:18px;font-size:0.78rem;color:#7a7a8a;border-top:1px solid #f1f1f1}
+@media(max-width:600px){.header,.content{padding:20px}.header h1{font-size:1.1rem}}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>Token Vocabulary: Terminology Analysis</h1>
+<p>Linguistic assessment of an alternative term</p>
+</div>
+<div class="content">
+<div class="field"><div class="label">Student</div><div class="value">${esc(d.lastName)} ${esc(d.firstName)}${d.group ? ' — ' + esc(d.group) : ''}</div></div>
+<div class="field"><div class="label">Proposed Term</div><div class="value term-highlight">${esc(d.termName)}</div></div>
+${d.termDef ? `<div class="field"><div class="label">Definition</div><div class="value">${esc(d.termDef)}</div></div>` : ''}
+<div class="field"><div class="label">Criterion 1: Heterogeneity of Units <span class="rating-badge">${ratingText(d.ratings.c1)}</span></div><div class="value">${d.arg1 ? esc(d.arg1) : '—'}</div></div>
+<div class="field"><div class="label">Criterion 2: Statistical Function <span class="rating-badge">${ratingText(d.ratings.c2)}</span></div><div class="value">${d.arg2 ? esc(d.arg2) : '—'}</div></div>
+<div class="field"><div class="label">Criterion 3: Communicative Convenience <span class="rating-badge">${ratingText(d.ratings.c3)}</span></div><div class="value">${d.arg3 ? esc(d.arg3) : '—'}</div></div>
+<div class="field"><div class="label">Criterion 4: Brevity and Memorability <span class="rating-badge">${ratingText(d.ratings.c4)}</span></div><div class="value">${d.arg4 ? esc(d.arg4) : '—'}</div></div>
+<div class="field"><div class="label">Overall Argumentation</div><div class="value">${esc(d.mainArg)}</div></div>
+${d.disadv ? `<div class="field"><div class="label">Known Disadvantages</div><div class="value">${esc(d.disadv)}</div></div>` : ''}
+</div>
+<div class="footer">Generated: ${d.date} | <br>© 2026 | kmp | CC BY-NC-SA 4.0</div>
+</div>
+</body>
+</html>`;
+
+    const blob = new Blob([doc], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `token_vocabulary_${d.lastName}_${d.firstName}.html`.replace(/\s+/g, '_');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('HTML file exported successfully.');
+}
+
+// Clear
+function clearForm() {
+    if (!confirm('Clear all entered data?')) return;
+    ['lastName','firstName','group','termName','termDefinition','arg1','arg2','arg3','arg4','mainArg','disadvantages'].forEach(id => document.getElementById(id).value = '');
+    Object.keys(ratings).forEach(k => ratings[k] = 0);
+    document.querySelectorAll('.star-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById('mainArgCount').textContent = '0';
+    savedData = null;
+    document.getElementById('exportBtn').disabled = true;
+    document.getElementById('previewContent').innerHTML = '<p class="preview-value empty">Fill out the form in the "Assignment" section and click "Save and preview."</p>';
+    showToast('Form cleared.');
+}
+
+// Persist form data in sessionStorage
+window.addEventListener('beforeunload', () => {
+    const fields = {};
+    ['lastName','firstName','group','termName','termDefinition','arg1','arg2','arg3','arg4','mainArg','disadvantages'].forEach(id => fields[id] = document.getElementById(id).value);
+    fields.ratings = ratings;
+    sessionStorage.setItem('tvFormData', JSON.stringify(fields));
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+    const stored = sessionStorage.getItem('tvFormData');
+    if (stored) {
+        try {
+            const fields = JSON.parse(stored);
+            Object.keys(fields).forEach(id => {
+                if (id === 'ratings') {
+                    Object.assign(ratings, fields.ratings);
+                    Object.keys(fields.ratings).forEach(c => {
+                        const val = fields.ratings[c];
+                        if (val) {
+                            document.querySelectorAll(`.rating-stars[data-criterion="${c}"] .star-btn`).forEach(b => {
+                                b.classList.toggle('selected', parseInt(b.dataset.val) <= val);
+                            });
+                        }
+                    });
+                } else if (document.getElementById(id)) {
+                    document.getElementById(id).value = fields[id];
+                }
+            });
+            document.getElementById('mainArgCount').textContent = (fields.mainArg || '').length;
+        } catch(e) {}
+    }
+});
+</script>
+</body>
+</html>

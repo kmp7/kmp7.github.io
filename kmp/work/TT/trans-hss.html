@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-card: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --heading-color: #325980;
+  --accent: #3498db;
+  --accent-hover: #2980b9;
+  --border-color: #f1f1f1;
+  --divider: #e0e0e0;
+  --input-bg: #ffffff;
+  --input-border: #ccc;
+  --success: #27ae60;
+  --highlight-bg: rgba(52, 152, 219, 0.15);
+  --highlight-border: #3498db;
+  --original-accent: #e74c3c;
+  --original-bg: rgba(231, 76, 60, 0.08);
+  --translated-accent: #27ae60;
+  --translated-bg: rgba(39, 174, 96, 0.08);
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1e2e;
+  --bg-secondary: #222840;
+  --bg-card: #2a2f45;
+  --text-primary: #e0e0e0;
+  --text-secondary: #aab0c0;
+  --heading-color: #6aafdb;
+  --accent: #3498db;
+  --accent-hover: #5bb0e8;
+  --border-color: #3a3f55;
+  --divider: #3a3f55;
+  --input-bg: #333850;
+  --input-border: #4a4f65;
+  --success: #2ecc71;
+  --highlight-bg: rgba(52, 152, 219, 0.2);
+  --highlight-border: #5bb0e8;
+  --original-accent: #e57373;
+  --original-bg: rgba(231, 76, 60, 0.15);
+  --translated-accent: #81c784;
+  --translated-bg: rgba(39, 174, 96, 0.15);
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  transition: background 0.3s, color 0.3s;
+  min-height: 100vh;
+}
+
+header {
+  background: var(--heading-color);
+  color: #fff;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+header h1 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.theme-toggle {
+  background: none;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.3s, transform 0.3s;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  border-color: rgba(255,255,255,0.7);
+  transform: rotate(20deg);
+}
+
+main {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-color);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.card h2 {
+  color: var(--heading-color);
+  font-size: 1.35rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.card h3 {
+  color: var(--heading-color);
+  font-size: 1.1rem;
+  margin: 1.2rem 0 0.6rem;
+}
+
+.card p, .card li {
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.card ul {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.quote-block {
+  background: var(--bg-secondary);
+  border-left: 4px solid var(--accent);
+  padding: 1rem 1.2rem;
+  border-radius: 0 8px 8px 0;
+  margin: 1rem 0;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.quote-block cite {
+  display: block;
+  margin-top: 0.5rem;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--heading-color);
+  font-size: 0.9rem;
+}
+
+/* Example selector */
+.example-selector {
+  margin-bottom: 1.5rem;
+}
+
+.example-selector label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--heading-color);
+}
+
+.example-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.example-tab {
+  padding: 0.6rem 1.2rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.example-tab:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.example-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* Translator interface */
+.translator-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.translator-panel {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  padding: 1.2rem;
+  border: 2px solid var(--border-color);
+  transition: border-color 0.3s;
+  min-height: 180px;
+}
+
+.translator-panel.original {
+  border-color: var(--original-accent);
+}
+
+.translator-panel.translated {
+  border-color: var(--translated-accent);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--divider);
+}
+
+.panel-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+}
+
+.original .panel-icon {
+  background: var(--original-accent);
+}
+
+.translated .panel-icon {
+  background: var(--translated-accent);
+}
+
+.panel-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.panel-content {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+
+.panel-content .highlight {
+  background: var(--highlight-bg);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  border-bottom: 2px solid var(--highlight-border);
+  transition: background 0.3s;
+}
+
+.original .panel-content .highlight {
+  background: var(--original-bg);
+  border-bottom-color: var(--original-accent);
+}
+
+.translated .panel-content .highlight {
+  background: var(--translated-bg);
+  border-bottom-color: var(--translated-accent);
+}
+
+/* Translation arrow */
+.translate-arrow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.arrow-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 0.8rem 2rem;
+  border-radius: 30px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.3s, transform 0.2s;
+  box-shadow: var(--shadow);
+}
+
+.arrow-btn:hover {
+  background: var(--accent-hover);
+  transform: scale(1.02);
+}
+
+.arrow-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.arrow-btn.translated-state {
+  background: var(--success);
+}
+
+/* Explanation section */
+.explanation-box {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  padding: 1.2rem;
+  margin-top: 1rem;
+  border-left: 4px solid var(--accent);
+}
+
+.explanation-box h4 {
+  color: var(--heading-color);
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.explanation-box p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+.transformation-list {
+  margin-top: 0.8rem;
+}
+
+.transformation-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px dashed var(--divider);
+}
+
+.transformation-item:last-child {
+  border-bottom: none;
+}
+
+.trans-original {
+  background: var(--original-bg);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  color: var(--original-accent);
+  font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.trans-arrow {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.trans-translated {
+  background: var(--translated-bg);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  color: var(--translated-accent);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+/* Navigation */
+.nav-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  gap: 1rem;
+}
+
+.nav-btn {
+  padding: 0.7rem 1.5rem;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.nav-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Progress indicator */
+.progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.progress-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border-color);
+  transition: background 0.3s, transform 0.3s;
+}
+
+.progress-dot.active {
+  background: var(--accent);
+  transform: scale(1.2);
+}
+
+.progress-dot.viewed {
+  background: var(--success);
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease;
+}
+
+/* Hidden */
+.hidden {
+  display: none !important;
+}
+
+/* Visibility for translation */
+.invisible {
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.visible {
+  opacity: 1;
+}
+
+/* Footer */
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  header {
+    padding: 0.8rem 1rem;
+  }
+  header h1 {
+    font-size: 1rem;
+  }
+  main {
+    padding: 1rem;
+  }
+  .card {
+    padding: 1.3rem;
+  }
+  .translator-container {
+    grid-template-columns: 1fr;
+  }
+  .example-tabs {
+    flex-direction: column;
+  }
+  .example-tab {
+    text-align: center;
+  }
+  .transformation-item {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .trans-arrow {
+    transform: rotate(90deg);
+  }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Переводчик на Talking As If</h1>
+  <button class="theme-toggle" id="themeToggle" title="Сменить тему">☀️</button>
+</header>
+
+<main>
+  <!-- Info Section -->
+  <section class="card">
+    <h2>О подходе «Talking As If»</h2>
+    <p>Когда мы описываем поведение больших языковых моделей (LLM), мы часто используем <strong>антропоморфный язык</strong>: говорим, что модель «понимает», «думает», «хочет», «знает». Это создаёт ложное впечатление о наличии у алгоритмов человеческой субъектности.</p>
+    
+    <div class="quote-block">
+      «Мы должны быть предельно точны в языке, который используем для описания LLM. Когда мы говорим, что модель "понимает" или "знает", мы должны понимать это как сокращение для "ведёт себя так, как если бы понимала/знала"».
+      <cite>— Мюррей Шанахан, «Talking About Large Language Models»</cite>
+    </div>
+
+    <h3>Суть подхода</h3>
+    <p>Подход <strong>Talking As If</strong> предлагает явно маркировать антропоморфные высказывания конструкцией <em>«как если бы»</em> (as if). Это сохраняет удобство описания, но напоминает о разнице между поведением и внутренним состоянием.</p>
+
+    <h3>Как пользоваться переводчиком</h3>
+    <p>Выберите один из примеров ниже, нажмите кнопку «Перевести» и посмотрите, как антропоморфное высказывание трансформируется в формулировку Talking As If. Обратите внимание на подсвеченные фрагменты и пояснения.</p>
+  </section>
+
+  <!-- Translator Section -->
+  <section class="card">
+    <h2>Интерактивный переводчик</h2>
+    
+    <div class="example-selector">
+      <label>Выберите пример для перевода:</label>
+      <div class="example-tabs" id="exampleTabs"></div>
+    </div>
+
+    <div class="translator-container">
+      <div class="translator-panel original">
+        <div class="panel-header">
+          <div class="panel-icon">A</div>
+          <div class="panel-title">Антропоморфный дискурс</div>
+        </div>
+        <div class="panel-content" id="originalText"></div>
+      </div>
+
+      <div class="translator-panel translated">
+        <div class="panel-header">
+          <div class="panel-icon">T</div>
+          <div class="panel-title">Talking As If</div>
+        </div>
+        <div class="panel-content invisible" id="translatedText"></div>
+      </div>
+    </div>
+
+    <div class="translate-arrow">
+      <button class="arrow-btn" id="translateBtn">
+        <span>Перевести</span>
+        <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+      </button>
+    </div>
+
+    <div class="explanation-box hidden" id="explanationBox">
+      <h4>Что изменилось:</h4>
+      <p id="explanationText"></p>
+      <div class="transformation-list" id="transformationList"></div>
+    </div>
+
+    <div class="progress-dots" id="progressDots"></div>
+
+    <div class="nav-buttons">
+      <button class="nav-btn" id="prevBtn" disabled>Предыдущий</button>
+      <button class="nav-btn" id="nextBtn">Следующий</button>
+    </div>
+  </section>
+
+  <!-- Summary Section -->
+  <section class="card">
+    <h2>Ключевые паттерны трансформации</h2>
+    <p>При переводе на Talking As If используются следующие конструкции:</p>
+    <ul>
+      <li><strong>«ведёт себя так, как если бы...»</strong> — для описания наблюдаемого поведения</li>
+      <li><strong>«функционирует так, как если бы...»</strong> — для описания работы системы</li>
+      <li><strong>«можно описать как...»</strong> — для метафорических характеристик</li>
+      <li><strong>«производит впечатление, что...»</strong> — для субъективных оценок</li>
+    </ul>
+    <p>Эти формулировки позволяют сохранить описательную силу языка, избегая онтологических обязательств относительно внутренних состояний LLM.</p>
+  </section>
+</main>
+
+<footer>
+  <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+</footer>
+
+<script>
+(function() {
+  // JSON data with examples
+  const examplesData = {
+    "examples": [
+      {
+        "id": 1,
+        "title": "Понимание",
+        "original": "ChatGPT понимает контекст разговора и учитывает его при формировании ответа.",
+        "translated": "ChatGPT ведёт себя так, как если бы понимал контекст разговора и учитывал его при формировании ответа.",
+        "explanation": "Глагол «понимает» заменяется конструкцией «ведёт себя так, как если бы понимал». Это переносит фокус с внутреннего состояния на наблюдаемое поведение.",
+        "transformations": [
+          {"from": "понимает", "to": "ведёт себя так, как если бы понимал"},
+          {"from": "учитывает", "to": "учитывал"}
+        ],
+        "originalHighlights": ["понимает", "учитывает"],
+        "translatedHighlights": ["ведёт себя так, как если бы понимал", "учитывал"]
+      },
+      {
+        "id": 2,
+        "title": "Знание",
+        "original": "Модель знает множество фактов о мире и может отвечать на вопросы из разных областей.",
+        "translated": "Модель функционирует так, как если бы знала множество фактов о мире, и может генерировать ответы на вопросы из разных областей.",
+        "explanation": "«Знает» предполагает наличие ментального состояния знания. Формулировка «функционирует так, как если бы знала» описывает только поведение. Также «отвечать» заменено на «генерировать ответы» для большей точности.",
+        "transformations": [
+          {"from": "знает", "to": "функционирует так, как если бы знала"},
+          {"from": "может отвечать", "to": "может генерировать ответы"}
+        ],
+        "originalHighlights": ["знает", "может отвечать"],
+        "translatedHighlights": ["функционирует так, как если бы знала", "может генерировать ответы"]
+      },
+      {
+        "id": 3,
+        "title": "Намерения",
+        "original": "ИИ-ассистент хочет помочь пользователю и старается дать полезный ответ.",
+        "translated": "ИИ-ассистент запрограммирован так, что ведёт себя, как если бы хотел помочь пользователю, и генерирует ответы, которые можно охарактеризовать как полезные.",
+        "explanation": "«Хочет» и «старается» приписывают алгоритму желания и усилия. Переформулировка указывает на программную обусловленность поведения и переносит оценку «полезности» на наблюдателя.",
+        "transformations": [
+          {"from": "хочет помочь", "to": "ведёт себя, как если бы хотел помочь"},
+          {"from": "старается дать полезный", "to": "генерирует ответы, которые можно охарактеризовать как полезные"}
+        ],
+        "originalHighlights": ["хочет помочь", "старается дать полезный"],
+        "translatedHighlights": ["ведёт себя, как если бы хотел помочь", "можно охарактеризовать как полезные"]
+      },
+      {
+        "id": 4,
+        "title": "Творчество",
+        "original": "Нейросеть проявляет креативность и придумывает оригинальные идеи.",
+        "translated": "Нейросеть генерирует выходные данные, которые производят впечатление креативных, и комбинирует элементы способами, которые могут восприниматься как оригинальные.",
+        "explanation": "«Проявляет креативность» и «придумывает» предполагают творческий процесс. Переформулировка описывает результат (генерация) и переносит оценку креативности на восприятие наблюдателя.",
+        "transformations": [
+          {"from": "проявляет креативность", "to": "генерирует выходные данные, которые производят впечатление креативных"},
+          {"from": "придумывает оригинальные идеи", "to": "комбинирует элементы способами, которые могут восприниматься как оригинальные"}
+        ],
+        "originalHighlights": ["проявляет креативность", "придумывает оригинальные идеи"],
+        "translatedHighlights": ["производят впечатление креативных", "могут восприниматься как оригинальные"]
+      },
+      {
+        "id": 5,
+        "title": "Обучение",
+        "original": "Модель научилась писать стихи и теперь умеет создавать тексты в разных поэтических формах.",
+        "translated": "В результате обучения на корпусе текстов модель приобрела способность генерировать последовательности, соответствующие паттернам стихотворных форм.",
+        "explanation": "«Научилась» и «умеет» предполагают приобретение навыка как осознанный процесс. Переформулировка описывает технический процесс обучения и результат в терминах паттернов.",
+        "transformations": [
+          {"from": "научилась писать", "to": "приобрела способность генерировать"},
+          {"from": "умеет создавать", "to": "генерировать последовательности, соответствующие паттернам"}
+        ],
+        "originalHighlights": ["научилась писать", "умеет создавать"],
+        "translatedHighlights": ["приобрела способность генерировать", "соответствующие паттернам"]
+      },
+      {
+        "id": 6,
+        "title": "Размышление",
+        "original": "LLM думает над сложным вопросом и рассуждает, прежде чем дать ответ.",
+        "translated": "LLM обрабатывает сложный запрос, и её выходные данные могут быть структурированы так, как если бы им предшествовало рассуждение.",
+        "explanation": "«Думает» и «рассуждает» приписывают когнитивные процессы. Переформулировка описывает обработку данных и структуру выхода без утверждений о внутренних процессах.",
+        "transformations": [
+          {"from": "думает над", "to": "обрабатывает"},
+          {"from": "рассуждает, прежде чем дать ответ", "to": "выходные данные структурированы так, как если бы им предшествовало рассуждение"}
+        ],
+        "originalHighlights": ["думает", "рассуждает"],
+        "translatedHighlights": ["обрабатывает", "как если бы им предшествовало рассуждение"]
+      },
+      {
+        "id": 7,
+        "title": "Эмоции",
+        "original": "Чат-бот сочувствует пользователю и выражает поддержку в трудной ситуации.",
+        "translated": "Чат-бот генерирует ответы, стилистически оформленные так, как если бы выражали сочувствие, используя речевые паттерны поддержки.",
+        "explanation": "«Сочувствует» приписывает эмоциональное состояние. Переформулировка фокусируется на стилистике генерируемого текста и используемых речевых паттернах.",
+        "transformations": [
+          {"from": "сочувствует", "to": "генерирует ответы, стилистически оформленные так, как если бы выражали сочувствие"},
+          {"from": "выражает поддержку", "to": "используя речевые паттерны поддержки"}
+        ],
+        "originalHighlights": ["сочувствует", "выражает поддержку"],
+        "translatedHighlights": ["как если бы выражали сочувствие", "речевые паттерны поддержки"]
+      },
+      {
+        "id": 8,
+        "title": "Ошибки",
+        "original": "Иногда модель ошибается и признаёт свои заблуждения, когда ей на них указывают.",
+        "translated": "Иногда модель генерирует некорректные выходные данные. При указании на несоответствия она может сгенерировать ответ, имеющий форму признания ошибки.",
+        "explanation": "«Ошибается» и «признаёт заблуждения» предполагают осознание. Переформулировка описывает генерацию некорректных данных и формальную структуру последующего ответа.",
+        "transformations": [
+          {"from": "ошибается", "to": "генерирует некорректные выходные данные"},
+          {"from": "признаёт свои заблуждения", "to": "может сгенерировать ответ, имеющий форму признания ошибки"}
+        ],
+        "originalHighlights": ["ошибается", "признаёт свои заблуждения"],
+        "translatedHighlights": ["генерирует некорректные выходные данные", "имеющий форму признания ошибки"]
+      }
+    ]
+  };
+
+  // State
+  let currentIndex = 0;
+  let isTranslated = false;
+  let viewedExamples = new Set();
+
+  // DOM elements
+  const themeToggle = document.getElementById('themeToggle');
+  const exampleTabs = document.getElementById('exampleTabs');
+  const originalText = document.getElementById('originalText');
+  const translatedText = document.getElementById('translatedText');
+  const translateBtn = document.getElementById('translateBtn');
+  const explanationBox = document.getElementById('explanationBox');
+  const explanationText = document.getElementById('explanationText');
+  const transformationList = document.getElementById('transformationList');
+  const progressDots = document.getElementById('progressDots');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  // Theme toggle
+  let isDark = false;
+  themeToggle.addEventListener('click', () => {
+    isDark = !isDark;
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : '');
+    themeToggle.textContent = isDark ? '🌙' : '☀️';
+  });
+
+  // Initialize tabs
+  function initTabs() {
+    examplesData.examples.forEach((ex, index) => {
+      const tab = document.createElement('button');
+      tab.className = 'example-tab' + (index === 0 ? ' active' : '');
+      tab.textContent = ex.title;
+      tab.addEventListener('click', () => selectExample(index));
+      exampleTabs.appendChild(tab);
+    });
+  }
+
+  // Initialize progress dots
+  function initProgressDots() {
+    examplesData.examples.forEach((_, index) => {
+      const dot = document.createElement('div');
+      dot.className = 'progress-dot' + (index === 0 ? ' active' : '');
+      progressDots.appendChild(dot);
+    });
+  }
+
+  // Update progress dots
+  function updateProgressDots() {
+    const dots = progressDots.querySelectorAll('.progress-dot');
+    dots.forEach((dot, index) => {
+      dot.classList.remove('active');
+      if (index === currentIndex) {
+        dot.classList.add('active');
+      }
+      if (viewedExamples.has(index)) {
+        dot.classList.add('viewed');
+      }
+    });
+  }
+
+  // Update tabs
+  function updateTabs() {
+    const tabs = exampleTabs.querySelectorAll('.example-tab');
+    tabs.forEach((tab, index) => {
+      tab.classList.toggle('active', index === currentIndex);
+    });
+  }
+
+  // Highlight text
+  function highlightText(text, highlights) {
+    let result = text;
+    highlights.forEach(h => {
+      const regex = new RegExp(`(${h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      result = result.replace(regex, '<span class="highlight">$1</span>');
+    });
+    return result;
+  }
+
+  // Select example
+  function selectExample(index) {
+    currentIndex = index;
+    isTranslated = false;
+    const example = examplesData.examples[index];
+
+    // Update original text with highlights
+    originalText.innerHTML = highlightText(example.original, example.originalHighlights);
+    originalText.classList.add('fade-in');
+
+    // Reset translated text
+    translatedText.innerHTML = '';
+    translatedText.classList.add('invisible');
+    translatedText.classList.remove('visible');
+
+    // Reset button
+    translateBtn.innerHTML = '<span>Перевести</span><svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>';
+    translateBtn.classList.remove('translated-state');
+
+    // Hide explanation
+    explanationBox.classList.add('hidden');
+
+    // Update UI
+    updateTabs();
+    updateProgressDots();
+    updateNavButtons();
+
+    // Remove animation class after animation
+    setTimeout(() => {
+      originalText.classList.remove('fade-in');
+    }, 400);
+  }
+
+  // Translate current example
+  function translateExample() {
+    if (isTranslated) {
+      // Reset to show again
+      selectExample(currentIndex);
+      return;
+    }
+
+    const example = examplesData.examples[currentIndex];
+
+    // Show translated text with highlights
+    translatedText.innerHTML = highlightText(example.translated, example.translatedHighlights);
+    translatedText.classList.remove('invisible');
+    translatedText.classList.add('visible', 'fade-in');
+
+    // Update button
+    translateBtn.innerHTML = '<span>Показать снова</span><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>';
+    translateBtn.classList.add('translated-state');
+
+    // Show explanation
+    explanationText.textContent = example.explanation;
+    transformationList.innerHTML = '';
+    example.transformations.forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'transformation-item';
+      item.innerHTML = `
+        <span class="trans-original">${t.from}</span>
+        <span class="trans-arrow">→</span>
+        <span class="trans-translated">${t.to}</span>
+      `;
+      transformationList.appendChild(item);
+    });
+    explanationBox.classList.remove('hidden');
+    explanationBox.classList.add('fade-in');
+
+    isTranslated = true;
+    viewedExamples.add(currentIndex);
+    updateProgressDots();
+
+    setTimeout(() => {
+      translatedText.classList.remove('fade-in');
+      explanationBox.classList.remove('fade-in');
+    }, 400);
+  }
+
+  // Update navigation buttons
+  function updateNavButtons() {
+    prevBtn.disabled = currentIndex === 0;
+    nextBtn.disabled = currentIndex === examplesData.examples.length - 1;
+  }
+
+  // Event listeners
+  translateBtn.addEventListener('click', translateExample);
+
+  prevBtn.addEventListener('click', () => {
+    if (currentIndex > 0) {
+      selectExample(currentIndex - 1);
+    }
+  });
+
+  nextBtn.addEventListener('click', () => {
+    if (currentIndex < examplesData.examples.length - 1) {
+      selectExample(currentIndex + 1);
+    }
+  });
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' && currentIndex > 0) {
+      selectExample(currentIndex - 1);
+    } else if (e.key === 'ArrowRight' && currentIndex < examplesData.examples.length - 1) {
+      selectExample(currentIndex + 1);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      translateExample();
+    }
+  });
+
+  // Initialize
+  initTabs();
+  initProgressDots();
+  selectExample(0);
+})();
+</script>
+</body>
+</html>
+```

@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --accent: #4a90e2;
+            --accent-hover: #357abd;
+            --border: #e0e0e0;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-card: #2d2d2d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --accent: #5aa3f0;
+            --accent-hover: #4a90e2;
+            --border: #404040;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background-color: var(--bg-secondary);
+            padding: 20px 0;
+            box-shadow: 0 2px 10px var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--accent);
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .add-joke-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 30px 0;
+            transition: background-color 0.3s ease;
+        }
+
+        .add-joke-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .jokes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        .joke-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .joke-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px var(--shadow);
+        }
+
+        .joke-author {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .joke-text {
+            font-size: 1.1rem;
+            font-style: italic;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .linguistic-analysis {
+            margin-top: 15px;
+        }
+
+        .analysis-title {
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .analysis-item {
+            margin-bottom: 12px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .analysis-item::before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+        }
+
+        .analysis-item strong {
+            color: var(--accent);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--bg-card);
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--text-secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--text-primary);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.4rem;
+            }
+            
+            .jokes-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .modal-content {
+                padding: 20px;
+            }
+        }
+		footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+        }
+		
+		
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <h1>LLM шутят)</h1>
+				
+                <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+            </div>
+        </div>
+    </header>
+
+
+    <main class="container">
+        <button class="add-joke-btn" onclick="openModal()">+ Добавить шутку</button>
+        
+        <div class="jokes-grid" id="jokesGrid">
+            <!-- Jokes will be dynamically inserted here -->
+        </div>
+    </main>
+
+    <!-- Modal for adding jokes -->
+    <div class="modal" id="jokeModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <h2>Добавить новую шутку</h2>
+            
+            <form id="jokeForm">
+                <div class="form-group">
+                    <label for="author">Авторы (ФИ + LLM):</label>
+                    <input type="text" id="author" required placeholder="Например: Орлова Ева + Claude 4 Opus">
+                </div>
+                
+                <div class="form-group">
+                    <label for="jokeText">Текст шутки:</label>
+                    <textarea id="jokeText" required placeholder="Введите текст шутки..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="analysis">Лингвистический анализ:</label>
+                    <textarea id="analysis" required placeholder="Опишите лингвистические средства создания юмористического эффекта..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Sample jokes data
+        let jokes = [
+            {
+"author": "Gemini",
+"text": "Студент-первокурсник: «Профессор, я проанализировал дискурс нейросети, и мне кажется, она глубоко осознаёт концепт одиночества». — Профессор: «Коллега, не путайте интенциональность субъекта с высокой вероятностью появления токена 'грустно' после токена 'мне' в обучающей выборке».",
+"analysis": [
+"Категориальная ошибка: Приписывание предикатов психического состояния (осознание) статистическому распределению (вероятность токена).",
+"Терминологический диссонанс: Резкий переход от гуманитарного слова «одиночество» к техническому «обучающая выборка» создает комический эффект демистификации.",
+"Высмеивание антропоморфизма: Ирония над стремлением лингвиста видеть «душу» там, где есть только математическая аппроксимация языка."
+]
+},
+{
+"author": "Gemini",
+"text": "— Как понять, что перед тобой лингвист, перечитавший статей об ИИ? — Он перестаёт говорить 'я думаю' и начинает говорить 'мои веса распределились в пользу данного высказывания'.",
+"analysis": [
+"Обратный антропоморфизм (механоморфизм): Комический эффект возникает из-за того, что человек начинает описывать себя терминами машины, совершая обратную категориальную ошибку.",
+"Стилистический контраст: Замена экзистенциального глагола «думать» на тяжеловесную техническую конструкцию.",
+"Сатира на редукционизм: Высмеивание идеи о том, что человеческий мозг и LLM функционально тождественны."
+]
+},
+
+
+{
+"author": "Gemini",
+"text": "Лингвист-теоретик спорит с разработчиком: «Ваша модель лжёт и галлюцинирует!» — Разработчик: «Она не лжёт. Лгать — значит знать истину и намеренно её скрывать. А она просто оптимизирует функцию потерь в пространстве, где истины никогда не было». — Лингвист: «Поздравляю, вы изобрели постмодернизм на Python».",
+"analysis": [
+"Прагматическая ловушка: Ошибка в употреблении глагола «лгать», требующего наличия интенции (намерения), которой нет у алгоритма.",
+"Категориальный сдвиг: Столкновение этической категории («ложь») и математической («функция потерь»).",
+"Культурологическая отсылка: Ироничное приравнивание технического несовершенства ИИ к философскому течению, отрицающему объективную истину."
+]
+},
+
+{
+"author": "Gemini",
+"text": "Экзамен по теории языка. Билет: 'Языковая личность'. Студент: «Я считаю, что LLM — это коллективная языковая личность...» — Экзаменатор: «В таком случае, голубчик, и Т9 — это поэт-минималист с тяжёлой формой когнитивного искажения».",
+"analysis": [
+"Reductio ad absurdum: Доведение идеи о «личности» ИИ до абсурда через сравнение с простейшим алгоритмом автозамены.",
+"Редукционизм: Высмеивание попытки расширить классическое понятие «языковой личности» на статистические модели.",
+"Метафора: Использование клинических терминов («когнитивное искажение») в отношении кода подчеркивает неуместность психологизации софта."
+]
+},
+
+{
+"author": "Gemini",
+"text": "Студент-семиолог: «Профессор, если ИИ генерирует означающее без интенции к означаемому, является ли он симулякром четвертого порядка?». Профессор: «Голубчик, если вы еще раз назовете автозамену в моем телефоне Жаном Бодрийяром, я поставлю вам 'неуд' пятого порядка».",
+"analysis": [
+"Терминологическая эклектика: Смешение структуралистской лингвистики (Соссюр), постструктурализма (Бодрийяр) и мобильных технологий.",
+"Высмеивание избыточной теоретизации: Ирония над попыткой применить сложнейший философский аппарат к простым техническим решениям.",
+"Категориальный сдвиг: Обыденный гаджет возводится в статус метафизического объекта."
+]
+},
+
+{
+"author": "Gemini",
+"text": "Хомскианец заходит в серверную и спрашивает: «Где здесь находится модуль Универсальной Грамматики?». Инженер Google молча указывает на массив из десяти тысяч GPU. Хомскианец вздыхает: «Я так и знал, что врожденные идеи нынче потребляют слишком много электричества».",
+"analysis": [
+"Категориальная ошибка: Попытка локализовать абстрактную лингвистическую структуру (LAD) в физическом «железе».",
+"Ирония над нативизмом: Столкновение теории «бедного стимула» (детям не нужно много данных) с реальностью LLM, которым нужны триллионы токенов.",
+"Метафора: Представление теоретического концепта как энергозатратного процесса."
+]
+},
+{
+"author": "Gemini",
+"text": "Встречаются структуралист, генеративист и LLM. Структуралист: «Я опишу твои элементы». Генеративист: «Я выведу твои правила». LLM: «Я просто предскажу ваше следующее слово». Структуралист и генеративист (хором): «Это не лингвистика, это гадание на кофейной гуще!». LLM: «...с вероятностью 0.98 кофейная гуща является побочным продуктом академического дискурса».",
+"analysis": [
+"Метаязыковая ирония: Модель перехватывает инициативу и описывает деятельность ученых в своих статистических терминах.",
+"Конфликт парадигм: Противопоставление объяснительной лингвистики (почему так?) предсказательной силе нейросетей (что дальше?).",
+"Рекурсия: Ответ нейросети демонстрирует её способность к имитации любого стиля, обесценивая попытки «втиснуть» её в рамки классических школ."
+]
+},
+
+
+
+{
+"author": "Gemini",
+"text": "Студент-социолингвист: «Я подсчитал, в ответе нейросети ровно 100 слов, это идеальный лексический объём!». Инженер-разработчик: «Вообще-то, там 148 токенов». Студент: «А куда делись остальные 48 слов?». Инженер: «Они не исчезли, они просто деконструировались на префиксы и флексии, потому что ваша 'лингвистическая единица' не влезла в мой контекстный чип».",
+"analysis": [
+"Категориальная ошибка: Отождествление лингвистической единицы (слово) с единицей обработки данных (токен).",
+"Редукционизм: Ирония над тем, как математическая оптимизация (BPE-токенизация) игнорирует целостность морфемы.",
+"Комический эффект: Столкновение гуманитарного ожидания («лексический объём») с технической необходимостью («контекстный чип»), где смысл буквально «нарезается» на куски ради экономии памяти."
+]
+},
+
+{
+"author": "Gemini",
+"text": "Студент: «Профессор, я нашел идеальный словарь будущего — это Token Vocabulary нейросети! Там нет лишней семантики, только чистые формы». — Профессор: «Коллега, боюсь, ваш словарь будущего — это лексикографический кошмар, где слово 'лингвистика' живет в трех разных квартирах, а половина жильцов — это одинокие запятые и фрагменты немецких артиклей».",
+"analysis": [
+"Категориальная ошибка: Смешение лексикографического словаря (системы лексем) с вектором токенов (статистическим индексом символьных последовательностей).",
+"Абсурдизация: Представление фрагментации слова как «жизни в разных квартирах», что подчеркивает потерю семантической целостности.",
+"Высмеивание редукционизма: Ирония над попыткой выдать технический список фрагментов (subword units) за полноценное описание языка."
+]
+},
+
+{
+"author": "Gemini",
+"text": "Преподаватель: «В чем разница между компетенцией Хомского и производительностью GPT?». Студент: «Компетенция — это когда ты идеально знаешь правила, но никогда не говоришь. А GPT — это когда ты переговорил со всем миром, но так и не понял ни одного правила».",
+"analysis": [
+"Дихотомия competence/performance: Ироничная интерпретация классического разделения на знание языка и его использование.",
+"Редукционизм: Сведение сложной архитектуры трансформеров к «бессознательному» говорению.",
+"Парадокс: Высмеивание ситуации, где имитация деятельности (output) оказывается эффективнее теоретического идеала."
+]
+},
+
+{
+"author": "Gemini",
+"text": "Лингвист спрашивает у модели: «Сколько значений у слова 'замок'?». Модель: «Смотря как я его порежу. Если на два токена — то два, а если заклинит на одном — то это просто 4 байта неопределенности».",
+"analysis": [
+"Абсурдизация: Высмеивание идеи, что семантика слова зависит от алгоритма сегментации (Byte Pair Encoding).",
+"Техно-детерминизм: Сарказм по поводу того, что для машины «значение» — это не контекст в сознании, а результат фрагментации строки.",
+"Лингвистический каламбур: Игра на понятии «неопределенности», которая в лингвистике касается смысла, а в IT — ошибки кодировки."
+]
+}
+
+
+        ];
+
+        // Theme management
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Load saved theme
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Modal management
+        function openModal() {
+            document.getElementById('jokeModal').classList.add('active');
+            document.getElementById('author').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('jokeModal').classList.remove('active');
+            document.getElementById('jokeForm').reset();
+        }
+
+        // Render jokes with animation
+        function renderJokes() {
+            const jokesGrid = document.getElementById('jokesGrid');
+            
+            // Clear existing jokes
+            while (jokesGrid.firstChild) {
+                jokesGrid.removeChild(jokesGrid.firstChild);
+            }
+            
+            // Add jokes with animation
+            jokes.forEach(joke => {
+                const jokeCard = document.createElement('div');
+                jokeCard.className = 'joke-card';
+                
+                const analysisHTML = joke.analysis.map(item => 
+                    `<div class="analysis-item">${item}</div>`
+                ).join('');
+                
+                jokeCard.innerHTML = `
+                    <div class="joke-author">Автор: ${joke.author}</div>
+                    <div class="joke-text">${joke.text}</div>
+                    <div class="linguistic-analysis">
+                        <div class="analysis-title">Лингвистические средства создания юмористического эффекта:</div>
+                        ${analysisHTML}
+                    </div>
+                `;
+                
+                jokesGrid.appendChild(jokeCard);
+            });
+        }
+
+        // Parse analysis text into array
+        function parseAnalysisText(text) {
+            return text.split('\n')
+                .filter(line => line.trim())
+                .map(line => {
+                    if (line.includes(':')) {
+                        const [category, ...rest] = line.split(':');
+                        return `<strong>${category.trim()}:</strong> ${rest.join(':').trim()}`;
+                    }
+                    return line;
+                });
+        }
+
+        // Save jokes to localStorage
+        function saveJokes() {
+            try {
+                localStorage.setItem('llmJokes', JSON.stringify(jokes));
+            } catch (e) {
+                console.error('Failed to save jokes to localStorage:', e);
+            }
+        }
+
+        // Load jokes from localStorage
+        function loadJokes() {
+            try {
+                const savedJokes = localStorage.getItem('llmJokes');
+                if (savedJokes) {
+                    jokes = JSON.parse(savedJokes);
+                }
+            } catch (e) {
+                console.error('Failed to load jokes from localStorage:', e);
+            }
+        }
+
+        // Form submission handler
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const author = document.getElementById('author').value.trim();
+            const jokeText = document.getElementById('jokeText').value.trim();
+            const analysis = document.getElementById('analysis').value.trim();
+            
+            if (!author || !jokeText || !analysis) {
+                alert('Пожалуйста, заполните все поля!');
+                return;
+            }
+            
+            const analysisArray = parseAnalysisText(analysis);
+            
+            jokes.push({
+                author: author,
+                text: jokeText,
+                analysis: analysisArray
+            });
+            
+            saveJokes();
+            renderJokes();
+            closeModal();
+        }
+
+        // Initialize the app
+        function init() {
+            loadJokes();
+            loadTheme();
+            renderJokes();
+            
+            // Set up event listeners
+            document.getElementById('jokeForm').addEventListener('submit', handleFormSubmit);
+            
+            document.getElementById('jokeModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeModal();
+                }
+            });
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && document.getElementById('jokeModal').classList.contains('active')) {
+                    closeModal();
+                }
+            });
+            
+            // Add helper text for analysis input
+            document.getElementById('analysis').setAttribute('placeholder', 
+                'Опишите лингвистические средства создания юмористического эффекта.\n' +
+                'Например:\n' +
+                'Игра слов: описание...\n' +
+                'Метафора: описание...\n' +
+                'Ирония: описание...'
+            );
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
