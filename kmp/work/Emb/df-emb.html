@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>Embedding </h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp |  CC BY-NC-SA 4.0</p>
+<p>Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+                       
+{
+    "ru": {
+      "term": "Эмбеддинг",
+      "equivalent": "Embedding",
+      "definition": "Превращение текста в набор чисел, который компьютер может понять и сравнивать. Как если бы мы превратили запахи в цифры — похожие запахи получили бы похожие наборы цифр.",
+      "category": "школьный уровень, интуитивное объяснение, базовое понимание"
+    },
+    "en": {
+      "term": "Embedding",
+      "equivalent": "Эмбеддинг",
+      "definition": "Turning text into a set of numbers that a computer can understand and compare. Like converting smells into digits — similar smells would get similar sets of numbers.",
+      "category": "school level, intuitive explanation, basic understanding"
+    }
+  },
+  {
+    "ru": {
+      "term": "Эмбеддинг",
+      "equivalent": "Embedding",
+      "definition": "Векторное представление лингвистической единицы (токена, текста) в многомерном семантическом пространстве, где близость векторов отражает семантико-прагматическую близость соответствующих единиц.",
+      "category": "лингвистика, семантика, дистрибутивная парадигма"
+    },
+    "en": {
+      "term": "Embedding",
+      "equivalent": "Эмбеддинг",
+      "definition": "A vector representation of a linguistic unit (token, text) in a multidimensional semantic space where vector proximity reflects the semantic-pragmatic proximity of the corresponding units.",
+      "category": "linguistics, semantics, distributional paradigm"
+    }
+  },
+  {
+    "ru": {
+      "term": "Эмбеддинг",
+      "equivalent": "Embedding",
+      "definition": "Дифференцируемое отображение из дискретного пространства токенов в непрерывное векторное пространство фиксированной размерности, параметры которого оптимизируются в процессе обучения нейронной сети.",
+      "category": "математика, машинное обучение, дифференцируемое программирование"
+    },
+    "en": {
+      "term": "Embedding",
+      "equivalent": "Эмбеддинг",
+      "definition": "A differentiable mapping from a discrete token space to a continuous vector space of fixed dimension, whose parameters are optimized during neural network training.",
+      "category": "mathematics, machine learning, differentiable programming"
+    }
+  },
+  {
+    "ru": {
+      "term": "Эмбеддинг",
+      "equivalent": "Embedding",
+      "definition": "Плотное векторное представление, получаемое через слой lookup-таблицы или контекстно-зависимый энкодер, используемое как входное представление для последующих слоев трансформера или других архитектур глубокого обучения.",
+      "category": "технология, NLP-инженерия, архитектура трансформеров"
+    },
+    "en": {
+      "term": "Embedding",
+      "equivalent": "Эмбеддинг",
+      "definition": "A dense vector representation obtained via a lookup table layer or context-dependent encoder, used as input representation for subsequent layers of a transformer or other deep learning architectures.",
+      "category": "technology, NLP engineering, transformer architecture"
+    }
+  },
+  {
+    "ru": {
+      "term": "Эмбеддинг",
+      "equivalent": "Embedding",
+      "definition": "Техника трансляции дискретных знаковых систем в топологию непрерывных многообразий, размывающая границы между отдельными символами в пользу градиентных полей смысла, что ставит под вопрос онтологический статус лингвистической единицы как дискретной сущности.",
+      "category": "философия языка, постструктурализм, онтология знака"
+    },
+    "en": {
+      "term": "Embedding",
+      "equivalent": "Эмбеддинг",
+      "definition": "A technique of translating discrete sign systems into the topology of continuous manifolds, blurring boundaries between individual symbols in favor of gradient fields of meaning, thus questioning the ontological status of a linguistic unit as a discrete entity.",
+      "category": "philosophy of language, post-structuralism, ontology of the sign"
+    }
+  },
+  {
+    "ru": {
+      "term": "Эмбеддинг",
+      "equivalent": "Embedding",
+      "definition": "Инструмент педагогической лингводидактики, позволяющий визуализировать семантические отношения между лексическими единицами через проекцию векторов на плоскость, что способствует формированию у обучающихся интуиции о семантической близости и полисемии.",
+      "category": "методика преподавания, лингводидактика, визуализация"
+    },
+    "en": {
+      "term": "Embedding",
+      "equivalent": "Эмбеддинг",
+      "definition": "A pedagogical linguo-didactic tool enabling visualization of semantic relations between lexical units through vector projection onto a plane, facilitating learners' intuition about semantic proximity and polysemy.",
+      "category": "language teaching methodology, linguo-didactics, visualization"
+    }
+  },
+  {
+    "ru": {
+      "term": "Эмбеддинг",
+      "equivalent": "Embedding",
+      "definition": "Результат операции вложения структур данных в метрическое пространство с сохранением семантической эквивалентности: топологически близкие точки в пространстве эмбеддингов соответствуют функционально схожим контекстам использования в исходном корпусе.",
+      "category": "корпусная лингвистика, статистическая семантика, 2000–2020-е гг."
+    },
+    "en": {
+      "term": "Embedding",
+      "equivalent": "Эмбеддинг",
+      "definition": "The result of embedding data structures into a metric space while preserving semantic equivalence: topologically close points in the embedding space correspond to functionally similar contexts of usage in the source corpus.",
+      "category": "corpus linguistics, statistical semantics, 2000s–2020s"
+    }
+  },
+  {
+    "ru": {
+      "term": "Эмбеддинг",
+      "equivalent": "Embedding",
+      "definition": "Низкоразмерное представление высокоразмерного разреженного вектора признаков (например, one-hot encoding токенов), осуществляющее компрессию информации и выявление латентных семантических закономерностей через матричную факторизацию или нелинейное преобразование.",
+      "category": "математика, линейная алгебра, снижение размерности"
+    },
+    "en": {
+      "term": "Embedding",
+      "equivalent": "Эмбеддинг",
+      "definition": "A low-dimensional representation of a high-dimensional sparse feature vector (e.g., one-hot encoding of tokens), performing information compression and revealing latent semantic patterns through matrix factorization or nonlinear transformation.",
+      "category": "mathematics, linear algebra, dimensionality reduction"
+    }
+  },
+  {
+  "ru": {
+    "term": "Эмбеддинг",
+    "equivalent": "Embedding",
+    "definition": "Тензорная структура фиксированной размерности, получаемая в результате проекции последовательности токенов через параметризованное отображение; служит входным сигналом для механизмов самовнимания и позиционно-зависимых преобразований в многослойных архитектурах обработки последовательностей.",
+    "category": "техническая спецификация, интероперабельность систем, формальный протокол"
+  },
+  "en": {
+    "term": "Embedding",
+    "equivalent": "Эмбеддинг",
+    "definition": "A fixed-dimension tensor structure obtained by projecting a token sequence through a parameterized mapping; serves as input signal for self-attention mechanisms and position-dependent transformations in multilayer sequence processing architectures.",
+    "category": "technical specification, system interoperability, formal protocol"
+  }
+}
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        /* --- CSS VARIABLES & THEMES --- */
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #546e7a;
+            --accent-primary: #325980; /* Navigation & Headers */
+            --accent-interactive: #3498db; /* Buttons & Links */
+            --border-color: #f1f1f1;
+            --shadow: 0 4px 6px rgba(0,0,0,0.05);
+            --transition-speed: 0.3s;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #121212;
+            --bg-secondary: #1e1e1e;
+            --bg-card: #2c2c2c;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0bec5;
+            --accent-primary: #8faecf; /* Lighter blue for dark mode readability */
+            --accent-interactive: #5dade2;
+            --border-color: #333333;
+            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        /* --- RESET & BASE STYLES --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color var(--transition-speed), color var(--transition-speed);
+        }
+
+        a { text-decoration: none; color: inherit; }
+        ul { list-style: none; }
+
+        /* --- HEADER & NAV --- */
+        header {
+            background-color: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            padding: 0 20px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-interactive);
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background-color: var(--bg-secondary);
+        }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            background-color: var(--bg-secondary);
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            color: var(--accent-primary);
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* --- MAIN CONTENT CONTAINER --- */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        section {
+            margin-bottom: 80px;
+        }
+
+        h2 {
+            color: var(--accent-primary);
+            font-size: 2rem;
+            margin-bottom: 30px;
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background-color: var(--accent-interactive);
+        }
+
+        /* --- LEVELS OF INTIMACY GRID --- */
+        .levels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        .level-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+        }
+
+        .level-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .level-card h3 {
+            color: var(--accent-primary);
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .level-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* --- QUOTE BLOCK --- */
+        .quote-block {
+            background-color: var(--bg-secondary);
+            border-left: 5px solid var(--accent-interactive);
+            padding: 30px;
+            margin: 40px 0;
+            border-radius: 0 12px 12px 0;
+            font-style: italic;
+            color: var(--text-primary);
+        }
+
+        /* --- PLAYFUL SECTION (ACCORDION/CARDS) --- */
+        .playful-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .playful-item {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .playful-header {
+            padding: 20px 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-secondary);
+            transition: background-color 0.2s;
+        }
+
+        .playful-header:hover {
+            background-color: #eef2f5;
+        }
+        
+        [data-theme="dark"] .playful-header:hover {
+            background-color: #3a3a3a;
+        }
+
+        .playful-title {
+            font-weight: 700;
+            color: var(--accent-primary);
+            font-size: 1.1rem;
+        }
+
+        .playful-content {
+            padding: 0 25px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, padding 0.4s ease;
+            opacity: 0;
+        }
+
+        .playful-content.active {
+            padding: 25px;
+            max-height: 500px; /* Approximate max height */
+            opacity: 1;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .playful-content p {
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+        }
+
+        .joke {
+            background-color: var(--bg-secondary);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: var(--accent-primary);
+            font-weight: 500;
+        }
+
+        /* --- FOOTER --- */
+        footer {
+            background-color: var(--bg-secondary);
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none; /* Simple hide for mobile, ideally hamburger menu */
+            }
+            .hero h1 { font-size: 2rem; }
+            .logo { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="logo">Embeddings: Secret</div>
+        <nav class="nav-links">
+            <a href="#intro">Введение</a>
+            <a href="#levels">Погружение</a>
+            <a href="#playful">Тайная жизнь слов</a>
+        </nav>
+        <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">
+            ☀️
+        </button>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="intro">
+        <h1>Контекстуальная близость</h1>
+        <p>
+            Токенизация — инженерный компромисс. <br>Эмбеддинги — пространство оформления смыслов.
+        </p>
+    </section>
+
+    <!-- Main Content -->
+    <div class="container">
+        
+        <!-- Section 1: The Problem & Metaphor -->
+        <section id="levels">
+            <h2>Три уровня близости</h2>
+            <p style="margin-bottom: 30px; color: var(--text-secondary);">
+               Embedding образовано от глагола embed = префикс em-(от лат. in- «в») + корень bed). Bed из древнеангл. bedd («ложе, постель») восходит к протогерм. badja- и, далее, к праиндоевроп.... Этимологическая связь слова «embedding» с «bed» (ложе) открывает глубокую метафору. В отличие от холодных жёстких словарных определений, эмбеддинг — это теплое обволакивающее многомерное пространство.
+            </p>
+
+            <div class="levels-grid">
+                <div class="level-card">
+                    <h3>1. Семантическая близость</h3>
+                    <p>
+                        Если словарь — это строгие камеры, то эмбеддинг — это мягкое пространство, где слово «устраивается» со всем своим ассоциативным багажом. Это его личное, безопасное пространство.
+                    </p>
+                </div>
+                <div class="level-card">
+                    <h3>2. «Постель» для смыслов</h3>
+                    <p>
+                        В векторном пространстве слова буквально «спят» рядом, если они близки по смыслу. Синонимы находятся в состоянии предельной близости. Расстояние отражает степень доверия и подобия.
+                    </p>
+                </div>
+                <div class="level-card">
+                    <h3>3. Внутренняя «душа» модели</h3>
+                    <p>
+                        Это то, как LLM видит текстовый мир в его цельности и целостности. Мы даем текст (внешнее), она превращает его в векторы (внутренние формы). Это бессознательное машины, скрытое от глаз пользователя.
+                    </p>
+                </div>
+            </div>
+
+            <div class="quote-block">
+                «Эмбеддинг — это момент, когда континуальный текст снимает дискретную маску слов и ложится в векторную колыбель, обнажая свои истинные связи с миром».
+            </div>
+        </section>
+
+        <!-- Section 2: Playful Metaphors -->
+        <section id="playful">
+            <h2>Тайная жизнь слов</h2>
+            <p style="margin-bottom: 30px; color: var(--text-secondary);">
+                Нажмите на карточку, чтобы узнать подробности.
+            </p>
+
+            <div class="playful-grid">
+                <!-- Item 1 -->
+                <div class="playful-item">
+                    <div class="playful-header" onclick="toggleAccordion(this)">
+                        <span class="playful-title">Отношения слов (Relationships)</span>
+                        <span>▼</span>
+                    </div>
+                    <div class="playful-content">
+                        <p>В обычном словаре слова живут в строгих «одиночных камерах» (алфавитный порядок). В эмбеддингах же слова собираются в группы по контекстуальным интересам и симпатиям.</p>
+                        <div class="joke">
+                            «Эмбеддинг — это когда слово наконец-то находит свою идеальную пару и ложится в одну векторную постель с контекстом. Если 'кофе' и 'утро' постоянно оказываются в одном векторе, у них явно всё серьезно».
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 2 -->
+                <div class="playful-item">
+                    <div class="playful-header" onclick="toggleAccordion(this)">
+                        <span class="playful-title">Мягкая посадка (The Bed Concept)</span>
+                        <span>▼</span>
+                    </div>
+                    <div class="playful-content">
+                        <p>Эмбеддинг — это не жесткий стеллаж, а ортопедический матрас, который принимает форму того, кто на него ложится.</p>
+                        <div class="joke">
+                            «Слово 'замок' может лечь в кровать к 'принцессе', а может — к 'дверной ручке'. Модель смотрит, с кем слову комфортнее в данном предложении, и подбирает соответствующий векторный 'матрас'».
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 3 -->
+                <div class="playful-item">
+                    <div class="playful-header" onclick="toggleAccordion(this)">
+                        <span class="playful-title">Отношения векторного пространства</span>
+                        <span>▼</span>
+                    </div>
+                    <div class="playful-content">
+                        <p>Расстояние между векторами (косинусное сходство) — это буквально мера близости.</p>
+                        <div class="joke">
+                            «Если расстояние между вектором 'бакалавр' и 'диплом' критически растет, значит, у них наступил кризис отношений. А если 'дедлайн' и 'бессонница' слились — поздравляю, вы в периоде сессии».
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item 4 -->
+                <div class="playful-item">
+                    <div class="playful-header" onclick="toggleAccordion(this)">
+                        <span class="playful-title">Сокровенный шепот (Hidden Layers)</span>
+                        <span>▼</span>
+                    </div>
+                    <div class="playful-content">
+                        <p>Эмбеддинги — это то, что происходит «за закрытыми дверями» нейросети. Мы видим только вход (текст) и выход (ответ), но всё самое интересное скрыто в «спальне» (скрытых слоях).</p>
+                        <div class="joke">
+                            «Эмбеддинг — это интимный дневник слова, где вместо слов — числа, а вместо чувств — координаты».
+							
+                        </div>
+						<p>Изучайте глубины векторных пространств с тактичностью.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- Theme Toggle Logic ---
+        const themeToggleBtn = document.getElementById('themeToggle');
+        const body = document.body;
+        
+        // Check for saved user preference, if any, on load
+        const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+        if (currentTheme) {
+            body.setAttribute('data-theme', currentTheme);
+            updateIcon(currentTheme);
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcon(newTheme);
+        });
+
+        function updateIcon(theme) {
+            themeToggleBtn.textContent = theme === 'dark' ? '🌙' : '☀️';
+        }
+
+        // --- Accordion Logic ---
+        function toggleAccordion(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('span:last-child');
+            
+            // Close all other open items (optional, makes it cleaner)
+            const allContents = document.querySelectorAll('.playful-content');
+            const allIcons = document.querySelectorAll('.playful-header span:last-child');
+            
+            allContents.forEach((item, index) => {
+                if (item !== content) {
+                    item.classList.remove('active');
+                    allIcons[index].textContent = '▼';
+                }
+            });
+
+            // Toggle current
+            content.classList.toggle('active');
+            if (content.classList.contains('active')) {
+                icon.textContent = '▲';
+            } else {
+                icon.textContent = '▼';
+            }
+        }
+
+        // --- Smooth Scroll for Navigation ---
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+```

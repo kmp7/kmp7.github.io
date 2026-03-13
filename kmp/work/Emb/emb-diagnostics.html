@@ -1,0 +1,2252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a2e;
+            --text-secondary: #555555;
+            --nav-color: #325980;
+            --accent: #3498db;
+            --accent-hover: #2980b9;
+            --border-color: #e8e8e8;
+            --divider: #e0e0e0;
+            --shadow: rgba(0, 0, 0, 0.08);
+            --shadow-hover: rgba(0, 0, 0, 0.15);
+            --success: #27ae60;
+            --success-bg: rgba(39, 174, 96, 0.1);
+            --warning: #f39c12;
+            --warning-bg: rgba(243, 156, 18, 0.1);
+            --danger: #e74c3c;
+            --danger-bg: rgba(231, 76, 60, 0.1);
+            --info-bg: #e8f4fd;
+            --level-0: #e0e0e0;
+            --level-1: #f39c12;
+            --level-2: #3498db;
+            --level-3: #27ae60;
+            --level-4: #9b59b6;
+            --input-bg: #ffffff;
+            --input-border: #d0d0d0;
+            --progress-bg: #e0e0e0;
+            --tooltip-bg: #325980;
+            --tooltip-text: #ffffff;
+            --radar-bg: rgba(52, 152, 219, 0.1);
+            --radar-border: #3498db;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: #1e2a4a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0b0;
+            --nav-color: #5ba0d9;
+            --accent: #5ba0d9;
+            --accent-hover: #7ab8e8;
+            --border-color: #2a3a5a;
+            --divider: #2a3a5a;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --shadow-hover: rgba(0, 0, 0, 0.5);
+            --success: #2ecc71;
+            --success-bg: rgba(46, 204, 113, 0.15);
+            --warning: #f1c40f;
+            --warning-bg: rgba(241, 196, 15, 0.15);
+            --danger: #e74c3c;
+            --danger-bg: rgba(231, 76, 60, 0.15);
+            --info-bg: #1a3050;
+            --input-bg: #162040;
+            --input-border: #3a4a6a;
+            --progress-bg: #2a3a5a;
+            --tooltip-bg: #5ba0d9;
+            --tooltip-text: #1a1a2e;
+            --radar-bg: rgba(91, 160, 217, 0.15);
+            --radar-border: #5ba0d9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* === HEADER === */
+        header {
+            background: var(--nav-color);
+            color: #ffffff;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 12px var(--shadow);
+        }
+
+        .header-left h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .header-left .subtitle {
+            font-size: 0.8rem;
+            opacity: 0.85;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        #themeToggle {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        #themeToggle:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: rotate(20deg);
+        }
+
+        /* === PROGRESS BAR === */
+        .global-progress {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: none;
+        }
+
+        .global-progress.visible {
+            display: block;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-title {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .progress-stats {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .progress-bar-outer {
+            height: 8px;
+            background: var(--progress-bg);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-inner {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* === MAIN === */
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        /* === SCREENS === */
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* === AUTH SCREEN === */
+        .auth-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 70vh;
+        }
+
+        .auth-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 24px var(--shadow);
+            max-width: 550px;
+            width: 100%;
+        }
+
+        .auth-title {
+            color: var(--nav-color);
+            font-size: 1.6rem;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .intro-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .intro-feature {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .intro-feature-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .intro-feature h4 {
+            color: var(--nav-color);
+            font-size: 0.95rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .intro-feature p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-input {
+            flex: 1;
+            padding: 0.85rem 1rem;
+            border: 2px solid var(--input-border);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            transition: all 0.25s ease;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+        }
+
+        .form-error {
+            color: var(--danger);
+            font-size: 0.85rem;
+            min-height: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #ffffff;
+            border: none;
+            padding: 0.9rem 2rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        /* === CARDS === */
+        .card {
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 1.8rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 12px var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .card h2 {
+            color: var(--nav-color);
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h3 {
+            color: var(--nav-color);
+            font-size: 1.1rem;
+            margin: 1.5rem 0 0.8rem;
+        }
+
+        /* === CATEGORY TABS === */
+        .category-tabs {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .category-tab {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.6rem 1.2rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .category-tab:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .category-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+        }
+
+        .category-tab .tab-progress {
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+            padding: 0.1rem 0.5rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .category-tab.active .tab-progress {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .category-tab.completed {
+            background: var(--success);
+            border-color: var(--success);
+            color: #ffffff;
+        }
+
+        /* === COMPETENCY ITEMS === */
+        .category-content {
+            display: none;
+        }
+
+        .category-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .subcategory {
+            margin-bottom: 1.5rem;
+        }
+
+        .subcategory-title {
+            color: var(--nav-color);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .competency-item {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 1rem 1.2rem;
+            margin-bottom: 0.7rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.25s ease;
+        }
+
+        .competency-item:hover {
+            border-color: var(--accent);
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .competency-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .competency-text {
+            flex: 1;
+            font-size: 0.92rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .competency-info {
+            color: var(--accent);
+            cursor: help;
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        .competency-tooltip {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background: var(--tooltip-bg);
+            color: var(--tooltip-text);
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            width: 280px;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            font-weight: 400;
+            line-height: 1.5;
+        }
+
+        .competency-info:hover .competency-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* === RATING SCALE === */
+        .rating-scale {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .rating-option {
+            flex: 1;
+            padding: 0.5rem 0.3rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-card);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .rating-option:hover {
+            border-color: var(--accent);
+        }
+
+        .rating-option.selected {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: #ffffff;
+        }
+
+        .rating-option.selected.level-0 { background: var(--level-0); border-color: var(--level-0); color: #333; }
+        .rating-option.selected.level-1 { background: var(--level-1); border-color: var(--level-1); }
+        .rating-option.selected.level-2 { background: var(--level-2); border-color: var(--level-2); }
+        .rating-option.selected.level-3 { background: var(--level-3); border-color: var(--level-3); }
+        .rating-option.selected.level-4 { background: var(--level-4); border-color: var(--level-4); }
+
+        .rating-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: block;
+        }
+
+        .rating-value {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        /* === LEGEND === */
+        .rating-legend {
+            background: var(--info-bg);
+            border-radius: 10px;
+            padding: 1rem 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .legend-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--nav-color);
+            margin-bottom: 0.6rem;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+        }
+
+        /* === NAVIGATION === */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid var(--border-color);
+        }
+
+        .btn-nav {
+            padding: 0.8rem 1.8rem;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            font-family: inherit;
+            border: 2px solid var(--accent);
+        }
+
+        .btn-nav.primary {
+            background: var(--accent);
+            color: #ffffff;
+            border-color: var(--accent);
+        }
+
+        .btn-nav.primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        .btn-nav.secondary {
+            background: transparent;
+            color: var(--accent);
+        }
+
+        .btn-nav.secondary:hover {
+            background: var(--accent);
+            color: #ffffff;
+        }
+
+        .btn-nav:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* === RESULTS SCREEN === */
+        .results-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .results-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .results-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.2rem;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .summary-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .summary-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.3rem;
+        }
+
+        /* === RADAR CHART === */
+        .radar-container {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        .radar-canvas {
+            max-width: 100%;
+        }
+
+        /* === CATEGORY RESULTS === */
+        .category-result {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .category-result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .category-result-name {
+            font-weight: 600;
+            color: var(--nav-color);
+            font-size: 1rem;
+        }
+
+        .category-result-score {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .category-result-bar {
+            height: 10px;
+            background: var(--progress-bg);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .category-result-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.6s ease;
+        }
+
+        .category-result-details {
+            margin-top: 0.8rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* === LEVEL BADGE === */
+        .level-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .level-badge.beginner { background: var(--danger-bg); color: var(--danger); }
+        .level-badge.elementary { background: var(--warning-bg); color: var(--warning); }
+        .level-badge.intermediate { background: var(--info-bg); color: var(--accent); }
+        .level-badge.advanced { background: var(--success-bg); color: var(--success); }
+
+        /* === RECOMMENDATIONS === */
+        .recommendations {
+            margin-top: 2rem;
+        }
+
+        .recommendation-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--warning);
+        }
+
+        .recommendation-card.strength {
+            border-left-color: var(--success);
+        }
+
+        .recommendation-card h4 {
+            color: var(--nav-color);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .recommendation-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .recommendation-card ul {
+            margin: 0.5rem 0 0 1.2rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .recommendation-card li {
+            margin-bottom: 0.3rem;
+        }
+
+        /* === EXPORT === */
+        .export-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .export-section h3 {
+            color: var(--nav-color);
+            margin-bottom: 1rem;
+        }
+
+        .export-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .export-info-item {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .export-info-item .label {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .export-info-item .value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--nav-color);
+            margin-top: 0.2rem;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-export {
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            font-family: inherit;
+            border: 2px solid var(--accent);
+            background: var(--accent);
+            color: #ffffff;
+        }
+
+        .btn-export:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        .btn-export.outline {
+            background: transparent;
+            color: var(--accent);
+        }
+
+        .btn-export.outline:hover {
+            background: var(--accent);
+            color: #ffffff;
+        }
+
+        /* === MOBILE === */
+        @media (max-width: 768px) {
+            header {
+                padding: 0.8rem 1rem;
+            }
+
+            .header-left h1 {
+                font-size: 1.05rem;
+            }
+
+            .header-left .subtitle {
+                font-size: 0.7rem;
+            }
+
+            main {
+                padding: 1.2rem 1rem 3rem;
+            }
+
+            .card {
+                padding: 1.3rem;
+            }
+
+            .auth-card {
+                padding: 1.8rem 1.3rem;
+            }
+
+            .form-row {
+                flex-direction: column;
+            }
+
+            .category-tabs {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 0.8rem;
+            }
+
+            .category-tab {
+                flex-shrink: 0;
+                font-size: 0.82rem;
+                padding: 0.5rem 1rem;
+            }
+
+            .rating-scale {
+                flex-wrap: wrap;
+            }
+
+            .rating-option {
+                flex: 0 0 calc(20% - 0.3rem);
+                padding: 0.4rem 0.2rem;
+            }
+
+            .rating-label {
+                font-size: 0.6rem;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+            }
+
+            .btn-nav {
+                width: 100%;
+                text-align: center;
+            }
+
+            .competency-tooltip {
+                width: 220px;
+                right: -50px;
+            }
+
+            .intro-features {
+                grid-template-columns: 1fr;
+            }
+
+            .results-summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-left .subtitle {
+                display: none;
+            }
+
+            .rating-option {
+                flex: 0 0 calc(20% - 0.25rem);
+            }
+
+            .legend-items {
+                flex-direction: column;
+                gap: 0.4rem;
+            }
+        }
+
+        /* === SCROLLBAR === */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--divider);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* === PRINT === */
+        @media print {
+            header, .global-progress, .nav-buttons, .export-buttons {
+                display: none !important;
+            }
+
+            body {
+                background: #fff;
+                padding: 0;
+            }
+
+            .card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <h1>Компьютерная диагностика</h1>
+            <div class="subtitle">готовности к изучению Embedding LLM</div>
+        </div>
+        <div class="header-right">
+            <button id="themeToggle" title="Сменить тему">☀️</button>
+        </div>
+    </header>
+
+    <div class="global-progress" id="globalProgress">
+        <div class="progress-header">
+            <span class="progress-title">Прогресс заполнения</span>
+            <span class="progress-stats" id="progressStats">0 / 0 компетенций</span>
+        </div>
+        <div class="progress-bar-outer">
+            <div class="progress-bar-inner" id="progressBar" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <main>
+        <!-- ===== AUTH SCREEN ===== -->
+        <div class="screen active" id="screenAuth">
+            <div class="auth-container">
+                <div class="auth-card">
+                    <h1 class="auth-title">Оцените свои компетенции</h1>
+                    <p class="auth-subtitle">
+                        Приложение поможет определить вашу готовность к профессиональному изучению 
+                        эмбеддингов и выявить области для развития
+                    </p>
+
+                    <div class="intro-features">
+                        <div class="intro-feature">
+                        <h4>6 областей</h4>
+                            <p>от математики до критического мышление</p>
+                        </div>
+                        <div class="intro-feature">
+                        <h4>50+ навыков</h4>
+                            <p>Детальная оценка конкретных компетенций</p>
+                        </div>
+                                            </div>
+
+                    <div class="form-row">
+                        <input type="text" class="form-input" id="inputSurname" placeholder="Фамилия">
+                        <input type="text" class="form-input" id="inputName" placeholder="Имя">
+                    </div>
+                    <div class="form-error" id="formError"></div>
+                    <button class="btn-primary" id="btnStart">Начать диагностику</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== ASSESSMENT SCREEN ===== -->
+        <div class="screen" id="screenAssessment">
+            <div class="card">
+                <h2>Оценка компетенций</h2>
+                <p class="card-subtitle">
+                    Оцените свой уровень владения каждым навыком по шкале от 0 до 4. 
+                    Наведите на значок <strong style="color: var(--accent);">ⓘ</strong> для подсказки.
+                </p>
+
+                <div class="rating-legend">
+                    <div class="legend-title">Шкала оценки:</div>
+                    <div class="legend-items">
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: var(--level-0)"></div>
+                            <span>0 — Не знакомо</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: var(--level-1)"></div>
+                            <span>1 — Слышал(а)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: var(--level-2)"></div>
+                            <span>2 — Базовое понимание</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: var(--level-3)"></div>
+                            <span>3 — Уверенное владение</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: var(--level-4)"></div>
+                            <span>4 — Экспертный уровень</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="category-tabs" id="categoryTabs"></div>
+
+                <div id="categoryContents"></div>
+
+                <div class="nav-buttons">
+                    <button class="btn-nav secondary" id="btnPrevCat" disabled>← Предыдущая</button>
+                    <button class="btn-nav primary" id="btnNextCat">Следующая →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== RESULTS SCREEN ===== -->
+        <div class="screen" id="screenResults">
+            <div class="card">
+                <div class="results-header">
+                    <h2>Результаты диагностики</h2>
+                    <p class="card-subtitle" id="resultsSubtitle"></p>
+                </div>
+
+                <div class="results-summary" id="resultsSummary"></div>
+
+                <div class="radar-container">
+                    <canvas id="radarChart" class="radar-canvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Детализация по областям</h2>
+                <div id="categoryResults"></div>
+            </div>
+
+            <div class="card">
+                <h2>Рекомендации</h2>
+                <div class="recommendations" id="recommendations"></div>
+            </div>
+
+            <div class="card">
+                <div class="export-section">
+                    <h3>Экспорт результатов</h3>
+                    <div class="export-info" id="exportInfo"></div>
+                    <div class="export-buttons">
+                        <button class="btn-export" onclick="downloadResults()">Скачать отчёт HTML</button>
+                        <button class="btn-export outline" onclick="restartAssessment()">Пройти заново</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ===== DATA: COMPETENCIES =====
+        const CATEGORIES = [
+            {
+                id: 'math',
+                name: 'Математика',
+                icon: '∑',
+                subcategories: [
+                    {
+                        name: 'Линейная алгебра',
+                        competencies: [
+                            { id: 'vec_basics', text: 'Понятие вектора и векторного пространства', tip: 'Понимаете, что вектор — это упорядоченный набор чисел, определяющий точку или направление в пространстве' },
+                            { id: 'vec_ops', text: 'Операции с векторами (сложение, скалярное произведение)', tip: 'Умеете складывать векторы, умножать на скаляр, вычислять dot product' },
+                            { id: 'norms', text: 'Нормы и расстояния (евклидово, косинусное)', tip: 'Знаете формулы евклидова расстояния и косинусного сходства, понимаете их смысл' },
+                            { id: 'matrices', text: 'Матрицы и операции с ними', tip: 'Умеете умножать матрицы, транспонировать, понимаете матрицу как преобразование' },
+                            { id: 'decomp', text: 'Разложение матриц (SVD, PCA)', tip: 'Знакомы с сингулярным разложением и методом главных компонент' },
+                        ]
+                    },
+                    {
+                        name: 'Анализ и оптимизация',
+                        competencies: [
+                            { id: 'derivatives', text: 'Производные и градиенты', tip: 'Понимаете производную как скорость изменения, градиент как направление наибольшего роста' },
+                            { id: 'partial', text: 'Частные производные', tip: 'Умеете дифференцировать функции многих переменных по каждой переменной отдельно' },
+                            { id: 'chain_rule', text: 'Цепное правило (chain rule)', tip: 'Понимаете, как дифференцировать композицию функций — основа backpropagation' },
+                            { id: 'optim', text: 'Градиентный спуск', tip: 'Знаете принцип итеративной оптимизации: движение в направлении антиградиента' },
+                        ]
+                    },
+                    {
+                        name: 'Вероятность и статистика',
+                        competencies: [
+                            { id: 'prob_basic', text: 'Распределения вероятностей', tip: 'Знаете, что такое распределение, плотность, нормальное распределение' },
+                            { id: 'cond_prob', text: 'Условная вероятность P(A|B)', tip: 'Понимаете вероятность события при условии другого события' },
+                            { id: 'entropy', text: 'Энтропия и кросс-энтропия', tip: 'Знаете меру неопределённости и её применение как функции потерь' },
+                            { id: 'mle', text: 'Метод максимального правдоподобия', tip: 'Понимаете принцип подбора параметров, максимизирующих вероятность данных' },
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'tech',
+                name: 'Программирование',
+                icon: '< >',
+                subcategories: [
+                    {
+                        name: 'Python',
+                        competencies: [
+                            { id: 'py_basics', text: 'Базовый синтаксис Python', tip: 'Переменные, циклы, функции, условия, работа с файлами' },
+                            { id: 'py_ds', text: 'Структуры данных (списки, словари)', tip: 'Уверенно работаете со списками, словарями, множествами, кортежами' },
+                            { id: 'py_oop', text: 'Основы ООП (классы, объекты)', tip: 'Понимаете классы, методы, наследование на базовом уровне' },
+                            { id: 'numpy', text: 'NumPy (массивы, операции)', tip: 'Работаете с ndarray, умеете выполнять векторизованные операции' },
+                            { id: 'pandas', text: 'Pandas (DataFrame, обработка данных)', tip: 'Загружаете, фильтруете, преобразуете табличные данные' },
+                        ]
+                    },
+                    {
+                        name: 'ML-библиотеки',
+                        competencies: [
+                            { id: 'sklearn', text: 'Scikit-learn (модели, метрики)', tip: 'Обучаете модели, оцениваете качество, делаете предобработку' },
+                            { id: 'pytorch', text: 'PyTorch или TensorFlow (тензоры, модели)', tip: 'Работаете с тензорами, строите и обучаете нейросети' },
+                            { id: 'hf', text: 'Hugging Face Transformers', tip: 'Загружаете предобученные модели, извлекаете эмбеддинги' },
+                            { id: 'gensim', text: 'Gensim (Word2Vec, FastText)', tip: 'Обучаете и используете классические эмбеддинги слов' },
+                        ]
+                    },
+                    {
+                        name: 'Инфраструктура',
+                        competencies: [
+                            { id: 'cli', text: 'Командная строка (терминал)', tip: 'Навигация, запуск скриптов, установка пакетов через pip' },
+                            { id: 'jupyter', text: 'Jupyter Notebooks', tip: 'Интерактивная разработка, визуализация, документирование кода' },
+                            { id: 'git', text: 'Git (версионирование)', tip: 'Базовые операции: commit, push, pull, branches' },
+                            { id: 'gpu', text: 'Работа с GPU / облаком', tip: 'Понимаете, зачем нужен GPU, работали с Colab или облачными сервисами' },
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'ling',
+                name: 'Лингвистика',
+                icon: 'Aa',
+                subcategories: [
+                    {
+                        name: 'Теоретическая семантика',
+                        competencies: [
+                            { id: 'lex_sem', text: 'Лексическая семантика (значение слова)', tip: 'Понимаете денотат, сигнификат, полисемию, синонимию' },
+                            { id: 'comp_analysis', text: 'Компонентный анализ (семы)', tip: 'Знакомы с разложением значения на элементарные признаки' },
+                            { id: 'distrib', text: 'Дистрибутивная гипотеза', tip: 'Понимаете идею «слово определяется контекстом» (Фёрс, Харрис)' },
+                            { id: 'sem_rel', text: 'Семантические отношения', tip: 'Гипонимия, меронимия, антонимия, семантические поля' },
+                        ]
+                    },
+                    {
+                        name: 'Корпусная лингвистика',
+                        competencies: [
+                            { id: 'corpus', text: 'Понятие корпуса текстов', tip: 'Знаете, что такое корпус, разметка, представительность' },
+                            { id: 'colloc', text: 'Коллокации и коокуррентность', tip: 'Понимаете статистическую сочетаемость слов' },
+                            { id: 'freq', text: 'Частотные характеристики (TF-IDF)', tip: 'Знакомы с законом Ципфа, мерами важности слов' },
+                            { id: 'concord', text: 'Конкорданс и KWIC', tip: 'Умеете анализировать контексты употребления слова' },
+                        ]
+                    },
+                    {
+                        name: 'Прикладная лингвистика',
+                        competencies: [
+                            { id: 'morph', text: 'Морфологический анализ', tip: 'Лемматизация, стемминг, грамматические категории' },
+                            { id: 'syntax', text: 'Синтаксис и структура предложения', tip: 'Понимаете влияние порядка слов и связей на значение' },
+                            { id: 'pragmatics', text: 'Прагматика и дискурс', tip: 'Контекстуальная зависимость значения, импликатуры' },
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'nlp',
+                name: 'NLP и ML',
+                icon: '⚙',
+                subcategories: [
+                    {
+                        name: 'Основы машинного обучения',
+                        competencies: [
+                            { id: 'ml_types', text: 'Типы обучения (supervised, unsupervised)', tip: 'Различаете обучение с учителем, без учителя, self-supervised' },
+                            { id: 'loss', text: 'Функции потерь', tip: 'Понимаете, что модель оптимизирует, MSE, cross-entropy' },
+                            { id: 'overfit', text: 'Переобучение и регуляризация', tip: 'Знаете проблему и методы борьбы: dropout, early stopping' },
+                            { id: 'validation', text: 'Валидация моделей', tip: 'Train/val/test split, кросс-валидация, метрики качества' },
+                        ]
+                    },
+                    {
+                        name: 'Архитектуры эмбеддингов',
+                        competencies: [
+                            { id: 'count_based', text: 'Count-based методы (LSA)', tip: 'Матрицы коокуррентности, латентно-семантический анализ' },
+                            { id: 'word2vec', text: 'Word2Vec (CBOW, Skip-gram)', tip: 'Понимаете архитектуры и принцип обучения' },
+                            { id: 'glove', text: 'GloVe', tip: 'Комбинация count-based и predictive подходов' },
+                            { id: 'fasttext', text: 'FastText (субсловные единицы)', tip: 'Учёт морфологии через n-граммы символов' },
+                            { id: 'contextual', text: 'Контекстуальные эмбеддинги (BERT, GPT)', tip: 'Понимаете отличие от статических: вектор зависит от контекста' },
+                            { id: 'transformers', text: 'Архитектура Transformer (attention)', tip: 'Механизм внимания, позиционные кодировки' },
+                        ]
+                    },
+                    {
+                        name: 'Применение эмбеддингов',
+                        competencies: [
+                            { id: 'sem_search', text: 'Семантический поиск', tip: 'Поиск по смыслу, а не по ключевым словам, RAG-системы' },
+                            { id: 'classification', text: 'Классификация текстов', tip: 'Использование эмбеддингов как признаков для классификатора' },
+                            { id: 'clustering', text: 'Кластеризация документов', tip: 'Группировка текстов по семантической близости' },
+                            { id: 'viz', text: 'Визуализация (t-SNE, UMAP)', tip: 'Проекция многомерных эмбеддингов на 2D для анализа' },
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'critical',
+                name: 'Критическое мышление',
+                icon: '?!',
+                subcategories: [
+                    {
+                        name: 'Методологические навыки',
+                        competencies: [
+                            { id: 'eval_emb', text: 'Оценка качества эмбеддингов', tip: 'Intrinsic (аналогии, близость) vs extrinsic (downstream tasks)' },
+                            { id: 'reproducibility', text: 'Воспроизводимость экспериментов', tip: 'Влияние random seed, гиперпараметров, документирование' },
+                            { id: 'compare', text: 'Сравнительный анализ методов', tip: 'Выбор подходящего типа эмбеддингов для задачи' },
+                        ]
+                    },
+                    {
+                        name: 'Критическая оценка',
+                        competencies: [
+                            { id: 'limits', text: 'Ограничения моделей', tip: 'Понимаете, что эмбеддинги НЕ улавливают (логика, факты, здравый смысл)' },
+                            { id: 'bias', text: 'Предвзятости в эмбеддингах (bias)', tip: 'Гендерные, расовые, культурные смещения из обучающих данных' },
+                            { id: 'ethics', text: 'Этические аспекты NLP', tip: 'Влияние данных, справедливость, прозрачность' },
+                            { id: 'interpret', text: 'Проблема интерпретируемости', tip: 'Понимаете, что оси эмбеддингов не имеют человеческого смысла' },
+                        ]
+                    },
+                    {
+                        name: 'Исследовательские навыки',
+                        competencies: [
+                            { id: 'papers', text: 'Чтение научных статей', tip: 'Понимаете структуру, терминологию ML/NLP-публикаций' },
+                            { id: 'experiments', text: 'Дизайн экспериментов', tip: 'Формулирование гипотез, планирование, анализ результатов' },
+                            { id: 'documentation', text: 'Документирование исследований', tip: 'Описание методологии для воспроизводимости' },
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'meta',
+                name: 'Метакогнитивные навыки',
+                icon: '◈',
+                subcategories: [
+                    {
+                        name: 'Абстрактное мышление',
+                        competencies: [
+                            { id: 'generalize', text: 'Обобщение от примеров к принципам', tip: 'Способность видеть общие паттерны за конкретными случаями' },
+                            { id: 'multidim', text: 'Мышление в многомерных пространствах', tip: 'Комфортная работа с понятиями, которые нельзя визуализировать' },
+                            { id: 'analogies', text: 'Использование аналогий и метафор', tip: 'Перенос знаний из одной области в другую' },
+                        ]
+                    },
+                    {
+                        name: 'Толерантность к неопределённости',
+                        competencies: [
+                            { id: 'probabilistic', text: 'Вероятностное мышление', tip: 'Принятие того, что результаты — это вероятности, а не точные ответы' },
+                            { id: 'approx', text: 'Работа с приближениями', tip: 'Понимание, что модели дают «примерно правильные» ответы' },
+                            { id: 'uncertainty', text: 'Комфорт с неопределённостью', tip: 'Способность действовать при неполной информации' },
+                        ]
+                    },
+                    {
+                        name: 'Междисциплинарность',
+                        competencies: [
+                            { id: 'connect', text: 'Связывание концепций разных областей', tip: 'Видите связи между лингвистикой, математикой, программированием' },
+                            { id: 'translate', text: 'Перевод между терминологиями', tip: 'Понимаете одни и те же идеи в разной формулировке' },
+                            { id: 'traditions', text: 'Понимание разных традиций', tip: 'Знаете, что одну проблему можно решать по-разному' },
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        // ===== STATE =====
+        let state = {
+            userName: '',
+            userSurname: '',
+            startTime: null,
+            ratings: {}, // { competencyId: rating }
+            currentCategoryIndex: 0
+        };
+
+        // ===== DOM ELEMENTS =====
+        const themeToggle = document.getElementById('themeToggle');
+        const globalProgress = document.getElementById('globalProgress');
+        const progressStats = document.getElementById('progressStats');
+        const progressBar = document.getElementById('progressBar');
+        const screenAuth = document.getElementById('screenAuth');
+        const screenAssessment = document.getElementById('screenAssessment');
+        const screenResults = document.getElementById('screenResults');
+        const categoryTabs = document.getElementById('categoryTabs');
+        const categoryContents = document.getElementById('categoryContents');
+        const btnStart = document.getElementById('btnStart');
+        const btnPrevCat = document.getElementById('btnPrevCat');
+        const btnNextCat = document.getElementById('btnNextCat');
+
+        // ===== THEME =====
+        let isDark = false;
+        themeToggle.addEventListener('click', () => {
+            isDark = !isDark;
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : '');
+            themeToggle.textContent = isDark ? '🌙' : '☀️';
+            if (screenResults.classList.contains('active')) {
+                drawRadarChart();
+            }
+        });
+
+        // ===== AUTH =====
+        btnStart.addEventListener('click', startAssessment);
+        document.getElementById('inputSurname').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('inputName').focus();
+        });
+        document.getElementById('inputName').addEventListener('keydown', e => {
+            if (e.key === 'Enter') startAssessment();
+        });
+
+        function startAssessment() {
+            const surname = document.getElementById('inputSurname').value.trim();
+            const name = document.getElementById('inputName').value.trim();
+            if (!surname || !name) {
+                document.getElementById('formError').textContent = 'Введите фамилию и имя';
+                return;
+            }
+
+            state.userSurname = surname;
+            state.userName = name;
+            state.startTime = new Date();
+
+            showScreen('assessment');
+            buildAssessmentUI();
+            globalProgress.classList.add('visible');
+            updateProgress();
+        }
+
+        function showScreen(name) {
+            [screenAuth, screenAssessment, screenResults].forEach(s => s.classList.remove('active'));
+            if (name === 'auth') screenAuth.classList.add('active');
+            else if (name === 'assessment') screenAssessment.classList.add('active');
+            else if (name === 'results') screenResults.classList.add('active');
+        }
+
+        // ===== BUILD UI =====
+        function buildAssessmentUI() {
+            // Build tabs
+            categoryTabs.innerHTML = '';
+            CATEGORIES.forEach((cat, i) => {
+                const tab = document.createElement('div');
+                tab.className = 'category-tab' + (i === 0 ? ' active' : '');
+                tab.dataset.index = i;
+                tab.innerHTML = `
+                    <span>${cat.icon}</span>
+                    <span>${cat.name}</span>
+                    <span class="tab-progress" data-cat="${cat.id}">0%</span>
+                `;
+                tab.addEventListener('click', () => switchCategory(i));
+                categoryTabs.appendChild(tab);
+            });
+
+            // Build contents
+            categoryContents.innerHTML = '';
+            CATEGORIES.forEach((cat, i) => {
+                const content = document.createElement('div');
+                content.className = 'category-content' + (i === 0 ? ' active' : '');
+                content.id = `content-${cat.id}`;
+
+                let html = '';
+                cat.subcategories.forEach(sub => {
+                    html += `<div class="subcategory">`;
+                    html += `<div class="subcategory-title">${sub.name}</div>`;
+                    sub.competencies.forEach(comp => {
+                        html += buildCompetencyItem(comp);
+                    });
+                    html += `</div>`;
+                });
+
+                content.innerHTML = html;
+                categoryContents.appendChild(content);
+            });
+
+            // Add event listeners to rating options
+            document.querySelectorAll('.rating-option').forEach(opt => {
+                opt.addEventListener('click', handleRatingClick);
+            });
+
+            updateNavButtons();
+        }
+
+        function buildCompetencyItem(comp) {
+            return `
+                <div class="competency-item" data-id="${comp.id}">
+                    <div class="competency-header">
+                        <div class="competency-text">${comp.text}</div>
+                        <div class="competency-info">
+                            ⓘ
+                            <div class="competency-tooltip">${comp.tip}</div>
+                        </div>
+                    </div>
+                    <div class="rating-scale">
+                        ${[0,1,2,3,4].map(level => `
+                            <div class="rating-option level-${level}" data-comp="${comp.id}" data-level="${level}">
+                                <span class="rating-value">${level}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleRatingClick(e) {
+            const opt = e.currentTarget;
+            const compId = opt.dataset.comp;
+            const level = parseInt(opt.dataset.level);
+
+            // Remove selected from siblings
+            opt.parentNode.querySelectorAll('.rating-option').forEach(o => o.classList.remove('selected'));
+            opt.classList.add('selected');
+
+            state.ratings[compId] = level;
+            updateProgress();
+            updateCategoryProgress();
+        }
+
+        function switchCategory(index) {
+            state.currentCategoryIndex = index;
+
+            document.querySelectorAll('.category-tab').forEach((t, i) => {
+                t.classList.toggle('active', i === index);
+            });
+
+            document.querySelectorAll('.category-content').forEach((c, i) => {
+                c.classList.toggle('active', i === index);
+            });
+
+            updateNavButtons();
+        }
+
+        function updateNavButtons() {
+            btnPrevCat.disabled = state.currentCategoryIndex === 0;
+
+            if (state.currentCategoryIndex === CATEGORIES.length - 1) {
+                btnNextCat.textContent = 'Показать результаты →';
+                btnNextCat.onclick = showResults;
+            } else {
+                btnNextCat.textContent = 'Следующая →';
+                btnNextCat.onclick = () => switchCategory(state.currentCategoryIndex + 1);
+            }
+
+            btnPrevCat.onclick = () => switchCategory(state.currentCategoryIndex - 1);
+        }
+
+        // ===== PROGRESS =====
+        function getTotalCompetencies() {
+            let total = 0;
+            CATEGORIES.forEach(cat => {
+                cat.subcategories.forEach(sub => {
+                    total += sub.competencies.length;
+                });
+            });
+            return total;
+        }
+
+        function updateProgress() {
+            const total = getTotalCompetencies();
+            const filled = Object.keys(state.ratings).length;
+            const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+
+            progressStats.textContent = `${filled} / ${total} компетенций`;
+            progressBar.style.width = `${pct}%`;
+        }
+
+        function updateCategoryProgress() {
+            CATEGORIES.forEach(cat => {
+                let total = 0, filled = 0;
+                cat.subcategories.forEach(sub => {
+                    sub.competencies.forEach(comp => {
+                        total++;
+                        if (state.ratings[comp.id] !== undefined) filled++;
+                    });
+                });
+                const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+                const badge = document.querySelector(`.tab-progress[data-cat="${cat.id}"]`);
+                if (badge) badge.textContent = `${pct}%`;
+
+                // Mark completed
+                const tab = badge?.closest('.category-tab');
+                if (tab) {
+                    tab.classList.toggle('completed', pct === 100);
+                }
+            });
+        }
+
+        // ===== RESULTS =====
+        function showResults() {
+            showScreen('results');
+            globalProgress.classList.remove('visible');
+            renderResults();
+        }
+
+        function getCategoryScore(cat) {
+            let total = 0, sum = 0, count = 0;
+            cat.subcategories.forEach(sub => {
+                sub.competencies.forEach(comp => {
+                    total++;
+                    const rating = state.ratings[comp.id];
+                    if (rating !== undefined) {
+                        sum += rating;
+                        count++;
+                    }
+                });
+            });
+            return {
+                total,
+                count,
+                sum,
+                avg: count > 0 ? sum / count : 0,
+                pct: count > 0 ? (sum / (count * 4)) * 100 : 0,
+                filled: count === total
+            };
+        }
+
+        function getOverallScore() {
+            let totalSum = 0, totalCount = 0;
+            CATEGORIES.forEach(cat => {
+                const score = getCategoryScore(cat);
+                totalSum += score.sum;
+                totalCount += score.count;
+            });
+            return {
+                avg: totalCount > 0 ? totalSum / totalCount : 0,
+                pct: totalCount > 0 ? (totalSum / (totalCount * 4)) * 100 : 0,
+                count: totalCount
+            };
+        }
+
+        function getLevelLabel(avg) {
+            if (avg < 1) return { label: 'Начальный', class: 'beginner' };
+            if (avg < 2) return { label: 'Базовый', class: 'elementary' };
+            if (avg < 3) return { label: 'Средний', class: 'intermediate' };
+            return { label: 'Продвинутый', class: 'advanced' };
+        }
+
+        function renderResults() {
+            const overall = getOverallScore();
+            const level = getLevelLabel(overall.avg);
+
+            document.getElementById('resultsSubtitle').innerHTML = `
+                ${state.userSurname} ${state.userName} — 
+                <span class="level-badge ${level.class}">${level.label} уровень</span>
+            `;
+
+            // Summary cards
+            const duration = getDuration();
+            document.getElementById('resultsSummary').innerHTML = `
+                <div class="summary-card">
+                    <div class="summary-value">${overall.avg.toFixed(1)}</div>
+                    <div class="summary-label">Средний балл (из 4)</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${Math.round(overall.pct)}%</div>
+                    <div class="summary-label">Общий уровень</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${overall.count}</div>
+                    <div class="summary-label">Оценено компетенций</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${duration}</div>
+                    <div class="summary-label">Время работы</div>
+                </div>
+            `;
+
+            // Category results
+            let catHtml = '';
+            CATEGORIES.forEach(cat => {
+                const score = getCategoryScore(cat);
+                const catLevel = getLevelLabel(score.avg);
+                const color = getScoreColor(score.pct);
+
+                catHtml += `
+                    <div class="category-result">
+                        <div class="category-result-header">
+                            <span class="category-result-name">${cat.icon} ${cat.name}</span>
+                            <span class="category-result-score" style="color: ${color}">${score.avg.toFixed(1)} / 4</span>
+                        </div>
+                        <div class="category-result-bar">
+                            <div class="category-result-fill" style="width: ${score.pct}%; background: ${color}"></div>
+                        </div>
+                        <div class="category-result-details">
+                            Оценено ${score.count} из ${score.total} навыков. 
+                            Уровень: <strong>${catLevel.label}</strong>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('categoryResults').innerHTML = catHtml;
+
+            // Recommendations
+            renderRecommendations();
+
+            // Export info
+            const now = new Date();
+            document.getElementById('exportInfo').innerHTML = `
+                <div class="export-info-item">
+                    <div class="label">Студент</div>
+                    <div class="value">${state.userSurname} ${state.userName}</div>
+                </div>
+                <div class="export-info-item">
+                    <div class="label">Дата</div>
+                    <div class="value">${now.toLocaleDateString('ru-RU')}</div>
+                </div>
+                <div class="export-info-item">
+                    <div class="label">Продолжительность</div>
+                    <div class="value">${duration}</div>
+                </div>
+                <div class="export-info-item">
+                    <div class="label">Уровень</div>
+                    <div class="value">${level.label}</div>
+                </div>
+            `;
+
+            // Draw radar
+            setTimeout(drawRadarChart, 100);
+        }
+
+        function getScoreColor(pct) {
+            if (pct < 25) return 'var(--danger)';
+            if (pct < 50) return 'var(--warning)';
+            if (pct < 75) return 'var(--accent)';
+            return 'var(--success)';
+        }
+
+        function renderRecommendations() {
+            const scores = CATEGORIES.map(cat => ({
+                cat,
+                score: getCategoryScore(cat)
+            }));
+
+            scores.sort((a, b) => a.score.avg - b.score.avg);
+
+            const weakest = scores.slice(0, 2).filter(s => s.score.avg < 2.5);
+            const strongest = scores.slice(-2).filter(s => s.score.avg >= 2.5);
+
+            let html = '';
+
+            // Strengths
+            strongest.forEach(s => {
+                html += `
+                    <div class="recommendation-card strength">
+                        <h4>Сильная сторона: ${s.cat.name}</h4>
+                        <p>Ваш уровень ${s.score.avg.toFixed(1)} из 4 — хорошая база для изучения эмбеддингов!</p>
+                    </div>
+                `;
+            });
+
+            // Weaknesses with recommendations
+            const recommendations = {
+                math: {
+                    title: 'Математика',
+                    tips: [
+                        'Курс «Линейная алгебра» на Coursera или Stepik',
+                        'Книга: «Математика для машинного обучения» (Deisenroth)',
+                        'YouTube: 3Blue1Brown — визуализация линейной алгебры'
+                    ]
+                },
+                tech: {
+                    title: 'Программирование',
+                    tips: [
+                        'Интерактивные курсы Python на Codecademy или Питонтьютор',
+                        'Практика: решение задач на LeetCode, Codewars',
+                        'Tutorials по NumPy и Pandas на официальных сайтах'
+                    ]
+                },
+                ling: {
+                    title: 'Лингвистика',
+                    tips: [
+                        'Учебник: Кобозева И.М. «Лингвистическая семантика»',
+                        'Практика работы с НКРЯ (ruscorpora.ru)',
+                        'Курс «Введение в компьютерную лингвистику» на Stepik'
+                    ]
+                },
+                nlp: {
+                    title: 'NLP и ML',
+                    tips: [
+                        'Курс Stanford CS224N: NLP with Deep Learning (YouTube)',
+                        'Книга: Jurafsky & Martin «Speech and Language Processing»',
+                        'Практика: Hugging Face tutorials'
+                    ]
+                },
+                critical: {
+                    title: 'Критическое мышление',
+                    tips: [
+                        'Чтение обзорных статей о bias в NLP',
+                        'Практика: анализ ошибок моделей на реальных примерах',
+                        'Участие в дискуссиях об этике AI'
+                    ]
+                },
+                meta: {
+                    title: 'Метакогнитивные навыки',
+                    tips: [
+                        'Практика объяснения концепций другим людям',
+                        'Ведение учебного дневника / заметок',
+                        'Работа над междисциплинарными проектами'
+                    ]
+                }
+            };
+
+            weakest.forEach(s => {
+                const rec = recommendations[s.cat.id];
+                if (rec) {
+                    html += `
+                        <div class="recommendation-card">
+                            <h4>Зона развития: ${rec.title}</h4>
+                            <p>Ваш уровень ${s.score.avg.toFixed(1)} из 4. Рекомендуем обратить внимание на эту область.</p>
+                            <ul>
+                                ${rec.tips.map(t => `<li>${t}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+            });
+
+            if (html === '') {
+                html = `
+                    <div class="recommendation-card strength">
+                        <h4>Отличная подготовка!</h4>
+                        <p>У вас хороший баланс компетенций для изучения эмбеддингов. 
+                        Рекомендуем переходить к практическим проектам и углублённому изучению.</p>
+                    </div>
+                `;
+            }
+
+            document.getElementById('recommendations').innerHTML = html;
+        }
+
+        // ===== RADAR CHART =====
+        function drawRadarChart() {
+            const canvas = document.getElementById('radarChart');
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width;
+            const H = canvas.height;
+            const cx = W / 2;
+            const cy = H / 2;
+            const radius = Math.min(W, H) / 2 - 50;
+
+            const styles = getComputedStyle(document.documentElement);
+            const textColor = styles.getPropertyValue('--text-primary').trim();
+            const gridColor = styles.getPropertyValue('--divider').trim();
+            const radarBg = styles.getPropertyValue('--radar-bg').trim();
+            const radarBorder = styles.getPropertyValue('--radar-border').trim();
+            const bgColor = styles.getPropertyValue('--bg-card').trim();
+
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, W, H);
+
+            const n = CATEGORIES.length;
+            const angleStep = (Math.PI * 2) / n;
+
+            // Draw grid circles
+            ctx.strokeStyle = gridColor;
+            ctx.lineWidth = 1;
+            for (let level = 1; level <= 4; level++) {
+                const r = (radius * level) / 4;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Level labels
+                ctx.fillStyle = textColor;
+                ctx.font = '11px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText(level.toString(), cx + 8, cy - r + 4);
+            }
+
+            // Draw spokes and labels
+            const categoryScores = CATEGORIES.map(cat => getCategoryScore(cat));
+
+            CATEGORIES.forEach((cat, i) => {
+                const angle = -Math.PI / 2 + i * angleStep;
+                const x = cx + Math.cos(angle) * radius;
+                const y = cy + Math.sin(angle) * radius;
+
+                // Spoke
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(x, y);
+                ctx.strokeStyle = gridColor;
+                ctx.stroke();
+
+                // Label
+                const labelRadius = radius + 25;
+                const lx = cx + Math.cos(angle) * labelRadius;
+                const ly = cy + Math.sin(angle) * labelRadius;
+
+                ctx.fillStyle = textColor;
+                ctx.font = 'bold 12px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(cat.name, lx, ly);
+            });
+
+            // Draw data polygon
+            ctx.beginPath();
+            CATEGORIES.forEach((cat, i) => {
+                const score = categoryScores[i];
+                const angle = -Math.PI / 2 + i * angleStep;
+                const r = (radius * score.avg) / 4;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.fillStyle = radarBg;
+            ctx.fill();
+            ctx.strokeStyle = radarBorder;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            // Draw data points
+            CATEGORIES.forEach((cat, i) => {
+                const score = categoryScores[i];
+                const angle = -Math.PI / 2 + i * angleStep;
+                const r = (radius * score.avg) / 4;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, Math.PI * 2
+				
+				
+				
+				
+				
+				
+				
+				);
+                ctx.fillStyle = radarBorder;
+                ctx.fill();
+                ctx.strokeStyle = bgColor;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+
+        // ===== HELPERS =====
+        function getDuration() {
+            if (!state.startTime) return '—';
+            const now = new Date();
+            const diff = Math.floor((now - state.startTime) / 1000);
+            const hours = Math.floor(diff / 3600);
+            const minutes = Math.floor((diff % 3600) / 60);
+            const seconds = diff % 60;
+
+            let result = '';
+            if (hours > 0) result += `${hours} ч `;
+            if (minutes > 0 || hours > 0) result += `${minutes} мин `;
+            result += `${seconds} сек`;
+            return result;
+        }
+
+        // ===== EXPORT =====
+        function downloadResults() {
+            const html = generateExportHTML();
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10);
+            const filename = `Диагностика_${state.userSurname}_${state.userName}_${dateStr}.html`;
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function generateExportHTML() {
+            const now = new Date();
+            const overall = getOverallScore();
+            const level = getLevelLabel(overall.avg);
+            const duration = getDuration();
+
+            const dateStr = now.toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            const timeStr = now.toLocaleTimeString('ru-RU', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // Build category details
+            let categoryDetailsHTML = '';
+            CATEGORIES.forEach(cat => {
+                const score = getCategoryScore(cat);
+                const catLevel = getLevelLabel(score.avg);
+                const pct = Math.round(score.pct);
+
+                let competenciesHTML = '';
+                cat.subcategories.forEach(sub => {
+                    competenciesHTML += `<div style="margin-top: 12px;"><strong style="color: #325980;">${sub.name}</strong></div>`;
+                    sub.competencies.forEach(comp => {
+                        const rating = state.ratings[comp.id];
+                        const ratingDisplay = rating !== undefined ? rating : '—';
+                        const ratingColor = rating !== undefined ? getExportRatingColor(rating) : '#999';
+                        competenciesHTML += `
+                            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="flex: 1;">${comp.text}</span>
+                                <span style="font-weight: 600; color: ${ratingColor}; min-width: 30px; text-align: center;">${ratingDisplay}</span>
+                            </div>
+                        `;
+                    });
+                });
+
+                categoryDetailsHTML += `
+                    <div style="margin-bottom: 24px; background: #f9f9f9; border-radius: 10px; padding: 16px; border: 1px solid #eee;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 style="margin: 0; color: #325980; font-size: 1.1rem;">${cat.icon} ${cat.name}</h3>
+                            <span style="font-weight: 700; color: ${getExportScoreColor(pct)};">${score.avg.toFixed(1)} / 4 (${pct}%)</span>
+                        </div>
+                        <div style="height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin-bottom: 12px;">
+                            <div style="height: 100%; width: ${pct}%; background: ${getExportScoreColor(pct)}; border-radius: 4px;"></div>
+                        </div>
+                        <div style="font-size: 0.9rem;">
+                            ${competenciesHTML}
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Build radar chart as SVG for export
+            const radarSVG = generateRadarSVG();
+
+            return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Диагностика компетенций — ${state.userSurname} ${state.userName}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #325980, #3498db);
+            color: #fff;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 1.6rem; margin-bottom: 8px; }
+        .header .subtitle { opacity: 0.9; font-size: 1rem; }
+        .content { padding: 30px; }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .info-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border-left: 4px solid #3498db;
+        }
+        .info-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #325980;
+        }
+        .info-card .label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 4px;
+        }
+        .section { margin-bottom: 30px; }
+        .section h2 {
+            color: #325980;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .level-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .level-beginner { background: rgba(231,76,60,0.1); color: #e74c3c; }
+        .level-elementary { background: rgba(243,156,18,0.1); color: #f39c12; }
+        .level-intermediate { background: rgba(52,152,219,0.1); color: #3498db; }
+        .level-advanced { background: rgba(39,174,96,0.1); color: #27ae60; }
+        .radar-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .summary-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        .summary-item .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #3498db;
+        }
+        .summary-item .label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #666;
+            border-top: 1px solid #eee;
+        }
+        @media print {
+            body { background: #fff; padding: 0; }
+            .container { box-shadow: none; }
+        }
+        @media (max-width: 768px) {
+            .info-grid { grid-template-columns: repeat(2, 1fr); }
+            .summary-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Диагностика компетенций</h1>
+            <div class="subtitle">Готовность к изучению Embedding LLM</div>
+        </div>
+
+        <div class="content">
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="value">${state.userSurname}</div>
+                    <div class="label">Фамилия</div>
+                </div>
+                <div class="info-card">
+                    <div class="value">${state.userName}</div>
+                    <div class="label">Имя</div>
+                </div>
+                <div class="info-card">
+                    <div class="value">${dateStr}</div>
+                    <div class="label">Дата</div>
+                </div>
+                <div class="info-card">
+                    <div class="value">${duration}</div>
+                    <div class="label">Время работы</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Общие результаты</h2>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="value">${overall.avg.toFixed(1)}</div>
+                        <div class="label">Средний балл (из 4)</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="value">${Math.round(overall.pct)}%</div>
+                        <div class="label">Общий уровень</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="value"><span class="level-badge level-${level.class}">${level.label}</span></div>
+                        <div class="label">Уровень готовности</div>
+                    </div>
+                </div>
+
+                <div class="radar-container">
+                    ${radarSVG}
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Детализация по областям</h2>
+                ${categoryDetailsHTML}
+            </div>
+        </div>
+
+        <div class="footer">
+			<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+            <p>Отчёт сгенерирован автоматически: ${dateStr}, ${timeStr}</p>
+            </div>
+    </div>
+</body>
+</html>`;
+        }
+
+        function getExportRatingColor(rating) {
+            const colors = ['#999', '#f39c12', '#3498db', '#27ae60', '#9b59b6'];
+            return colors[rating] || '#999';
+        }
+
+        function getExportScoreColor(pct) {
+            if (pct < 25) return '#e74c3c';
+            if (pct < 50) return '#f39c12';
+            if (pct < 75) return '#3498db';
+            return '#27ae60';
+        }
+
+        function generateRadarSVG() {
+            const W = 350;
+            const H = 350;
+            const cx = W / 2;
+            const cy = H / 2;
+            const radius = 120;
+            const n = CATEGORIES.length;
+            const angleStep = (Math.PI * 2) / n;
+
+            let svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
+
+            // Background
+            svg += `<rect width="${W}" height="${H}" fill="#ffffff"/>`;
+
+            // Grid circles
+            for (let level = 1; level <= 4; level++) {
+                const r = (radius * level) / 4;
+                svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#e0e0e0" stroke-width="1"/>`;
+                // Level label
+                svg += `<text x="${cx + 5}" y="${cy - r + 4}" font-size="10" fill="#999">${level}</text>`;
+            }
+
+            // Spokes and labels
+            CATEGORIES.forEach((cat, i) => {
+                const angle = -Math.PI / 2 + i * angleStep;
+                const x = cx + Math.cos(angle) * radius;
+                const y = cy + Math.sin(angle) * radius;
+
+                svg += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#e0e0e0" stroke-width="1"/>`;
+
+                // Label
+                const labelRadius = radius + 22;
+                const lx = cx + Math.cos(angle) * labelRadius;
+                const ly = cy + Math.sin(angle) * labelRadius;
+                svg += `<text x="${lx}" y="${ly}" font-size="11" font-weight="600" fill="#325980" text-anchor="middle" dominant-baseline="middle">${cat.name}</text>`;
+            });
+
+            // Data polygon
+            const categoryScores = CATEGORIES.map(cat => getCategoryScore(cat));
+            let polygonPoints = '';
+            CATEGORIES.forEach((cat, i) => {
+                const score = categoryScores[i];
+                const angle = -Math.PI / 2 + i * angleStep;
+                const r = (radius * score.avg) / 4;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                polygonPoints += `${x},${y} `;
+            });
+
+            svg += `<polygon points="${polygonPoints.trim()}" fill="rgba(52,152,219,0.2)" stroke="#3498db" stroke-width="2.5"/>`;
+
+            // Data points
+            CATEGORIES.forEach((cat, i) => {
+                const score = categoryScores[i];
+                const angle = -Math.PI / 2 + i * angleStep;
+                const r = (radius * score.avg) / 4;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+
+                svg += `<circle cx="${x}" cy="${y}" r="5" fill="#3498db" stroke="#fff" stroke-width="2"/>`;
+            });
+
+            svg += `</svg>`;
+            return svg;
+        }
+
+        // ===== RESTART =====
+        function restartAssessment() {
+            state = {
+                userName: '',
+                userSurname: '',
+                startTime: null,
+                ratings: {},
+                currentCategoryIndex: 0
+            };
+
+            document.getElementById('inputSurname').value = '';
+            document.getElementById('inputName').value = '';
+            document.getElementById('formError').textContent = '';
+
+            globalProgress.classList.remove('visible');
+            showScreen('auth');
+        }
+
+        // ===== INITIALIZATION =====
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('inputSurname').focus();
+        });
+    </script>
+</body>
+</html>
