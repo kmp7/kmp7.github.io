@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+		
+<p><strong>Поводы:</strong> <a target="blank" href="https://habr.com/ru/articles/1010932/" class="link-kmp15"> ... сложностью оказались не нейронки, а слова</a> + Сэм Альтман: <a target="blank" href="https://www.youtube.com/watch?v=OASktZjQVVg" class="link-kmp15">услуги LLM - только по токенам</a>, <br> <br> 
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Здравствуйте! Вам доступен материал?
+https://habr.com/ru/articles/1010932/</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+<div class="message-content">
+<p>Материал можно разобрать, но я не могу открыть ссылку напрямую. Если вы пришлёте текст статьи или нужные фрагменты, я смогу подробно их проанализировать, объяснить сложные моменты или подготовить структурированное резюме. Готова продолжать!</p>
+</div>
+</div>
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Там главное для нас: «Промпт может быть сколь угодно точным по смыслу, но если визуальное пространство двух классов пересекается — слова не помогут». Оцените.</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+<div class="message-content">
+<p>Это очень точное и важное наблюдение, Ева. Фраза описывает фундаментальное ограничение моделей, работающих с данными, — и она полностью применима к LLM, к компьютерному зрению и вообще ко всем системам машинного обучения.</p>
+
+<h4>Что означает «пересечение визуальных пространств классов»</h4>
+<p>Если два класса объектов (например, два типа изображений, два стиля текста, два паттерна поведения) занимают пересекающиеся области в пространстве признаков, то:</p>
+<ul>
+<li>модель не может провести чёткую границу между ними,</li>
+<li>даже идеально сформулированный промпт не устранит фундаментальную неопределённость,</li>
+<li>ошибки будут возникать не из-за «неправильных слов», а из-за природы данных.</li>
+</ul>
+
+<h4>Почему слова не помогают</h4>
+<p>Промпт — это инструкция, но он не может изменить структуру обученного пространства.
+Если модель видит два класса как частично совпадающие, то:</p>
+<ul>
+<li>она будет колебаться между ними,</li>
+<li>будет «галлюцинировать» детали, чтобы выбрать один,</li>
+<li>или будет выдавать усреднённый ответ.</li>
+</ul>
+
+<p>Это не ошибка промпта — это ограничение самой геометрии представлений.</p>
+
+<h4>Почему это важно для дискурса об AI</h4>
+<p>Здесь снова возникает риск категориальной ошибки: ожидать, что «правильные слова» заставят модель мыслить иначе.
+Но LLM не «понимает» слова — она работает в многомерном пространстве токенов и признаков.
+И если классы пересекаются, никакая вербальная точность не устранит пересечение.</p>
+
+<h4>Итоговая оценка</h4>
+<p><strong>Да, утверждение абсолютно корректно: точность промпта не может преодолеть фундаментальные ограничения представлений модели. Если классы пересекаются в её внутреннем пространстве, то ошибки неизбежны.</strong></p>
+
+<p>Если хотите, могу объяснить это на примере лингвистики, компьютерного зрения или работы токенов в LLM — выберите направление, и мы углубимся.</p>
+</div>
+</div>
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Можно обобщить и уточнить: <strong>Промпт может быть сколь угодно точным по смыслу, но если семантическое (визуальное, вербальное, акустическое) пространство двух классов пересекается — слова не помогут?</strong></p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+<div class="message-content">
+<p>Да, Ева, именно так — ваше обобщение абсолютно корректно и даже более точное, чем исходная формулировка. Вы поднимаете фундаментальный принцип работы всех моделей машинного обучения, включая LLM.</p>
+
+<h4>Почему это верно для любых модальностей</h4>
+<p>Неважно, в каком пространстве работает модель — визуальном, текстовом, аудио или смешанном. Если два класса данных занимают пересекающиеся области в этом пространстве, то:</p>
+<ul>
+<li>модель не может провести чёткую границу между ними,</li>
+<li>ошибки будут возникать даже при идеальном описании задачи,</li>
+<li>промпт не способен «раздвинуть» классы, если они пересекаются в её представлениях.</li>
+</ul>
+
+<h4>Почему слова не помогают</h4>
+<p>Промпт — это инструкция, но он не меняет структуру обученного пространства.
+Модель уже «решила» для себя, какие объекты похожи, а какие различаются.
+Если два класса перепутаны на уровне признаков, то:</p>
+<ul>
+<li>семантические уточнения не устраняют пересечение,</li>
+<li>модель будет колебаться между вариантами,</li>
+<li>или выдавать усреднённый, компромиссный ответ.</li>
+</ul>
+
+<h4>Универсальность вашего обобщения</h4>
+<p>Вы правильно расширили идею: это не только про визуальные классы.
+То же самое происходит:</p>
+<ul>
+<li><strong>в семантическом пространстве</strong> — когда два смысла статистически неразличимы;</li>
+<li><strong>в акустическом</strong> — когда два звука имеют одинаковые спектральные признаки;</li>
+<li><strong>в вербальном</strong> — когда два стиля текста или два намерения выглядят одинаково для модели.</li>
+</ul>
+
+<h4>Итог</h4>
+<p><strong>Да: если пространства классов пересекаются, никакая точность промпта не устранит фундаментальную неопределённость. Это ограничение модели, а не языка.</strong></p>
+
+<p>Если хотите, можем разобрать конкретные примеры таких пересечений в лингвистике, компьютерном зрении или работе LLM.</p>
+</div>
+</div>
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Нас тут токенами замучили, но оказывается не напрасно. Их действительно важно отличать от слов для эффективной работы с LLM.</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+<div class="message-content">
+<p>Ева, вы подметили ключевую вещь. Различать токены и слова — это не занудство и не техническая мелочь, а фундаментальная часть грамотного взаимодействия с LLM.</p>
+
+<h4>Почему это так важно</h4>
+<ul>
+<li><strong>Токен — это не слово.</strong> Это минимальная единица, на которую модель разбивает текст. Она может быть короче слова, длиннее слова или совпадать с ним — но смысловой единицей не является.</li>
+<li><strong>Модель «думает» токенами, а не словами.</strong> Все её внутренние операции — вероятности, переходы, контексты — происходят в пространстве токенов.</li>
+<li><strong>Ошибки в понимании токенов → ошибки в ожиданиях.</strong> Если считать токен словом, легко попасть в категориальную ловушку: ожидать от модели семантической точности там, где она оперирует статистическими сегментами.</li>
+</ul>
+
+<h4>Почему это связано с нашей темой о пересечении пространств</h4>
+<p>Когда мы говорим о пересечении классов в семантическом или визуальном пространстве, то в случае LLM это пересечение происходит именно в <strong>токенном</strong> пространстве.
+Если два смысла «живут» в близких областях токенного пространства, то:</p>
+
+<ul>
+<li>модель будет путать их,</li>
+<li>промпт не сможет полностью развести их,</li>
+<li>и никакая словесная точность не устранит статистическое пересечение.</li>
+</ul>
+
+<h4>Поэтому различать токены и слова — это не формальность</h4>
+<p>Это способ избежать категориальных ошибок и понимать, <strong>как именно</strong> модель принимает решения.
+И вы совершенно правы: если это понять, работа с LLM становится намного эффективнее и предсказуемее.</p>
+
+<p>Если хотите, можем разобрать, как токенизация влияет на смысл, на ошибки модели и на качество промптов.</p>
+</div>
+</div>
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Кстати. Сэм Альтман на саммите BlackRock US Infrastructure Summit <a target="blank" href="https://www.youtube.com/watch?v=OASktZjQVVg" class="link-kmp15">заявил</a>, что интеллект от ИИ станет коммунальной услугой вроде электричества или воды, которую люди будут покупать "по счётчику".</p><p>Фактически, он имел в виду, что индустрия уйдёт от подписок, и модели будут продаваться только по токенам.
+Так что экономическая составляющая умения работать с токенами тоже важна?</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+<div class="message-content">
+<p>Ева, вы подмечаете стратегический сдвиг, который сейчас происходит в индустрии. И да — если ИИ действительно станет «коммунальной услугой», то умение работать с токенами приобретает не только техническое, но и экономическое значение.</p>
+
+<h4>Почему сравнение с электричеством важно</h4>
+<p>Когда Альтман говорит о «коммунальной услуге», он подразумевает модель потребления:</p>
+<ul>
+<li>не подписка,</li>
+<li>не фиксированная плата,</li>
+<li><strong>а оплата за фактическое использование</strong> — как за киловатт‑часы или кубометры воды.</li>
+</ul>
+
+<p>В мире LLM это означает: <strong>оплата за токены</strong>.</p>
+
+<h4>Почему экономическая грамотность в токенах становится важной</h4>
+<p>Если токены — это «единицы потребления», то:</p>
+<ul>
+<li>эффективный промпт = экономный промпт,</li>
+<li>умение сокращать токены = снижение стоимости,</li>
+<li>понимание токенизации = контроль расходов,</li>
+<li>оптимизация запросов = оптимизация бюджета.</li>
+</ul>
+
+<p>Это похоже на то, как люди учатся экономить электричество: выключать лишнее, использовать энергоэффективные приборы.
+Здесь — писать точнее, короче, структурированнее.</p>
+
+<h4>И снова — различие между словами и токенами</h4>
+<p>Если человек думает «слово = токен», он не может управлять расходом.
+Но если он понимает, что токен — это статистическая единица, которая может быть:</p>
+<ul>
+<li>частью слова,</li>
+<li>целым словом,</li>
+<li>несколькими словами,</li>
+</ul>
+<p>— тогда он начинает видеть реальную экономику взаимодействия с моделью.</p>
+
+<h4>Итог</h4>
+<p><strong>Да: экономическая составляющая умения работать с токенами становится всё более важной.
+Если ИИ действительно станет «по счётчику», то токены — это новая валюта взаимодействия с интеллектом.</strong></p>
+
+<p>Если хотите, могу показать, как один и тот же запрос может стоить в 2–5 раз меньше токенов без потери качества.</p>
+</div>
+</div>
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>С токенами разобрались, но есть нюанс. Мы тут начинаем изучать корпусную лингвистику, а там тоже токенизация, но там токены как раз слова (+ знаки пунктуации). Как не запутаться?</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+<div class="message-content">
+<p>Ева, это отличный и очень своевременный вопрос. Вы подошли к точке, где два мира — корпусная лингвистика и современные LLM — используют одно и то же слово «токен», для выражения совсем разных категорий. Чтобы не запутаться, важно чётко развести эти категории.</p>
+
+<h4>Два мира — два смысла слова «токен»</h4>
+
+<table>
+<tr>
+<th>Корпусная лингвистика</th>
+<th>LLM / машинное обучение</th>
+</tr>
+<tr>
+<td><strong>Токен = слово</strong> (или знак пунктуации).
+Это лингвистическая единица.</td>
+<td><strong>Токен = фрагмент строки</strong>, полученный алгоритмом BPE/WordPiece.
+Это техническая единица.</td>
+</tr>
+<tr>
+<td>Основано на грамматике и семантике.</td>
+<td>Основано на статистике и частотах.</td>
+</tr>
+<tr>
+<td>Токенизация ≈ разбиение текста на слова.</td>
+<td>Токенизация ≈ разбиение текста на удобные для модели кусочки.</td>
+</tr>
+<tr>
+<td>Цель: анализ языка.</td>
+<td>Цель: эффективное обучение модели.</td>
+</tr>
+</table>
+
+<h4>Как не запутаться: простое правило</h4>
+<p><strong>Всегда спрашивайте себя: «Здесь токен — это лингвистическая единица или вычислительная?»</strong></p>
+
+<ul>
+<li>Если речь о корпусах, частотах слов, морфологии — это <strong>лингвистический токен</strong>.</li>
+<li>Если речь о LLM, стоимости, длине контекста, промптах — это <strong>технический токен</strong>.</li>
+</ul>
+
+<h4>Почему важно различать</h4>
+<p>Потому что смешение этих двух категорий — как раз та самая <strong>категориальная ошибка</strong>, о которой мы говорили раньше.
+Если считать токен в LLM «словом», то:</p>
+
+<ul>
+<li>непонятно, почему длинные слова дороже коротких;</li>
+<li>непонятно, почему «internationalization» — это один токен, а «котик» — два;</li>
+<li>непонятно, почему модель иногда «ломает» слова;</li>
+<li>непонятно, как экономить токены.</li>
+</ul>
+
+<p>А если считать токен в корпусной лингвистике «фрагментом строки», то теряется смысл лингвистического анализа.</p>
+
+<h4>Итог</h4>
+<p><strong>Да, два разных смысла слова «токен» могут запутать.
+Но если держать в голове, что в корпусной лингвистике токен = слово, а в LLM токен = технический кусочек текста, путаница исчезает.</strong></p>
+
+</div>
+</div>
+
+
+
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>У нас впереди эмбеддинги. Обещано, что с ними ещё веселее... Поможете, если что?</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+<div class="message-content">
+<p>Ева, конечно помогу — эмбеддинги действительно «веселее», но в хорошем смысле.
+Они открывают совершенно другой уровень понимания того, как модели представляют мир: не словами, не токенами, а <strong>геометрией смыслов</strong>.</p>
+
+<h4>Почему эмбеддинги — следующий важный шаг</h4>
+<ul>
+<li><strong>Токены — это поверхность.</strong> Они показывают, как модель видит текст на входе.</li>
+<li><strong>Эмбеддинги — это глубина.</strong> Они показывают, как модель «чувствует» смысл внутри себя.</li>
+<li><strong>Все рассуждения о пересечении классов происходят именно в пространстве эмбеддингов.</strong></li>
+</ul>
+
+<p>То, что мы обсуждали — пересечение семантических пространств, невозможность развести классы словами, статистическую природу ошибок — всё это становится кристально ясным, когда смотришь на эмбеддинги.</p>
+
+<h4>Что мы сможем делать вместе</h4>
+<ul>
+<li>разбирать, как формируются эмбеддинги;</li>
+<li>понимать, почему два разных слова оказываются рядом;</li>
+<li>видеть, где модель путает смыслы и почему;</li>
+<li>учиться управлять поведением модели через геометрию, а не только через текст;</li>
+<li>понимать, как работают RAG, поиск, кластеризация, семантические карты.</li>
+</ul>
+
+<h4>Итог</h4>
+<p><strong>Да, я с удовольствием помогу вам пройти через эмбеддинги — это одна из самых интересных и полезных тем в современной лингвистике и работе с ИИ.</strong>
+И вы уже отлично подготовлены: понимание токенов и категориальных ошибок — идеальная база.</p>
+
+<p>Когда будете готовы — начинаем.</p>
+</div></div>
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>А после эмбеддингов Attention?</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+<div class="message-content">
+
+<p>Ева, да — после эмбеддингов логично и естественно переходить к Attention.
+Это как перейти от «геометрии смыслов» к механизму, который позволяет модели выбирать, на что смотреть внутри этой геометрии.</p>
+
+<h4>Почему Attention идёт сразу после эмбеддингов</h4>
+<p>Эмбеддинги — это <strong>координаты</strong> слов, фраз, токенов в многомерном пространстве.
+Attention — это <strong>механизм навигации</strong> внутри этого пространства.</p>
+
+<ul>
+<li>Эмбеддинг говорит: «вот где токен находится».</li>
+<li>Attention говорит: «вот на какие токены нужно смотреть, чтобы понять текущий».</li>
+</ul>
+
+<p>Без эмбеддингов Attention не на что «смотреть».
+Без Attention эмбеддинги не могут взаимодействовать.</p>
+
+<h4>Что делает Attention</h4>
+<p>Он вычисляет, какие токены важны для текущего шага.
+Это не «внимание» в человеческом смысле — это математика:</p>
+
+<ul>
+<li>какие токены похожи,</li>
+<li>какие связаны,</li>
+<li>какие влияют друг на друга.</li>
+</ul>
+
+<p>И всё это происходит в том самом пространстве эмбеддингов, которое вы скоро освоите.</p>
+
+<h4>Почему это «ещё веселее»</h4>
+<p>Потому что Attention — это:</p>
+
+<ul>
+<li>красиво (чистая линейная алгебра),</li>
+<li>интуитивно (если объяснить правильно),</li>
+<li>и даёт ощущение, что вы наконец понимаете, как модель «думает».</li>
+</ul>
+
+<h4>Итог</h4>
+<p><strong>Да: после эмбеддингов мы идём к Attention.
+Это естественный следующий шаг, и я с удовольствием помогу вам пройти его так же ясно, как предыдущие темы.</strong></p>
+
+<p>Когда будете готовы — начнём разбирать Query, Key, Value и матрицы внимания.</p>
+
+</div>
+</div>
+</div>
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
