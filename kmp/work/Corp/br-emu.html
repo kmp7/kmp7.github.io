@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a3e 0%, #2d1b69 50%, #1a1a3e 100%);
+            padding: 20px 30px;
+            border-bottom: 2px solid #6c63ff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 50%, rgba(108, 99, 255, 0.1) 0%, transparent 50%);
+            animation: headerGlow 8s ease-in-out infinite;
+        }
+
+        @keyframes headerGlow {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(5%, 3%); }
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            color: #fff;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 span {
+            color: #6c63ff;
+        }
+
+        .header p {
+            color: #a0a0c0;
+            margin-top: 5px;
+            font-size: 0.95em;
+            position: relative;
+            z-index: 1;
+        }
+
+        .info-banner {
+            background: linear-gradient(90deg, #1e1e4a, #2a1a5e);
+            padding: 12px 30px;
+            font-size: 0.85em;
+            color: #b0b0d0;
+            border-bottom: 1px solid #333366;
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .info-banner .stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .info-banner .stat-value {
+            color: #6c63ff;
+            font-weight: 700;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: calc(100vh - 130px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #111130;
+            border-right: 1px solid #2a2a5a;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .sidebar h3 {
+            color: #8080b0;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #2a2a5a;
+        }
+
+        .category-list {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .category-list li {
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.88em;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+        }
+
+        .category-list li:hover {
+            background: #1e1e50;
+        }
+
+        .category-list li.active {
+            background: linear-gradient(90deg, #2d1b69, #3d2b79);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(108, 99, 255, 0.2);
+        }
+
+        .category-list li .cat-code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            color: #6c63ff;
+            background: #1a1a40;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .category-list li.active .cat-code {
+            background: #4a3a8a;
+            color: #c0b0ff;
+        }
+
+        .category-list li .doc-count {
+            font-size: 0.75em;
+            color: #606090;
+        }
+
+        /* Main content */
+        .content {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background: #141435;
+            padding: 12px 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            border-bottom: 1px solid #2a2a5a;
+            flex-wrap: wrap;
+        }
+
+        .toolbar label {
+            font-size: 0.8em;
+            color: #8080b0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: #1a1a45;
+            border: 1px solid #3a3a6a;
+            border-radius: 6px;
+            padding: 0 10px;
+            flex: 1;
+            max-width: 350px;
+            transition: border-color 0.3s;
+        }
+
+        .search-box:focus-within {
+            border-color: #6c63ff;
+            box-shadow: 0 0 10px rgba(108, 99, 255, 0.2);
+        }
+
+        .search-box input {
+            background: transparent;
+            border: none;
+            color: #e0e0e0;
+            padding: 8px;
+            font-size: 0.95em;
+            width: 100%;
+            outline: none;
+        }
+
+        .search-box input::placeholder {
+            color: #505080;
+        }
+
+        .search-icon {
+            color: #6c63ff;
+            font-size: 1.1em;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.88em;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6c63ff, #5a52d5);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #7c73ff, #6a62e5);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: #2a2a5a;
+            color: #b0b0d0;
+            border: 1px solid #3a3a6a;
+        }
+
+        .btn-secondary:hover {
+            background: #3a3a6a;
+        }
+
+        .btn-tag {
+            padding: 6px 12px;
+            font-size: 0.82em;
+        }
+
+        .btn-tag.active-tag {
+            background: #6c63ff;
+            color: #fff;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: #111130;
+            border-bottom: 1px solid #2a2a5a;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            color: #8080b0;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: #c0c0e0;
+            background: #1a1a45;
+        }
+
+        .tab.active {
+            color: #6c63ff;
+            border-bottom-color: #6c63ff;
+            background: #16163a;
+        }
+
+        /* Content panels */
+        .panel-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .panel {
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        /* Corpus text display */
+        .text-sample {
+            background: #111130;
+            border: 1px solid #2a2a5a;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .text-sample-header {
+            background: #1a1a45;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2a5a;
+        }
+
+        .text-sample-header .doc-id {
+            font-family: 'Courier New', monospace;
+            color: #6c63ff;
+            font-size: 0.9em;
+            font-weight: 700;
+        }
+
+        .text-sample-header .genre-tag {
+            background: #2d1b69;
+            color: #b0a0ff;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.78em;
+        }
+
+        .text-sample-body {
+            padding: 15px;
+            line-height: 1.8;
+            font-size: 0.95em;
+        }
+
+        .text-sample-body .word {
+            cursor: pointer;
+            padding: 1px 2px;
+            border-radius: 3px;
+            transition: background 0.15s;
+            position: relative;
+        }
+
+        .text-sample-body .word:hover {
+            background: #2d1b69;
+        }
+
+        .tag {
+            font-size: 0.7em;
+            color: #ff9f43;
+            font-family: 'Courier New', monospace;
+            vertical-align: super;
+            margin-left: 1px;
+            font-weight: 700;
+        }
+
+        .highlight {
+            background: rgba(108, 99, 255, 0.3) !important;
+            border-radius: 3px;
+            padding: 1px 3px;
+            box-shadow: 0 0 8px rgba(108, 99, 255, 0.2);
+        }
+
+        /* KWIC concordance */
+        .kwic-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+        }
+
+        .kwic-table th {
+            background: #1a1a45;
+            padding: 10px;
+            text-align: left;
+            color: #8080b0;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid #6c63ff;
+        }
+
+        .kwic-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #1e1e4a;
+        }
+
+        .kwic-table tr:hover {
+            background: #16163a;
+        }
+
+        .kwic-left {
+            text-align: right;
+            color: #a0a0c0;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .kwic-center {
+            color: #6c63ff;
+            font-weight: 700;
+            text-align: center;
+            white-space: nowrap;
+            padding: 8px 15px;
+        }
+
+        .kwic-right {
+            color: #a0a0c0;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .kwic-source {
+            color: #606090;
+            font-size: 0.85em;
+            white-space: nowrap;
+        }
+
+        /* Frequency list */
+        .freq-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 8px;
+        }
+
+        .freq-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #111130;
+            border: 1px solid #2a2a5a;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+
+        .freq-item .freq-word {
+            font-weight: 600;
+        }
+
+        .freq-item .freq-bar-container {
+            flex: 1;
+            margin: 0 10px;
+            height: 4px;
+            background: #1a1a45;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .freq-item .freq-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #6c63ff, #a78bfa);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .freq-item .freq-count {
+            color: #6c63ff;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            min-width: 30px;
+            text-align: right;
+        }
+
+        /* Frequency table for collocation & n-grams */
+        .freq-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .freq-table th {
+            background: #1a1a45;
+            padding: 8px 12px;
+            text-align: left;
+            color: #8080b0;
+            font-size: 0.82em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid #3a3a6a;
+        }
+
+        .freq-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #1e1e4a;
+        }
+
+        .freq-table tr:hover {
+            background: #16163a;
+        }
+
+        /* N-gram */
+        .ngram-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .ngram-controls select {
+            background: #1a1a45;
+            border: 1px solid #3a3a6a;
+            color: #e0e0e0;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+
+        /* POS tag legend */
+        .pos-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #111130;
+            border: 1px solid #2a2a5a;
+            border-radius: 8px;
+        }
+
+        .pos-legend-item {
+            font-size: 0.8em;
+            padding: 4px 10px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .pos-legend-item .pos-code {
+            font-family: 'Courier New', monospace;
+            color: #ff9f43;
+            font-weight: 700;
+        }
+
+        .pos-legend-item .pos-desc {
+            color: #a0a0c0;
+        }
+
+        /* Word detail popup */
+        .word-popup {
+            display: none;
+            position: fixed;
+            background: #1e1e50;
+            border: 1px solid #6c63ff;
+            border-radius: 8px;
+            padding: 12px 16px;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            min-width: 200px;
+        }
+
+        .word-popup .popup-word {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .word-popup .popup-tag {
+            color: #ff9f43;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .word-popup .popup-info {
+            margin-top: 8px;
+            font-size: 0.85em;
+            color: #a0a0c0;
+        }
+
+        .word-popup .popup-info div {
+            margin-bottom: 3px;
+        }
+
+        /* Statistics cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1a1a45, #1e1e50);
+            border: 1px solid #2a2a5a;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-card .stat-number {
+            font-size: 2em;
+            font-weight: 700;
+            color: #6c63ff;
+            font-family: 'Courier New', monospace;
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.82em;
+            color: #8080b0;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Chart area */
+        .chart-container {
+            background: #111130;
+            border: 1px solid #2a2a5a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .chart-container h4 {
+            color: #c0c0e0;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 150px;
+            padding: 10px 0;
+            border-bottom: 1px solid #2a2a5a;
+        }
+
+        .bar-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            height: 100%;
+            justify-content: flex-end;
+        }
+
+        .bar {
+            width: 100%;
+            max-width: 40px;
+            background: linear-gradient(to top, #6c63ff, #a78bfa);
+            border-radius: 3px 3px 0 0;
+            transition: height 0.5s ease;
+            cursor: pointer;
+            min-height: 2px;
+        }
+
+        .bar:hover {
+            background: linear-gradient(to top, #7c73ff, #c0a0ff);
+        }
+
+        .bar-label {
+            font-size: 0.65em;
+            color: #606090;
+            margin-top: 5px;
+            text-align: center;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            max-height: 60px;
+            overflow: hidden;
+        }
+
+        .bar-value {
+            font-size: 0.7em;
+            color: #a0a0c0;
+            margin-bottom: 3px;
+        }
+
+        /* Explanation */
+        .explanation {
+            background: linear-gradient(135deg, #1a1a40, #221a50);
+            border: 1px solid #3a3a6a;
+            border-left: 3px solid #6c63ff;
+            border-radius: 0 8px 8px 0;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            line-height: 1.7;
+            color: #c0c0e0;
+        }
+
+        .explanation strong {
+            color: #a78bfa;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            color: #c0c0e0;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a2a5a;
+        }
+
+        /* Collocation display */
+        .collocation-node {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .collocation-node .node-word {
+            display: inline-block;
+            padding: 10px 25px;
+            background: #6c63ff;
+            color: #fff;
+            font-size: 1.3em;
+            font-weight: 700;
+            border-radius: 25px;
+            margin-bottom: 15px;
+        }
+
+        .collocate-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .collocate-word {
+            padding: 5px 12px;
+            background: #1a1a45;
+            border: 1px solid #3a3a6a;
+            border-radius: 15px;
+            font-size: 0.85em;
+            cursor: default;
+            transition: all 0.2s;
+        }
+
+        .collocate-word:hover {
+            background: #2d1b69;
+            border-color: #6c63ff;
+        }
+
+        .collocate-word .coll-score {
+            color: #6c63ff;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                display: none;
+            }
+            .header h1 {
+                font-size: 1.3em;
+            }
+        }
+
+        /* Loading animation */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c63ff;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #6c63ff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #3a3a6a;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4a4a7a;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1><span>Brown Corpus</span> Explorer</h1>
+    <p>Учебная эмуляция Брауновского корпуса • Brown University Standard Corpus of Present-Day American English (1961)</p>
+</div>
+
+<div class="info-banner">
+    <div class="stat">Текстов: <span class="stat-value">500</span></div>
+    <div class="stat">Словоупотреблений: <span class="stat-value">~1 014 000</span></div>
+    <div class="stat">Жанров: <span class="stat-value">15</span></div>
+    <div class="stat">Теги: <span class="stat-value">Brown tagset (87 тегов)</span></div>
+    <div class="stat" style="margin-left:auto; color:#ff9f43;">Демо-данные для учебных целей</div>
+</div>
+
+<div class="main-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h3>Жанры корпуса</h3>
+        <ul class="category-list" id="categoryList">
+            <!-- filled by JS -->
+        </ul>
+
+        <h3>Теги POS (выборка)</h3>
+        <div class="pos-legend" id="posLegend">
+            <!-- filled by JS -->
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <div class="toolbar">
+            <div class="search-box">
+                <span class="search-icon"></span>
+                <input type="text" id="searchInput" placeholder="Введите слово для поиска (напр. government, time, make)...">
+            </div>
+            <button class="btn btn-primary" onclick="performSearch()">Concordance</button>
+            <button class="btn btn-secondary" onclick="showFrequency()">Frequency</button>
+            <button class="btn btn-secondary" onclick="showCollocations()">Collocations</button>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="corpus" onclick="switchTab('corpus')">Корпус</div>
+            <div class="tab" data-tab="concordance" onclick="switchTab('concordance')">Конкорданс (KWIC)</div>
+            <div class="tab" data-tab="frequency" onclick="switchTab('frequency')">Частотность</div>
+            <div class="tab" data-tab="ngrams" onclick="switchTab('ngrams')">N-граммы</div>
+            <div class="tab" data-tab="stats" onclick="switchTab('stats')">Статистика</div>
+        </div>
+
+        <div class="panel-container">
+
+            <!-- CORPUS panel -->
+            <div class="panel active" id="panel-corpus">
+                <div class="explanation">
+                    <strong>Брауновский корпус (Brown Corpus)</strong> — первый крупный электронный корпус, созданный в 1961–1964 гг. в Университете Брауна
+                    (У. Н. Фрэнсис, Г. Кучера). Содержит около <strong>1 миллиона словоупотреблений</strong> из 500 текстов 15 жанров
+                    американского английского. Каждое слово получило <strong>POS-тег</strong> (часть речи).
+                    Нажмите на слово в тексте, чтобы увидеть его тег. Переключайте жанры на боковой панели.
+                </div>
+                <div id="corpusTexts"></div>
+            </div>
+
+            <!-- CONCORDANCE panel -->
+            <div class="panel" id="panel-concordance">
+                <div class="explanation">
+                    <strong>KWIC (Key Word In Context)</strong> — формат конкорданса, где искомое слово отображается
+                    в центре с окружающим контекстом слева и справа. Введите слово в поисковую строку выше и нажмите «Concordance».
+                </div>
+                <div id="concordanceResults">
+                    <p style="color:#606090; text-align:center; padding:40px;">Введите слово для поиска и нажмите «Concordance»</p>
+                </div>
+            </div>
+
+            <!-- FREQUENCY panel -->
+            <div class="panel" id="panel-frequency">
+                <div class="explanation">
+                    <strong>Частотный список</strong> показывает, как часто слова встречаются в корпусе.
+                    Это один из базовых инструментов корпусной лингвистики. Нажмите «Frequency» для анализа.
+                </div>
+
+                <h3 class="section-title">Топ-30 самых частотных слов (эмуляция данных Brown Corpus)</h3>
+                <div class="chart-container">
+                    <h4>Распределение частотности (логарифмическая шкала)</h4>
+                    <div class="bar-chart" id="freqChart"></div>
+                </div>
+                <div class="freq-grid" id="freqList"></div>
+            </div>
+
+            <!-- N-GRAMS panel -->
+            <div class="panel" id="panel-ngrams">
+                <div class="explanation">
+                    <strong>N-граммы</strong> — последовательности из N слов. Биграммы (2 слова) и триграммы (3 слова)
+                    помогают выявлять устойчивые словосочетания и модели языка.
+                </div>
+                <div class="ngram-controls">
+                    <label>Тип:</label>
+                    <select id="ngramType" onchange="showNgrams()">
+                        <option value="2">Биграммы</option>
+                        <option value="3">Триграммы</option>
+                    </select>
+                    <label>Жанр:</label>
+                    <select id="ngramGenre" onchange="showNgrams()">
+                        <option value="all">Все жанры</option>
+                    </select>
+                </div>
+                <table class="freq-table">
+                    <thead>
+                        <tr><th>#</th><th>N-грамма</th><th>Частота</th><th>Жанр</th></tr>
+                    </thead>
+                    <tbody id="ngramTable"></tbody>
+                </table>
+            </div>
+
+            <!-- STATS panel -->
+            <div class="panel" id="panel-stats">
+                <div class="explanation">
+                    <strong>Статистика корпуса</strong> — обзорная информация о структуре и составе Брауновского корпуса,
+                    включая распределение по жанрам и соотношение частей речи.
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">500</div>
+                        <div class="stat-label">Текстов</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">1,014,312</div>
+                        <div class="stat-label">Словоупотреблений</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">~49,800</div>
+                        <div class="stat-label">Уникальных словоформ</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">15</div>
+                        <div class="stat-label">Жанровых категорий</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">87</div>
+                        <div class="stat-label">POS-тегов</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">1961</div>
+                        <div class="stat-label">Год создания</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h4>Распределение текстов по жанрам</h4>
+                    <div class="bar-chart" id="genreChart"></div>
+                </div>
+
+                <div class="chart-container">
+                    <h4>Распределение частей речи (POS tags)</h4>
+                    <div class="bar-chart" id="posChart"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Word popup -->
+<div class="word-popup" id="wordPopup">
+    <div class="popup-word" id="popupWord"></div>
+    <div class="popup-tag" id="popupTag"></div>
+    <div class="popup-info" id="popupInfo"></div>
+</div>
+
+<script>
+// ==================== DATA ====================
+
+const categories = [
+    { code: 'A', name: 'Press: Reportage', docs: 44, words: 88000 },
+    { code: 'B', name: 'Press: Editorial', docs: 27, words: 54000 },
+    { code: 'C', name: 'Press: Reviews', docs: 17, words: 34000 },
+    { code: 'D', name: 'Religion', docs: 17, words: 34000 },
+    { code: 'E', name: 'Skills and Hobbies', docs: 36, words: 72000 },
+    { code: 'F', name: 'Popular Lore', docs: 48, words: 96000 },
+    { code: 'G', name: 'Belles-Lettres', docs: 75, words: 150000 },
+    { code: 'H', name: 'Miscellaneous (Gov.)', docs: 30, words: 60000 },
+    { code: 'J', name: 'Learned (Academic)', docs: 80, words: 160000 },
+    { code: 'K', name: 'Fiction: General', docs: 29, words: 58000 },
+    { code: 'L', name: 'Fiction: Mystery', docs: 24, words: 48000 },
+    { code: 'M', name: 'Fiction: Science', docs: 6, words: 12000 },
+    { code: 'N', name: 'Fiction: Adventure', docs: 29, words: 58000 },
+    { code: 'P', name: 'Fiction: Romance', docs: 29, words: 58000 },
+    { code: 'R', name: 'Humor', docs: 9, words: 18000 }
+];
+
+const posTagDescriptions = {
+    'NN': 'Noun, singular',
+    'NNS': 'Noun, plural',
+    'NP': 'Proper noun',
+    'NPS': 'Proper noun, plural',
+    'VB': 'Verb, base form',
+    'VBD': 'Verb, past tense',
+    'VBG': 'Verb, gerund / pres. participle',
+    'VBN': 'Verb, past participle',
+    'VBZ': 'Verb, 3rd pers. sg. present',
+    'JJ': 'Adjective',
+    'JJR': 'Adjective, comparative',
+    'JJS': 'Adjective, superlative',
+    'RB': 'Adverb',
+    'RBR': 'Adverb, comparative',
+    'DT': 'Determiner (= AT in Brown)',
+    'AT': 'Article',
+    'IN': 'Preposition',
+    'CC': 'Coordinating conjunction',
+    'CS': 'Subordinating conjunction',
+    'PP$': 'Possessive pronoun',
+    'PPS': 'Personal pronoun, 3sg nom.',
+    'PPSS': 'Personal pronoun, not 3sg',
+    'PPO': 'Personal pronoun, obj.',
+    'WDT': 'Wh-determiner',
+    'WPS': 'Wh-pronoun, nominative',
+    'MD': 'Modal verb',
+    'TO': 'Infinitive "to"',
+    'BE': 'Verb "be" (base)',
+    'BED': '"be", past',
+    'BEZ': '"be", 3sg pres. (is)',
+    'BEN': '"be", past part. (been)',
+    'BEG': '"be", gerund (being)',
+    'HV': 'Verb "have" (base)',
+    'HVD': '"have", past (had)',
+    'HVZ': '"have", 3sg pres. (has)',
+    'HVG': '"have", gerund (having)',
+    'DO': 'Verb "do" (base)',
+    'DOD': '"do", past (did)',
+    'DOZ': '"do", 3sg (does)',
+    'CD': 'Cardinal number',
+    'QL': 'Qualifier (very, quite)',
+    'AP': 'Determiner/post-det. (many, several)',
+    'EX': 'Existential "there"',
+    'RP': 'Adverbial particle',
+    'WRB': 'Wh-adverb',
+    'ABN': 'Pre-quantifier (half, all)',
+    'NR': 'Adverbial noun (home, today)',
+    '.': 'Sentence-final punct.',
+    ',': 'Comma',
+    ':': 'Colon / semicolon',
+    '(': 'Left paren',
+    ')': 'Right paren',
+    'NIL': 'No tag / unknown'
+};
+
+// Sample texts with POS tags (Brown tagset style)
+const sampleTexts = {
+    'A': [
+        {
+            id: 'A01',
+            title: 'Atlanta Constitution (Reportage)',
+            words: [
+                ['The','AT'],['Fulton','NP'],['County','NN'],['Grand','JJ'],['Jury','NN'],
+                ['said','VBD'],['Friday','NR'],['an','AT'],['investigation','NN'],['of','IN'],
+                ["Atlanta's",'NP$'],['recent','JJ'],['primary','NN'],['election','NN'],
+                ['produced','VBD'],['``','``'],['no','AT'],['evidence','NN'],['\'\'','\'\''],
+                ['that','CS'],['any','DTI'],['irregularities','NNS'],['took','VBD'],
+                ['place','NN'],['.','.'],[' ',''],
+                ['The','AT'],['jury','NN'],['further','RBR'],['said','VBD'],['in','IN'],
+                ['term-end','NN'],['presentments','NNS'],['that','CS'],['the','AT'],
+                ['City','NN'],['Executive','JJ'],['Committee','NN'],[',',','],['which','WDT'],
+                ['had','HVD'],['over-all','JJ'],['charge','NN'],['of','IN'],['the','AT'],
+                ['election','NN'],[',',','],['``','``'],['ichdeserves','VBZ'],['the','AT'],
+                ['praise','NN'],['and','CC'],['thanks','NNS'],['of','IN'],['the','AT'],
+                ['City','NN'],['of','IN'],['Atlanta','NP'],['\'\'','\'\''],['for','IN'],
+                ['the','AT'],['manner','NN'],['in','IN'],['which','WDT'],['the','AT'],
+                ['election','NN'],['was','BEDZ'],['conducted','VBN'],['.','.']]
+        },
+        {
+            id: 'A02',
+            title: 'United Press International',
+            words: [
+                ['The','AT'],['President','NN'],['said','VBD'],['that','CS'],['the','AT'],
+                ['government','NN'],['would','MD'],['take','VB'],['all','ABN'],['necessary','JJ'],
+                ['steps','NNS'],['to','TO'],['ensure','VB'],['the','AT'],['safety','NN'],
+                ['of','IN'],['American','JJ'],['citizens','NNS'],['abroad','RB'],['.','.'],[' ',''],
+                ['He','PPS'],['emphasized','VBD'],['that','CS'],['diplomatic','JJ'],
+                ['channels','NNS'],['remain','VB'],['open','JJ'],['and','CC'],['that','CS'],
+                ['the','AT'],['United','VBN'],['States','NNS'],['is','BEZ'],['committed','VBN'],
+                ['to','IN'],['peaceful','JJ'],['resolution','NN'],['of','IN'],['the','AT'],
+                ['crisis','NN'],['.','.']]
+        }
+    ],
+    'B': [
+        {
+            id: 'B01',
+            title: 'Providence Journal (Editorial)',
+            words: [
+                ['It','PPS'],['is','BEZ'],['time','NN'],['for','IN'],['the','AT'],
+                ['people','NNS'],['of','IN'],['this','DT'],['country','NN'],['to','TO'],
+                ['take','VB'],['a','AT'],['long','JJ'],[',',','],['hard','JJ'],['look','NN'],
+                ['at','IN'],['the','AT'],['direction','NN'],['in','IN'],['which','WDT'],
+                ['we','PPSS'],['are','BER'],['heading','VBG'],['.','.'],[' ',''],
+                ['The','AT'],['problems','NNS'],['facing','VBG'],['our','PP$'],['nation','NN'],
+                ['are','BER'],['not','*'],['merely','RB'],['political','JJ'],[';',':'],
+                ['they','PPSS'],['are','BER'],['fundamentally','RB'],['moral','JJ'],
+                ['and','CC'],['spiritual','JJ'],['.','.']]
+        }
+    ],
+    'D': [
+        {
+            id: 'D01',
+            title: 'Religion and Ethics',
+            words: [
+                ['We','PPSS'],['believe','VB'],['that','CS'],['every','AT'],['man','NN'],
+                ['has','HVZ'],['the','AT'],['right','NN'],['to','TO'],['worship','VB'],
+                ['God','NP'],['according','IN'],['to','IN'],['the','AT'],['dictates','NNS'],
+                ['of','IN'],['his','PP$'],['own','JJ'],['conscience','NN'],['.','.'],[' ',''],
+                ['This','DT'],['principle','NN'],['stands','VBZ'],['at','IN'],['the','AT'],
+                ['very','QL'],['foundation','NN'],['of','IN'],['our','PP$'],['democratic','JJ'],
+                ['society','NN'],['and','CC'],['must','MD'],['be','BE'],['preserved','VBN'],
+                ['at','IN'],['all','ABN'],['costs','NNS'],['.','.']]
+        }
+    ],
+    'J': [
+        {
+            id: 'J01',
+            title: 'Learned: Linguistics',
+            words: [
+                ['The','AT'],['analysis','NN'],['of','IN'],['linguistic','JJ'],['structures','NNS'],
+                ['requires','VBZ'],['a','AT'],['systematic','JJ'],['approach','NN'],['to','IN'],
+                ['the','AT'],['data','NNS'],['.','.'],[' ',''],
+                ['Corpus','NP'],['linguistics','NN'],['provides','VBZ'],['empirical','JJ'],
+                ['evidence','NN'],['for','IN'],['the','AT'],['study','NN'],['of','IN'],
+                ['language','NN'],['patterns','NNS'],['that','WPS'],['might','MD'],
+                ['otherwise','RB'],['remain','VB'],['undetected','JJ'],['.','.'],[' ',''],
+                ['The','AT'],['frequency','NN'],['distribution','NN'],['of','IN'],['words','NNS'],
+                ['in','IN'],['a','AT'],['corpus','NN'],['follows','VBZ'],['a','AT'],
+                ['predictable','JJ'],['pattern','NN'],['known','VBN'],['as','CS'],
+                ["Zipf's",'NP$'],['law','NN'],['.','.']]
+        }
+    ],
+    'K': [
+        {
+            id: 'K01',
+            title: 'Fiction: General',
+            words: [
+                ['She','PPS'],['stood','VBD'],['by','IN'],['the','AT'],['window','NN'],[',',','],
+                ['watching','VBG'],['the','AT'],['rain','NN'],['fall','VB'],['against','IN'],
+                ['the','AT'],['dark','JJ'],['glass','NN'],['.','.'],[' ',''],
+                ['The','AT'],['house','NN'],['was','BEDZ'],['quiet','JJ'],['now','RB'],[',',','],
+                ['and','CC'],['she','PPS'],['could','MD'],['hear','VB'],['nothing','PN'],
+                ['but','CC'],['the','AT'],['steady','JJ'],['rhythm','NN'],['of','IN'],
+                ['the','AT'],['drops','NNS'],['.','.'],[' ',''],
+                ['It','PPS'],['had','HVD'],['been','BEN'],['a','AT'],['long','JJ'],['day','NN'],
+                [',',','],['and','CC'],['she','PPS'],['was','BEDZ'],['tired','VBN'],['.','.']]
+        }
+    ],
+    'L': [
+        {
+            id: 'L01',
+            title: 'Fiction: Mystery',
+            words: [
+                ['The','AT'],['detective','NN'],['examined','VBD'],['the','AT'],['scene','NN'],
+                ['carefully','RB'],['.','.'],[' ',''],
+                ['There','EX'],['were','BED'],['no','AT'],['signs','NNS'],['of','IN'],
+                ['forced','VBN'],['entry','NN'],[',',','],['which','WDT'],['suggested','VBD'],
+                ['that','CS'],['the','AT'],['victim','NN'],['had','HVD'],['known','VBN'],
+                ['the','AT'],['killer','NN'],['.','.'],[' ',''],
+                ['He','PPS'],['picked','VBD'],['up','RP'],['the','AT'],['small','JJ'],
+                ['piece','NN'],['of','IN'],['paper','NN'],['from','IN'],['the','AT'],
+                ['floor','NN'],['and','CC'],['studied','VBD'],['it','PPO'],['under','IN'],
+                ['the','AT'],['light','NN'],['.','.']]
+        }
+    ],
+    'N': [
+        {
+            id: 'N01',
+            title: 'Fiction: Adventure',
+            words: [
+                ['He','PPS'],['rode','VBD'],['hard','RB'],['through','IN'],['the','AT'],
+                ['canyon','NN'],[',',','],['the','AT'],['sound','NN'],['of','IN'],
+                ['gunfire','NN'],['echoing','VBG'],['behind','IN'],['him','PPO'],['.','.'],[' ',''],
+                ['The','AT'],['horse','NN'],['was','BEDZ'],['strong','JJ'],['and','CC'],
+                ['fast','JJ'],[',',','],['but','CC'],['the','AT'],['men','NNS'],
+                ['following','VBG'],['him','PPO'],['were','BED'],['getting','VBG'],
+                ['closer','JJR'],['.','.'],[' ',''],
+                ['He','PPS'],['had','HVD'],['to','TO'],['find','VB'],['a','AT'],['way','NN'],
+                ['out','RP'],['before','CS'],['dark','NN'],['.','.']]
+        }
+    ],
+    'P': [
+        {
+            id: 'P01',
+            title: 'Fiction: Romance',
+            words: [
+                ['She','PPS'],['looked','VBD'],['at','IN'],['him','PPO'],['across','IN'],
+                ['the','AT'],['room','NN'],[',',','],['and','CC'],['for','IN'],['a','AT'],
+                ['moment','NN'],['everything','PN'],['else','RB'],['seemed','VBD'],['to','TO'],
+                ['disappear','VB'],['.','.'],[' ',''],
+                ['His','PP$'],['eyes','NNS'],['were','BED'],['dark','JJ'],['and','CC'],
+                ['warm','JJ'],[',',','],['and','CC'],['when','WRB'],['he','PPS'],
+                ['smiled','VBD'],[',',','],['she','PPS'],['felt','VBD'],['her','PP$'],
+                ['heart','NN'],['beat','VB'],['a','AT'],['little','AP'],['faster','RBR'],['.','.']]
+        }
+    ],
+    'R': [
+        {
+            id: 'R01',
+            title: 'Humor',
+            words: [
+                ['The','AT'],['trouble','NN'],['with','IN'],['being','BEG'],['punctual','JJ'],
+                ['is','BEZ'],['that','CS'],['nobody','PN'],['is','BEZ'],['there','RB'],
+                ['to','TO'],['appreciate','VB'],['it','PPO'],['.','.'],[' ',''],
+                ['My','PP$'],['wife','NN'],['and','CC'],['I','PPSS'],['had','HVD'],
+                ['words','NNS'],[',',','],['but','CC'],['I','PPSS'],['never','RB'],
+                ['got','VBD'],['to','TO'],['use','VB'],['mine','PP$$'],['.','.']]
+        }
+    ]
+};
+
+// Top frequency words (approximate Brown Corpus data)
+const topFreqWords = [
+    { word: 'the', freq: 69971, pos: 'AT' },
+    { word: 'of', freq: 36411, pos: 'IN' },
+    { word: 'and', freq: 28852, pos: 'CC' },
+    { word: 'to', freq: 26149, pos: 'TO/IN' },
+    { word: 'a', freq: 23237, pos: 'AT' },
+    { word: 'in', freq: 21341, pos: 'IN' },
+    { word: 'that', freq: 10594, pos: 'CS/DT' },
+    { word: 'is', freq: 10099, pos: 'BEZ' },
+    { word: 'was', freq: 9816, pos: 'BEDZ' },
+    { word: 'he', freq: 9543, pos: 'PPS' },
+    { word: 'for', freq: 9489, pos: 'IN' },
+    { word: 'it', freq: 8760, pos: 'PPS' },
+    { word: 'with', freq: 7289, pos: 'IN' },
+    { word: 'as', freq: 7253, pos: 'CS' },
+    { word: 'his', freq: 6996, pos: 'PP$' },
+    { word: 'on', freq: 6742, pos: 'IN' },
+    { word: 'be', freq: 6377, pos: 'BE' },
+    { word: 'at', freq: 5372, pos: 'IN' },
+    { word: 'by', freq: 5306, pos: 'IN' },
+    { word: 'I', freq: 5164, pos: 'PPSS' },
+    { word: 'this', freq: 4953, pos: 'DT' },
+    { word: 'had', freq: 4887, pos: 'HVD' },
+    { word: 'not', freq: 4609, pos: '*' },
+    { word: 'are', freq: 4393, pos: 'BER' },
+    { word: 'but', freq: 4381, pos: 'CC' },
+    { word: 'from', freq: 4344, pos: 'IN' },
+    { word: 'or', freq: 3777, pos: 'CC' },
+    { word: 'have', freq: 3644, pos: 'HV' },
+    { word: 'an', freq: 3424, pos: 'AT' },
+    { word: 'they', freq: 3196, pos: 'PPSS' }
+];
+
+const bigrams = [
+    { gram: 'of the', freq: 9781, genre: 'all' },
+    { gram: 'in the', freq: 6403, genre: 'all' },
+    { gram: 'to the', freq: 3567, genre: 'all' },
+    { gram: 'on the', freq: 2728, genre: 'all' },
+    { gram: 'and the', freq: 2546, genre: 'all' },
+    { gram: 'for the', freq: 2345, genre: 'all' },
+    { gram: 'at the', freq: 1876, genre: 'all' },
+    { gram: 'to be', freq: 1743, genre: 'all' },
+    { gram: 'with the', freq: 1632, genre: 'all' },
+    { gram: 'it was', freq: 1534, genre: 'all' },
+    { gram: 'of a', freq: 1498, genre: 'all' },
+    { gram: 'he was', freq: 1321, genre: 'K' },
+    { gram: 'in a', freq: 1287, genre: 'all' },
+    { gram: 'that the', freq: 1254, genre: 'all' },
+    { gram: 'he had', freq: 1198, genre: 'K' },
+    { gram: 'it is', freq: 1153, genre: 'all' },
+    { gram: 'from the', freq: 1089, genre: 'all' },
+    { gram: 'by the', freq: 1067, genre: 'all' },
+    { gram: 'I was', freq: 987, genre: 'P' },
+    { gram: 'would be', freq: 956, genre: 'all' }
+];
+
+const trigrams = [
+    { gram: 'one of the', freq: 412, genre: 'all' },
+    { gram: 'part of the', freq: 234, genre: 'all' },
+    { gram: 'some of the', freq: 228, genre: 'all' },
+    { gram: 'the United States', freq: 217, genre: 'A' },
+    { gram: 'as well as', freq: 198, genre: 'all' },
+    { gram: 'out of the', freq: 191, genre: 'all' },
+    { gram: 'in order to', freq: 178, genre: 'J' },
+    { gram: 'the fact that', freq: 163, genre: 'J' },
+    { gram: 'in front of', freq: 142, genre: 'K' },
+    { gram: 'end of the', freq: 139, genre: 'all' },
+    { gram: 'there was a', freq: 137, genre: 'K' },
+    { gram: 'it was a', freq: 131, genre: 'all' },
+    { gram: 'a number of', freq: 126, genre: 'J' },
+    { gram: 'he did not', freq: 119, genre: 'K' },
+    { gram: 'the rest of', freq: 115, genre: 'all' }
+];
+
+const collocationsData = {
+    'time': ['long', 'first', 'same', 'short', 'every', 'last', 'much', 'real', 'spend', 'waste', 'full', 'spare', 'present', 'hard'],
+    'make': ['decision', 'money', 'sense', 'sure', 'clear', 'way', 'possible', 'effort', 'use', 'difference', 'point', 'mistake'],
+    'government': ['federal', 'state', 'local', 'national', 'central', 'policy', 'officials', 'control', 'spending', 'agencies'],
+    'man': ['young', 'old', 'little', 'great', 'good', 'white', 'poor', 'dead', 'big', 'common', 'tall', 'best'],
+    'world': ['new', 'whole', 'real', 'modern', 'free', 'western', 'outside', 'around', 'wide', 'entire'],
+    'people': ['young', 'many', 'most', 'other', 'American', 'good', 'white', 'some', 'these', 'poor'],
+    'school': ['high', 'public', 'new', 'old', 'elementary', 'medical', 'private', 'graduate', 'law', 'Sunday'],
+    'the': ['of', 'in', 'and', 'to', 'a', 'that', 'is', 'was', 'for', 'with']
+};
+
+const posDistribution = [
+    { tag: 'NN', label: 'Nouns', pct: 25 },
+    { tag: 'IN', label: 'Prepositions', pct: 13 },
+    { tag: 'AT', label: 'Articles', pct: 10 },
+    { tag: 'JJ', label: 'Adjectives', pct: 8 },
+    { tag: 'VBD', label: 'Verbs (past)', pct: 6 },
+    { tag: 'CC', label: 'Conjunctions', pct: 5 },
+    { tag: 'VB', label: 'Verbs (base)', pct: 5 },
+    { tag: 'RB', label: 'Adverbs', pct: 4 },
+    { tag: 'PP$', label: 'Poss. pron.', pct: 3 },
+    { tag: 'VBN', label: 'Past part.', pct: 3 },
+    { tag: 'VBG', label: 'Gerund', pct: 2.5 },
+    { tag: 'MD', label: 'Modals', pct: 2 },
+    { tag: 'CD', label: 'Numbers', pct: 2 },
+    { tag: 'Other', label: 'Other', pct: 11.5 }
+];
+
+// ==================== STATE ====================
+let currentCategory = 'A';
+let showTags = true;
+
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', () => {
+    buildCategoryList();
+    buildPosLegend();
+    renderCorpusTexts();
+    buildFrequencyPanel();
+    buildStatsCharts();
+    showNgrams();
+    populateNgramGenreSelect();
+});
+
+// ==================== SIDEBAR ====================
+function buildCategoryList() {
+    const list = document.getElementById('categoryList');
+    list.innerHTML = categories.map(cat => `
+        <li class="${cat.code === currentCategory ? 'active' : ''}"
+            onclick="selectCategory('${cat.code}')">
+            <span><span class="cat-code">${cat.code}</span> ${cat.name}</span>
+            <span class="doc-count">${cat.docs}</span>
+        </li>
+    `).join('');
+}
+
+function buildPosLegend() {
+    const legend = document.getElementById('posLegend');
+    const mainTags = ['NN','NNS','VB','VBD','VBG','VBN','JJ','RB','IN','AT','CC','MD','PP$','PPS','TO','CD'];
+    legend.innerHTML = mainTags.map(tag => `
+        <div class="pos-legend-item">
+            <span class="pos-code">${tag}</span>
+            <span class="pos-desc">${posTagDescriptions[tag] || tag}</span>
+        </div>
+    `).join('');
+}
+
+function selectCategory(code) {
+    currentCategory = code;
+    buildCategoryList();
+    renderCorpusTexts();
+}
+
+// ==================== CORPUS TEXT ====================
+function renderCorpusTexts() {
+    const container = document.getElementById('corpusTexts');
+    const texts = sampleTexts[currentCategory];
+
+    if (!texts) {
+        container.innerHTML = `
+            <div class="text-sample">
+                <div class="text-sample-header">
+                    <span class="doc-id">${currentCategory}xx</span>
+                    <span class="genre-tag">${categories.find(c=>c.code===currentCategory)?.name}</span>
+                </div>
+                <div class="text-sample-body" style="color:#606090; text-align:center; padding:30px;">
+                    Образцы текстов этого жанра не включены в демо-версию. Выберите жанр A, B, D, J, K, L, N, P или R.
+                </div>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="margin-bottom:10px; display:flex; gap:10px; align-items:center;">
+            <button class="btn btn-tag ${showTags ? 'active-tag' : ''}" onclick="toggleTags()">
+                 ${showTags ? 'Скрыть теги' : 'Показать теги'}
+            </button>
+            <span style="font-size:0.8em; color:#606090;">Нажмите на слово для информации</span>
+        </div>
+    ` + texts.map(text => `
+        <div class="text-sample">
+            <div class="text-sample-header">
+                <span class="doc-id">${text.id}</span>
+                <span class="genre-tag">${text.title}</span>
+            </div>
+            <div class="text-sample-body">
+                ${text.words.map(([word, tag], i) => {
+                    if (word === ' ') return '<br>';
+                    if (['.', ',', ':', ';', '!', '?', '``', "''"].includes(word)) {
+                        return `<span class="word" onclick="showWordInfo(event, '${escapeJS(word)}', '${escapeJS(tag)}')">${word}${showTags && tag ? `<span class="tag">${tag}</span>` : ''}</span>`;
+                    }
+                    return ` <span class="word" onclick="showWordInfo(event, '${escapeJS(word)}', '${escapeJS(tag)}')">${word}${showTags && tag ? `<span class="tag">${tag}</span>` : ''}</span>`;
+                }).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function escapeJS(str) {
+    return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+function toggleTags() {
+    showTags = !showTags;
+    renderCorpusTexts();
+}
+
+// ==================== WORD POPUP ====================
+function showWordInfo(event, word, tag) {
+    event.stopPropagation();
+    const popup = document.getElementById('wordPopup');
+    const wordEl = document.getElementById('popupWord');
+    const tagEl = document.getElementById('popupTag');
+    const infoEl = document.getElementById('popupInfo');
+
+    wordEl.textContent = word;
+    tagEl.textContent = `${tag} — ${posTagDescriptions[tag] || 'Tag: ' + tag}`;
+
+    // Count frequency in all sample texts
+    let count = 0;
+    Object.values(sampleTexts).forEach(texts => {
+        texts.forEach(text => {
+            text.words.forEach(([w]) => {
+                if (w.toLowerCase() === word.toLowerCase()) count++;
+            });
+        });
+    });
+
+    // Check top frequency
+    const topEntry = topFreqWords.find(f => f.word.toLowerCase() === word.toLowerCase());
+
+    infoEl.innerHTML = `
+        <div>В демо-текстах: <strong>${count}</strong> раз(а)</div>
+        ${topEntry ? `<div>В полном корпусе: <strong>~${topEntry.freq.toLocaleString()}</strong></div>` : ''}
+        ${topEntry ? `<div>Ранг: <strong>#${topFreqWords.indexOf(topEntry) + 1}</strong> из 49,800</div>` : ''}
+    `;
+
+    popup.style.display = 'block';
+    const x = Math.min(event.clientX + 10, window.innerWidth - 250);
+    const y = Math.min(event.clientY + 10, window.innerHeight - 150);
+    popup.style.left = x + 'px';
+    popup.style.top = y + 'px';
+}
+
+document.addEventListener('click', () => {
+    document.getElementById('wordPopup').style.display = 'none';
+});
+
+// ==================== TABS ====================
+function switchTab(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+    document.getElementById(`panel-${tabName}`).classList.add('active');
+}
+
+// ==================== CONCORDANCE (KWIC) ====================
+function performSearch() {
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (!query) return;
+
+    switchTab('concordance');
+    const results = [];
+
+    Object.entries(sampleTexts).forEach(([catCode, texts]) => {
+        texts.forEach(text => {
+            const words = text.words;
+            for (let i = 0; i < words.length; i++) {
+                if (words[i][0].toLowerCase() === query) {
+                    const leftWords = [];
+                    const rightWords = [];
+                    for (let j = Math.max(0, i - 6); j < i; j++) {
+                        if (words[j][0] !== ' ') leftWords.push(words[j][0]);
+                    }
+                    for (let j = i + 1; j < Math.min(words.length, i + 7); j++) {
+                        if (words[j][0] !== ' ') rightWords.push(words[j][0]);
+                    }
+                    results.push({
+                        left: leftWords.join(' '),
+                        center: words[i][0],
+                        tag: words[i][1],
+                        right: rightWords.join(' '),
+                        source: text.id
+                    });
+                }
+            }
+        });
+    });
+
+    const container = document.getElementById('concordanceResults');
+    if (results.length === 0) {
+        container.innerHTML = `<p style="color:#ff6b6b; text-align:center; padding:30px;">
+            «${query}» не найдено в демо-текстах. Попробуйте: the, he, was, government, she, time, said</p>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <p style="color:#a0a0c0; margin-bottom:15px;">Найдено <strong style="color:#6c63ff;">${results.length}</strong> вхождений «<strong>${query}</strong>» в демо-текстах:</p>
+        <div style="overflow-x:auto;">
+        <table class="kwic-table">
+            <thead><tr><th>Левый контекст</th><th>KWIC</th><th>Правый контекст</th><th>POS</th><th>Источник</th></tr></thead>
+            <tbody>
+                ${results.map(r => `
+                    <tr>
+                        <td class="kwic-left">${r.left}</td>
+                        <td class="kwic-center">${r.center}</td>
+                        <td class="kwic-right">${r.right}</td>
+                        <td style="color:#ff9f43; font-family:monospace;">${r.tag}</td>
+                        <td class="kwic-source">${r.source}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        </div>`;
+}
+
+// ==================== FREQUENCY ====================
+function buildFrequencyPanel() {
+    const maxFreq = topFreqWords[0].freq;
+
+    // Chart
+    const chart = document.getElementById('freqChart');
+    chart.innerHTML = topFreqWords.slice(0, 20).map(item => {
+        const height = (Math.log(item.freq) / Math.log(maxFreq)) * 100;
+        return `
+            <div class="bar-wrapper">
+                <div class="bar-value">${(item.freq / 1000).toFixed(1)}k</div>
+                <div class="bar" style="height:${height}%" title="${item.word}: ${item.freq}"></div>
+                <div class="bar-label">${item.word}</div>
+            </div>`;
+    }).join('');
+
+    // List
+    const list = document.getElementById('freqList');
+    list.innerHTML = topFreqWords.map((item, i) => {
+        const barWidth = (item.freq / maxFreq) * 100;
+        return `
+            <div class="freq-item">
+                <span style="color:#606090; min-width:25px;">${i + 1}.</span>
+                <span class="freq-word">${item.word}</span>
+                <div class="freq-bar-container">
+                    <div class="freq-bar" style="width:${barWidth}%"></div>
+                </div>
+                <span style="color:#ff9f43; font-family:monospace; font-size:0.75em; min-width:35px;">${item.pos}</span>
+                <span class="freq-count">${item.freq.toLocaleString()}</span>
+            </div>`;
+    }).join('');
+}
+
+function showFrequency() {
+    switchTab('frequency');
+}
+
+// ==================== COLLOCATIONS ====================
+function showCollocations() {
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (!query) {
+        switchTab('concordance');
+        document.getElementById('concordanceResults').innerHTML = `
+            <p style="color:#ff9f43; text-align:center; padding:30px;">
+                Введите слово для поиска коллокаций. Попробуйте: time, make, government, man, world, people, school</p>`;
+        return;
+    }
+
+    switchTab('concordance');
+    const collocates = collocationsData[query];
+    if (!collocates) {
+        document.getElementById('concordanceResults').innerHTML = `
+            <p style="color:#ff6b6b; text-align:center; padding:30px;">
+                Коллокации для «${query}» не найдены в демо-данных. Попробуйте: time, make, government, man, world, people, school</p>`;
+        return;
+    }
+
+    document.getElementById('concordanceResults').innerHTML = `
+        <div class="explanation">
+            <strong>Коллокации</strong> — слова, которые статистически значимо чаще встречаются рядом
+            с искомым словом, чем можно было бы ожидать случайно. Оценка (score) — условный показатель MI (Mutual Information).
+        </div>
+        <div class="collocation-node">
+            <div class="node-word">${query}</div>
+            <div class="collocate-cloud">
+                ${collocates.map((w, i) => {
+                    const score = (3.5 - i * 0.15).toFixed(2);
+                    return `<div class="collocate-word">${w} <span class="coll-score">${score}</span></div>`;
+                }).join('')}
+            </div>
+        </div>
+        <table class="freq-table" style="max-width:500px; margin:20px auto;">
+            <thead><tr><th>#</th><th>Коллокат</th><th>MI Score</th><th>Позиция</th></tr></thead>
+            <tbody>
+                ${collocates.map((w, i) => `
+                    <tr>
+                        <td style="color:#606090;">${i + 1}</td>
+                        <td style="font-weight:600;">${w}</td>
+                        <td style="color:#6c63ff; font-family:monospace;">${(3.5 - i * 0.15).toFixed(2)}</td>
+                        <td style="color:#a0a0c0;">L1–R1</td>
+                    </tr>`).join('')}
+            </tbody>
+        </table>`;
+}
+
+// ==================== N-GRAMS ====================
+function populateNgramGenreSelect() {
+    const sel = document.getElementById('ngramGenre');
+    sel.innerHTML = '<option value="all">Все жанры</option>' +
+        categories.map(c => `<option value="${c.code}">${c.code} — ${c.name}</option>`).join('');
+}
+
+function showNgrams() {
+    const type = parseInt(document.getElementById('ngramType').value);
+    const genre = document.getElementById('ngramGenre').value;
+    const data = type === 2 ? bigrams : trigrams;
+    const filtered = genre === 'all' ? data : data.filter(d => d.genre === 'all' || d.genre === genre);
+
+    const table = document.getElementById('ngramTable');
+    table.innerHTML = filtered.map((item, i) => `
+        <tr>
+            <td style="color:#606090;">${i + 1}</td>
+            <td style="font-weight:600; font-family:monospace;">${item.gram}</td>
+            <td style="color:#6c63ff; font-family:monospace;">${item.freq.toLocaleString()}</td>
+            <td style="color:#a0a0c0;">${item.genre === 'all' ? 'все' : item.genre}</td>
+        </tr>
+    `).join('');
+}
+
+// ==================== STATS CHARTS ====================
+function buildStatsCharts() {
+    // Genre chart
+    const genreChart = document.getElementById('genreChart');
+    const maxDocs = Math.max(...categories.map(c => c.docs));
+    genreChart.innerHTML = categories.map(cat => {
+        const height = (cat.docs / maxDocs) * 100;
+        return `
+            <div class="bar-wrapper">
+                <div class="bar-value">${cat.docs}</div>
+                <div class="bar" style="height:${height}%" title="${cat.name}: ${cat.docs} texts"></div>
+                <div class="bar-label">${cat.code}</div>
+            </div>`;
+    }).join('');
+
+    // POS chart
+    const posChart = document.getElementById('posChart');
+    const maxPct = Math.max(...posDistribution.map(p => p.pct));
+    posChart.innerHTML = posDistribution.map(p => {
+        const height = (p.pct / maxPct) * 100;
+        return `
+            <div class="bar-wrapper">
+                <div class="bar-value">${p.pct}%</div>
+                <div class="bar" style="height:${height}%" title="${p.tag}: ${p.pct}%"></div>
+                <div class="bar-label">${p.tag}</div>
+            </div>`;
+    }).join('');
+}
+
+// ==================== SEARCH ON ENTER ====================
+document.getElementById('searchInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') performSearch();
+});
+</script>
+</body>
+</html>

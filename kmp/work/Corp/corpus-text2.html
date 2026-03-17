@@ -1,0 +1,2641 @@
+
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CorpusLab — Учебная демонстрация обработки корпуса</title>
+<style>
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-card: #ffffff;
+  --nav-color: #325980;
+  --accent: #3498db;
+  --accent-hover: #2980b9;
+  --divider: #f1f1f1;
+  --text-primary: #2c3e50;
+  --text-secondary: #5a6a7a;
+  --text-muted: #8899aa;
+  --border: #dde3ea;
+  --shadow: 0 2px 12px rgba(50,89,128,0.08);
+  --shadow-hover: 0 4px 20px rgba(50,89,128,0.14);
+  --token-bg: #e8f4fd;
+  --token-border: #b8d9f0;
+  --ner-person: #ffe0b2;
+  --ner-org: #c8e6c9;
+  --ner-loc: #bbdefb;
+  --ner-date: #f3e5f5;
+  --ner-misc: #fff9c4;
+  --pos-noun: #e3f2fd;
+  --pos-verb: #fce4ec;
+  --pos-adj: #e8f5e9;
+  --pos-adv: #fff3e0;
+  --pos-other: #f5f5f5;
+  --kwic-left: #f0f4f8;
+  --kwic-key: #ffeaa7;
+  --kwic-right: #f0f4f8;
+  --tooltip-bg: #325980;
+  --tooltip-text: #ffffff;
+  --code-bg: #f8f9fa;
+  --success: #27ae60;
+  --error: #e74c3c;
+  --warning: #f39c12;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --transition: 0.3s ease;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1d23;
+  --bg-secondary: #22262e;
+  --bg-card: #2a2e36;
+  --nav-color: #4a8abf;
+  --text-primary: #e0e6ed;
+  --text-secondary: #a0b0c0;
+  --text-muted: #6a7a8a;
+  --border: #3a3e46;
+  --divider: #333840;
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+  --shadow-hover: 0 4px 20px rgba(0,0,0,0.4);
+  --token-bg: #1e3a4f;
+  --token-border: #2a5070;
+  --ner-person: #4a3520;
+  --ner-org: #1e3a25;
+  --ner-loc: #1e2a40;
+  --ner-date: #2a1e30;
+  --ner-misc: #3a3520;
+  --pos-noun: #1e2a3a;
+  --pos-verb: #3a1e25;
+  --pos-adj: #1e3a25;
+  --pos-adv: #3a2a1e;
+  --pos-other: #2a2e36;
+  --kwic-left: #252a32;
+  --kwic-key: #4a4020;
+  --kwic-right: #252a32;
+  --tooltip-bg: #4a8abf;
+  --code-bg: #252a32;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  transition: background var(--transition), color var(--transition);
+}
+
+/* === HEADER === */
+header {
+  background: var(--nav-color);
+  color: #fff;
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.logo {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.logo span { color: #7ec8e3; }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.theme-toggle {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  font-size: 1.2rem;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle:hover { background: rgba(255,255,255,0.25); }
+
+/* === PROGRESS BAR === */
+.progress-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 20px 24px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  white-space: nowrap;
+}
+
+.step-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--divider);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: all var(--transition);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.step-circle.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(52,152,219,0.3);
+}
+
+.step-circle.completed {
+  background: var(--success);
+  color: #fff;
+}
+
+.step-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  text-align: center;
+  max-width: 80px;
+}
+
+.step-label.active { color: var(--accent); font-weight: 600; }
+.step-label.completed { color: var(--success); }
+
+.step-connector {
+  width: 40px;
+  height: 2px;
+  background: var(--divider);
+  flex-shrink: 0;
+}
+
+.step-connector.completed { background: var(--success); }
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+/* === MAIN === */
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border);
+  transition: all var(--transition);
+}
+
+.card:hover { box-shadow: var(--shadow-hover); }
+
+.card h2 {
+  color: var(--nav-color);
+  font-size: 1.4rem;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card h3 {
+  color: var(--nav-color);
+  font-size: 1.1rem;
+  margin: 20px 0 10px;
+}
+
+.card p.subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  font-size: 0.95rem;
+}
+
+.step-number {
+  background: var(--accent);
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* === FORMS === */
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: border-color var(--transition);
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+
+.btn-secondary {
+  background: var(--divider);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover { background: var(--border); }
+
+.btn-success {
+  background: var(--success);
+  color: #fff;
+}
+
+.btn-success:hover { background: #219a52; }
+
+.btn-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.85rem;
+}
+
+/* === TABS === */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--divider);
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+.tab-btn {
+  padding: 10px 18px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all var(--transition);
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.tab-btn:hover { color: var(--accent); }
+
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* === TOKENS === */
+.token-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  min-height: 48px;
+}
+
+.token {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--token-bg);
+  border: 1px solid var(--token-border);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+}
+
+.token:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.token.punct { background: var(--divider); border-color: var(--border); opacity: 0.7; }
+.token.noise { background: #fdecea; border-color: #e57373; }
+
+.token-index {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-right: 4px;
+  font-weight: 700;
+}
+
+/* === ANNOTATION TABLE === */
+.anno-table-wrapper {
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.anno-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.anno-table th {
+  background: var(--nav-color);
+  color: #fff;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+  position: relative;
+}
+
+.anno-table th .info-icon {
+  cursor: help;
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
+.anno-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--divider);
+  vertical-align: top;
+}
+
+.anno-table tr:hover td { background: var(--bg-secondary); }
+
+.anno-table tr:nth-child(even) td { background: var(--divider); }
+.anno-table tr:nth-child(even):hover td { background: var(--border); }
+
+.pos-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.pos-NOUN, .pos-PROPN { background: var(--pos-noun); color: #1565c0; }
+.pos-VERB, .pos-AUX { background: var(--pos-verb); color: #c62828; }
+.pos-ADJ { background: var(--pos-adj); color: #2e7d32; }
+.pos-ADV { background: var(--pos-adv); color: #e65100; }
+.pos-PUNCT, .pos-SYM, .pos-X { background: var(--pos-other); color: var(--text-muted); }
+.pos-DET, .pos-ADP, .pos-CCONJ, .pos-SCONJ, .pos-PART, .pos-PRON, .pos-NUM, .pos-INTJ { background: #f3e5f5; color: #6a1b9a; }
+
+.ner-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ner-PER { background: var(--ner-person); color: #e65100; }
+.ner-ORG { background: var(--ner-org); color: #2e7d32; }
+.ner-LOC { background: var(--ner-loc); color: #1565c0; }
+.ner-DATE { background: var(--ner-date); color: #6a1b9a; }
+.ner-MISC { background: var(--ner-misc); color: #f57f17; }
+.ner-O { color: var(--text-muted); }
+
+/* === KWIC === */
+.kwic-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.kwic-table th {
+  background: var(--nav-color);
+  color: #fff;
+  padding: 10px 12px;
+  font-weight: 600;
+}
+
+.kwic-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.kwic-table .kwic-left {
+  text-align: right;
+  background: var(--kwic-left);
+  color: var(--text-secondary);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kwic-table .kwic-keyword {
+  text-align: center;
+  background: var(--kwic-key);
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.kwic-table .kwic-right {
+  text-align: left;
+  background: var(--kwic-right);
+  color: var(--text-secondary);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kwic-table tr:hover td { filter: brightness(0.96); }
+
+/* === TREE === */
+.tree-container {
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.tree-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 8px;
+}
+
+.tree-label {
+  background: var(--accent);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.tree-word {
+  background: var(--bg-card);
+  border: 2px solid var(--accent);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tree-children {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.tree-children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  height: 1px;
+  background: var(--border);
+}
+
+.tree-branch {
+  position: relative;
+}
+
+.tree-branch::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+}
+
+/* === DEP ARC SVG === */
+.dep-svg-container {
+  overflow-x: auto;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  margin: 16px 0;
+}
+
+/* === TOOLTIP === */
+.tooltip-trigger {
+  position: relative;
+  cursor: help;
+  border-bottom: 1px dotted var(--accent);
+  color: var(--accent);
+}
+
+.tooltip-trigger:hover .tooltip-content,
+.tooltip-trigger:focus .tooltip-content {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.tooltip-content {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 400;
+  white-space: nowrap;
+  max-width: 280px;
+  white-space: normal;
+  z-index: 999;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  line-height: 1.4;
+}
+
+.tooltip-content::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border: 5px solid transparent;
+  border-top-color: var(--tooltip-bg);
+}
+
+/* === SEARCH === */
+.search-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search-bar input, .search-bar select {
+  padding: 8px 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.search-bar input:focus, .search-bar select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* === TASK / QUIZ === */
+.task-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  margin: 12px 0;
+}
+
+.task-card h4 {
+  color: var(--nav-color);
+  margin-bottom: 10px;
+}
+
+.task-status {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: inline-block;
+  margin-top: 10px;
+}
+
+.task-correct { background: #d4edda; color: #155724; }
+.task-incorrect { background: #f8d7da; color: #721c24; }
+
+[data-theme="dark"] .task-correct { background: #1e3a25; color: #80cfa0; }
+[data-theme="dark"] .task-incorrect { background: #3a1e22; color: #e08090; }
+
+/* === REFLECTION === */
+.reflection-area textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* === NOISE EXAMPLES === */
+.noise-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.noise-chip {
+  padding: 4px 12px;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-family: monospace;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.noise-chip:hover {
+  border-color: var(--accent);
+  background: var(--token-bg);
+}
+
+.noise-chip.selected {
+  border-color: var(--accent);
+  background: var(--token-bg);
+  border-style: solid;
+}
+
+/* === DESCRIPTION === */
+.info-box {
+  background: var(--bg-secondary);
+  border-left: 4px solid var(--accent);
+  padding: 14px 18px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin: 14px 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.lang-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.lang-ru { background: #e3f2fd; color: #1565c0; }
+.lang-en { background: #fce4ec; color: #c62828; }
+
+[data-theme="dark"] .lang-ru { background: #1e2a3a; color: #64b5f6; }
+[data-theme="dark"] .lang-en { background: #3a1e25; color: #ef9a9a; }
+
+.step-section { display: none; }
+.step-section.active { display: block; }
+
+.hidden { display: none !important; }
+
+/* === NAV BUTTONS === */
+.nav-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
+}
+
+/* === LANG SWITCHER === */
+.lang-switcher {
+  display: flex;
+  background: rgba(255,255,255,0.15);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.lang-switcher button {
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.7);
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: inherit;
+}
+
+.lang-switcher button.active {
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+}
+
+/* === TEMPLATE CARDS === */
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.template-card {
+  padding: 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  background: var(--bg-primary);
+}
+
+.template-card:hover { border-color: var(--accent); }
+.template-card.selected { border-color: var(--accent); background: var(--token-bg); }
+
+.template-card .type-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.template-card .template-text {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* === FEATURES LIST === */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+.feature-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.feature-dot.available { background: var(--success); }
+.feature-dot.limited { background: var(--warning); }
+.feature-dot.unavailable { background: var(--error); }
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  header { padding: 0 12px; }
+  .logo { font-size: 1.1rem; }
+  main { padding: 12px; }
+  .card { padding: 20px; }
+  .form-row { grid-template-columns: 1fr; }
+  .template-grid { grid-template-columns: 1fr; }
+  .progress-bar { padding: 12px; justify-content: flex-start; }
+  .step-connector { width: 20px; }
+  .step-label { font-size: 0.65rem; max-width: 55px; }
+  .step-circle { width: 30px; height: 30px; font-size: 0.75rem; }
+  .search-bar { flex-direction: column; }
+  .search-bar input, .search-bar select { width: 100%; }
+  .btn-group { flex-direction: column; }
+  .btn-group .btn { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 480px) {
+  .step-label { display: none; }
+  .step-connector { width: 12px; }
+  .features-grid { grid-template-columns: 1fr; }
+}
+
+/* === ANIMATIONS === */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.step-section.active { animation: fadeIn 0.3s ease; }
+
+.corpus-text-display {
+  background: var(--code-bg);
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid var(--border);
+  margin: 12px 0;
+}
+
+.morph-features {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.dep-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent);
+  font-family: monospace;
+}
+
+.sem-role {
+  font-size: 0.75rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #e1bee7;
+  color: #4a148c;
+}
+
+[data-theme="dark"] .sem-role { background: #2a1e30; color: #ce93d8; }
+
+/* Export button styling */
+.export-section {
+  text-align: center;
+  padding: 20px;
+}
+
+/* Instruction list */
+.instruction-list {
+  counter-reset: inst;
+  list-style: none;
+  padding: 0;
+}
+
+.instruction-list li {
+  counter-increment: inst;
+  padding: 8px 0 8px 36px;
+  position: relative;
+  border-bottom: 1px solid var(--divider);
+}
+
+.instruction-list li::before {
+  content: counter(inst);
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 24px;
+  height: 24px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.checkmark { color: var(--success); font-weight: 700; }
+.crossmark { color: var(--error); font-weight: 700; }
+
+.quiz-option {
+  display: block;
+  padding: 8px 14px;
+  margin: 4px 0;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  background: var(--bg-primary);
+}
+
+.quiz-option:hover { border-color: var(--accent); }
+.quiz-option.selected { border-color: var(--accent); background: var(--token-bg); }
+.quiz-option.correct { border-color: var(--success); background: #d4edda; }
+.quiz-option.incorrect { border-color: var(--error); background: #f8d7da; }
+[data-theme="dark"] .quiz-option.correct { background: #1e3a25; }
+[data-theme="dark"] .quiz-option.incorrect { background: #3a1e22; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Corpus<span>Lab</span></div>
+  <div class="header-actions">
+    <div class="lang-switcher">
+      <button class="active" onclick="switchInterfaceLang('ru')" id="langBtnRu">RU</button>
+      <button onclick="switchInterfaceLang('en')" id="langBtnEn">EN</button>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">☀️</button>
+  </div>
+</header>
+
+<div class="progress-bar" id="progressBar">
+  <!-- Generated by JS -->
+</div>
+
+<main id="mainContent">
+  <!-- STEP 0: Welcome / Input -->
+  <section class="step-section active" id="step-0">
+    <div class="card">
+      <h2><span class="step-number">0</span> <span data-i18n="step0_title">Введение и ввод данных</span></h2>
+      <p class="subtitle" data-i18n="step0_subtitle">Добро пожаловать в CorpusLab! Начнём с того, чтобы познакомиться.</p>
+
+      <div class="info-box" data-i18n="step0_info">
+        <strong>Что такое языковой корпус?</strong><br>
+        Языковой корпус — это большая, структурированная коллекция текстов, размеченная для лингвистического анализа. 
+        Корпуса используются для изучения частотности слов, грамматических конструкций, стилистических особенностей и многого другого.
+        В этом приложении вы пройдёте все основные этапы обработки корпусных данных.
+      </div>
+
+      <h3 data-i18n="step0_instructions_title">Инструкция</h3>
+      <ol class="instruction-list">
+        <li data-i18n="inst_1">Введите вашу фамилию на русском и английском языках</li>
+        <li data-i18n="inst_2">Выберите шаблоны фраз и шумовые элементы для формирования корпуса</li>
+        <li data-i18n="inst_3">Пройдите этапы: токенизация, нормализация, аннотация</li>
+        <li data-i18n="inst_4">Используйте панель запросов для поиска по корпусу</li>
+        <li data-i18n="inst_5">Выполните задания и напишите отзыв</li>
+        <li data-i18n="inst_6">Экспортируйте результаты в HTML-файл</li>
+      </ol>
+
+      <h3 data-i18n="step0_input_title">Ваши данные</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="surnameRu" data-i18n="label_surname_ru">Фамилия (на русском)</label>
+          <input type="text" id="surnameRu" placeholder="Например: Иванов" value="Иванов">
+        </div>
+        <div class="form-group">
+          <label for="surnameEn" data-i18n="label_surname_en">Фамилия (на английском)</label>
+          <input type="text" id="surnameEn" placeholder="E.g.: Ivanov" value="Ivanov">
+        </div>
+      </div>
+
+      <h3 data-i18n="step0_lang_models">Доступные модели/аннотации по языкам</h3>
+      <div class="form-row">
+        <div>
+          <span class="lang-badge lang-ru">Русский</span>
+          <div class="features-grid" style="margin-top:8px;">
+            <div class="feature-item"><span class="feature-dot available"></span> Токенизация</div>
+            <div class="feature-item"><span class="feature-dot available"></span> POS-разметка</div>
+            <div class="feature-item"><span class="feature-dot available"></span> Лемматизация</div>
+            <div class="feature-item"><span class="feature-dot available"></span> Морф. признаки</div>
+            <div class="feature-item"><span class="feature-dot available"></span> NER</div>
+            <div class="feature-item"><span class="feature-dot available"></span> Синтаксис (dep)</div>
+            <div class="feature-item"><span class="feature-dot limited"></span> Семант. роли</div>
+          </div>
+        </div>
+        <div>
+          <span class="lang-badge lang-en">English</span>
+          <div class="features-grid" style="margin-top:8px;">
+            <div class="feature-item"><span class="feature-dot available"></span> Tokenization</div>
+            <div class="feature-item"><span class="feature-dot available"></span> POS tagging</div>
+            <div class="feature-item"><span class="feature-dot available"></span> Lemmatization</div>
+            <div class="feature-item"><span class="feature-dot available"></span> Morph. features</div>
+            <div class="feature-item"><span class="feature-dot available"></span> NER</div>
+            <div class="feature-item"><span class="feature-dot available"></span> Syntax (dep)</div>
+            <div class="feature-item"><span class="feature-dot available"></span> Semantic roles</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-buttons">
+        <span></span>
+        <button class="btn btn-primary" onclick="goToStep(1)" data-i18n="btn_next">Далее</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 1: Templates & Noise -->
+  <section class="step-section" id="step-1">
+    <div class="card">
+      <h2><span class="step-number">1</span> <span data-i18n="step1_title">Формирование корпуса</span></h2>
+      <p class="subtitle" data-i18n="step1_subtitle">Выберите шаблоны фраз и шумовые примеры. Ваша фамилия будет подставлена в шаблоны.</p>
+
+      <div class="info-box" data-i18n="step1_info">
+        Реальные корпуса содержат тексты различных стилей и регистров. 
+        Мы предлагаем три типа шаблонов — формальный, разговорный и сложноподчинённый — чтобы продемонстрировать влияние контекста на анализ. 
+        «Шумовые» элементы показывают, как пайплайн справляется с нестандартными данными.
+      </div>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchCorpusLang('ru')" id="corpusLangRu" data-i18n="tab_russian">Русский корпус</button>
+        <button class="tab-btn" onclick="switchCorpusLang('en')" id="corpusLangEn" data-i18n="tab_english">English corpus</button>
+      </div>
+
+      <h3 data-i18n="step1_templates">Шаблоны фраз</h3>
+      <div class="template-grid" id="templateGrid">
+        <!-- Generated by JS -->
+      </div>
+
+      <h3 data-i18n="step1_noise">Шумовые примеры</h3>
+      <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;" data-i18n="step1_noise_desc">Нажмите, чтобы добавить в корпус (опечатки, сокращения, тэги и т.д.):</p>
+      <div class="noise-examples" id="noiseExamples">
+        <!-- Generated by JS -->
+      </div>
+
+      <h3 data-i18n="step1_result">Сформированный корпус</h3>
+      <div class="corpus-text-display" id="corpusDisplay">
+        <!-- Generated by JS -->
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-primary btn-sm" onclick="regenerateCorpus()" data-i18n="btn_regenerate">Обновить корпус</button>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" onclick="goToStep(0)" data-i18n="btn_prev">Назад</button>
+        <button class="btn btn-primary" onclick="goToStep(2)" data-i18n="btn_next">Далее</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 2: Tokenization -->
+  <section class="step-section" id="step-2">
+    <div class="card">
+      <h2><span class="step-number">2</span> <span data-i18n="step2_title">Токенизация</span></h2>
+      <p class="subtitle" data-i18n="step2_subtitle">Разбиение текста на минимальные единицы анализа — токены (слова, знаки препинания).</p>
+
+      <div class="info-box" data-i18n="step2_info">
+        <span class="tooltip-trigger" tabindex="0">
+          Токенизация
+          <span class="tooltip-content">Токенизация — процесс разбиения текста на отдельные единицы (токены): слова, числа, знаки препинания. Это первый и обязательный этап обработки корпуса.</span>
+        </span>
+        — первый этап обработки текста. Для лингвистического корпуса обычно используется пословная токенизация: каждое слово и знак препинания становятся отдельным токеном.
+        Обратите внимание, как обрабатываются «шумовые» элементы.
+      </div>
+
+      <h3 data-i18n="step2_source">Исходный текст</h3>
+      <div class="corpus-text-display" id="sourceTextDisplay"></div>
+
+      <h3 data-i18n="step2_result">Результат токенизации</h3>
+      <div class="token-container" id="tokenContainer"></div>
+
+      <h3 data-i18n="step2_stats">Статистика</h3>
+      <div class="features-grid" id="tokenStats"></div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" onclick="goToStep(1)" data-i18n="btn_prev">Назад</button>
+        <button class="btn btn-primary" onclick="goToStep(3)" data-i18n="btn_next">Далее</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3: Normalization -->
+  <section class="step-section" id="step-3">
+    <div class="card">
+      <h2><span class="step-number">3</span> <span data-i18n="step3_title">Нормализация</span></h2>
+      <p class="subtitle" data-i18n="step3_subtitle">Приведение токенов к стандартной форме: исправление опечаток, раскрытие сокращений, удаление тэгов.</p>
+
+      <div class="info-box" data-i18n="step3_info">
+        <span class="tooltip-trigger" tabindex="0">
+          Нормализация
+          <span class="tooltip-content">Нормализация — приведение токенов к каноническому виду: lowercase, исправление опечаток, удаление HTML-тэгов, раскрытие сокращений. Повышает качество дальнейшего анализа.</span>
+        </span>
+        устраняет «шум» и вариативность написания, чтобы дальнейшие этапы работали корректно.
+      </div>
+
+      <div class="anno-table-wrapper">
+        <table class="anno-table" id="normTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th data-i18n="th_original">Исходный токен</th>
+              <th data-i18n="th_normalized">Нормализованный</th>
+              <th data-i18n="th_changes">Изменения</th>
+            </tr>
+          </thead>
+          <tbody id="normTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" onclick="goToStep(2)" data-i18n="btn_prev">Назад</button>
+        <button class="btn btn-primary" onclick="goToStep(4)" data-i18n="btn_next">Далее</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 4: Annotation -->
+  <section class="step-section" id="step-4">
+    <div class="card">
+      <h2><span class="step-number">4</span> <span data-i18n="step4_title">Мультиуровневая аннотация</span></h2>
+      <p class="subtitle" data-i18n="step4_subtitle">Морфологическая, синтаксическая, NER и семантическая разметка каждого токена.</p>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchAnnoTab('morph')" data-i18n="tab_morph">Морфология</button>
+        <button class="tab-btn" onclick="switchAnnoTab('syntax')" data-i18n="tab_syntax">Синтаксис</button>
+        <button class="tab-btn" onclick="switchAnnoTab('ner')" data-i18n="tab_ner">NER</button>
+        <button class="tab-btn" onclick="switchAnnoTab('semrole')" data-i18n="tab_semrole">Сем. роли</button>
+      </div>
+
+      <!-- Morph -->
+      <div class="tab-content active" id="annoMorph">
+        <div class="info-box">
+          <span class="tooltip-trigger" tabindex="0">
+            POS (Part of Speech)
+            <span class="tooltip-content">Часть речи — грамматическая категория слова: существительное (NOUN), глагол (VERB), прилагательное (ADJ) и др. Используется система Universal Dependencies.</span>
+          </span> — часть речи; 
+          <span class="tooltip-trigger" tabindex="0">
+            Лемма
+            <span class="tooltip-content">Лемма — словарная (начальная) форма слова. Для глаголов — инфинитив, для существительных — именительный падеж единственного числа.</span>
+          </span> — начальная форма;
+          Морфологические признаки — число, падеж, род, время и т.д.
+        </div>
+        <div class="anno-table-wrapper">
+          <table class="anno-table" id="morphTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th data-i18n="th_token">Токен</th>
+                <th>
+                  POS
+                  <span class="tooltip-trigger info-icon" tabindex="0" style="border:none;">
+                    [?]
+                    <span class="tooltip-content">Part of Speech — часть речи по Universal Dependencies: NOUN, VERB, ADJ, ADV, PROPN, DET, ADP, CCONJ, SCONJ, PUNCT и др.</span>
+                  </span>
+                </th>
+                <th data-i18n="th_lemma">Лемма</th>
+                <th data-i18n="th_morph">Морф. признаки</th>
+              </tr>
+            </thead>
+            <tbody id="morphTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Syntax -->
+      <div class="tab-content" id="annoSyntax">
+        <div class="info-box">
+          <span class="tooltip-trigger" tabindex="0">
+            Синтаксический разбор
+            <span class="tooltip-content">Dependency parsing — анализ синтаксических связей между словами в предложении. Каждое слово зависит от другого (head), связь обозначается типом (nsubj, obj, amod и т.д.).</span>
+          </span> показывает синтаксические зависимости между словами. Стрелка ведёт от зависимого к вершине.
+        </div>
+        <div class="anno-table-wrapper">
+          <table class="anno-table" id="syntaxTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th data-i18n="th_token">Токен</th>
+                <th>
+                  Head
+                  <span class="tooltip-trigger info-icon" tabindex="0" style="border:none;">
+                    [?]
+                    <span class="tooltip-content">Head — вершина (главное слово), от которого зависит данный токен. ROOT — корень предложения (обычно сказуемое).</span>
+                  </span>
+                </th>
+                <th>
+                  Dep. Rel.
+                  <span class="tooltip-trigger info-icon" tabindex="0" style="border:none;">
+                    [?]
+                    <span class="tooltip-content">Dependency Relation — тип синтаксической связи: nsubj (подлежащее), obj (дополнение), amod (определение), advmod (обстоятельство), punct и др.</span>
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="syntaxTableBody"></tbody>
+          </table>
+        </div>
+        <h3 data-i18n="step4_dep_tree">Дерево зависимостей</h3>
+        <div class="dep-svg-container" id="depTreeContainer"></div>
+      </div>
+
+      <!-- NER -->
+      <div class="tab-content" id="annoNer">
+        <div class="info-box">
+          <span class="tooltip-trigger" tabindex="0">
+            NER (Named Entity Recognition)
+            <span class="tooltip-content">NER — распознавание именованных сущностей: персоны (PER), организации (ORG), локации (LOC), даты (DATE) и пр. Используется для информационного извлечения.</span>
+          </span> — выделение имён собственных, организаций, дат, мест.
+        </div>
+        <div class="anno-table-wrapper">
+          <table class="anno-table" id="nerTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th data-i18n="th_token">Токен</th>
+                <th>NER Tag</th>
+                <th data-i18n="th_entity_type">Тип сущности</th>
+              </tr>
+            </thead>
+            <tbody id="nerTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Semantic roles -->
+      <div class="tab-content" id="annoSemrole">
+        <div class="info-box">
+          <span class="tooltip-trigger" tabindex="0">
+            Семантические роли (SRL)
+            <span class="tooltip-content">Semantic Role Labeling — определение «кто делает что кому где когда». Роли: Agent (деятель), Patient (объект действия), Theme, Location, Time и т.д.</span>
+          </span> определяют роль каждого участника ситуации: кто действует, на что направлено действие, где и когда.
+        </div>
+        <div class="anno-table-wrapper">
+          <table class="anno-table" id="semroleTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th data-i18n="th_token">Токен</th>
+                <th data-i18n="th_predicate">Предикат</th>
+                <th data-i18n="th_role">Семантическая роль</th>
+              </tr>
+            </thead>
+            <tbody id="semroleTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" onclick="goToStep(3)" data-i18n="btn_prev">Назад</button>
+        <button class="btn btn-primary" onclick="goToStep(5)" data-i18n="btn_next">Далее</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 5: Query / KWIC -->
+  <section class="step-section" id="step-5">
+    <div class="card">
+      <h2><span class="step-number">5</span> <span data-i18n="step5_title">Панель запросов и KWIC</span></h2>
+      <p class="subtitle" data-i18n="step5_subtitle">Поиск по корпусу: по слову, лемме, части речи. Результаты в формате KWIC.</p>
+
+      <div class="info-box">
+        <span class="tooltip-trigger" tabindex="0">
+          KWIC
+          <span class="tooltip-content">Key Word In Context — формат отображения результатов поиска: левый контекст | ключевое слово | правый контекст. Используется для конкордансного анализа.</span>
+        </span> (Key Word In Context) — стандартный формат вывода результатов в корпусной лингвистике.
+      </div>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchQueryTab('word')" data-i18n="tab_word_search">По слову</button>
+        <button class="tab-btn" onclick="switchQueryTab('pos')" data-i18n="tab_pos_search">По части речи</button>
+        <button class="tab-btn" onclick="switchQueryTab('ner_search')" data-i18n="tab_ner_search">По NER</button>
+        <button class="tab-btn" onclick="switchQueryTab('morph_search')" data-i18n="tab_morph_search">По морф. признакам</button>
+      </div>
+
+      <!-- Word search -->
+      <div class="tab-content active" id="queryWord">
+        <div class="search-bar">
+          <input type="text" id="searchWordInput" placeholder="Введите слово или лемму..." data-i18n-placeholder="placeholder_word_search">
+          <select id="searchWordMode">
+            <option value="form" data-i18n="option_form">Словоформа</option>
+            <option value="lemma" data-i18n="option_lemma">Лемма</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="searchWord()" data-i18n="btn_search">Найти</button>
+        </div>
+      </div>
+
+      <!-- POS search -->
+      <div class="tab-content" id="queryPos">
+        <div class="search-bar">
+          <select id="searchPosSelect">
+            <option value="">-- Выберите часть речи --</option>
+            <option value="NOUN">NOUN (существительное)</option>
+            <option value="VERB">VERB (глагол)</option>
+            <option value="ADJ">ADJ (прилагательное)</option>
+            <option value="ADV">ADV (наречие)</option>
+            <option value="PROPN">PROPN (имя собственное)</option>
+            <option value="DET">DET (определитель)</option>
+            <option value="ADP">ADP (предлог)</option>
+            <option value="PRON">PRON (местоимение)</option>
+            <option value="CCONJ">CCONJ (сочин. союз)</option>
+            <option value="SCONJ">SCONJ (подчин. союз)</option>
+            <option value="PUNCT">PUNCT (пунктуация)</option>
+            <option value="NUM">NUM (числительное)</option>
+            <option value="PART">PART (частица)</option>
+            <option value="AUX">AUX (вспом. глагол)</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="searchPOS()" data-i18n="btn_search">Найти</button>
+        </div>
+      </div>
+
+      <!-- NER search -->
+      <div class="tab-content" id="queryNerSearch">
+        <div class="search-bar">
+          <select id="searchNerSelect">
+            <option value="">-- Тип сущности --</option>
+            <option value="PER">PER (персона)</option>
+            <option value="ORG">ORG (организация)</option>
+            <option value="LOC">LOC (место)</option>
+            <option value="DATE">DATE (дата)</option>
+            <option value="MISC">MISC (прочее)</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="searchNER()" data-i18n="btn_search">Найти</button>
+        </div>
+      </div>
+
+      <!-- Morph feature search -->
+      <div class="tab-content" id="queryMorphSearch">
+        <div class="search-bar">
+          <select id="searchMorphFeature">
+            <option value="">-- Признак --</option>
+            <option value="Case=Nom">Падеж: Именительный</option>
+            <option value="Case=Gen">Падеж: Родительный</option>
+            <option value="Case=Dat">Падеж: Дательный</option>
+            <option value="Case=Acc">Падеж: Винительный</option>
+            <option value="Case=Ins">Падеж: Творительный</option>
+            <option value="Case=Loc">Падеж: Предложный</option>
+            <option value="Number=Sing">Число: Единственное</option>
+            <option value="Number=Plur">Число: Множественное</option>
+            <option value="Gender=Masc">Род: Мужской</option>
+            <option value="Gender=Fem">Род: Женский</option>
+            <option value="Gender=Neut">Род: Средний</option>
+            <option value="Tense=Past">Время: Прошедшее</option>
+            <option value="Tense=Pres">Время: Настоящее</option>
+            <option value="Tense=Fut">Время: Будущее</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="searchMorphFeature()" data-i18n="btn_search">Найти</button>
+        </div>
+      </div>
+
+      <h3 data-i18n="step5_kwic_title">Результаты KWIC</h3>
+      <div class="search-bar" style="justify-content:flex-end;">
+        <select id="kwicSort" onchange="sortKWIC()">
+          <option value="default" data-i18n="option_sort_default">По порядку</option>
+          <option value="left" data-i18n="option_sort_left">По левому контексту</option>
+          <option value="right" data-i18n="option_sort_right">По правому контексту</option>
+          <option value="keyword" data-i18n="option_sort_keyword">По ключевому слову</option>
+        </select>
+      </div>
+      <div class="anno-table-wrapper">
+        <table class="kwic-table" id="kwicTable">
+          <thead>
+            <tr>
+              <th data-i18n="th_left_ctx">Левый контекст</th>
+              <th data-i18n="th_keyword">Ключевое слово</th>
+              <th data-i18n="th_right_ctx">Правый контекст</th>
+            </tr>
+          </thead>
+          <tbody id="kwicTableBody">
+            <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:30px;" data-i18n="kwic_empty">Выполните поиск, чтобы увидеть результаты</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" onclick="goToStep(4)" data-i18n="btn_prev">Назад</button>
+        <button class="btn btn-primary" onclick="goToStep(6)" data-i18n="btn_next">Далее</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 6: Tasks & Reflection -->
+  <section class="step-section" id="step-6">
+    <div class="card">
+      <h2><span class="step-number">6</span> <span data-i18n="step6_title">Задания и рефлексия</span></h2>
+      <p class="subtitle" data-i18n="step6_subtitle">Проверьте свои знания и поделитесь впечатлениями.</p>
+
+      <h3 data-i18n="step6_quiz_title">Задания с автоматической проверкой</h3>
+
+      <div class="task-card" id="task1">
+        <h4 data-i18n="task1_q">Задание 1: Что такое токенизация?</h4>
+        <div class="quiz-option" onclick="checkQuiz(1, this, 'b')" data-i18n="task1_a">a) Перевод текста на другой язык</div>
+        <div class="quiz-option" onclick="checkQuiz(1, this, 'b')" data-i18n="task1_b">b) Разбиение текста на минимальные единицы (токены)</div>
+        <div class="quiz-option" onclick="checkQuiz(1, this, 'b')" data-i18n="task1_c">c) Определение тональности текста</div>
+        <div class="quiz-option" onclick="checkQuiz(1, this, 'b')" data-i18n="task1_d">d) Перевод текста в бинарный код</div>
+        <div id="task1Result"></div>
+      </div>
+
+      <div class="task-card" id="task2">
+        <h4 data-i18n="task2_q">Задание 2: Какой тэг POS соответствует существительному в системе Universal Dependencies?</h4>
+        <div class="quiz-option" onclick="checkQuiz(2, this, 'c')" data-i18n="task2_a">a) VERB</div>
+        <div class="quiz-option" onclick="checkQuiz(2, this, 'c')" data-i18n="task2_b">b) ADJ</div>
+        <div class="quiz-option" onclick="checkQuiz(2, this, 'c')" data-i18n="task2_c">c) NOUN</div>
+        <div class="quiz-option" onclick="checkQuiz(2, this, 'c')" data-i18n="task2_d">d) ADV</div>
+        <div id="task2Result"></div>
+      </div>
+
+      <div class="task-card" id="task3">
+        <h4 data-i18n="task3_q">Задание 3: Что показывает формат KWIC?</h4>
+        <div class="quiz-option" onclick="checkQuiz(3, this, 'a')" data-i18n="task3_a">a) Ключевое слово в контексте (левый контекст | слово | правый контекст)</div>
+        <div class="quiz-option" onclick="checkQuiz(3, this, 'a')" data-i18n="task3_b">b) Количество слов в предложении</div>
+        <div class="quiz-option" onclick="checkQuiz(3, this, 'a')" data-i18n="task3_c">c) Синтаксическое дерево</div>
+        <div class="quiz-option" onclick="checkQuiz(3, this, 'a')" data-i18n="task3_d">d) Перевод слова на другой язык</div>
+        <div id="task3Result"></div>
+      </div>
+
+      <div class="task-card" id="task4">
+        <h4 data-i18n="task4_q">Задание 4: NER-тэг PER обозначает:</h4>
+        <div class="quiz-option" onclick="checkQuiz(4, this, 'b')" data-i18n="task4_a">a) Место (локацию)</div>
+        <div class="quiz-option" onclick="checkQuiz(4, this, 'b')" data-i18n="task4_b">b) Персону (имя собственное человека)</div>
+        <div class="quiz-option" onclick="checkQuiz(4, this, 'b')" data-i18n="task4_c">c) Организацию</div>
+        <div class="quiz-option" onclick="checkQuiz(4, this, 'b')" data-i18n="task4_d">d) Дату</div>
+        <div id="task4Result"></div>
+      </div>
+
+      <div class="task-card" id="task5">
+        <h4 data-i18n="task5_q">Задание 5: Зачем нужна нормализация текста перед аннотацией?</h4>
+        <div class="quiz-option" onclick="checkQuiz(5, this, 'c')" data-i18n="task5_a">a) Чтобы текст стал красивее</div>
+        <div class="quiz-option" onclick="checkQuiz(5, this, 'c')" data-i18n="task5_b">b) Чтобы сократить объём данных</div>
+        <div class="quiz-option" onclick="checkQuiz(5, this, 'c')" data-i18n="task5_c">c) Чтобы устранить шум и вариативность для повышения качества анализа</div>
+        <div class="quiz-option" onclick="checkQuiz(5, this, 'c')" data-i18n="task5_d">d) Чтобы перевести текст на английский</div>
+        <div id="task5Result"></div>
+      </div>
+
+      <h3 data-i18n="step6_reflection_title">Рефлексия</h3>
+      <div class="reflection-area">
+        <div class="form-group">
+          <label data-i18n="label_reflection_app">Что нового вы узнали о корпусной обработке? Что было наиболее полезным?</label>
+          <textarea id="reflectionApp" rows="4" placeholder="Ваш отзыв о приложении..." data-i18n-placeholder="placeholder_reflection_app"></textarea>
+        </div>
+        <div class="form-group">
+          <label data-i18n="label_reflection_work">Оцените свою работу. Что было легко, а что вызвало затруднения?</label>
+          <textarea id="reflectionWork" rows="4" placeholder="Самооценка работы..." data-i18n-placeholder="placeholder_reflection_work"></textarea>
+        </div>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" onclick="goToStep(5)" data-i18n="btn_prev">Назад</button>
+        <button class="btn btn-primary" onclick="goToStep(7)" data-i18n="btn_next">Далее</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 7: Export -->
+  <section class="step-section" id="step-7">
+    <div class="card">
+      <h2><span class="step-number">7</span> <span data-i18n="step7_title">Экспорт результатов</span></h2>
+      <p class="subtitle" data-i18n="step7_subtitle">Сохраните результаты своей работы в HTML-файл.</p>
+
+      <div class="info-box" data-i18n="step7_info">
+        Экспортируемый файл будет содержать: ваши данные, сформированный корпус, результаты токенизации, нормализации, аннотации, результаты поиска, ответы на задания и рефлексию.
+      </div>
+
+      <div class="export-section">
+        <button class="btn btn-success" onclick="exportResults()" style="font-size:1.1rem;padding:14px 36px;" data-i18n="btn_export">Экспортировать в HTML</button>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" onclick="goToStep(6)" data-i18n="btn_prev">Назад</button>
+        <span></span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+// ===================== STATE =====================
+const state = {
+  currentStep: 0,
+  corpusLang: 'ru',
+  interfaceLang: 'ru',
+  surnameRu: 'Иванов',
+  surnameEn: 'Ivanov',
+  selectedTemplates: new Set([0, 1, 2]),
+  selectedNoise: new Set([0, 1, 2]),
+  corpus: '',
+  tokens: [],
+  normalized: [],
+  annotations: [],
+  kwicResults: [],
+  quizAnswers: {},
+};
+
+// ===================== STEP NAMES =====================
+const stepNames = {
+  ru: ['Ввод','Корпус','Токены','Нормализ.','Аннотация','Запросы','Задания','Экспорт'],
+  en: ['Input','Corpus','Tokens','Normaliz.','Annotation','Queries','Tasks','Export']
+};
+
+// ===================== TEMPLATES =====================
+const templates = {
+  ru: [
+    { type: 'Формальная', typeBadge: 'формальная', text: 'Уважаемый коллега {SURNAME}, приглашаем Вас на конференцию по корпусной лингвистике в Московском университете 15 ноября 2024 года.' },
+    { type: 'Разговорная', typeBadge: 'разговорная', text: 'Привет, {SURNAME}! Ты сегодня идёшь на семинар по лингвистике или опять прогуливаешь?' },
+    { type: 'Сложноподчинённая', typeBadge: 'сложноподчинённая', text: 'Когда студент {SURNAME} закончит исследование, которое было начато в прошлом семестре, результаты будут опубликованы в сборнике университета.' },
+  ],
+  en: [
+    { type: 'Formal', typeBadge: 'formal', text: 'Dear colleague {SURNAME}, we invite you to the conference on corpus linguistics at Moscow University on November 15, 2024.' },
+    { type: 'Colloquial', typeBadge: 'colloquial', text: 'Hey {SURNAME}! Are you going to the linguistics seminar today or skipping again?' },
+    { type: 'Complex', typeBadge: 'complex', text: 'When student {SURNAME} finishes the research that was started last semester, the results will be published in the university collection.' },
+  ]
+};
+
+const noiseExamples = {
+  ru: [
+    { label: 'Опечатка', text: 'Лнгвистика — это науко о язке.' },
+    { label: 'Сокращение', text: 'Проф. {SURNAME} из МГУ опубл. статью в ж. «Вопросы языкознания».' },
+    { label: 'HTML-тэги', text: '<p>Корпус <b>содержит</b> тэги</p> и &amp; спецсимволы.' },
+    { label: 'Смешанный', text: 'ахах {SURNAME} написал оч крутую работу!!1 #лингвистика @corpus_lab' },
+  ],
+  en: [
+    { label: 'Typo', text: 'Lnguistics is a scienec abuot langauge.' },
+    { label: 'Abbreviation', text: 'Prof. {SURNAME} from MSU publ. a paper in J. of Linguistics.' },
+    { label: 'HTML tags', text: '<p>The corpus <b>contains</b> tags</p> and &amp; special chars.' },
+    { label: 'Mixed', text: 'haha {SURNAME} wrote a rly cool paper!!1 #linguistics @corpus_lab' },
+  ]
+};
+
+// ===================== MORPH DATABASE =====================
+function getMorphDB(lang, surname) {
+  if (lang === 'ru') {
+    return {
+      'уважаемый': { pos:'ADJ', lemma:'уважаемый', morph:'Case=Nom|Degree=Pos|Gender=Masc|Number=Sing', ner:'O', dep:'amod', head_offset:-1, semrole:''},
+      'коллега': { pos:'NOUN', lemma:'коллега', morph:'Animacy=Anim|Case=Nom|Gender=Masc|Number=Sing', ner:'O', dep:'nsubj', head_offset:0, semrole:'Addressee'},
+      'приглашаем': { pos:'VERB', lemma:'приглашать', morph:'Aspect=Imp|Mood=Ind|Number=Plur|Person=1|Tense=Pres|VerbForm=Fin|Voice=Act', ner:'O', dep:'root', head_offset:0, semrole:'Predicate'},
+      'вас': { pos:'PRON', lemma:'вы', morph:'Case=Acc|Number=Plur|Person=2', ner:'O', dep:'obj', head_offset:-1, semrole:'Patient'},
+      'на': { pos:'ADP', lemma:'на', morph:'', ner:'O', dep:'case', head_offset:1, semrole:''},
+      'конференцию': { pos:'NOUN', lemma:'конференция', morph:'Animacy=Inan|Case=Acc|Gender=Fem|Number=Sing', ner:'O', dep:'obl', head_offset:-2, semrole:'Goal'},
+      'по': { pos:'ADP', lemma:'по', morph:'', ner:'O', dep:'case', head_offset:1, semrole:''},
+      'корпусной': { pos:'ADJ', lemma:'корпусной', morph:'Case=Dat|Degree=Pos|Gender=Fem|Number=Sing', ner:'O', dep:'amod', head_offset:1, semrole:''},
+      'лингвистике': { pos:'NOUN', lemma:'лингвистика', morph:'Animacy=Inan|Case=Dat|Gender=Fem|Number=Sing', ner:'O', dep:'nmod', head_offset:-3, semrole:'Theme'},
+      'в': { pos:'ADP', lemma:'в', morph:'', ner:'O', dep:'case', head_offset:1, semrole:''},
+      'московском': { pos:'ADJ', lemma:'московский', morph:'Case=Loc|Degree=Pos|Gender=Masc|Number=Sing', ner:'B-LOC', dep:'amod', head_offset:1, semrole:''},
+      'университете': { pos:'NOUN', lemma:'университет', morph:'Animacy=Inan|Case=Loc|Gender=Masc|Number=Sing', ner:'I-LOC', dep:'obl', head_offset:-6, semrole:'Location'},
+      '15': { pos:'NUM', lemma:'15', morph:'NumType=Card', ner:'B-DATE', dep:'nummod', head_offset:1, semrole:''},
+      'ноября': { pos:'NOUN', lemma:'ноябрь', morph:'Animacy=Inan|Case=Gen|Gender=Masc|Number=Sing', ner:'I-DATE', dep:'obl', head_offset:-8, semrole:'Time'},
+      '2024': { pos:'NUM', lemma:'2024', morph:'NumType=Card', ner:'I-DATE', dep:'nummod', head_offset:-1, semrole:''},
+      'года': { pos:'NOUN', lemma:'год', morph:'Animacy=Inan|Case=Gen|Gender=Masc|Number=Sing', ner:'I-DATE', dep:'nmod', head_offset:-2, semrole:''},
+      'привет': { pos:'INTJ', lemma:'привет', morph:'', ner:'O', dep:'discourse', head_offset:2, semrole:''},
+      'ты': { pos:'PRON', lemma:'ты', morph:'Case=Nom|Number=Sing|Person=2', ner:'O', dep:'nsubj', head_offset:1, semrole:'Agent'},
+      'сегодня': { pos:'ADV', lemma:'сегодня', morph:'Degree=Pos', ner:'O', dep:'advmod', head_offset:1, semrole:'Time'},
+      'идёшь': { pos:'VERB', lemma:'идти', morph:'Aspect=Imp|Mood=Ind|Number=Sing|Person=2|Tense=Pres|VerbForm=Fin|Voice=Act', ner:'O', dep:'root', head_offset:0, semrole:'Predicate'},
+      'семинар': { pos:'NOUN', lemma:'семинар', morph:'Animacy=Inan|Case=Acc|Gender=Masc|Number=Sing', ner:'O', dep:'obl', head_offset:-1, semrole:'Goal'},
+      'или': { pos:'CCONJ', lemma:'или', morph:'', ner:'O', dep:'cc', head_offset:1, semrole:''},
+      'опять': { pos:'ADV', lemma:'опять', morph:'Degree=Pos', ner:'O', dep:'advmod', head_offset:1, semrole:''},
+      'прогуливаешь': { pos:'VERB', lemma:'прогуливать', morph:'Aspect=Imp|Mood=Ind|Number=Sing|Person=2|Tense=Pres|VerbForm=Fin|Voice=Act', ner:'O', dep:'conj', head_offset:-4, semrole:'Predicate'},
+      'когда': { pos:'SCONJ', lemma:'когда', morph:'', ner:'O', dep:'mark', head_offset:2, semrole:''},
+      'студент': { pos:'NOUN', lemma:'студент', morph:'Animacy=Anim|Case=Nom|Gender=Masc|Number=Sing', ner:'O', dep:'nsubj', head_offset:1, semrole:'Agent'},
+      'закончит': { pos:'VERB', lemma:'закончить', morph:'Aspect=Perf|Mood=Ind|Number=Sing|Person=3|Tense=Fut|VerbForm=Fin|Voice=Act', ner:'O', dep:'advcl', head_offset:5, semrole:'Predicate'},
+      'исследование': { pos:'NOUN', lemma:'исследование', morph:'Animacy=Inan|Case=Acc|Gender=Neut|Number=Sing', ner:'O', dep:'obj', head_offset:-1, semrole:'Patient'},
+      'которое': { pos:'PRON', lemma:'который', morph:'Case=Nom|Gender=Neut|Number=Sing|PronType=Rel', ner:'O', dep:'nsubj:pass', head_offset:2, semrole:'Patient'},
+      'было': { pos:'AUX', lemma:'быть', morph:'Aspect=Imp|Gender=Neut|Mood=Ind|Number=Sing|Tense=Past|VerbForm=Fin|Voice=Act', ner:'O', dep:'aux:pass', head_offset:1, semrole:''},
+      'начато': { pos:'VERB', lemma:'начать', morph:'Aspect=Perf|Gender=Neut|Number=Sing|Tense=Past|Variant=Short|VerbForm=Part|Voice=Pass', ner:'O', dep:'acl:relcl', head_offset:-3, semrole:'Predicate'},
+      'прошлом': { pos:'ADJ', lemma:'прошлый', morph:'Case=Loc|Degree=Pos|Gender=Masc|Number=Sing', ner:'B-DATE', dep:'amod', head_offset:1, semrole:''},
+      'семестре': { pos:'NOUN', lemma:'семестр', morph:'Animacy=Inan|Case=Loc|Gender=Masc|Number=Sing', ner:'I-DATE', dep:'obl', head_offset:-2, semrole:'Time'},
+      'результаты': { pos:'NOUN', lemma:'результат', morph:'Animacy=Inan|Case=Nom|Gender=Masc|Number=Plur', ner:'O', dep:'nsubj:pass', head_offset:2, semrole:'Patient'},
+      'будут': { pos:'AUX', lemma:'быть', morph:'Aspect=Imp|Mood=Ind|Number=Plur|Person=3|Tense=Fut|VerbForm=Fin|Voice=Act', ner:'O', dep:'aux:pass', head_offset:1, semrole:''},
+      'опубликованы': { pos:'VERB', lemma:'опубликовать', morph:'Aspect=Perf|Number=Plur|Tense=Past|Variant=Short|VerbForm=Part|Voice=Pass', ner:'O', dep:'root', head_offset:0, semrole:'Predicate'},
+      'сборнике': { pos:'NOUN', lemma:'сборник', morph:'Animacy=Inan|Case=Loc|Gender=Masc|Number=Sing', ner:'O', dep:'obl', head_offset:-1, semrole:'Location'},
+      'лнгвистика': { pos:'NOUN', lemma:'лингвистика', morph:'Animacy=Inan|Case=Nom|Gender=Fem|Number=Sing', ner:'O', dep:'nsubj', head_offset:2, semrole:'Theme'},
+      'это': { pos:'PART', lemma:'это', morph:'', ner:'O', dep:'cop', head_offset:1, semrole:''},
+      'науко': { pos:'NOUN', lemma:'наука', morph:'Animacy=Inan|Case=Nom|Gender=Fem|Number=Sing', ner:'O', dep:'root', head_offset:0, semrole:''},
+      'о': { pos:'ADP', lemma:'о', morph:'', ner:'O', dep:'case', head_offset:1, semrole:''},
+      'язке': { pos:'NOUN', lemma:'язык', morph:'Animacy=Inan|Case=Loc|Gender=Masc|Number=Sing', ner:'O', dep:'nmod', head_offset:-2, semrole:'Theme'},
+      'проф': { pos:'NOUN', lemma:'профессор', morph:'Abbr=Yes', ner:'O', dep:'appos', head_offset:1, semrole:''},
+      'из': { pos:'ADP', lemma:'из', morph:'', ner:'O', dep:'case', head_offset:1, semrole:''},
+      'мгу': { pos:'PROPN', lemma:'МГУ', morph:'Abbr=Yes', ner:'B-ORG', dep:'nmod', head_offset:-2, semrole:'Location'},
+      'опубл': { pos:'VERB', lemma:'опубликовать', morph:'Abbr=Yes|Aspect=Perf|Tense=Past|VerbForm=Fin', ner:'O', dep:'root', head_offset:0, semrole:'Predicate'},
+      'статью': { pos:'NOUN', lemma:'статья', morph:'Animacy=Inan|Case=Acc|Gender=Fem|Number=Sing', ner:'O', dep:'obj', head_offset:-1, semrole:'Patient'},
+      'ж': { pos:'NOUN', lemma:'журнал', morph:'Abbr=Yes', ner:'O', dep:'obl', head_offset:-2, semrole:'Location'},
+      'вопросы': { pos:'NOUN', lemma:'вопрос', morph:'Animacy=Inan|Case=Nom|Gender=Masc|Number=Plur', ner:'B-MISC', dep:'appos', head_offset:-1, semrole:''},
+      'языкознания': { pos:'NOUN', lemma:'языкознание', morph:'Animacy=Inan|Case=Gen|Gender=Neut|Number=Sing', ner:'I-MISC', dep:'nmod', head_offset:-1, semrole:''},
+      'корпус': { pos:'NOUN', lemma:'корпус', morph:'Animacy=Inan|Case=Nom|Gender=Masc|Number=Sing', ner:'O', dep:'nsubj', head_offset:1, semrole:'Theme'},
+      'содержит': { pos:'VERB', lemma:'содержать', morph:'Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act', ner:'O', dep:'root', head_offset:0, semrole:'Predicate'},
+      'тэги': { pos:'NOUN', lemma:'тэг', morph:'Animacy=Inan|Case=Acc|Gender=Masc|Number=Plur', ner:'O', dep:'obj', head_offset:-1, semrole:'Patient'},
+      'и': { pos:'CCONJ', lemma:'и', morph:'', ner:'O', dep:'cc', head_offset:1, semrole:''},
+      'спецсимволы': { pos:'NOUN', lemma:'спецсимвол', morph:'Animacy=Inan|Case=Acc|Gender=Masc|Number=Plur', ner:'O', dep:'conj', head_offset:-2, semrole:'Patient'},
+      'ахах': { pos:'INTJ', lemma:'ахах', morph:'', ner:'O', dep:'discourse', head_offset:2, semrole:''},
+      'написал': { pos:'VERB', lemma:'написать', morph:'Aspect=Perf|Gender=Masc|Mood=Ind|Number=Sing|Tense=Past|VerbForm=Fin|Voice=Act', ner:'O', dep:'root', head_offset:0, semrole:'Predicate'},
+      'оч': { pos:'ADV', lemma:'очень', morph:'Abbr=Yes|Degree=Pos', ner:'O', dep:'advmod', head_offset:1, semrole:''},
+      'крутую': { pos:'ADJ', lemma:'крутой', morph:'Case=Acc|Degree=Pos|Gender=Fem|Number=Sing', ner:'O', dep:'amod', head_offset:1, semrole:''},
+      'работу': { pos:'NOUN', lemma:'работа', morph:'Animacy=Inan|Case=Acc|Gender=Fem|Number=Sing', ner:'O', dep:'obj', head_offset:-3, semrole:'Patient'},
+      '1': { pos:'NUM', lemma:'1', morph:'NumType=Card', ner:'O', dep:'dep', head_offset:-1, semrole:''},
+      '#лингвистика': { pos:'X', lemma:'#лингвистика', morph:'', ner:'O', dep:'dep', head_offset:-5, semrole:''},
+      '@corpus_lab': { pos:'X', lemma:'@corpus_lab', morph:'', ner:'O', dep:'dep', head_offset:-6, semrole:''},
+    };
+  } else {
+    return {
+      'dear': { pos:'ADJ', lemma:'dear', morph:'Degree=Pos', ner:'O', dep:'amod', head_offset:1, semrole:''},
+      'colleague': { pos:'NOUN', lemma:'colleague', morph:'Number=Sing', ner:'O', dep:'nsubj', head_offset:3, semrole:'Addressee'},
+      'we': { pos:'PRON', lemma:'we', morph:'Case=Nom|Number=Plur|Person=1|PronType=Prs', ner:'O', dep:'nsubj', head_offset:1, semrole:'Agent'},
+      'invite': { pos:'VERB', lemma:'invite', morph:'Mood=Ind|Number=Plur|Person=1|Tense=Pres|VerbForm=Fin', ner:'O', dep:'root', head_offset:0, semrole:'Predicate'},
+      'you': { pos:'PRON', lemma:'you', morph:'Case=Acc|Person=2|PronType=Prs', ner:'O', dep:'obj', head_offset:-1, semrole:'Patient'},
+      'to': { pos:'ADP', lemma:'to', morph:'', ner:'O', dep:'case', head_offset:2, semrole:''},
+      'the': { pos:'DET', lemma:'the', morph:'Definite=Def|PronType=Art', ner:'O', dep:'det', head_offset:1, semrole:''},
+      'conference': { pos:'NOUN', lemma:'conference', morph:'Number=Sing', ner:'O', dep:'obl', head_offset:-3, semrole:'Goal'},
+      'on': { pos:'ADP', lemma:'on', morph:'', ner:'O', dep:'case', head_offset:1, semrole:''},
+      'corpus': { pos:'NOUN', lemma:'corpus', morph:'Number=Sing', ner:'O', dep:'compound', head_offset:1, semrole:''},
+      'linguistics': { pos:'NOUN', lemma:'linguistics', morph:'Number=Plur', ner:'O', dep:'nmod', head_offset:-3, semrole:'Theme'},
+      'at': { pos:'ADP', lemma:'at', morph:'', ner:'O', dep:'case', head_offset:2, semrole:''},
+      'moscow': { pos:'PROPN', lemma:'Moscow', morph:'Number=Sing', ner:'B-LOC', dep:'compound', head_offset:1, semrole:''},
+      'university': { pos:'NOUN', lemma:'university', morph:'Number=Sing', ner:'I-LOC', dep:'obl', head_offset:-8, semrole:'Location'},
+      'november': { pos:'PROPN', lemma:'November', morph:'Number=Sing', ner:'B-DATE', dep:'obl', head_offset:-9, semrole:'Time'},
+      '15': { pos:'NUM', lemma:'15', morph:'NumType=Card', ner:'I-DATE', dep:'nummod', head_offset:-1, semrole:''},
+      '2024': { pos:'NUM', lemma:'2024', morph:'NumType=Card', ner:'I-DATE', dep:'nummod', head_offset:-2, semrole:''},
+      'hey': { pos:'INTJ', lemma:'hey', morph:'', ner:'O', dep:'discourse', head_offset:2, semrole:''},
+      'are': { pos:'AUX', lemma:'be', morph:'Mood=Ind|Number=Sing|Person=2|Tense=Pres|VerbForm=Fin', ner:'O', dep:'aux', head_offset:1, semrole:''},
+      'going': { pos:'VERB', lemma:'go', morph:'Tense=Pres|VerbForm=Part', ner:'O', dep:'root', head_offset:0, semrole:'Predicate'},
+      'seminar': { pos:'NOUN', lemma:'seminar', morph:'Number=Sing', ner:'O', dep:'obl', head_offset:-2, semrole:'Goal'},
+      'today': { pos:'ADV', lemma:'today', morph:'', ner:'O', dep:'advmod', head_offset:-3, semrole:'Time'},
+      'or': { pos:'CCONJ', lemma:'or', morph:'', ner:'O', dep:'cc', head_offset:1, semrole:''},
+      'skipping': { pos:'VERB', lemma:'skip', morph:'Tense=Pres|VerbForm=Part', ner:'O', dep:'conj', head_offset:-4, semrole:'Predicate'},
+      'again': { pos:'ADV', lemma:'again', morph:'', ner:'O', dep:'advmod', head_offset:-1, semrole:''},
+      'when': { pos:'SCONJ', lemma:'when', morph:'', ner:'O', dep:'mark', head_offset:2, semrole:''},
+      'student': { pos:'NOUN', lemma:'student', morph:'Number=Sing', ner:'O', dep:'nsubj', head_offset:1, semrole:'Agent'},
+      'finishes': { pos:'VERB', lemma:'finish', morph:'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin', ner:'O', dep:'advcl', head_offset:5, semrole:'Predicate'},
+      'research': { pos:'NOUN', lemma:'research', morph:'Number=Sing', ner:'O', dep:'obj', head_offset:-1, semrole:'Patient'},
+      'that': { pos:'PRON', lemma:'that', morph:'PronType=Rel', ner:'O', dep:'nsubj:pass', head_offset:2, semrole:'Patient'},
+      'was': { pos:'AUX', lemma:'be', morph:'Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin', ner:'O', dep:'aux:pass', head_offset:1, semrole:''},
+      'started': { pos:'VERB', lemma:'start', morph:'Tense=Past|VerbForm=Part|Voice=Pass', ner:'O', dep:'acl:relcl', head_offset:-3, semrole:'Predicate'},
+      'last': { pos:'ADJ', lemma:'last', morph:'Degree=Pos', ner:'B-DATE', dep:'amod', head_offset:1, semrole:''},
+      'semester': { pos:'NOUN', lemma:'semester', morph:'Number=Sing', ner:'I-DATE', dep:'obl', head_offset:-2, semrole:'Time'},
+      'results': { pos:'NOUN', lemma:'result', morph:'Number=Plur', ner:'O', dep:'nsubj:pass', head_offset:3, semrole:'Patient'},
+      'will': { pos:'AUX', lemma:'will', morph:'VerbForm=Fin', ner:'O', dep:'aux', head_offset:2, semrole:''},
+      'be': { pos:'AUX', lemma:'be', morph:'VerbForm=Inf', ner:'O', dep:'aux:pass', head_offset:1, semrole:''},
+      'published': { pos:'VERB', lemma:'publish', morph:'Tense=Past|VerbForm=Part|Voice=Pass', ner:'O', dep:'root', head_offset:0, semrole:'Predicate'},
+      'in': { pos:'ADP', lemma:'in', morph:'', ner:'O', dep:'case', head_offset:2, semrole:''},
+      'collection': { pos:'NOUN', lemma:'collection', morph:'Number=Sing', ner:'O', dep:'obl', head_offset:-2, semrole:'Location'},
+      'lnguistics': { pos:'NOUN', lemma:'linguistics', morph:'Number=Plur', ner:'O', dep:'nsubj', head_offset:2, semrole:'Theme'},
+      'is': { pos:'AUX', lemma:'be', morph:'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin', ner:'O', dep:'cop', head_offset:1, semrole:''},
+      'a': { pos:'DET', lemma:'a', morph:'Definite=Ind|PronType=Art', ner:'O', dep:'det', head_offset:1, semrole:''},
+      'scienec': { pos:'NOUN', lemma:'science', morph:'Number=Sing', ner:'O', dep:'root', head_offset:0, semrole:''},
+      'abuot': { pos:'ADP', lemma:'about', morph:'', ner:'O', dep:'case', head_offset:1, semrole:''},
+      'langauge': { pos:'NOUN', lemma:'language', morph:'Number=Sing', ner:'O', dep:'nmod', head_offset:-2, semrole:'Theme'},
+      'prof': { pos:'NOUN', lemma:'professor', morph:'Abbr=Yes|Number=Sing', ner:'O', dep:'appos', head_offset:1, semrole:''},
+      'from': { pos:'ADP', lemma:'from', morph:'', ner:'O', dep:'case', head_offset:1, semrole:''},
+      'msu': { pos:'PROPN', lemma:'MSU', morph:'Abbr=Yes|Number=Sing', ner:'B-ORG', dep:'nmod', head_offset:-2, semrole:'Location'},
+      'publ': { pos:'VERB', lemma:'publish', morph:'Abbr=Yes|Tense=Past|VerbForm=Fin', ner:'O', dep:'root', head_offset:0, semrole:'Predicate'},
+      'paper': { pos:'NOUN', lemma:'paper', morph:'Number=Sing', ner:'O', dep:'obj', head_offset:-1, semrole:'Patient'},
+      'j': { pos:'NOUN', lemma:'journal', morph:'Abbr=Yes|Number=Sing', ner:'O', dep:'obl', head_offset:-2, semrole:'Location'},
+      'of': { pos:'ADP', lemma:'of', morph:'', ner:'O', dep:'case', head_offset:1, semrole:''},
+      'contains': { pos:'VERB', lemma:'contain', morph:'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin', ner:'O', dep:'root', head_offset:0, semrole:'Predicate'},
+      'tags': { pos:'NOUN', lemma:'tag', morph:'Number=Plur', ner:'O', dep:'obj', head_offset:-1, semrole:'Patient'},
+      'and': { pos:'CCONJ', lemma:'and', morph:'', ner:'O', dep:'cc', head_offset:1, semrole:''},
+      'special': { pos:'ADJ', lemma:'special', morph:'Degree=Pos', ner:'O', dep:'amod', head_offset:1, semrole:''},
+      'chars': { pos:'NOUN', lemma:'char', morph:'Number=Plur', ner:'O', dep:'conj', head_offset:-3, semrole:'Patient'},
+      'haha': { pos:'INTJ', lemma:'haha', morph:'', ner:'O', dep:'discourse', head_offset:2, semrole:''},
+      'wrote': { pos:'VERB', lemma:'write', morph:'Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin', ner:'O', dep:'root', head_offset:0, semrole:'Predicate'},
+      'rly': { pos:'ADV', lemma:'really', morph:'Abbr=Yes|Degree=Pos', ner:'O', dep:'advmod', head_offset:1, semrole:''},
+      'cool': { pos:'ADJ', lemma:'cool', morph:'Degree=Pos', ner:'O', dep:'amod', head_offset:1, semrole:''},
+      '#linguistics': { pos:'X', lemma:'#linguistics', morph:'', ner:'O', dep:'dep', head_offset:-4, semrole:''},
+      '@corpus_lab': { pos:'X', lemma:'@corpus_lab', morph:'', ner:'O', dep:'dep', head_offset:-5, semrole:''},
+    };
+  }
+}
+
+// surname annotations
+function getSurnameAnnotation(lang) {
+  if (lang === 'ru') {
+    return { pos:'PROPN', lemma: state.surnameRu, morph:'Animacy=Anim|Case=Nom|Gender=Masc|Number=Sing', ner:'B-PER', dep:'appos', head_offset:-1, semrole:'Agent'};
+  } else {
+    return { pos:'PROPN', lemma: state.surnameEn, morph:'Number=Sing', ner:'B-PER', dep:'appos', head_offset:-1, semrole:'Agent'};
+  }
+}
+
+// ===================== TOKENIZER =====================
+function tokenize(text) {
+  // Word-level tokenizer for linguistic corpus
+  // Keep hashtags, @mentions as single tokens
+  // Separate punctuation
+  const tokens = [];
+  // Remove HTML tags but mark them
+  let cleaned = text;
+  // First extract HTML tags as noise tokens
+  const htmlRegex = /<\/?[a-zA-Z][^>]*>/g;
+  let match;
+  const htmlPositions = [];
+  while ((match = htmlRegex.exec(text)) !== null) {
+    htmlPositions.push({ start: match.index, end: match.index + match[0].length, tag: match[0] });
+  }
+  
+  // Remove HTML entities
+  cleaned = cleaned.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+  // Remove HTML tags
+  cleaned = cleaned.replace(/<\/?[a-zA-Z][^>]*>/g, ' ');
+  
+  // Tokenize: split on whitespace, then separate punctuation (but keep # and @ prefixed)
+  const rawTokens = cleaned.split(/\s+/).filter(t => t.length > 0);
+  
+  for (const raw of rawTokens) {
+    // Separate leading and trailing punctuation (but not # and @)
+    let token = raw;
+    
+    // Extract leading punct (except # @)
+    while (token.length > 0 && /^[.,!?;:"""''«»()\[\]{}—–\-…\/\\]/.test(token)) {
+      tokens.push(token[0]);
+      token = token.slice(1);
+    }
+    
+    if (token.length === 0) continue;
+    
+    // Extract trailing punct
+    const trailingPunct = [];
+    while (token.length > 0 && /[.,!?;:"""''«»()\[\]{}—–…\/\\]$/.test(token)) {
+      trailingPunct.unshift(token[token.length - 1]);
+      token = token.slice(0, -1);
+    }
+    
+    // Handle !!1 type patterns
+    if (token.match(/^!+\d*$/)) {
+      for (const ch of token) {
+        tokens.push(ch);
+      }
+    } else if (token.length > 0) {
+      tokens.push(token);
+    }
+    
+    for (const p of trailingPunct) {
+      tokens.push(p);
+    }
+  }
+  
+  return tokens;
+}
+
+function isPunctuation(token) {
+  return /^[.,!?;:"""''«»()\[\]{}—–\-…\/\\]+$/.test(token);
+}
+
+function isNoise(token) {
+  return /^[#@]/.test(token) || /^</.test(token) || /!!/.test(token);
+}
+
+// ===================== NORMALIZER =====================
+function normalize(token, lang) {
+  const original = token;
+  let normalized = token;
+  const changes = [];
+  
+  // Remove HTML-like content
+  if (/<[^>]+>/.test(normalized)) {
+    normalized = normalized.replace(/<[^>]+>/g, '');
+    changes.push(lang === 'ru' ? 'Удалён HTML-тэг' : 'Removed HTML tag');
+  }
+  
+  // Lowercase (for non-proper nouns, we'll still lowercase for normalization)
+  if (normalized !== normalized.toLowerCase() && !isPunctuation(normalized)) {
+    normalized = normalized.toLowerCase();
+    changes.push(lang === 'ru' ? 'Приведение к нижнему регистру' : 'Lowercased');
+  }
+  
+  // Fix common typos
+  const typoFixes = lang === 'ru' ? {
+    'лнгвистика': 'лингвистика',
+    'науко': 'наука',
+    'язке': 'языке',
+    'опубл': 'опубликовал',
+  } : {
+    'lnguistics': 'linguistics',
+    'scienec': 'science',
+    'abuot': 'about',
+    'langauge': 'language',
+    'rly': 'really',
+    'publ': 'published',
+  };
+  
+  if (typoFixes[normalized]) {
+    changes.push(lang === 'ru' ? `Исправлена опечатка/сокращение: ${normalized} → ${typoFixes[normalized]}` : `Fixed typo/abbr: ${normalized} → ${typoFixes[normalized]}`);
+    normalized = typoFixes[normalized];
+  }
+  
+  // Abbreviations
+  const abbrFixes = lang === 'ru' ? {
+    'проф': 'профессор',
+    'ж': 'журнал',
+    'оч': 'очень',
+  } : {
+    'prof': 'professor',
+    'j': 'journal',
+  };
+  
+  if (abbrFixes[normalized]) {
+    changes.push(lang === 'ru' ? `Раскрыто сокращение: ${normalized} → ${abbrFixes[normalized]}` : `Expanded abbreviation: ${normalized} → ${abbrFixes[normalized]}`);
+    normalized = abbrFixes[normalized];
+  }
+  
+  if (changes.length === 0) {
+    changes.push(lang === 'ru' ? 'Без изменений' : 'No changes');
+  }
+  
+  return { original, normalized, changes };
+}
+
+// ===================== ANNOTATOR =====================
+function annotateToken(token, lang, index, allTokens) {
+  const lower = token.toLowerCase();
+  const db = getMorphDB(lang, lang === 'ru' ? state.surnameRu : state.surnameEn);
+  const surnameCheck = lang === 'ru' ? state.surnameRu.toLowerCase() : state.surnameEn.toLowerCase();
+  
+  if (lower === surnameCheck) {
+    const sa = getSurnameAnnotation(lang);
+    return { token, index, ...sa };
+  }
+  
+  if (db[lower]) {
+    const entry = db[lower];
+    return {
+      token, index,
+      pos: entry.pos,
+      lemma: entry.lemma,
+      morph: entry.morph,
+      ner: entry.ner,
+      dep: entry.dep,
+      head: Math.max(0, index + entry.head_offset),
+      semrole: entry.semrole
+    };
+  }
+  
+  // Fallback for punctuation
+  if (isPunctuation(token)) {
+    return {
+      token, index,
+      pos: 'PUNCT', lemma: token, morph: '', ner: 'O',
+      dep: 'punct', head: Math.max(0, index - 1), semrole: ''
+    };
+  }
+  
+  // Fallback for unknown
+  return {
+    token, index,
+    pos: 'X', lemma: lower, morph: '', ner: 'O',
+    dep: 'dep', head: Math.max(0, index - 1), semrole: ''
+  };
+}
+
+// ===================== UI FUNCTIONS =====================
+function initProgressBar() {
+  const bar = document.getElementById('progressBar');
+  const names = stepNames[state.interfaceLang];
+  let html = '';
+  for (let i = 0; i < names.length; i++) {
+    if (i > 0) {
+      html += `<div class="step-connector ${i <= state.currentStep ? 'completed' : ''}" id="conn-${i}"></div>`;
+    }
+    const circleClass = i === state.currentStep ? 'active' : (i < state.currentStep ? 'completed' : '');
+    const labelClass = i === state.currentStep ? 'active' : (i < state.currentStep ? 'completed' : '');
+    html += `<div class="step-item">
+      <div class="step-circle ${circleClass}" id="stepCircle-${i}" onclick="goToStep(${i})">${i < state.currentStep ? '&#10003;' : i}</div>
+      <div class="step-label ${labelClass}" id="stepLabel-${i}">${names[i]}</div>
+    </div>`;
+  }
+  bar.innerHTML = html;
+}
+
+function goToStep(step) {
+  // Validate step 0
+  if (step > 0) {
+    state.surnameRu = document.getElementById('surnameRu').value.trim() || 'Иванов';
+    state.surnameEn = document.getElementById('surnameEn').value.trim() || 'Ivanov';
+  }
+  
+  // Hide current
+  document.querySelectorAll('.step-section').forEach(s => s.classList.remove('active'));
+  document.getElementById(`step-${step}`).classList.add('active');
+  
+  state.currentStep = step;
+  initProgressBar();
+  
+  // Process step data
+  if (step === 1) renderCorpusStep();
+  if (step === 2) renderTokenizationStep();
+  if (step === 3) renderNormalizationStep();
+  if (step === 4) renderAnnotationStep();
+  if (step === 5) renderQueryStep();
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ===================== STEP 1: CORPUS =====================
+function renderCorpusStep() {
+  renderTemplates();
+  renderNoiseExamples();
+  regenerateCorpus();
+}
+
+function renderTemplates() {
+  const grid = document.getElementById('templateGrid');
+  const lang = state.corpusLang;
+  const tmpl = templates[lang];
+  const surname = lang === 'ru' ? state.surnameRu : state.surnameEn;
+  
+  grid.innerHTML = tmpl.map((t, i) => {
+    const selected = state.selectedTemplates.has(i) ? 'selected' : '';
+    const text = t.text.replace(/{SURNAME}/g, surname);
+    return `<div class="template-card ${selected}" onclick="toggleTemplate(${i})">
+      <div class="type-badge">${t.typeBadge}</div>
+      <div class="template-text">${text}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleTemplate(i) {
+  if (state.selectedTemplates.has(i)) state.selectedTemplates.delete(i);
+  else state.selectedTemplates.add(i);
+  renderTemplates();
+  regenerateCorpus();
+}
+
+function renderNoiseExamples() {
+  const container = document.getElementById('noiseExamples');
+  const lang = state.corpusLang;
+  const examples = noiseExamples[lang];
+  const surname = lang === 'ru' ? state.surnameRu : state.surnameEn;
+  
+  container.innerHTML = examples.map((e, i) => {
+    const selected = state.selectedNoise.has(i) ? 'selected' : '';
+    const text = e.text.replace(/{SURNAME}/g, surname);
+    return `<div class="noise-chip ${selected}" onclick="toggleNoise(${i})" title="${text}">${e.label}</div>`;
+  }).join('');
+}
+
+function toggleNoise(i) {
+  if (state.selectedNoise.has(i)) state.selectedNoise.delete(i);
+  else state.selectedNoise.add(i);
+  renderNoiseExamples();
+  regenerateCorpus();
+}
+
+function regenerateCorpus() {
+  const lang = state.corpusLang;
+  const surname = lang === 'ru' ? state.surnameRu : state.surnameEn;
+  const tmpl = templates[lang];
+  const noise = noiseExamples[lang];
+  
+  const parts = [];
+  state.selectedTemplates.forEach(i => {
+    if (tmpl[i]) parts.push(tmpl[i].text.replace(/{SURNAME}/g, surname));
+  });
+  state.selectedNoise.forEach(i => {
+    if (noise[i]) parts.push(noise[i].text.replace(/{SURNAME}/g, surname));
+  });
+  
+  state.corpus = parts.join('\n');
+  document.getElementById('corpusDisplay').textContent = state.corpus || (lang === 'ru' ? 'Выберите хотя бы один шаблон или шумовой пример.' : 'Select at least one template or noise example.');
+}
+
+function switchCorpusLang(lang) {
+  state.corpusLang = lang;
+  document.getElementById('corpusLangRu').classList.toggle('active', lang === 'ru');
+  document.getElementById('corpusLangEn').classList.toggle('active', lang === 'en');
+  renderCorpusStep();
+}
+
+// ===================== STEP 2: TOKENIZATION =====================
+function renderTokenizationStep() {
+  document.getElementById('sourceTextDisplay').textContent = state.corpus;
+  
+  state.tokens = tokenize(state.corpus);
+  
+  const container = document.getElementById('tokenContainer');
+  container.innerHTML = state.tokens.map((t, i) => {
+    let cls = 'token';
+    if (isPunctuation(t)) cls += ' punct';
+    if (isNoise(t)) cls += ' noise';
+    return `<span class="${cls}" title="Token #${i}"><span class="token-index">${i}</span>${escapeHTML(t)}</span>`;
+  }).join('');
+  
+  // Stats
+  const stats = document.getElementById('tokenStats');
+  const wordCount = state.tokens.filter(t => !isPunctuation(t)).length;
+  const punctCount = state.tokens.filter(t => isPunctuation(t)).length;
+  const uniqueWords = new Set(state.tokens.filter(t => !isPunctuation(t)).map(t => t.toLowerCase())).size;
+  const l = state.interfaceLang;
+  
+  stats.innerHTML = `
+    <div class="feature-item"><span class="feature-dot available"></span> ${l==='ru'?'Всего токенов':'Total tokens'}: <strong>${state.tokens.length}</strong></div>
+    <div class="feature-item"><span class="feature-dot available"></span> ${l==='ru'?'Слов':'Words'}: <strong>${wordCount}</strong></div>
+    <div class="feature-item"><span class="feature-dot available"></span> ${l==='ru'?'Знаков препинания':'Punctuation'}: <strong>${punctCount}</strong></div>
+    <div class="feature-item"><span class="feature-dot available"></span> ${l==='ru'?'Уникальных слов':'Unique words'}: <strong>${uniqueWords}</strong></div>
+  `;
+}
+
+// ===================== STEP 3: NORMALIZATION =====================
+function renderNormalizationStep() {
+  const lang = state.corpusLang;
+  state.normalized = state.tokens.map(t => normalize(t, lang));
+  
+  const tbody = document.getElementById('normTableBody');
+  tbody.innerHTML = state.normalized.map((n, i) => {
+    const changed = n.changes.some(c => !(c.includes('Без изменений') || c.includes('No changes')));
+    return `<tr>
+      <td>${i}</td>
+      <td><code>${escapeHTML(n.original)}</code></td>
+      <td><code>${escapeHTML(n.normalized)}</code></td>
+      <td style="font-size:0.8rem;${changed?'color:var(--accent);font-weight:600;':''}">${n.changes.join('; ')}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ===================== STEP 4: ANNOTATION =====================
+function renderAnnotationStep() {
+  const lang = state.corpusLang;
+  state.annotations = state.tokens.map((t, i) => annotateToken(t, lang, i, state.tokens));
+  
+  renderMorphTable();
+  renderSyntaxTable();
+  renderNERTable();
+  renderSemRoleTable();
+  renderDepTree();
+}
+
+function renderMorphTable() {
+  const tbody = document.getElementById('morphTableBody');
+  tbody.innerHTML = state.annotations.map(a => `<tr>
+    <td>${a.index}</td>
+    <td><code>${escapeHTML(a.token)}</code></td>
+    <td><span class="pos-tag pos-${a.pos}">${a.pos}</span></td>
+    <td>${escapeHTML(a.lemma)}</td>
+    <td><span class="morph-features">${a.morph || '—'}</span></td>
+  </tr>`).join('');
+}
+
+function renderSyntaxTable() {
+  const tbody = document.getElementById('syntaxTableBody');
+  tbody.innerHTML = state.annotations.map(a => {
+    const headToken = state.annotations[a.head];
+    const headText = headToken ? headToken.token : 'ROOT';
+    return `<tr>
+      <td>${a.index}</td>
+      <td><code>${escapeHTML(a.token)}</code></td>
+      <td>${a.dep === 'root' ? '<strong>ROOT</strong>' : `${a.head} (${escapeHTML(headText)})`}</td>
+      <td><span class="dep-label">${a.dep}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderNERTable() {
+  const tbody = document.getElementById('nerTableBody');
+  const nerLabels = {
+    'B-PER': 'Person (начало)', 'I-PER': 'Person (продолж.)',
+    'B-ORG': 'Organization (начало)', 'I-ORG': 'Organization (продолж.)',
+    'B-LOC': 'Location (начало)', 'I-LOC': 'Location (продолж.)',
+    'B-DATE': 'Date (начало)', 'I-DATE': 'Date (продолж.)',
+    'B-MISC': 'Misc (начало)', 'I-MISC': 'Misc (продолж.)',
+    'O': '—'
+  };
+  
+  tbody.innerHTML = state.annotations.map(a => {
+    const nerType = a.ner.replace(/^[BI]-/, '');
+    const nerClass = nerType === 'O' ? 'ner-O' : `ner-${nerType}`;
+    return `<tr>
+      <td>${a.index}</td>
+      <td><code>${escapeHTML(a.token)}</code></td>
+      <td><span class="ner-tag ${nerClass}">${a.ner}</span></td>
+      <td>${nerLabels[a.ner] || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderSemRoleTable() {
+  const tbody = document.getElementById('semroleTableBody');
+  tbody.innerHTML = state.annotations.map(a => `<tr>
+    <td>${a.index}</td>
+    <td><code>${escapeHTML(a.token)}</code></td>
+    <td>${a.pos === 'VERB' || a.pos === 'AUX' ? '<span class="sem-role" style="background:#bbdefb;color:#1565c0;">Predicate</span>' : '—'}</td>
+    <td>${a.semrole ? `<span class="sem-role">${a.semrole}</span>` : '—'}</td>
+  </tr>`).join('');
+}
+
+function renderDepTree() {
+  const container = document.getElementById('depTreeContainer');
+  
+  // Build a simple dependency arc visualization using SVG
+  const tokens = state.annotations;
+  if (tokens.length === 0) { container.innerHTML = ''; return; }
+  
+  // Limit to first 20 tokens for readability
+  const display = tokens.slice(0, Math.min(tokens.length, 25));
+  
+  const tokenWidth = 70;
+  const tokenGap = 10;
+  const svgWidth = display.length * (tokenWidth + tokenGap) + 40;
+  const baseY = 200;
+  const tokenY = baseY + 10;
+  
+  let svg = `<svg width="${svgWidth}" height="${baseY + 60}" xmlns="http://www.w3.org/2000/svg" style="font-family:Consolas,monospace;">`;
+  
+  // Draw arcs
+  for (const t of display) {
+    if (t.dep === 'root' || t.dep === 'ROOT') continue;
+    const headIdx = t.head;
+    if (headIdx < 0 || headIdx >= display.length) continue;
+    
+    const fromX = 20 + t.index * (tokenWidth + tokenGap) + tokenWidth / 2;
+    const toX = 20 + headIdx * (tokenWidth + tokenGap) + tokenWidth / 2;
+    const dist = Math.abs(t.index - headIdx);
+    const arcHeight = Math.min(30 + dist * 18, 160);
+    const midX = (fromX + toX) / 2;
+    
+    // Theme-aware colors
+    const arcColor = 'var(--accent)';
+    
+    svg += `<path d="M ${fromX} ${baseY} Q ${fromX} ${baseY - arcHeight} ${midX} ${baseY - arcHeight} Q ${toX} ${baseY - arcHeight} ${toX} ${baseY}" 
+              fill="none" stroke="${arcColor}" stroke-width="1.5" opacity="0.6"/>`;
+    
+    // Arrow head
+    svg += `<polygon points="${toX-3},${baseY-5} ${toX+3},${baseY-5} ${toX},${baseY}" fill="${arcColor}" opacity="0.6"/>`;
+    
+    // Label
+    const labelY = baseY - arcHeight - 4;
+    svg += `<text x="${midX}" y="${labelY}" text-anchor="middle" font-size="9" fill="var(--accent)" font-weight="600">${t.dep}</text>`;
+  }
+  
+  // Draw tokens
+  for (const t of display) {
+    const x = 20 + t.index * (tokenWidth + tokenGap);
+    const posColor = {'NOUN':'#1565c0','VERB':'#c62828','ADJ':'#2e7d32','ADV':'#e65100','PROPN':'#1565c0','PUNCT':'#999'}[t.pos] || 'var(--text-secondary)';
+    
+    svg += `<text x="${x + tokenWidth/2}" y="${tokenY + 14}" text-anchor="middle" font-size="11" fill="var(--text-primary)" font-weight="600">${escapeHTML(t.token.length > 9 ? t.token.slice(0,8)+'…' : t.token)}</text>`;
+    svg += `<text x="${x + tokenWidth/2}" y="${tokenY + 28}" text-anchor="middle" font-size="9" fill="${posColor}">${t.pos}</text>`;
+    
+    if (t.dep === 'root') {
+      svg += `<line x1="${x + tokenWidth/2}" y1="${baseY - 170}" x2="${x + tokenWidth/2}" y2="${baseY}" stroke="var(--success)" stroke-width="2"/>`;
+      svg += `<text x="${x + tokenWidth/2}" y="${baseY - 174}" text-anchor="middle" font-size="10" fill="var(--success)" font-weight="700">ROOT</text>`;
+    }
+  }
+  
+  svg += '</svg>';
+  container.innerHTML = svg;
+}
+
+function switchAnnoTab(tab) {
+  document.querySelectorAll('#step-4 .tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#step-4 .tab-content').forEach(c => c.classList.remove('active'));
+  
+  const tabs = { morph: 'annoMorph', syntax: 'annoSyntax', ner: 'annoNer', semrole: 'annoSemrole' };
+  document.getElementById(tabs[tab]).classList.add('active');
+  
+  event.target.classList.add('active');
+  
+  if (tab === 'syntax') renderDepTree();
+}
+
+// ===================== STEP 5: QUERIES =====================
+function renderQueryStep() {}
+
+function switchQueryTab(tab) {
+  document.querySelectorAll('#step-5 .tab-bar .tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#step-5 .tab-content').forEach(c => c.classList.remove('active'));
+  
+  const tabs = { word: 'queryWord', pos: 'queryPos', ner_search: 'queryNerSearch', morph_search: 'queryMorphSearch' };
+  document.getElementById(tabs[tab]).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function searchWord() {
+  const query = document.getElementById('searchWordInput').value.trim().toLowerCase();
+  const mode = document.getElementById('searchWordMode').value;
+  if (!query) return;
+  
+  const results = [];
+  state.annotations.forEach((a, i) => {
+    const match = mode === 'lemma' ? a.lemma.toLowerCase() === query : a.token.toLowerCase() === query;
+    if (match) {
+      results.push(buildKWIC(i));
+    }
+  });
+  
+  state.kwicResults = results;
+  renderKWIC(results);
+}
+
+function searchPOS() {
+  const pos = document.getElementById('searchPosSelect').value;
+  if (!pos) return;
+  
+  const results = [];
+  state.annotations.forEach((a, i) => {
+    if (a.pos === pos) results.push(buildKWIC(i));
+  });
+  
+  state.kwicResults = results;
+  renderKWIC(results);
+}
+
+function searchNER() {
+  const ner = document.getElementById('searchNerSelect').value;
+  if (!ner) return;
+  
+  const results = [];
+  state.annotations.forEach((a, i) => {
+    if (a.ner.includes(ner)) results.push(buildKWIC(i));
+  });
+  
+  state.kwicResults = results;
+  renderKWIC(results);
+}
+
+function searchMorphFeature() {
+  const feat = document.getElementById('searchMorphFeature').value;
+  if (!feat) return;
+  
+  const results = [];
+  state.annotations.forEach((a, i) => {
+    if (a.morph && a.morph.includes(feat)) results.push(buildKWIC(i));
+  });
+  
+  state.kwicResults = results;
+  renderKWIC(results);
+}
+
+function buildKWIC(index) {
+  const contextSize = 5;
+  const leftTokens = state.tokens.slice(Math.max(0, index - contextSize), index);
+  const rightTokens = state.tokens.slice(index + 1, Math.min(state.tokens.length, index + contextSize + 1));
+  
+  return {
+    left: leftTokens.join(' '),
+    keyword: state.tokens[index],
+    right: rightTokens.join(' '),
+    index: index
+  };
+}
+
+function renderKWIC(results) {
+  const tbody = document.getElementById('kwicTableBody');
+  const l = state.interfaceLang;
+  
+  if (results.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:30px;">${l==='ru'?'Ничего не найдено':'No results found'}</td></tr>`;
+    return;
+  }
+  
+  tbody.innerHTML = results.map(r => `<tr>
+    <td class="kwic-left">${escapeHTML(r.left)}</td>
+    <td class="kwic-keyword">${escapeHTML(r.keyword)}</td>
+    <td class="kwic-right">${escapeHTML(r.right)}</td>
+  </tr>`).join('');
+}
+
+function sortKWIC() {
+  const sortBy = document.getElementById('kwicSort').value;
+  let sorted = [...state.kwicResults];
+  
+  if (sortBy === 'left') sorted.sort((a, b) => a.left.localeCompare(b.left));
+  else if (sortBy === 'right') sorted.sort((a, b) => a.right.localeCompare(b.right));
+  else if (sortBy === 'keyword') sorted.sort((a, b) => a.keyword.localeCompare(b.keyword));
+  else sorted.sort((a, b) => a.index - b.index);
+  
+  renderKWIC(sorted);
+}
+
+// ===================== STEP 6: QUIZ =====================
+function checkQuiz(taskNum, element, correctLetter) {
+  const task = document.getElementById(`task${taskNum}`);
+  if (task.dataset.answered) return;
+  
+  const options = task.querySelectorAll('.quiz-option');
+  const clickedLetter = String.fromCharCode(97 + Array.from(options).indexOf(element)); // a, b, c, d
+  
+  const isCorrect = clickedLetter === correctLetter;
+  
+  options.forEach(opt => {
+    const optLetter = String.fromCharCode(97 + Array.from(options).indexOf(opt));
+    if (optLetter === correctLetter) opt.classList.add('correct');
+    else if (opt === element && !isCorrect) opt.classList.add('incorrect');
+  });
+  
+  const resultDiv = document.getElementById(`task${taskNum}Result`);
+  const l = state.interfaceLang;
+  if (isCorrect) {
+    resultDiv.innerHTML = `<div class="task-status task-correct"><span class="checkmark">&#10003;</span> ${l==='ru'?'Правильно!':'Correct!'}</div>`;
+  } else {
+    resultDiv.innerHTML = `<div class="task-status task-incorrect"><span class="crossmark">&#10007;</span> ${l==='ru'?'Неправильно. Правильный ответ выделен зелёным.':'Incorrect. The correct answer is highlighted in green.'}</div>`;
+  }
+  
+  state.quizAnswers[taskNum] = { answer: clickedLetter, correct: isCorrect };
+  task.dataset.answered = 'true';
+}
+
+// ===================== STEP 7: EXPORT =====================
+function exportResults() {
+  const l = state.interfaceLang;
+  const now = new Date().toLocaleString(l === 'ru' ? 'ru-RU' : 'en-US');
+  
+  // Quiz results
+  let quizHTML = '';
+  for (let i = 1; i <= 5; i++) {
+    const qa = state.quizAnswers[i];
+    quizHTML += `<p>Задание ${i}: ${qa ? (qa.correct ? '<span style="color:green;">Правильно</span>' : '<span style="color:red;">Неправильно</span>') + ` (ответ: ${qa.answer})` : '<em>Не выполнено</em>'}</p>`;
+  }
+  
+  const refApp = document.getElementById('reflectionApp')?.value || '';
+  const refWork = document.getElementById('reflectionWork')?.value || '';
+  
+  // Build annotation table
+  let annoRows = state.annotations.map(a => `<tr>
+    <td>${a.index}</td><td>${esc(a.token)}</td><td>${a.pos}</td><td>${esc(a.lemma)}</td>
+    <td>${a.morph||'—'}</td><td>${a.ner}</td><td>${a.dep}</td><td>${a.semrole||'—'}</td>
+  </tr>`).join('');
+  
+  // KWIC
+  let kwicRows = state.kwicResults.map(r => `<tr>
+    <td style="text-align:right;">${esc(r.left)}</td>
+    <td style="text-align:center;font-weight:700;background:#ffeaa7;">${esc(r.keyword)}</td>
+    <td>${esc(r.right)}</td>
+  </tr>`).join('');
+  
+  const html = `<!DOCTYPE html>
+<html lang="${l}">
+<head><meta charset="UTF-8"><title>CorpusLab — Результаты — ${state.surnameRu} / ${state.surnameEn}</title>
+<style>
+body{font-family:'Segoe UI',sans-serif;max-width:900px;margin:0 auto;padding:30px;color:#2c3e50;line-height:1.6;}
+h1{color:#325980;border-bottom:3px solid #3498db;padding-bottom:10px;}
+h2{color:#325980;margin-top:30px;}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:0.85rem;}
+th{background:#325980;color:#fff;padding:8px 10px;text-align:left;}
+td{padding:6px 10px;border-bottom:1px solid #eee;}
+tr:nth-child(even) td{background:#f9f9f9;}
+.info{background:#f0f4f8;border-left:4px solid #3498db;padding:12px 16px;margin:12px 0;border-radius:0 6px 6px 0;}
+code{background:#f5f5f5;padding:2px 6px;border-radius:3px;font-size:0.9em;}
+pre{background:#f5f5f5;padding:16px;border-radius:6px;white-space:pre-wrap;font-size:0.9em;border:1px solid #ddd;}
+.meta{color:#666;font-size:0.9em;}
+</style></head><body>
+<h1>CorpusLab — Результаты работы</h1>
+<p class="meta">Студент: <strong>${esc(state.surnameRu)}</strong> / <strong>${esc(state.surnameEn)}</strong><br>Дата: ${now}<br>Язык корпуса: ${state.corpusLang === 'ru' ? 'Русский' : 'English'}</p>
+
+<h2>1. Корпус</h2>
+<pre>${esc(state.corpus)}</pre>
+
+<h2>2. Токенизация (${state.tokens.length} токенов)</h2>
+<div class="info">Токены: ${state.tokens.map(t => `<code>${esc(t)}</code>`).join(' ')}</div>
+
+<h2>3. Нормализация</h2>
+<table>
+<tr><th>#</th><th>Исходный</th><th>Нормализованный</th><th>Изменения</th></tr>
+${state.normalized.map((n,i) => `<tr><td>${i}</td><td><code>${esc(n.original)}</code></td><td><code>${esc(n.normalized)}</code></td><td>${n.changes.join('; ')}</td></tr>`).join('')}
+</table>
+
+<h2>4. Аннотация</h2>
+<table>
+<tr><th>#</th><th>Токен</th><th>POS</th><th>Лемма</th><th>Морф.</th><th>NER</th><th>Dep</th><th>Сем. роль</th></tr>
+${annoRows}
+</table>
+
+<h2>5. Результаты поиска (KWIC)</h2>
+${kwicRows ? `<table><tr><th>Левый контекст</th><th>Ключевое слово</th><th>Правый контекст</th></tr>${kwicRows}</table>` : '<p><em>Поиск не выполнялся</em></p>'}
+
+<h2>6. Задания</h2>
+${quizHTML}
+
+<h2>7. Рефлексия</h2>
+<h3>Отзыв о приложении:</h3>
+<p>${esc(refApp) || '<em>Не заполнено</em>'}</p>
+<h3>Самооценка работы:</h3>
+<p>${esc(refWork) || '<em>Не заполнено</em>'}</p>
+
+<hr><p class="meta" style="text-align:center;">Сгенерировано CorpusLab</p>
+</body></html>`;
+  
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `CorpusLab_${state.surnameEn}_${new Date().toISOString().slice(0,10)}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ===================== THEME =====================
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'dark' ? '🌙' : '☀️';
+  localStorage.setItem('corpuslab-theme', next);
+}
+
+// ===================== LANG SWITCHER =====================
+function switchInterfaceLang(lang) {
+  state.interfaceLang = lang;
+  document.getElementById('langBtnRu').classList.toggle('active', lang === 'ru');
+  document.getElementById('langBtnEn').classList.toggle('active', lang === 'en');
+  document.documentElement.lang = lang;
+  applyTranslations(lang);
+  initProgressBar();
+}
+
+const translations = {
+  step0_title: { ru: 'Введение и ввод данных', en: 'Introduction & Data Input' },
+  step0_subtitle: { ru: 'Добро пожаловать в CorpusLab! Начнём с того, чтобы познакомиться.', en: 'Welcome to CorpusLab! Let\'s start by getting to know you.' },
+  step0_info: { ru: '<strong>Что такое языковой корпус?</strong><br>Языковой корпус — это большая, структурированная коллекция текстов, размеченная для лингвистического анализа. Корпуса используются для изучения частотности слов, грамматических конструкций, стилистических особенностей и многого другого. В этом приложении вы пройдёте все основные этапы обработки корпусных данных.', en: '<strong>What is a language corpus?</strong><br>A language corpus is a large, structured collection of texts annotated for linguistic analysis. Corpora are used to study word frequency, grammatical constructions, stylistic features, and more. In this app, you will go through all the main stages of corpus data processing.' },
+  step0_instructions_title: { ru: 'Инструкция', en: 'Instructions' },
+  inst_1: { ru: 'Введите вашу фамилию на русском и английском языках', en: 'Enter your surname in Russian and English' },
+  inst_2: { ru: 'Выберите шаблоны фраз и шумовые элементы для формирования корпуса', en: 'Choose phrase templates and noise elements to form the corpus' },
+  inst_3: { ru: 'Пройдите этапы: токенизация, нормализация, аннотация', en: 'Go through the stages: tokenization, normalization, annotation' },
+  inst_4: { ru: 'Используйте панель запросов для поиска по корпусу', en: 'Use the query panel to search the corpus' },
+  inst_5: { ru: 'Выполните задания и напишите отзыв', en: 'Complete the tasks and write your feedback' },
+  inst_6: { ru: 'Экспортируйте результаты в HTML-файл', en: 'Export results to an HTML file' },
+  step0_input_title: { ru: 'Ваши данные', en: 'Your data' },
+  label_surname_ru: { ru: 'Фамилия (на русском)', en: 'Surname (in Russian)' },
+  label_surname_en: { ru: 'Фамилия (на английском)', en: 'Surname (in English)' },
+  step0_lang_models: { ru: 'Доступные модели/аннотации по языкам', en: 'Available models/annotations by language' },
+  btn_next: { ru: 'Далее', en: 'Next' },
+  btn_prev: { ru: 'Назад', en: 'Back' },
+  btn_search: { ru: 'Найти', en: 'Search' },
+  btn_regenerate: { ru: 'Обновить корпус', en: 'Regenerate corpus' },
+  btn_export: { ru: 'Экспортировать в HTML', en: 'Export to HTML' },
+  step1_title: { ru: 'Формирование корпуса', en: 'Corpus Formation' },
+  step1_subtitle: { ru: 'Выберите шаблоны фраз и шумовые примеры. Ваша фамилия будет подставлена в шаблоны.', en: 'Choose phrase templates and noise examples. Your surname will be inserted into templates.' },
+  step1_info: { ru: 'Реальные корпуса содержат тексты различных стилей и регистров. Мы предлагаем три типа шаблонов — формальный, разговорный и сложноподчинённый — чтобы продемонстрировать влияние контекста на анализ. «Шумовые» элементы показывают, как пайплайн справляется с нестандартными данными.', en: 'Real corpora contain texts of various styles and registers. We offer three types of templates — formal, colloquial, and complex — to demonstrate the influence of context on analysis. "Noise" elements show how the pipeline handles non-standard data.' },
+  tab_russian: { ru: 'Русский корпус', en: 'Russian corpus' },
+  tab_english: { ru: 'Английский корпус', en: 'English corpus' },
+  step1_templates: { ru: 'Шаблоны фраз', en: 'Phrase Templates' },
+  step1_noise: { ru: 'Шумовые примеры', en: 'Noise Examples' },
+  step1_noise_desc: { ru: 'Нажмите, чтобы добавить в корпус (опечатки, сокращения, тэги и т.д.):', en: 'Click to add to corpus (typos, abbreviations, tags, etc.):' },
+  step1_result: { ru: 'Сформированный корпус', en: 'Generated Corpus' },
+  step2_title: { ru: 'Токенизация', en: 'Tokenization' },
+  step2_subtitle: { ru: 'Разбиение текста на минимальные единицы анализа — токены (слова, знаки препинания).', en: 'Splitting text into minimal units of analysis — tokens (words, punctuation marks).' },
+  step2_info: { ru: '<span class="tooltip-trigger" tabindex="0">Токенизация<span class="tooltip-content">Токенизация — процесс разбиения текста на отдельные единицы (токены): слова, числа, знаки препинания. Это первый и обязательный этап обработки корпуса.</span></span> — первый этап обработки текста. Для лингвистического корпуса обычно используется пословная токенизация: каждое слово и знак препинания становятся отдельным токеном. Обратите внимание, как обрабатываются «шумовые» элементы.', en: '<span class="tooltip-trigger" tabindex="0">Tokenization<span class="tooltip-content">Tokenization is the process of splitting text into individual units (tokens): words, numbers, punctuation. This is the first and mandatory stage of corpus processing.</span></span> is the first stage of text processing. For a linguistic corpus, word-level tokenization is typically used: each word and punctuation mark becomes a separate token. Notice how "noise" elements are handled.' },
+  step2_source: { ru: 'Исходный текст', en: 'Source Text' },
+  step2_result: { ru: 'Результат токенизации', en: 'Tokenization Result' },
+  step2_stats: { ru: 'Статистика', en: 'Statistics' },
+  step3_title: { ru: 'Нормализация', en: 'Normalization' },
+  step3_subtitle: { ru: 'Приведение токенов к стандартной форме: исправление опечаток, раскрытие сокращений, удаление тэгов.', en: 'Converting tokens to standard form: fixing typos, expanding abbreviations, removing tags.' },
+  step3_info: { ru: '<span class="tooltip-trigger" tabindex="0">Нормализация<span class="tooltip-content">Нормализация — приведение токенов к каноническому виду: lowercase, исправление опечаток, удаление HTML-тэгов, раскрытие сокращений. Повышает качество дальнейшего анализа.</span></span> устраняет «шум» и вариативность написания, чтобы дальнейшие этапы работали корректно.', en: '<span class="tooltip-trigger" tabindex="0">Normalization<span class="tooltip-content">Normalization is converting tokens to canonical form: lowercasing, fixing typos, removing HTML tags, expanding abbreviations. Improves the quality of further analysis.</span></span> eliminates "noise" and spelling variability so that subsequent stages work correctly.' },
+  th_original: { ru: 'Исходный токен', en: 'Original Token' },
+  th_normalized: { ru: 'Нормализованный', en: 'Normalized' },
+  th_changes: { ru: 'Изменения', en: 'Changes' },
+  step4_title: { ru: 'Мультиуровневая аннотация', en: 'Multi-level Annotation' },
+  step4_subtitle: { ru: 'Морфологическая, синтаксическая, NER и семантическая разметка каждого токена.', en: 'Morphological, syntactic, NER and semantic annotation of each token.' },
+  tab_morph: { ru: 'Морфология', en: 'Morphology' },
+  tab_syntax: { ru: 'Синтаксис', en: 'Syntax' },
+  tab_ner: { ru: 'NER', en: 'NER' },
+  tab_semrole: { ru: 'Сем. роли', en: 'Sem. Roles' },
+  th_token: { ru: 'Токен', en: 'Token' },
+  th_lemma: { ru: 'Лемма', en: 'Lemma' },
+  th_morph: { ru: 'Морф. признаки', en: 'Morph. Features' },
+  th_entity_type: { ru: 'Тип сущности', en: 'Entity Type' },
+  th_predicate: { ru: 'Предикат', en: 'Predicate' },
+  th_role: { ru: 'Семантическая роль', en: 'Semantic Role' },
+  step4_dep_tree: { ru: 'Дерево зависимостей', en: 'Dependency Tree' },
+  step5_title: { ru: 'Панель запросов и KWIC', en: 'Query Panel & KWIC' },
+  step5_subtitle: { ru: 'Поиск по корпусу: по слову, лемме, части речи. Результаты в формате KWIC.', en: 'Corpus search: by word, lemma, part of speech. Results in KWIC format.' },
+  tab_word_search: { ru: 'По слову', en: 'By Word' },
+  tab_pos_search: { ru: 'По части речи', en: 'By POS' },
+  tab_ner_search: { ru: 'По NER', en: 'By NER' },
+  tab_morph_search: { ru: 'По морф. признакам', en: 'By Morph. Features' },
+  step5_kwic_title: { ru: 'Результаты KWIC', en: 'KWIC Results' },
+  th_left_ctx: { ru: 'Левый контекст', en: 'Left Context' },
+  th_keyword: { ru: 'Ключевое слово', en: 'Keyword' },
+  th_right_ctx: { ru: 'Правый контекст', en: 'Right Context' },
+  kwic_empty: { ru: 'Выполните поиск, чтобы увидеть результаты', en: 'Run a search to see results' },
+  option_sort_default: { ru: 'По порядку', en: 'Default order' },
+  option_sort_left: { ru: 'По левому контексту', en: 'By left context' },
+  option_sort_right: { ru: 'По правому контексту', en: 'By right context' },
+  option_sort_keyword: { ru: 'По ключевому слову', en: 'By keyword' },
+  option_form: { ru: 'Словоформа', en: 'Word form' },
+  option_lemma: { ru: 'Лемма', en: 'Lemma' },
+  step6_title: { ru: 'Задания и рефлексия', en: 'Tasks & Reflection' },
+  step6_subtitle: { ru: 'Проверьте свои знания и поделитесь впечатлениями.', en: 'Test your knowledge and share your impressions.' },
+  step6_quiz_title: { ru: 'Задания с автоматической проверкой', en: 'Auto-graded Tasks' },
+  task1_q: { ru: 'Задание 1: Что такое токенизация?', en: 'Task 1: What is tokenization?' },
+  task1_a: { ru: 'a) Перевод текста на другой язык', en: 'a) Translating text to another language' },
+  task1_b: { ru: 'b) Разбиение текста на минимальные единицы (токены)', en: 'b) Splitting text into minimal units (tokens)' },
+  task1_c: { ru: 'c) Определение тональности текста', en: 'c) Determining text sentiment' },
+  task1_d: { ru: 'd) Перевод текста в бинарный код', en: 'd) Converting text to binary code' },
+  task2_q: { ru: 'Задание 2: Какой тэг POS соответствует существительному в системе Universal Dependencies?', en: 'Task 2: Which POS tag corresponds to a noun in Universal Dependencies?' },
+  task2_a: { ru: 'a) VERB', en: 'a) VERB' },
+  task2_b: { ru: 'b) ADJ', en: 'b) ADJ' },
+  task2_c: { ru: 'c) NOUN', en: 'c) NOUN' },
+  task2_d: { ru: 'd) ADV', en: 'd) ADV' },
+  task3_q: { ru: 'Задание 3: Что показывает формат KWIC?', en: 'Task 3: What does the KWIC format show?' },
+  task3_a: { ru: 'a) Ключевое слово в контексте (левый контекст | слово | правый контекст)', en: 'a) Keyword in context (left context | word | right context)' },
+  task3_b: { ru: 'b) Количество слов в предложении', en: 'b) Number of words in a sentence' },
+  task3_c: { ru: 'c) Синтаксическое дерево', en: 'c) Syntactic tree' },
+  task3_d: { ru: 'd) Перевод слова на другой язык', en: 'd) Translation of a word to another language' },
+  task4_q: { ru: 'Задание 4: NER-тэг PER обозначает:', en: 'Task 4: The NER tag PER denotes:' },
+  task4_a: { ru: 'a) Место (локацию)', en: 'a) A location' },
+  task4_b: { ru: 'b) Персону (имя собственное человека)', en: 'b) A person (proper name)' },
+  task4_c: { ru: 'c) Организацию', en: 'c) An organization' },
+  task4_d: { ru: 'd) Дату', en: 'd) A date' },
+  task5_q: { ru: 'Задание 5: Зачем нужна нормализация текста перед аннотацией?', en: 'Task 5: Why is text normalization needed before annotation?' },
+  task5_a: { ru: 'a) Чтобы текст стал красивее', en: 'a) To make the text look prettier' },
+  task5_b: { ru: 'b) Чтобы сократить объём данных', en: 'b) To reduce data volume' },
+  task5_c: { ru: 'c) Чтобы устранить шум и вариативность для повышения качества анализа', en: 'c) To remove noise and variability to improve analysis quality' },
+  task5_d: { ru: 'd) Чтобы перевести текст на английский', en: 'd) To translate the text into English' },
+  step6_reflection_title: { ru: 'Рефлексия', en: 'Reflection' },
+  label_reflection_app: { ru: 'Что нового вы узнали о корпусной обработке? Что было наиболее полезным?', en: 'What did you learn about corpus processing? What was most useful?' },
+  label_reflection_work: { ru: 'Оцените свою работу. Что было легко, а что вызвало затруднения?', en: 'Evaluate your work. What was easy and what was challenging?' },
+  step7_title: { ru: 'Экспорт результатов', en: 'Export Results' },
+  step7_subtitle: { ru: 'Сохраните результаты своей работы в HTML-файл.', en: 'Save your work results to an HTML file.' },
+  step7_info: { ru: 'Экспортируемый файл будет содержать: ваши данные, сформированный корпус, результаты токенизации, нормализации, аннотации, результаты поиска, ответы на задания и рефлексию.', en: 'The exported file will contain: your data, the generated corpus, tokenization, normalization, and annotation results, search results, task answers, and reflection.' },
+  placeholder_word_search: { ru: 'Введите слово или лемму...', en: 'Enter a word or lemma...' },
+  placeholder_reflection_app: { ru: 'Ваш отзыв о приложении...', en: 'Your feedback about the app...' },
+  placeholder_reflection_work: { ru: 'Самооценка работы...', en: 'Self-assessment of your work...' },
+};
+
+function applyTranslations(lang) {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (translations[key] && translations[key][lang]) {
+      el.innerHTML = translations[key][lang];
+    }
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (translations[key] && translations[key][lang]) {
+      el.placeholder = translations[key][lang];
+    }
+  });
+}
+
+// ===================== UTILITY =====================
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function esc(str) { return escapeHTML(str); }
+
+// ===================== INIT =====================
+function init() {
+  // Restore theme
+  const saved = localStorage.getItem('corpuslab-theme');
+  if (saved === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.getElementById('themeBtn').textContent = '🌙';
+  }
+  
+  initProgressBar();
+}
+
+init();
+</script>
+</body>
+</html>

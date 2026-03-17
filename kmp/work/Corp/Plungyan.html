@@ -1,0 +1,1574 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-card: #ffffff;
+  --text-primary: #1a1a2e;
+  --text-secondary: #444466;
+  --heading-color: #325980;
+  --accent: #3498db;
+  --accent-hover: #2980b9;
+  --divider: #f1f1f1;
+  --border-light: #e0e0e0;
+  --quote-bg: #f8fafc;
+  --quote-border: #325980;
+  --tag-bg: #e8f0fe;
+  --tag-text: #325980;
+  --shadow: 0 2px 16px rgba(0,0,0,0.06);
+  --shadow-hover: 0 4px 24px rgba(0,0,0,0.10);
+  --code-bg: #f0f4f8;
+  --nav-active-bg: rgba(52,152,219,0.10);
+  --commentary-bg: linear-gradient(135deg, #f8fafc 0%, #eef3f9 100%);
+  --commentary-border: #3498db;
+  --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] {
+  --bg-primary: #0f1923;
+  --bg-secondary: #162231;
+  --bg-card: #1a2d42;
+  --text-primary: #e0e6ed;
+  --text-secondary: #a0b4c8;
+  --heading-color: #6aaedb;
+  --accent: #3498db;
+  --accent-hover: #5dade2;
+  --divider: #1e3246;
+  --border-light: #264060;
+  --quote-bg: #162a3e;
+  --quote-border: #6aaedb;
+  --tag-bg: #1a3550;
+  --tag-text: #6aaedb;
+  --shadow: 0 2px 16px rgba(0,0,0,0.25);
+  --shadow-hover: 0 4px 24px rgba(0,0,0,0.35);
+  --code-bg: #162a3e;
+  --nav-active-bg: rgba(52,152,219,0.18);
+  --commentary-bg: linear-gradient(135deg, #162a3e 0%, #1a3550 100%);
+  --commentary-border: #3498db;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  transition: background var(--transition), color var(--transition);
+  overflow-x: hidden;
+}
+
+/* ===== HEADER ===== */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: var(--heading-color);
+  color: #fff;
+  padding: 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  transition: background var(--transition);
+}
+
+.header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.header-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+.header-subtitle {
+  font-size: 0.82rem;
+  opacity: 0.82;
+  font-weight: 400;
+  margin-top: 0.15rem;
+}
+
+#theme-toggle {
+  background: rgba(255,255,255,0.15);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  color: #fff;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.25s, transform 0.25s;
+  flex-shrink: 0;
+}
+
+#theme-toggle:hover {
+  background: rgba(255,255,255,0.25);
+  transform: scale(1.1);
+}
+
+/* ===== NAV ===== */
+nav {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--divider);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: background var(--transition), border-color var(--transition);
+  overflow: hidden;
+}
+
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.nav-inner::-webkit-scrollbar { display: none; }
+
+.nav-link {
+  display: block;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 2.5px solid transparent;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  cursor: pointer;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: var(--nav-active-bg);
+}
+
+/* ===== MAIN ===== */
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.section {
+  display: none;
+  animation: fadeSlideIn 0.45s ease;
+}
+
+.section.active {
+  display: block;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 2rem 2.2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--divider);
+  transition: background var(--transition), border-color var(--transition), box-shadow 0.3s;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.card h2 {
+  color: var(--heading-color);
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 2px solid var(--divider);
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.card h3 {
+  color: var(--heading-color);
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.7rem;
+  transition: color var(--transition);
+}
+
+.card p {
+  margin-bottom: 0.85rem;
+  color: var(--text-primary);
+  transition: color var(--transition);
+}
+
+/* ===== BLOCKQUOTE ===== */
+blockquote {
+  background: var(--quote-bg);
+  border-left: 4px solid var(--quote-border);
+  border-radius: 0 10px 10px 0;
+  padding: 1.3rem 1.6rem;
+  margin: 1.2rem 0;
+  font-style: italic;
+  color: var(--text-secondary);
+  position: relative;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
+blockquote::before {
+  content: '\201C';
+  position: absolute;
+  top: -0.15rem;
+  left: 0.65rem;
+  font-size: 3rem;
+  color: var(--quote-border);
+  opacity: 0.2;
+  font-style: normal;
+  line-height: 1;
+}
+
+/* ===== COMMENTARY BOX ===== */
+.commentary-box {
+  background: var(--commentary-bg);
+  border-left: 4px solid var(--commentary-border);
+  border-radius: 0 12px 12px 0;
+  padding: 1.5rem 1.8rem;
+  margin: 1.2rem 0;
+  transition: border-color var(--transition);
+}
+
+.commentary-box .cb-label {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin-bottom: 0.6rem;
+  padding: 0.2rem 0.7rem;
+  background: var(--tag-bg);
+  border-radius: 4px;
+  transition: color var(--transition), background var(--transition);
+}
+
+.commentary-box p {
+  font-size: 0.97rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.7rem;
+}
+
+.commentary-box p:last-child { margin-bottom: 0; }
+
+/* ===== REFERENCE LIST ===== */
+.ref-list {
+  list-style: none;
+  padding: 0;
+}
+
+.ref-list li {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--divider);
+  font-size: 0.93rem;
+  color: var(--text-secondary);
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.ref-list li:last-child { border-bottom: none; }
+
+.ref-list a {
+  color: var(--accent);
+  text-decoration: none;
+  word-break: break-all;
+  transition: color 0.2s;
+}
+
+.ref-list a:hover {
+  text-decoration: underline;
+  color: var(--accent-hover);
+}
+
+/* ===== TAGS ===== */
+.tag {
+  display: inline-block;
+  padding: 0.22rem 0.7rem;
+  margin: 0.2rem 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  border-radius: 100px;
+  transition: background var(--transition), color var(--transition);
+}
+
+/* ===== ACCORDION ===== */
+.accordion-item {
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+
+.accordion-header {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: none;
+  padding: 1rem 1.3rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--heading-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  transition: background 0.2s, color var(--transition);
+}
+
+.accordion-header:hover {
+  background: var(--nav-active-bg);
+}
+
+.accordion-header .arrow {
+  display: inline-block;
+  transition: transform 0.3s;
+  font-size: 0.85rem;
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-left: 0.75rem;
+}
+
+.accordion-item.open .accordion-header .arrow {
+  transform: rotate(180deg);
+}
+
+.accordion-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, padding 0.3s ease;
+  padding: 0 1.3rem;
+  background: var(--bg-card);
+}
+
+.accordion-item.open .accordion-body {
+  max-height: 2000px;
+  padding: 1rem 1.3rem 1.3rem;
+}
+
+/* ===== TIMELINE ===== */
+.timeline {
+  position: relative;
+  padding-left: 2.2rem;
+  margin: 1rem 0;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0.5rem;
+  top: 0;
+  bottom: 0;
+  width: 2.5px;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0.3;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -1.7rem;
+  top: 0.45rem;
+  width: 11px;
+  height: 11px;
+  background: var(--accent);
+  border-radius: 50%;
+  border: 2.5px solid var(--bg-card);
+  box-shadow: 0 0 0 2px var(--accent);
+  transition: border-color var(--transition);
+}
+
+.timeline-year {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 0.2rem;
+}
+
+.timeline-text {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+/* ===== KEY POINTS LIST ===== */
+.key-points {
+  list-style: none;
+  padding: 0;
+  counter-reset: kp;
+}
+
+.key-points li {
+  position: relative;
+  padding: 0.75rem 0 0.75rem 3rem;
+  margin-bottom: 0.5rem;
+  counter-increment: kp;
+}
+
+.key-points li::before {
+  content: counter(kp);
+  position: absolute;
+  left: 0;
+  top: 0.7rem;
+  width: 2rem;
+  height: 2rem;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== TABLE ===== */
+.comp-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 1rem 0;
+  border: 1px solid var(--divider);
+  font-size: 0.92rem;
+}
+
+.comp-table th {
+  background: var(--heading-color);
+  color: #fff;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.comp-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--divider);
+  color: var(--text-secondary);
+  vertical-align: top;
+  transition: background 0.2s, color var(--transition), border-color var(--transition);
+}
+
+.comp-table tr:last-child td { border-bottom: none; }
+
+.comp-table tr:nth-child(even) td {
+  background: var(--bg-secondary);
+}
+
+.comp-table tr:hover td {
+  background: var(--nav-active-bg);
+}
+
+/* ===== HERO SECTION ===== */
+.hero {
+  text-align: center;
+  padding: 2.5rem 1rem 1.5rem;
+}
+
+.hero h1 {
+  font-size: 2rem;
+  color: var(--heading-color);
+  margin-bottom: 0.6rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  transition: color var(--transition);
+}
+
+.hero p {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* ===== FOOTER ===== */
+footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--divider);
+  transition: color var(--transition), border-color var(--transition);
+}
+
+/* ===== SCROLL-TO-TOP ===== */
+#scroll-top {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 12px rgba(52,152,219,0.35);
+  transition: transform 0.25s, opacity 0.25s;
+  z-index: 999;
+}
+
+#scroll-top:hover {
+  transform: scale(1.1);
+}
+
+#scroll-top.visible {
+  display: flex;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .header-inner {
+    padding: 0.85rem 1rem;
+  }
+  .header-title {
+    font-size: 1.05rem;
+  }
+  .header-subtitle {
+    font-size: 0.75rem;
+  }
+  .card {
+    padding: 1.3rem 1.2rem;
+    border-radius: 10px;
+  }
+  .card h2 {
+    font-size: 1.2rem;
+  }
+  blockquote {
+    padding: 1rem 1.1rem;
+  }
+  .commentary-box {
+    padding: 1.1rem 1.2rem;
+  }
+  .hero h1 {
+    font-size: 1.5rem;
+  }
+  .hero p {
+    font-size: 0.95rem;
+  }
+  .nav-link {
+    padding: 0.75rem 0.8rem;
+    font-size: 0.82rem;
+  }
+  .comp-table {
+    font-size: 0.82rem;
+  }
+  .comp-table th, .comp-table td {
+    padding: 0.6rem 0.65rem;
+  }
+  main {
+    padding: 1rem 0.65rem 3rem;
+  }
+  .key-points li {
+    padding-left: 2.6rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-title { font-size: 0.95rem; }
+  .nav-link { padding: 0.7rem 0.65rem; font-size: 0.78rem; }
+  .hero h1 { font-size: 1.28rem; }
+  .card { padding: 1rem 0.95rem; }
+  .card h2 { font-size: 1.08rem; }
+}
+
+/* ===== PRINT ===== */
+@media print {
+  header, nav, #scroll-top, #theme-toggle { display: none !important; }
+  .section { display: block !important; }
+  .card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
+}
+
+/* ===== FORM STYLES ===== */
+.form-group {
+  margin-bottom: 1.3rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--heading-color);
+  margin-bottom: 0.4rem;
+  transition: color var(--transition);
+}
+
+.form-hint {
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border-light);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.25s, background var(--transition), color var(--transition), box-shadow 0.25s;
+  -webkit-appearance: none;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.form-textarea {
+  min-height: 220px;
+  max-height: 600px;
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.5rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: 0 3px 12px rgba(52, 152, 219, 0.3);
+}
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--heading-color);
+  border-color: var(--border-light);
+}
+
+.btn-secondary:hover {
+  background: var(--nav-active-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.07);
+}
+
+.preview-note {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Preview rendered blocks */
+#preview-content .pv-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--divider);
+}
+
+#preview-content .pv-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--heading-color);
+}
+
+#preview-content .pv-meta {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+#preview-content .pv-subject {
+  display: inline-block;
+  padding: 0.18rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  border-radius: 100px;
+}
+
+#preview-content .pv-body {
+  margin-top: 0.75rem;
+  white-space: pre-wrap;
+  line-height: 1.75;
+  color: var(--text-primary);
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(120%);
+  background: var(--heading-color);
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  z-index: 10000;
+  opacity: 0;
+  transition: transform 0.35s ease, opacity 0.35s ease;
+  pointer-events: none;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .form-actions {
+    flex-direction: column;
+  }
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .form-textarea {
+    min-height: 180px;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>
+      <div class="header-title">Corpus linguistics | LLM</div>
+      <div class="header-subtitle">Тезисы В. А. Плунгяна: оценка актуальности</div>
+    </div>
+    <button id="theme-toggle" aria-label="Переключить тему" title="Переключить тему">☀️</button>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-link active" data-section="intro">Введение</a>
+    <a class="nav-link" data-section="thesis">Тезисы</a>
+    <a class="nav-link" data-section="interpretation">Интерпретация</a>
+    <a class="nav-link" data-section="relevance">Актуальность 2026</a>
+    <a class="nav-link" data-section="practice">Страна советов</a>
+    <a class="nav-link" data-section="sources">Источники</a>
+	<a class="nav-link" data-section="student-comment">Рефлексия</a>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ===== ВВЕДЕНИЕ ===== -->
+  <div class="section active" id="intro">
+    <div class="hero">
+      <h1>Словарь. Грамматика. Корпус.</h1>
+      <p>Тезисы Владимира Александровича Плунгяна 2009 года в эпоху LLM</p>
+    </div>
+
+    <div class="card">
+      <h2>Из лекции</h2>
+      <p>В 2009 году В.&nbsp;А.&nbsp;Плунгян в публичной лекции «Почему современная лингвистика должна быть лингвистикой корпусов» сформулировал тезис, который стал программным для целого поколения лингвистов: помимо словаря и грамматики, для овладения языком необходим <strong>корпус текстов</strong>.</p>
+      <p>Этот материал предназначен для студентов-лингвистов и будущих преподавателей иностранных языков, изучающих дисциплины «Корпусная лингвистика» и «ИИ в профессиональной деятельности». Здесь:</p>
+      <ul class="key-points">
+        <li>Текст ключевых тезисов В.&nbsp;А.&nbsp;Плунгяна с указанием источников</li>
+        <li>Развёрнутую интерпретацию каждого положения</li>
+        <li>Комментарий LLM: оценку актуальности тезисов в 2026 году</li>
+        <li>Непрошенные советы для лингвистов и преподавателей</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Контекст высказывания</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-year">2003–2004</div>
+          <div class="timeline-text">Запуск Национального корпуса русского языка (НКРЯ) — проекта, в котором В.&nbsp;А.&nbsp;Плунгян играл значимую роль</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-year">2009</div>
+          <div class="timeline-text">Публичная лекция В.&nbsp;А.&nbsp;Плунгяна на Полит.ру (сейчас недоступна), в которой сформулирован ключевой тезис о «трёх вещах»</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-year">2020</div>
+          <div class="timeline-text">А.&nbsp;Ч.&nbsp;Пиперски цитирует тезис Плунгяна в докладе «Русский язык и корпусное разнообразие» на конференции «Диалог 2020»</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-year">2022–2025</div>
+          <div class="timeline-text">Взрывной рост LLM, обученных на гигантских корпусах текстов, — прямое подтверждение центральной роли корпусов</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ТЕЗИСЫ ===== -->
+  <div class="section" id="thesis">
+    <div class="card">
+      <h2>Ключевая цитата В.&nbsp;А.&nbsp;Плунгяна</h2>
+      <p>Ниже приведён полный фрагмент из лекции 2009 года:</p>
+      <blockquote>
+        Все знают, что есть две вещи, нужные, чтобы овладеть языком, это словарь и грамматика, они нужны и теоретику, и практику. Так вот, если в результате моей лекции вы ничего не поймете и не запомните, это совершенно не страшно. </p><p>Запомните единственное: теперь для овладения языком человеку нужны не две, а три вещи: словарь, грамматика и корпус текстов данного языка. </p><p>Потому что и словарь, и грамматика, в общем-то, бесполезны вне этого живого пространства, где язык, собственно, и функционирует. </p><p>Более того, и словари и грамматики теперь нужны не традиционные, а нового поколения, словари такого-то корпуса и грамматики такого-то корпуса.
+      </blockquote>
+      <p style="font-size: 0.88rem; color: var(--text-secondary);">
+        Источник: Плунгян В.&nbsp;А. (2009). Почему современная лингвистика должна быть лингвистикой корпусов. Публичная лекция, Полит.ру. Цитируется по: Пиперски А.&nbsp;Ч. «Русский язык и корпусное разнообразие» // Компьютерная лингвистика и интеллектуальные технологии: по материалам международной конференции «Диалог 2020».
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Структура тезиса: три положения</h2>
+      <p>Тезис Плунгяна содержит не одно, а три взаимосвязанных утверждения. Разберём каждое:</p>
+
+      <div class="accordion-item open">
+        <button class="accordion-header">
+          <span>Положение 1: Корпус — третий обязательный инструмент</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="accordion-body">
+          <p>Традиционная пара «словарь + грамматика» дополняется третьим элементом — <strong>корпусом текстов</strong>. Этот элемент необходим и теоретику (исследователю языка), и практику (изучающему язык, преподавателю, переводчику).</p>
+          <div class="tag">словарь</div>
+          <div class="tag">грамматика</div>
+          <div class="tag">корпус</div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header">
+          <span>Положение 2: Словарь и грамматика бесполезны вне «живого пространства» языка</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="accordion-body">
+          <p>Плунгян подчёркивает, что изолированные, абстрагированные от реального употребления описания языка (словари и грамматики) не дают полной картины. Корпус — это и есть то <strong>«живое пространство»</strong>, в котором язык функционирует: множество реальных контекстов, реальных сочетаний слов, реальных дискурсивных стратегий.</p>
+          <div class="tag">узус</div>
+          <div class="tag">контекст</div>
+          <div class="tag">реальное употребление</div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header">
+          <span>Положение 3: Словари и грамматики «нового поколения» — производные от корпуса</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="accordion-body">
+          <p>Наиболее радикальная часть тезиса: не просто «добавить корпус к словарю и грамматике», а перестроить сами словари и грамматики, создавая их <strong>на основе конкретного корпуса</strong>. Это означает, что описание языка должно быть эмпирически обоснованным и привязанным к определённому массиву данных.</p>
+          <div class="tag">корпусные словари</div>
+          <div class="tag">корпусные грамматики</div>
+          <div class="tag">эмпирический подход</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ИНТЕРПРЕТАЦИЯ ===== -->
+  <div class="section" id="interpretation">
+    <div class="card">
+      <h2>Интерпретация тезисов В. А. Плунгяна</h2>
+      
+      <h3>О триаде «словарь — грамматика — корпус»</h3>
+      <p>Плунгян предложил не просто инструментальное дополнение, а <strong>парадигмальный сдвиг</strong>. До эпохи корпусов лингвист работал с примерами, которые сам придумывал или брал из ограниченного набора текстов. Словарь фиксировал «канонические» значения слов, грамматика описывала «правильные» конструкции. Корпус же вносит принципиально новое измерение — <strong>частотность, вариативность и контекст</strong>.</p>
+
+      <div class="commentary-box">
+        <div class="cb-label">Комментарий LLM</div>
+        <p>Этот тезис интересно переосмыслить из 2026 года. Большие языковые модели, по сути, <em>и есть</em> «переработанные корпуса»: они обучены на триллионах токенов текста и неявно впитали в себя и грамматику, и лексику, и прагматику. Можно сказать, что LLM — это предельная реализация идеи Плунгяна: три ресурса (словарь, грамматика, корпус), слитые в единую статистическую модель. Однако именно поэтому понимание того, <strong>как устроен корпус и какие данные в него входят</strong>, остаётся критически важным — без этого понимания невозможно ни оценить качество модели, ни исправить её ошибки.</p>
+      </div>
+
+      <h3>О «живом пространстве» языка</h3>
+      <p>Метафора «живого пространства» указывает на фундаментальное различие между <strong>языком-системой</strong> (langue) и <strong>языком-в-употреблении</strong> (parole, или, в современных терминах, usage). Словарь описывает единицы системы, грамматика — правила их комбинирования, но только корпус показывает, <em>как на самом деле</em> носители языка используют эти единицы и правила.</p>
+      <p>Это перекликается с идеями корпусной лингвистики Джона Синклера: «языковые единицы не имеют фиксированного значения вне контекста употребления». Корпус делает контекст доступным в массовом масштабе.</p>
+
+      <div class="commentary-box">
+        <div class="cb-label">Комментарий LLM</div>
+        <p>В эпоху LLM «живое пространство» расширилось многократно. Если в 2009 году корпус НКРЯ содержал порядка 300 миллионов словоупотреблений, то обучающие корпуса современных языковых моделей содержат триллионы токенов на десятках языков. Однако возникает парадокс: чем больше данных, тем труднее определить, <strong>чей</strong> это язык, <strong>какого</strong> периода и <strong>какого</strong> регистра. Именно здесь сохраняет свою ценность классический лингвистический корпус — сбалансированный, размеченный, документированный.</p>
+      </div>
+
+      <h3>О словарях и грамматиках «нового поколения»</h3>
+      <p>Это положение наиболее провокационно. Плунгян фактически говорит: <strong>не существует «словаря языка» — существует «словарь данного корпуса»</strong>. Любое описание языка является проекцией определённой выборки. Осознание этого факта — ключ к научной честности.</p>
+      <p>Примеры реализации: <em>Frequency Dictionary of Russian</em> (Sharoff et al.), словарные статьи НКРЯ с частотной информацией, грамматические профили конструкций на основе корпусных данных.</p>
+
+      <div class="commentary-box">
+        <div class="cb-label">Комментарий LLM</div>
+        <p>В 2026 году мы наблюдаем практическое воплощение этой идеи в неожиданной форме. Каждая LLM — это, по сути, «словарь и грамматика своего обучающего корпуса». Модель, обученная преимущественно на англоязычных текстах, имеет иной «словарь», чем модель, обученная на сбалансированном многоязычном корпусе. Это делает тезис Плунгяна о привязке описания к конкретному корпусу не только актуальным, но и <strong>практически значимым для каждого, кто работает с ИИ</strong>. Понимание обучающего корпуса модели — это понимание её возможностей и ограничений.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== АКТУАЛЬНОСТЬ 2026 ===== -->
+  <div class="section" id="relevance">
+    <div class="card">
+      <h2>Оценка актуальности в 2026 году</h2>
+      <p>Насколько тезис Плунгяна 2009 года остаётся справедливым спустя семнадцать лет? Оценим каждое положение.</p>
+
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th style="width:30%">Положение</th>
+            <th style="width:35%">Статус в 2026</th>
+            <th style="width:35%">Комментарий</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Корпус — третий инструмент</strong></td>
+            <td>Полностью подтверждено и расширено</td>
+            <td>Корпусные данные стали основой не только лингвистики, но и всей индустрии ИИ. Можно утверждать, что корпус стал <em>первым</em> инструментом.</td>
+          </tr>
+          <tr>
+            <td><strong>Словарь и грамматика бесполезны вне «живого пространства»</strong></td>
+            <td>Подтверждено с оговоркой</td>
+            <td>Формальные описания сохраняют ценность как <em>обобщения</em>. Однако их верификация без корпуса невозможна. LLM научились генерировать текст без явных словарей и грамматик — исключительно из корпусных данных.</td>
+          </tr>
+          <tr>
+            <td><strong>Словари и грамматики «такого-то корпуса»</strong></td>
+            <td>Приобрело новый смысл</td>
+            <td>Каждая LLM — это неявные «словарь и грамматика» своего обучающего корпуса. Документирование состава корпусов стало вопросом этики и научной воспроизводимости.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Что изменилось: пять ключевых тенденций</h2>
+
+      <div class="accordion-item">
+        <button class="accordion-header">
+          <span>1. От корпуса как инструмента — к корпусу как фундаменту ИИ</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="accordion-body">
+          <p>В 2009 году корпус был инструментом лингвиста-исследователя. В 2026 году корпуса (и их качество, состав, репрезентативность) определяют поведение систем ИИ, которые используют миллиарды людей. Проблема «мусор на входе — мусор на выходе» (garbage in, garbage out) стала проблемой планетарного масштаба.</p>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header">
+          <span>2. Формула расширилась: словарь + грамматика + корпус + модель</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="accordion-body">
+          <p>Можно предложить обновление формулы Плунгяна. В 2026 году для полноценной работы с языком специалисту нужны <strong>четыре</strong> ресурса: словарь, грамматика, корпус и <strong>языковая модель</strong> (LLM). Модель — это новый вид лингвистического инструмента, который позволяет не только находить примеры, но и генерировать, трансформировать и анализировать тексты. При этом модель, как и словарь с грамматикой, производна от корпуса.</p>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header">
+          <span>3. Корпусная грамотность стала частью цифровой грамотности</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="accordion-body">
+          <p>Понимание того, что такое корпус, как он составлен, какие в нём смещения (biases), — это уже не узкоспециальное знание, а часть общей компетенции любого профессионала, работающего с текстами и ИИ. Для преподавателя иностранного языка это означает необходимость понимать, на каких данных обучены инструменты, которые используют их студенты.</p>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header">
+          <span>4. Размеченные корпуса сохраняют уникальную ценность</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="accordion-body">
+          <p>Несмотря на гигантские объёмы обучающих данных LLM, классические лингвистические корпуса (НКРЯ, BNC, COCA и др.) сохраняют незаменимое преимущество: <strong>разметка, сбалансированность и документированность</strong>. LLM не может заменить корпус, когда нужно узнать точную частотность конструкции, проследить диахронические изменения или проверить гипотезу на контролируемой выборке.</p>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header">
+          <span>5. Проблема «корпусного происхождения» моделей</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="accordion-body">
+          <p>Тезис Плунгяна о «словаре такого-то корпуса» неожиданно стал центральной проблемой этики ИИ. Какие тексты вошли в обучающий корпус? Чьи голоса представлены, а чьи — нет? Какие предубеждения впитала модель? Эти вопросы — прямое следствие того фундаментального наблюдения, что языковое описание всегда привязано к конкретной выборке данных.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Итоговая оценка</h2>
+      <div class="commentary-box">
+        <div class="cb-label">Заключение LLM</div>
+        <p>Тезис В.&nbsp;А.&nbsp;Плунгяна не просто «остаётся актуальным» в 2026 году — он оказался <strong>пророческим</strong>. Именно корпуса текстов стали тем ресурсом, который сделал возможной революцию больших языковых моделей. Формулировка «словарь и грамматика бесполезны вне живого пространства языка» стала, по сути, рабочим принципом всей современной индустрии NLP: мы больше не пытаемся описать язык набором правил — мы учим модели на реальном языковом материале.</p>
+        <p>Единственное уточнение, которое требуется из перспективы 2026 года: триада Плунгяна может быть дополнена четвёртым элементом — <strong>моделью</strong>. Но и модель, в свою очередь, есть производная от корпуса. Поэтому центральная роль корпуса, на которой настаивал Плунгян, не только не умалена, а, напротив, многократно усилена.</p>
+        <p>Для студентов-лингвистов и будущих преподавателей это означает: <strong>понимание природы корпуса — это ключ к пониманию и традиционной лингвистики, и современного ИИ</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ДЛЯ ПРАКТИКИ ===== -->
+  <div class="section" id="practice">
+    <div class="card">
+      <h2>Страна советов</h2>
+      <p>Как связать тезисы Плунгяна с вашей учебной и будущей профессиональной деятельностью?</p>
+
+      <h3>Для будущих преподавателей иностранных языков</h3>
+      <ul class="key-points">
+        <li><strong>Используйте корпуса для подготовки учебных материалов.</strong> Вместо того чтобы придумывать примеры, ищите их в корпусах (НКРЯ, COCA, DWDS, ++). Так вы гарантируете естественность и актуальность материала.</li>
+        <li><strong>Обучайте студентов работе с корпусами.</strong> Data-driven learning (DDL) — подход, при котором учащиеся сами исследуют корпус, чтобы выявить языковые закономерности, — показывает высокую эффективность.</li>
+        <li><strong>Сравнивайте данные корпуса с рекомендациями учебника.</strong> Нередко учебники предлагают конструкции, которые редко встречаются в реальном языке. Корпус позволяет это обнаружить.</li>
+        <li><strong>Осознанно используйте LLM.</strong> Понимая, что модель — это «переработанный корпус», вы сможете критически оценивать её ответы и объяснять студентам, почему модель может ошибаться.</li>
+      </ul>
+
+      <h3>Для будущих лингвистов-исследователей</h3>
+      <ul class="key-points">
+        <li><strong>Формулируйте гипотезы, проверяемые на корпусе.</strong> Это основа современной эмпирической лингвистики. Утверждение «в русском языке X употребляется чаще, чем Y» должно подкрепляться корпусными данными.</li>
+        <li><strong>Документируйте свои корпуса.</strong> Следуя идее Плунгяна о «словаре такого-то корпуса», всегда указывайте, на каком корпусе получены ваши результаты, каков его объём, состав и временной охват.</li>
+        <li><strong>Используйте LLM как исследовательский инструмент.</strong> Модели могут помочь в аннотировании данных, выявлении закономерностей и генерации гипотез — но не заменяют корпусного анализа.</li>
+        <li><strong>Развивайте навыки программирования.</strong> Python с библиотеками NLTK, spaCy, Stanza позволяет работать с корпусами на принципиально новом уровне.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Полезные ресурсы</h2>
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>Ресурс</th>
+            <th>Описание</th>
+            <th>Применение</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>НКРЯ</strong> (ruscorpora.ru)</td>
+            <td>Национальный корпус русского языка</td>
+            <td>Исследование русского языка, подготовка учебных материалов</td>
+          </tr>
+          <tr>
+            <td><strong>COCA</strong> (english-corpora.org)</td>
+            <td>Corpus of Contemporary American English</td>
+            <td>Исследование современного американского английского</td>
+          </tr>
+          <tr>
+            <td><strong>Sketch Engine</strong></td>
+            <td>Платформа для работы с корпусами десятков языков</td>
+            <td>Многоязычные исследования, word sketches</td>
+          </tr>
+          <tr>
+            <td><strong>Leipzig Corpora Collection</strong></td>
+            <td>Корпуса для более чем 250 языков</td>
+            <td>Работа с менее ресурсными языками</td>
+          </tr>
+          <tr>
+            <td><strong>Voyant Tools</strong></td>
+            <td>Онлайн-инструмент для анализа текстов</td>
+            <td>Быстрый анализ собственных текстовых коллекций</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== ИСТОЧНИКИ ===== -->
+  <div class="section" id="sources">
+    <div class="card">
+      <h2>Библиографические источники</h2>
+      <ul class="ref-list">
+        <li>
+          <strong>Плунгян Владимир Александрович</strong><br>
+          <a href="https://ru.wikipedia.org/wiki/Плунгян,_Владимир_Александрович" target="_blank" rel="noopener">статья в Википедии</a> 
+        </li>
+		<li>
+          <strong>Плунгян Владимир Александрович</strong><br>
+          <a href="https://scholar.google.ru/citations?user=NIVnjloAAAAJ&hl=ru&oi=ao" target="_blank" rel="noopener">на Scholar.google</a> 
+        </li>
+		
+		<li>
+          <strong>Плунгян Владимир Александрович</strong><br>
+          <a href="https://postnauka.org/search?query=плунгян" target="_blank" rel="noopener">на Постнауке</a> 
+        </li>
+		
+		<li>
+          <strong>Плунгян В.&nbsp;А.</strong> (2009). Почему современная лингвистика должна быть лингвистикой корпусов: публичная лекция. — Полит.ру, 23 октября 2009&nbsp;г.<br>
+          Оригинальный URL (ресурс был недоступен):<br>
+          <a href="https://polit.ru/article/2009/10/23/corpus/" target="_blank" rel="noopener">https://polit.ru/article/2009/10/23/corpus/</a>
+        </li>
+		
+        <li>
+          <strong>Пиперски А.&nbsp;Ч.</strong> (2020). Русский язык и корпусное разнообразие // Компьютерная лингвистика и интеллектуальные технологии: по материалам международной конференции «Диалог 2020». — Москва, 17–20 июня 2020&nbsp;г. — РГГУ / НИУ ВШЭ.<br>
+          <a href="https://dialogue-conf.org/media/5114/piperskiach-087.pdf" target="_blank" rel="noopener">https://dialogue-conf.org/media/5114/piperskiach-087.pdf</a>
+        </li>
+      </ul>
+      <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+        Цитата В.&nbsp;А.&nbsp;Плунгяна воспроизводится по тексту его лекции (2009).
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Об авторских комментариях</h2>
+      <div class="commentary-box">
+        <div class="cb-label">Примечание</div>
+        <p>Авторские комментарии, обозначенные меткой <strong>«Комментарий LLM»</strong>, подготовлены большой языковой моделью Claude (Anthropic) в 2026 году. Они представляют собой аналитическую интерпретацию тезисов В.&nbsp;А.&nbsp;Плунгяна с позиции современного состояния технологий обработки естественного языка и искусственного интеллекта.</p>
+        <p>Данные комментарии предназначены для учебных целей и представляют одну из возможных интерпретаций. Студентам рекомендуется критически осмыслять предложенные оценки и формировать собственную позицию.</p>
+      </div>
+    </div>
+  </div>
+  
+  
+    <!-- ===== КОММЕНТАРИЙ СТУДЕНТА ===== -->
+  <div class="section" id="student-comment">
+    <div class="card">
+      <h2>Комментарий студента к материалу</h2>
+      <p>Оставьте свой развёрнутый комментарий к тезисам В.&nbsp;А.&nbsp;Плунгяна и их интерпретации. Вы можете выразить согласие или несогласие с отдельными положениями, дополнить их собственными наблюдениями, привести примеры из своей учебной или профессиональной практики. Готовый комментарий можно экспортировать в HTML-файл.</p>
+
+      <form id="comment-form" autocomplete="off">
+        <div class="form-group">
+          <label class="form-label" for="student-name">Фамилия Имя</label>
+          <input
+            type="text"
+            id="student-name"
+            class="form-input"
+            placeholder="Например: Орлова Ева"
+            maxlength="120"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="student-group">Группа<span class="form-hint"></span></label>
+          <input
+            type="text"
+            id="student-group"
+            class="form-input"
+            placeholder="Например: 300"
+            maxlength="60"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="comment-subject">Тема рефлексии</label>
+          <select id="comment-subject" class="form-input">
+            <option value="general">Общий комментарий ко всему материалу</option>
+            <option value="thesis">К тезисам</option>
+            <option value="interpretation">К интерпретации</option>
+            <option value="relevance">К оценке актуальности</option>
+            <option value="practice">К непрошенным советам</option>
+            <option value="llm-comments">К комментариям LLM</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="comment-text">
+            Текст комментария
+            <span class="form-hint">(<span id="char-count">0</span> / 5000 символов)</span>
+          </label>
+          <textarea
+            id="comment-text"
+            class="form-textarea"
+            placeholder="Изложите свои мысли подробно. Вы можете:&#10;— выразить согласие или несогласие с тезисами;&#10;— привести примеры из собственного опыта;&#10;— предложить дополнения или уточнения;&#10;— оценить полезность материала для вашей специальности."
+            maxlength="5000"
+            required
+          ></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="btn-preview" class="btn btn-secondary">Предпросмотр</button>
+          <button type="button" id="btn-export" class="btn btn-primary">Экспорт (HTML)</button>
+          <button type="button" id="btn-clear" class="btn btn-ghost">Очистить</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Область предпросмотра -->
+    <div class="card" id="preview-area" style="display:none;">
+      <h2>Предпросмотр комментария</h2>
+      <div id="preview-content"></div>
+      <p class="preview-note">Так будет выглядеть ваш комментарий в экспортированном файле. Нажмите «Экспорт (HTML)», чтобы сохранить.</p>
+    </div>
+
+    <div class="card">
+      <h2>Рекомендации по написанию комментария</h2>
+      <div class="accordion-item">
+        <button class="accordion-header">
+          <span>Что включить в комментарий?</span>
+          <span class="arrow">&#9660;</span>
+        </button>
+        <div class="accordion-body">
+          <ul class="key-points">
+            <li><strong>Критическую оценку тезисов.</strong> Согласны ли вы с тем, что корпус стал «третьим обязательным инструментом»? Или вы считаете, что роль корпуса преувеличена?</li>
+            <li><strong>Примеры из практики.</strong> Использовали ли вы корпуса (НКРЯ, COCA и др.) в своей учебной или исследовательской работе? Каков был ваш опыт?</li>
+            <li><strong>Реакцию на комментарии LLM.</strong> Убедительна ли предложенная интерпретация? Какие аспекты упущены?</li>
+            <li><strong>Собственный прогноз.</strong> Как, по-вашему, изменится роль корпусов и ИИ в лингвистике и преподавании через 5–10 лет?</li>
+            <li><strong>Связь с другими дисциплинами.</strong> Как тезисы Плунгяна соотносятся с тем, что вы изучали в других курсах?</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</footer>
+
+<button id="scroll-top" aria-label="Наверх" title="Наверх">&#8593;</button>
+
+<script>
+(function() {
+  'use strict';
+
+  // === THEME TOGGLE ===
+  const themeBtn = document.getElementById('theme-toggle');
+  const html = document.documentElement;
+
+  function setTheme(dark) {
+    html.setAttribute('data-theme', dark ? 'dark' : 'light');
+    themeBtn.textContent = dark ? '☀️' : '🌙';
+    try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch(e) {}
+  }
+
+  function getPreferredTheme() {
+    try {
+      const stored = localStorage.getItem('theme');
+      if (stored) return stored === 'dark';
+    } catch(e) {}
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  setTheme(getPreferredTheme());
+
+  themeBtn.addEventListener('click', function() {
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    setTheme(!isDark);
+  });
+
+  // === NAVIGATION ===
+  const navLinks = document.querySelectorAll('.nav-link');
+  const sections = document.querySelectorAll('.section');
+
+  function showSection(id) {
+    sections.forEach(function(s) {
+      s.classList.remove('active');
+    });
+    navLinks.forEach(function(l) {
+      l.classList.remove('active');
+    });
+    const target = document.getElementById(id);
+    if (target) {
+      target.classList.add('active');
+    }
+    navLinks.forEach(function(l) {
+      if (l.getAttribute('data-section') === id) {
+        l.classList.add('active');
+      }
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  navLinks.forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      var sectionId = this.getAttribute('data-section');
+      showSection(sectionId);
+      try { history.replaceState(null, '', '#' + sectionId); } catch(e) {}
+    });
+  });
+
+  // Handle hash on load
+  if (window.location.hash) {
+    var hashId = window.location.hash.substring(1);
+    var validIds = Array.from(navLinks).map(function(l) { return l.getAttribute('data-section'); });
+    if (validIds.indexOf(hashId) !== -1) {
+      showSection(hashId);
+    }
+  }
+
+  // === ACCORDION ===
+  document.querySelectorAll('.accordion-header').forEach(function(header) {
+    header.addEventListener('click', function() {
+      var item = this.parentElement;
+      var wasOpen = item.classList.contains('open');
+      // Close siblings (optional: remove these 3 lines for independent toggle)
+      // var parent = item.parentElement;
+      // parent.querySelectorAll('.accordion-item.open').forEach(function(i) { i.classList.remove('open'); });
+      // Toggle current
+      if (wasOpen) {
+        item.classList.remove('open');
+      } else {
+        item.classList.add('open');
+      }
+    });
+  });
+
+  // === SCROLL TO TOP ===
+  var scrollBtn = document.getElementById('scroll-top');
+
+  window.addEventListener('scroll', function() {
+    if (window.scrollY > 400) {
+      scrollBtn.classList.add('visible');
+    } else {
+      scrollBtn.classList.remove('visible');
+    }
+  }, { passive: true });
+
+  scrollBtn.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  
+  
+    // === STUDENT COMMENT SECTION ===
+
+  var commentText = document.getElementById('comment-text');
+  var charCount = document.getElementById('char-count');
+  var btnPreview = document.getElementById('btn-preview');
+  var btnExport = document.getElementById('btn-export');
+  var btnClear = document.getElementById('btn-clear');
+  var previewArea = document.getElementById('preview-area');
+  var previewContent = document.getElementById('preview-content');
+
+  // Character counter
+  if (commentText && charCount) {
+    commentText.addEventListener('input', function() {
+      charCount.textContent = this.value.length;
+    });
+  }
+
+  // Subject labels map
+  var subjectLabels = {
+    'general': 'Общий комментарий ко всему материалу',
+    'thesis': 'К тезисам',
+    'interpretation': 'К интерпретации',
+    'relevance': 'К оценке актуальности',
+    'practice': 'К непрошенным советам',
+    'llm-comments': 'К комментариям LLM'
+  };
+
+  function getFormData() {
+    var name = document.getElementById('student-name').value.trim();
+    var group = document.getElementById('student-group').value.trim();
+    var subject = document.getElementById('comment-subject').value;
+    var text = commentText.value.trim();
+    return { name: name, group: group, subject: subject, text: text };
+  }
+
+  function validateForm() {
+    var d = getFormData();
+    if (!d.name) { showToast('Пожалуйста, введите Фамилию и Имя'); document.getElementById('student-name').focus(); return false; }
+    if (!d.text) { showToast('Пожалуйста, напишите текст комментария'); commentText.focus(); return false; }
+    if (d.text.length < 555) { showToast('Комментарий слишком короткий (минимум 555 символов)'); commentText.focus(); return false; }
+    return true;
+  }
+
+  function formatDate() {
+    var d = new Date();
+    var pad = function(n) { return n < 10 ? '0' + n : n; };
+    return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear() + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
+  function renderPreview(data) {
+    var html = '<div class="pv-header">';
+    html += '<span class="pv-name">' + escapeHtml(data.name) + '</span>';
+    if (data.group) {
+      html += '<span class="pv-meta">' + escapeHtml(data.group) + '</span>';
+    }
+    html += '<span class="pv-meta">' + formatDate() + '</span>';
+    html += '</div>';
+    html += '<div><span class="pv-subject">' + escapeHtml(subjectLabels[data.subject] || data.subject) + '</span></div>';
+    html += '<div class="pv-body">' + escapeHtml(data.text) + '</div>';
+    return html;
+  }
+
+  // Preview
+  if (btnPreview) {
+    btnPreview.addEventListener('click', function() {
+      if (!validateForm()) return;
+      var data = getFormData();
+      previewContent.innerHTML = renderPreview(data);
+      previewArea.style.display = 'block';
+      previewArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  // Export
+  if (btnExport) {
+    btnExport.addEventListener('click', function() {
+      if (!validateForm()) return;
+      var data = getFormData();
+      var dateStr = formatDate();
+      var fileName = 'comment_' + data.name.replace(/\s+/g, '_') + '_' + new Date().toISOString().slice(0, 10) + '.html';
+
+      var exportHtml = '<!DOCTYPE html>\n<html lang="ru">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>Комментарий — ' + escapeHtml(data.name) + '</title>\n<style>\n';
+      exportHtml += 'body{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;max-width:800px;margin:0 auto;padding:2rem 1.5rem;color:#1a1a2e;line-height:1.7;background:#f9fafb}\n';
+      exportHtml += 'h1{color:#325980;font-size:1.5rem;margin-bottom:0.3rem}\n';
+      exportHtml += '.meta{color:#666;font-size:0.88rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid #e8e8e8}\n';
+      exportHtml += '.meta span{margin-right:1.5rem}\n';
+      exportHtml += '.subject{display:inline-block;padding:0.2rem 0.75rem;font-size:0.8rem;font-weight:600;background:#e8f0fe;color:#325980;border-radius:100px;margin-bottom:1rem}\n';
+      exportHtml += '.comment-body{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:1.8rem 2rem;white-space:pre-wrap;line-height:1.8;box-shadow:0 2px 8px rgba(0,0,0,0.04)}\n';
+      exportHtml += '.source{margin-top:2rem;padding-top:1rem;border-top:1px solid #e8e8e8;font-size:0.82rem;color:#888}\n';
+      exportHtml += '.source a{color:#3498db}\n';
+      exportHtml += '@media print{body{padding:1rem}}\n';
+      exportHtml += '@media(max-width:600px){body{padding:1rem 0.75rem}.comment-body{padding:1.2rem 1rem}}\n';
+      exportHtml += '</style>\n</head>\n<body>\n';
+      exportHtml += '<h1>Комментарий к материалу</h1>\n';
+      exportHtml += '<h2 style="color:#325980;font-size:1.1rem;font-weight:400;margin-bottom:1rem;">Тезисы В.&nbsp;А.&nbsp;Плунгяна: корпусная лингвистика и ИИ</h2>\n';
+      exportHtml += '<div class="meta">\n';
+      exportHtml += '  <span><strong>' + escapeHtml(data.name) + '</strong></span>\n';
+      if (data.group) {
+        exportHtml += '  <span>' + escapeHtml(data.group) + '</span>\n';
+      }
+      exportHtml += '  <span>' + escapeHtml(dateStr) + '</span>\n';
+      exportHtml += '</div>\n';
+      exportHtml += '<div class="subject">' + escapeHtml(subjectLabels[data.subject] || data.subject) + '</div>\n';
+      exportHtml += '<div class="comment-body">' + escapeHtml(data.text) + '</div>\n';
+      exportHtml += '<div class="source">\n';
+      exportHtml += '  <p><center> © 2025 | kmp | CC BY-NC-SA 4.0 </center></p>\n';
+      exportHtml += '  <p><center>для всех </center></p>\n';
+      exportHtml += '</div>\n';
+      exportHtml += '</body>\n</html>';
+
+      // Trigger download
+      var blob = new Blob([exportHtml], { type: 'text/html;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showToast('Файл «' + fileName + '» сохранён');
+    });
+  }
+
+  // Clear
+  if (btnClear) {
+    btnClear.addEventListener('click', function() {
+      if (commentText.value.trim() || document.getElementById('student-name').value.trim()) {
+        if (!confirm('Очистить все поля формы?')) return;
+      }
+      document.getElementById('student-name').value = '';
+      document.getElementById('student-group').value = '';
+      document.getElementById('comment-subject').selectedIndex = 0;
+      commentText.value = '';
+      charCount.textContent = '0';
+      previewArea.style.display = 'none';
+      previewContent.innerHTML = '';
+      showToast('Форма очищена');
+    });
+  }
+
+  // Toast notification
+  function showToast(message) {
+    var existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    var toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        toast.classList.add('show');
+      });
+    });
+    setTimeout(function() {
+      toast.classList.remove('show');
+      setTimeout(function() { toast.remove(); }, 400);
+    }, 3000);
+  }
+
+})();
+</script>
+
+</body>
+</html>
