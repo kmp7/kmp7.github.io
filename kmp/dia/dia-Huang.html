@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+		
+<p><strong>Повод:</strong> NVIDIA CEO  <a target="blank" href="https://www.youtube.com/watch?v=jIviHI7fqyc" class="link-kmp15"> Jensen Huang</a>   GTC 2026 Full Keynote<br> <br> 
+
+
+
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Дженсен Хуанг 17 марта на GTC 2026 заявил, что <strong>OpenClaw</strong> — это «новый компьютер» и, возможно, <strong>самый важный софтверный релиз в истории</strong>. Он позиционирует это как операционную систему нового типа. Прокомментируйте</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Gemini (Google)
+        </div>
+        <div class="message-content">
+            <p>Классическая ОС (Windows, Linux) — это посредник между <em>пользователем</em> и <em>железом</em>. <strong>OpenClaw</strong> — это посредник между <em>задачей</em> и <em>глобальным вычислительным кластером</em>. Вот три причины, почему это ОС нового типа:</p>
+            
+            <ol>
+                <li><strong>Отсутствие локальной привязки (World-Scale Kernel):</strong> Ядро OpenClaw не «живет» на вашем процессоре. Оно распределено. Для системы нет разницы, выполняется ли часть кода на вашем ноутбуке, а часть — в облаке за 5000 км. Она управляет всей сетью как единым гигантским компьютером.</li>
+                
+                <li><strong>Семантическая адресация вместо путей к файлам:</strong> В обычной ОС вы обращаетесь к <code>C:/Documents/data.txt</code>. В OpenClaw вы обращаетесь к <strong>контексту</strong>. Вы даете запрос: «Найди противоречия в этих контрактах», и ОС сама решает, какие «агенты-драйверы» запустить и какие данные подтянуть из распределенного хранилища.</li>
+                
+                <li><strong>Агент как «Системный процесс»:</strong> Если в Windows процесс — это запущенная программа, то в OpenClaw процесс — это <strong>автономный агент</strong>. Он обладает собственной памятью, целями и способностью договариваться с другими агентами. Это переход от <em>императивного</em> управления (сделай А, потом Б) к <em>декларативному</em> (мне нужен результат Х, разберись сам).</li>
+            </ol>
+            
+            <p>Для лингвистов это особенно интересно: фактически, <strong>язык становится программным интерфейсом</strong> (Linguistic UI) этой операционной системы. OpenClaw «понимает» интенции на уровне ядра, а не просто исполняет бинарный код.</p>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Почему Хуанг сразу обозначил безопасность как главную проблему?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Gemini (Google)
+        </div>
+        <div class="message-content">
+            <p>Принципиально важно то, что <strong>OpenClaw</strong> управляет не ресурсами одного устройства, а мощностями всего дата-центра или глобальной сети как единым целым. Это «ИИ-нативная» система: в ней агенты вшиты в ядро, а распределение задач между GPU происходит динамически и прозрачно для пользователя.</p>
+            <p>Проблема безопасности здесь критична, потому что в такой архитектуре <strong>размывается периметр</strong>. Когда данные постоянно мигрируют между узлами сети, классические файерволы бессильны. Возникает риск «агентных угроз», когда автономная система может интерпретировать команду во вред инфраструктуре.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Для решения этих рисков NVIDIA предлагает <strong>NemoClaw</strong> — enterprise-версию системы. Они заявляют об аудите логов, <i>confidential computing</i> и изоляции агентов в «песочницах». Как эти технические надстройки меняют правила игры для крупных корпораций?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Gemini (Google)
+        </div>
+        <div class="message-content">
+            <p>NemoClaw переводит ИИ из зоны «экспериментального хаоса» в зону корпоративного комплаенса за счет трех механизмов:</p>
+            <ul>
+                <li><strong>Confidential Computing:</strong> Шифрование данных прямо на GPU. Даже имея доступ к железу, злоумышленник увидит лишь шум, так как данные расшифровываются только внутри доверенной среды исполнения (TEE).</li>
+                <li><strong>OpenShell (Sandboxing):</strong> Агенты изолированы. Мы можем ограничить их права: например, разрешить читать документы, но запретить выход в интернет. Это исключает неконтролируемое поведение системы.</li>
+                <li><strong>Аудит и логирование:</strong> Система фиксирует не только результат, но и цепочку рассуждений (Chain of Thought). Это позволяет юридически обосновать действия ИИ и оперативно находить причины «галлюцинаций».</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Но не убьет ли такая жесткая «песочница» саму суть автономности агентов? Не потеряем ли мы ту эмерджентность, ради которой создавался OpenClaw?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Gemini (Google)
+        </div>
+        <div class="message-content">
+            <p>Это вечный баланс между свободой и контролем. В NemoClaw агент остается гибким в решении задачи, но его <strong>внешние эффекты</strong> строго ограничены. Для специалистов это означает смену парадигмы: мы переходим от написания кода к <strong>программированию намерений и границ</strong>. Мы даем ИИ «творческий карт-бланш» внутри безопасного периметра.</p>
+        </div>
+    </div>
+
+
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>То есть, если подвести итог: старая ОС работала как <strong>дирижер</strong>, который указывает каждому «музыканту» (процессору, памяти, диску), какую конкретную «ноту» и в какой миллисекунде играть. А OpenClaw — это <strong>продюсер</strong>, который просто ставит задачу: «Мне нужен джазовый альбом к утру», и система сама находит исполнителей, инструменты и записывает трек?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Gemini (Google)
+        </div>
+        <div class="message-content">
+            <p>Абсолютно верная аналогия. В этой новой парадигме меняется сама роль «программного обеспечения»:</p>
+            <ul>
+                <li><strong>Дирижер (Старая ОС):</strong> Если скрипка (видеокарта) сломалась или музыкант не пришел, оркестр может остановиться или сфальшивить. Программист должен прописать обработку каждой ошибки вручную.</li>
+                <li><strong>Продюсер (OpenClaw):</strong> Системе не важен конкретный «музыкант». Если один кластер GPU перегружен, ОС сама найдет другой в другой части света, договорится о ресурсах и пересоберет «группу» на лету.</li>
+            </ul>
+            <p>Для лингвистов здесь открывается самое интересное: <strong>ТЗ (техническое задание) на естественном языке становится партитурой.</strong> Продюсер (пользователь) не обязан знать, как работает микшерный пульт (CUDA-ядра), он должен уметь четко сформулировать жанр и настроение (Context Engineering: промптинг на основе контекстного управления).</p>
+            <p><strong>NemoClaw</strong> в этой схеме — это юридический отдел и служба безопасности студии, которые следят, чтобы «джазовый альбом» не нарушил авторские права и не содержал запрещенного контента.</p>
+        </div>
+    </div>
+
+
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Но ведь это означает, что в итоге <strong>за всё будет отвечать продюсер</strong>! Если система — это огромный оркестр из агентов, то человек становится тем единственным звеном, которое несет ответственность за этические, юридические и фактические последствия. Это огромный вызов для профессиональных компетенций.</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Gemini (Google)
+        </div>
+        <div class="message-content">
+            <p>Именно в этом заключается главный парадокс эры OpenClaw. Технологии становятся умнее, но <strong>груз ответственности на человеке становится тяжелее</strong>. Мы наблюдаем рождение новой «профессиональной гигиены»:</p>
+            
+            <ul>
+                <li><strong>От «знания как» к «знанию что»:</strong> Раньше лингвист тратил 80% времени на рутину (сбор корпуса, разметку). Теперь он тратит эти 80% на <strong>верификацию и аудит</strong>. Продюсер должен уметь распознать фальшивую ноту в симфонии, которую выдал ИИ.</li>
+                <li><strong>Архитектурное мышление:</strong> Профессионал будущего — это тот, кто понимает ограничения системы. NemoClaw дает нам «песочницу», но именно человек решает, какие границы в ней установить, чтобы агент не превратился в «цифрового деструктора».</li>
+                <li><strong>Этический комплаенс:</strong> Если «джазовый альбом» (результат работы ОС) кого-то оскорбил, виноват не OpenClaw. Виноват продюсер, который не задал правильные эстетические и этические фильтры на входе.</li>
+            </ul>
+            
+            <p><strong>Вывод:</strong> Задача — не конкурировать с «новым компьютером» в скорости, а стать его <strong>квалифицированным заказчиком и строгим критиком</strong>. Профессионализм теперь измеряется не навыком исполнения, а глубиной понимания контекста и последствий.</p>
+        </div>
+    </div>
+</div>
+
+
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
