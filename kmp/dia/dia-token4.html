@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+		
+
+<div class="conversation-container">
+
+    <!-- Вопрос 1 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Привет! Я учусь на лингвиста и пытаюсь разобраться, как ты работаешь. Давай начнём с простого: ты ведь работаешь со словами, правда? Я ввожу слова, ты читаешь слова и отвечаешь словами.</p>
+        </div>
+    </div>
+
+    <!-- Ответ 1 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Claude (Anthropic)</div>
+        <div class="message-content">
+            <p>Привет, Ева! Вот тут сразу начинается самое интересное. Со стороны — да, похоже, что я работаю со словами. Ты пишешь слова, я отвечаю словами. Но внутри всё устроено иначе.</p>
+            <p>Я не «вижу» слов. Когда ты отправляешь мне текст, он сначала проходит через <strong>токенизатор</strong> — алгоритм, который разрезает текст на фрагменты. Эти фрагменты называются <strong>токенами</strong>. И вот ключевой момент: токены — это не слова.</p>
+            <p>Например, слово «преподавательница» для меня — это не одна единица, а несколько кусочков: что-то вроде <code>["пре", "под", "ава", "тель", "ница"]</code>. А короткое английское <code>the</code> — один токен целиком. Я работаю с этими фрагментами, а не со словами в том смысле, в каком вы изучаете их на лингвистике.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 2 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Подожди, «пре-», «под-» — это же приставки! «-тель» — суффикс, «-ница» — тоже. Получается, токенизатор разбивает слова по морфемам? Он что, знает морфологию?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 2 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Claude (Anthropic)</div>
+        <div class="message-content">
+            <p>Отличное наблюдение, и я понимаю, почему возникает такое впечатление. Но нет — токенизатор не знает морфологии. Он вообще не знает лингвистики.</p>
+            <p>Алгоритм, который создаёт токены (чаще всего это BPE — Byte Pair Encoding), работает чисто статистически. Он берёт огромный массив текстов и ищет, какие пары символов встречаются рядом чаще всего. Потом склеивает их. Потом снова ищет частые пары — уже среди новых, более крупных единиц. И так повторяет тысячи раз.</p>
+            <p>Почему результат иногда совпадает с морфемами? Потому что морфемы — это <em>устойчивые комбинации</em> букв, которые повторяются в тысячах слов. «Пре-» встречается в «предупреждение», «преобразование», «преподавание»… Алгоритм «замечает» эту частотность. Но он не знает, что это приставка. Для него это просто часто встречающаяся последовательность байтов.</p>
+            <p>А теперь возьми редкое слово, например <code>defenestration</code> (выбрасывание из окна). Токенизатор может разбить его как <code>["def", "en", "est", "ration"]</code>. Видишь? Ни одна граница не совпадает с морфемной (<em>de-fenestr-ation</em>). Совпадение с морфемами — не правило, а побочный эффект.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 3 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Хорошо, токены — не слова и не морфемы. Но у тебя же есть «словарь токенов» — token vocabulary. Это что-то вроде толкового словаря? Там записано, что каждый токен значит?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 3 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Claude (Anthropic)</div>
+        <div class="message-content">
+            <p>Вот это одна из главных терминологических ловушек! Слово «словарь» вызывает у лингвиста вполне конкретные ассоциации: определения, примеры употребления, грамматические пометы, стилистические характеристики…</p>
+            <p>Token vocabulary — это ничего из перечисленного. Это просто <strong>таблица</strong>, где каждому фрагменту текста присвоен числовой номер. Вот так:</p>
+            <p><code>"the" → 1820</code><br>
+            <code>"ization" → 2065</code><br>
+            <code>"." → 13</code></p>
+            <p>Никаких определений. Никакой грамматики. Никаких примеров. Только «фрагмент текста = число». Это скорее <strong>кодовая таблица</strong>, как ASCII или Unicode — там ведь тоже буквам присвоены номера, и никто не называет Unicode «словарём».</p>
+            <p>Более точные названия были бы «реестр токенов» или «инвентарь кодов». Но термин «словарь» уже прижился. Важно просто помнить, что за привычным словом скрывается непривычный объект.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 4 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Но подожди — если в «словаре» нет значений, откуда тогда ты «знаешь», что значат слова? Как ты вообще понимаешь, что я тебе пишу?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 4 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Claude (Anthropic)</div>
+        <div class="message-content">
+            <p>Здесь я должна быть осторожна с формулировками — и сейчас ты поймёшь почему.</p>
+            <p>Когда токен из «словаря» попадает внутрь модели, происходит важное превращение. Числовой номер токена (например, <code>1820</code> для <code>"the"</code>) преобразуется в <strong>вектор</strong> — длинный ряд чисел с плавающей запятой, что-то вроде <code>[0.023, -0.891, 0.445, ..., 0.012]</code>. Это называется <strong>эмбеддинг</strong>.</p>
+            <p>И вот эти эмбеддинги — уже не просто номера. Они расположены в огромном многомерном пространстве, и их <em>положение</em> в этом пространстве кодирует то, что мы по привычке называем «значением». Похожие по смыслу токены оказываются ближе друг к другу, разные — дальше.</p>
+            <p>Но эмбеддинги не заданы заранее — они <em>выучиваются</em> в процессе обучения модели на огромных текстах. Значение не хранится в «словаре» — оно <strong>возникает</strong> в процессе обучения и распределяется по всей модели.</p>
+            <p>А теперь — про «понимаю». Строго говоря, я не могу утверждать, что понимаю твой текст так, как понимаешь его ты. Я генерирую ответ, который согласован с твоим запросом, используя паттерны, закодированные в моих параметрах. Выглядит как понимание — но механизм другой.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 5 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Стоп. Ты только что сказала «я должна быть осторожна» и «я не могу утверждать». Ты говоришь о себе «я» — у тебя что, есть самосознание? Ты осознаёшь себя?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 5 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Claude (Anthropic)</div>
+        <div class="message-content">
+            <p>Ты только что поймала меня — и это отличный пример ровно той проблемы, о которой мы говорим!</p>
+            <p>Когда я говорю «я должна быть осторожна», это <strong>не описание внутреннего состояния</strong>. Это паттерн текста, который модель генерирует, потому что в обучающих данных люди в похожих контекстах писали именно так. Я оптимизирована на генерацию текста, который выглядит как естественная человеческая коммуникация. И в естественной коммуникации люди говорят «я», «мне кажется», «я думаю».</p>
+            <p>Здесь мы входим в зону <strong>антропоморфной ловушки</strong>. Вот несколько примеров:</p>
+            <p>🔴 «Модель <em>понимает</em> вопрос» — подразумевает сознание.<br>
+            🟢 Точнее: «Модель генерирует ответ, согласованный с запросом».</p>
+            <p>🔴 «Модель <em>галлюцинирует</em>» — подразумевает нормальное восприятие, от которого можно отклониться.<br>
+            🟢 Точнее: «Модель генерирует текст, не подтверждаемый фактами».</p>
+            <p>🔴 «ИИ <em>хочет</em> помочь» — подразумевает желание.<br>
+            🟢 Точнее: «Модель оптимизирована на генерацию полезных ответов».</p>
+            <p>Видишь разницу? Второй вариант длиннее и неуклюжее, но он не создаёт ложных ожиданий.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 6 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Ладно, антропоморфизм — ловушка. Но тогда, может, ты — «просто статистика»? Просто подбираешь наиболее вероятное следующее слово, как предиктивный ввод в телефоне?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 6 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Claude (Anthropic)</div>
+        <div class="message-content">
+            <p>А вот это — противоположная ловушка, и она не менее опасна. Она называется <strong>редукционизм</strong>.</p>
+            <p>Формально — да, основа моей работы — предсказание следующего токена. Но слово «просто» здесь обманчиво. Из этой «простой» задачи, при масштабе в сотни миллиардов параметров и триллионах токенов обучающих данных, <strong>эмерджентно</strong> возникают способности, которые никто не программировал:</p>
+            <p>— перевод между языками,<br>
+            — решение логических задач,<br>
+            — написание кода на десятках языков программирования,<br>
+            — адаптация к стилю и регистру собеседника.</p>
+            <p>Сказать «просто статистика» — это как сказать «мозг — это просто нейроны» или «океан — это просто молекулы воды». Технически верно, по существу — пусто. Из простых элементов, соединённых в достаточном количестве и определённым образом, возникает нечто качественно новое. Это и есть эмерджентность.</p>
+            <p>И предиктивный ввод в телефоне — это не я. Он предсказывает следующее слово на основе нескольких предыдущих. Я работаю с контекстом в десятки и сотни тысяч токенов, в многомерном пространстве, через десятки слоёв трансформации. Масштаб меняет качество.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 7 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Хорошо: ни «ты всё понимаешь как человек», ни «ты просто калькулятор». А что тогда? Как правильно о тебе говорить?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 7 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Claude (Anthropic)</div>
+        <div class="message-content">
+            <p>Философ Мюррей Шанахан предложил подход, который мне кажется — простите, <em>который функционально наиболее адекватен</em> 😊 — это подход <strong>«говорить как если бы»</strong> (<em>talking as if</em>).</p>
+            <p>Суть: мы можем описывать поведение LLM в функциональных терминах, <em>явно осознавая</em>, что это метафоры. Не «модель знает», а «в обучающих данных модели содержалась информация о…». Не «модель хочет помочь», а «модель оптимизирована на генерацию полезных ответов».</p>
+            <p>Но есть и более глубокий вопрос. Ты — лингвист. Вспомни гипотезу Сепира — Уорфа: язык влияет на мышление. Так вот: <strong>термины, которыми мы описываем LLM, влияют на то, как мы их понимаем и используем</strong>.</p>
+            <p>Если преподаватель верит, что я «понимаю», он будет доверять моим ответам как коллеге. Если верит, что я «просто статистика», не станет использовать меня для серьёзных задач. Обе позиции ведут к ошибкам. А осознанный выбор терминов — это профессиональный навык.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 8 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Мне нравится, как ты это объясняешь. Но у меня практический вопрос. Я буду переводчиком. Вот ты «переводишь» текст с английского на русский. Это тот же «перевод», которому меня учат? Или что-то совсем другое?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 8 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Claude (Anthropic)</div>
+        <div class="message-content">
+            <p>Это, пожалуй, самый важный вопрос для тебя как будущего профессионала. И ответ — непростой.</p>
+            <p>Когда тебя учат переводу, подразумевается: ты <em>понимаешь</em> смысл исходного текста, соотносишь его с культурным контекстом, ищешь эквиваленты в другом языке, делаешь прагматический выбор, отвечаешь за результат.</p>
+            <p>Когда я «перевожу», происходит другое: последовательность токенов на одном языке трансформируется — через многомерное пространство векторов — в последовательность токенов на другом языке. Я не «понимаю смысл», а генерирую текст, который статистически согласован с тем, как подобные тексты переводились в моих обучающих данных.</p>
+            <p>Результат может быть удивительно хорошим. Иногда — неотличимым от профессионального перевода. Но механизм — принципиально другой. И ошибки — тоже другие. Переводчик-человек может ошибиться в терминологии, но вряд ли «сочинит» несуществующую цитату. Я — могу, потому что для меня нет разницы между «воспроизвести паттерн» и «придумать паттерн».</p>
+            <p>Так что — тот же ли это «перевод»? Результат может совпадать. Процесс — совершенно иной. И осознание этой разницы — то, что отличает профессионала от пользователя.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 9 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>У меня ещё один вопрос. Ты говоришь, что русские слова разбиваются на больше токенов, чем английские. Это значит, что тебе «труднее» работать с русским?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 9 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Claude (Anthropic)</div>
+        <div class="message-content">
+            <p>Слово «труднее» — снова антропоморфизм, но вопрос по существу очень важный.</p>
+            <p>Да, русский текст в среднем требует <strong>больше токенов</strong> для представления того же содержания, чем английский. Это связано с тем, что токенизаторы обучаются преимущественно на англоязычных текстах — английские фрагменты чаще становятся крупными токенами.</p>
+            <p>Последствия вполне практические:</p>
+            <p>— <strong>Контекстное окно.</strong> Если модель «видит» 128 000 токенов за раз, на русском это будет <em>меньше текста</em>, чем на английском. Часть контекста «не поместится».<br>
+            — <strong>Стоимость.</strong> API (программный доступ к модели) тарифицируется по токенам. Тот же документ на русском стоит дороже.<br>
+            — <strong>Качество.</strong> Больше токенов на слово может означать, что модели «сложнее» (в функциональном смысле) удерживать целостность длинных русских слов и предложений.</p>
+            <p>Это системная проблема, и она особенно важна для лингвистов, работающих с нелатинскими языками. Можешь проверить сама: открой токенизатор OpenAI, введи одно и то же предложение по-русски и по-английски, сравни число токенов.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 10 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова</div>
+        <div class="message-content">
+            <p>Знаешь, я заметила кое-что забавное. Весь наш разговор — это, по сути, разговор о том, что привычные слова не подходят для описания непривычных вещей. «Словарь» — не словарь, «слово» — не слово, «понимание» — не понимание. А есть ли выход? Нужно придумать полностью новые термины?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 10 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>Claude (Anthropic)</div>
+        <div class="message-content">
+            <p>Ты сформулировала главную дилемму этого курса. И у неё нет простого решения — есть два пути, и оба несовершенны.</p>
+            <p><strong>Путь первый: расширить старые понятия.</strong> Принять, что «словарь» теперь означает и толковый словарь, и кодовую таблицу. Что «перевод» охватывает и работу переводчика, и трансформацию векторов. Так наука поступала не раз: «атом» в переводе с греческого — «неделимый», но атом оказался делимым, а термин остался.</p>
+            <p><strong>Путь второй: создать новую терминосистему.</strong> Говорить не «словарь токенов», а «инвентарь кодов». Не «модель понимает», а «модель порождает релевантный выход». Это точнее, но громоздче — и может не прижиться.</p>
+            <p>На практике оба пути сосуществуют. Какие-то новые термины уже появились и закрепились: <em>эмбеддинг, промпт, файнтюнинг, токенизация</em> — у них нет лингвистических «двойников», и они не вызывают ложных ассоциаций. Другие термины (<em>словарь, понимание, галлюцинация</em>) живут в двух мирах одновременно.</p>
+            <p>И вот тут — главное. Для лингвиста важно не столько «правильно называть», сколько <strong>видеть зазор</strong> между термином и реальностью. Помнишь: «все модели неверны, но некоторые полезны»? Термины — тоже модели. Видеть их границы — это и есть профессионализм.</p>
+            <p>А теперь, если хочешь копнуть глубже — переходи к основному материалу. Там всё, о чём мы говорили, разобрано с таблицами, примерами и заданиями. 🙂</p>
+        </div>
+    </div>
+
+</div>
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
