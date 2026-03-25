@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#fff;--bg2:#f5f5f5;--nav:#325980;--accent:#3498db;--border:#f1f1f1;
+--text:#222;--text2:#555;--card:#fff;--shadow:rgba(0,0,0,.08);--tag-bg:#e8f4fd;
+--err-bg:#fdeaea;--err-text:#c0392b;--ok-bg:#eafde8;--ok-text:#27ae60;
+--tag-text:#2980b9;--hover:#eaf2f8;--input-bg:#fff;--code-bg:#f8f9fa;
+}
+[data-theme="dark"]{
+--bg:#1a1a2e;--bg2:#16213e;--nav:#0f3460;--accent:#3498db;--border:#233554;
+--text:#e0e0e0;--text2:#a0a0a0;--card:#16213e;--shadow:rgba(0,0,0,.3);--tag-bg:#1a3a5c;
+--err-bg:#3d1515;--err-text:#e74c3c;--ok-bg:#153d15;--ok-text:#2ecc71;
+--tag-text:#5dade2;--hover:#1a3a5c;--input-bg:#0f3460;--code-bg:#1a1a2e;
+}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg2);color:var(--text);line-height:1.6;transition:all .3s}
+header{background:var(--nav);color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px var(--shadow)}
+header h1{font-size:1.35rem;font-weight:600;letter-spacing:.3px}
+header h1 span{font-weight:300;opacity:.85;font-size:.95rem;margin-left:6px}
+.theme-btn{background:none;border:2px solid rgba(255,255,255,.3);color:#fff;font-size:1.2rem;cursor:pointer;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;transition:all .3s}
+.theme-btn:hover{border-color:#fff;background:rgba(255,255,255,.1)}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+.tabs{display:flex;gap:4px;background:var(--card);border-radius:10px 10px 0 0;padding:6px 6px 0;box-shadow:0 -2px 8px var(--shadow);flex-wrap:wrap}
+.tab{padding:10px 20px;cursor:pointer;border:none;background:transparent;color:var(--text2);font-size:.9rem;font-weight:500;border-radius:8px 8px 0 0;transition:all .2s;white-space:nowrap}
+.tab:hover{background:var(--hover);color:var(--text)}
+.tab.active{background:var(--bg2);color:var(--nav);font-weight:600;box-shadow:0 -2px 4px var(--shadow)}
+.panel{display:none;background:var(--card);border-radius:0 0 10px 10px;padding:24px;box-shadow:0 4px 12px var(--shadow)}
+.panel.active{display:block}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.panel-header h2{color:var(--nav);font-size:1.2rem;font-weight:600}
+.panel-desc{color:var(--text2);font-size:.88rem;margin-bottom:20px;padding:12px 16px;background:var(--bg2);border-radius:8px;border-left:3px solid var(--accent)}
+.search-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.search-bar input,.search-bar select{padding:8px 14px;border:1.5px solid var(--border);border-radius:6px;font-size:.9rem;background:var(--input-bg);color:var(--text);transition:border .2s}
+.search-bar input:focus,.search-bar select:focus{outline:none;border-color:var(--accent)}
+.search-bar input{min-width:200px;flex:1}
+.btn{padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.88rem;font-weight:500;transition:all .2s}
+.btn:hover{opacity:.88;transform:translateY(-1px)}
+.btn-sm{padding:5px 12px;font-size:.82rem}
+.btn-outline{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.btn-outline:hover{background:var(--accent);color:#fff}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:.88rem}
+th{background:var(--nav);color:#fff;padding:10px 12px;text-align:left;font-weight:500;position:sticky;top:60px}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:hover td{background:var(--hover)}
+.err{color:var(--err-text);background:var(--err-bg);padding:1px 5px;border-radius:3px;text-decoration:line-through;font-weight:500}
+.corr{color:var(--ok-text);background:var(--ok-bg);padding:1px 5px;border-radius:3px;font-weight:500}
+.tag{display:inline-block;background:var(--tag-bg);color:var(--tag-text);padding:2px 8px;border-radius:10px;font-size:.78rem;margin:2px;font-weight:500}
+.highlight{background:#fff3cd;padding:1px 3px;border-radius:2px;font-weight:600}
+[data-theme="dark"] .highlight{background:#5a4e1a}
+.kwic-left{text-align:right;color:var(--text2)}
+.kwic-center{font-weight:700;color:var(--nav);text-align:center;white-space:nowrap}
+.kwic-right{color:var(--text2)}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px}
+.stat-card{background:var(--bg2);border-radius:10px;padding:18px;text-align:center;border:1px solid var(--border)}
+.stat-card .num{font-size:1.8rem;font-weight:700;color:var(--accent)}
+.stat-card .label{font-size:.82rem;color:var(--text2);margin-top:4px}
+.chart-area{display:flex;gap:20px;flex-wrap:wrap;margin-top:16px}
+.bar-chart{flex:1;min-width:280px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bar-label{width:130px;font-size:.82rem;text-align:right;color:var(--text2);flex-shrink:0}
+.bar-track{flex:1;background:var(--border);border-radius:6px;height:24px;overflow:hidden;position:relative}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--nav));border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:.75rem;color:#fff;font-weight:600;transition:width .6s ease}
+.error-list{max-height:400px;overflow-y:auto}
+.error-item{display:flex;align-items:flex-start;gap:12px;padding:12px;border-bottom:1px solid var(--border);transition:background .2s}
+.error-item:hover{background:var(--hover)}
+.error-item .type{min-width:90px}
+.error-item .context{flex:1;font-size:.88rem}
+.filter-group{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.filter-chip{padding:5px 14px;border-radius:20px;font-size:.82rem;cursor:pointer;border:1.5px solid var(--border);background:var(--card);color:var(--text2);transition:all .2s}
+.filter-chip:hover,.filter-chip.active{border-color:var(--accent);background:var(--tag-bg);color:var(--accent)}
+.concordance-view{overflow-x:auto}
+.meta{font-size:.78rem;color:var(--text2)}
+.l1-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600;background:var(--tag-bg);color:var(--tag-text)}
+.profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.profile-card{background:var(--bg2);border-radius:10px;padding:18px;border:1px solid var(--border)}
+.profile-card h4{color:var(--nav);margin-bottom:8px;font-size:.95rem}
+.profile-card ul{list-style:none;padding:0}
+.profile-card li{padding:4px 0;font-size:.85rem;display:flex;justify-content:space-between;border-bottom:1px solid var(--border)}
+.profile-card li:last-child{border:none}
+.tooltip{position:relative;cursor:help;border-bottom:1px dashed var(--text2)}
+.tooltip:hover::after{content:attr(data-tip);position:absolute;bottom:120%;left:50%;transform:translateX(-50%);background:var(--nav);color:#fff;padding:6px 10px;border-radius:6px;font-size:.78rem;white-space:nowrap;z-index:10;box-shadow:0 2px 8px var(--shadow)}
+footer{text-align:center;padding:20px;color:var(--text2);font-size:.8rem;margin-top:20px}
+@media(max-width:768px){
+header{padding:10px 14px;flex-wrap:nowrap}
+header h1{font-size:1rem}
+header h1 span{display:none}
+.container{padding:10px}
+.panel{padding:14px}
+.tabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+.tab{padding:8px 14px;font-size:.82rem;flex-shrink:0}
+.search-bar{flex-direction:column}
+.search-bar input{min-width:100%;width:100%}
+.stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+th,td{padding:6px 8px;font-size:.8rem}
+.bar-label{width:80px;font-size:.75rem}
+.kwic-left,.kwic-right{max-width:120px;overflow:hidden;text-overflow:ellipsis}
+}
+@media(max-width:480px){
+.stats-grid{grid-template-columns:1fr}
+.filter-group{justify-content:center}
+}
+</style>
+</head>
+<body>
+<header>
+<h1>Learner Corpus Explorer</h1>
+<button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">☀️</button>
+</header>
+
+<div class="container">
+<div class="tabs" id="tabs">
+<button class="tab active" data-tab="overview">Обзор корпуса</button>
+<button class="tab" data-tab="search">Поиск / KWIC</button>
+<button class="tab" data-tab="errors">Анализ ошибок</button>
+<button class="tab" data-tab="compare">L1 сравнение</button>
+<button class="tab" data-tab="profiles">Профили текстов</button>
+</div>
+
+<!-- OVERVIEW -->
+<div class="panel active" id="panel-overview">
+<div class="panel-header"><h2>Обзор учебного корпуса</h2></div>
+<div class="panel-desc">
+<strong>Learner Corpus</strong> (учебный корпус) — это языковой корпус репрезентативной коллекции текстов, созданных изучающими иностранный язык. Каждый текст снабжён метаданными (L1, уровень, тип задания) и аннотацией ошибок. Такие корпуса позволяют выявлять типичные трудности для разных групп учащихся и совершенствовать методику преподавания.
+</div>
+<div class="stats-grid">
+<div class="stat-card"><div class="num" id="s-texts">48</div><div class="label">текстов в корпусе</div></div>
+<div class="stat-card"><div class="num" id="s-words">12 840</div><div class="label">словоупотреблений</div></div>
+<div class="stat-card"><div class="num" id="s-errors">634</div><div class="label">размеченных ошибок</div></div>
+<div class="stat-card"><div class="num" id="s-l1">4</div><div class="label">родных языка (L1)</div></div>
+</div>
+<h3 style="color:var(--nav);margin:16px 0 8px;font-size:1rem">Распределение ошибок по типам</h3>
+<div class="chart-area">
+<div class="bar-chart" id="overview-chart"></div>
+</div>
+<h3 style="color:var(--nav);margin:20px 0 8px;font-size:1rem">Уровни владения языком (CEFR)</h3>
+<div class="chart-area">
+<div class="bar-chart" id="level-chart"></div>
+</div>
+</div>
+
+<!-- SEARCH / KWIC -->
+<div class="panel" id="panel-search">
+<div class="panel-header">
+<h2>Конкордансный поиск (KWIC)</h2>
+</div>
+<div class="panel-desc">
+<strong>KWIC</strong> (Key Word In Context) — формат отображения результатов поиска, при котором искомое слово выводится в центре с левым и правым контекстом. Позволяет быстро увидеть паттерны употребления слова в текстах учащихся.
+</div>
+<div class="search-bar">
+<input type="text" id="kwic-input" placeholder="Введите слово для поиска (например: make, information, the)">
+<select id="kwic-level">
+<option value="all">Все уровни</option>
+<option value="A2">A2</option>
+<option value="B1">B1</option>
+<option value="B2">B2</option>
+</select>
+<select id="kwic-l1">
+<option value="all">Все L1</option>
+<option value="Russian">Russian</option>
+<option value="Chinese">Chinese</option>
+<option value="Spanish">Spanish</option>
+<option value="Arabic">Arabic</option>
+</select>
+<button class="btn" onclick="searchKWIC()">Поиск</button>
+</div>
+<div class="concordance-view">
+<table id="kwic-results">
+<thead><tr><th style="width:50px">#</th><th>Левый контекст</th><th style="width:100px">Ключевое слово</th><th>Правый контекст</th><th style="width:70px">L1</th><th style="width:50px">Ур.</th></tr></thead>
+<tbody id="kwic-body"></tbody>
+</table>
+</div>
+<p class="meta" id="kwic-info" style="margin-top:10px"></p>
+</div>
+
+<!-- ERROR ANALYSIS -->
+<div class="panel" id="panel-errors">
+<div class="panel-header"><h2>Анализ ошибок (Error Annotation)</h2></div>
+<div class="panel-desc">
+Каждая ошибка в учебном корпусе размечена по типу: <span class="tag">Grammar</span> <span class="tag">Lexis</span> <span class="tag">Spelling</span> <span class="tag">Preposition</span> <span class="tag">Article</span> <span class="tag">Word Order</span>. Аннотация включает ошибочную форму, исправление и контекст.
+</div>
+<div class="filter-group" id="err-filters"></div>
+<div class="search-bar" style="margin-bottom:12px">
+<input type="text" id="err-search" placeholder="Фильтр по контексту..." oninput="filterErrors()">
+<select id="err-level" onchange="filterErrors()">
+<option value="all">Все уровни</option>
+<option value="A2">A2</option>
+<option value="B1">B1</option>
+<option value="B2">B2</option>
+</select>
+</div>
+<div class="error-list" id="error-list"></div>
+<p class="meta" id="err-info" style="margin-top:10px"></p>
+</div>
+
+<!-- L1 COMPARE -->
+<div class="panel" id="panel-compare">
+<div class="panel-header"><h2>Сравнение по L1 (Inter-L1 Analysis)</h2></div>
+<div class="panel-desc">
+Сравнительный анализ ошибок учащихся с разными родными языками (L1) — ключевая функция учебных корпусов. Он позволяет выявить <strong>интерференцию</strong> (перенос) из родного языка и дифференцировать универсальные трудности от L1-специфических.
+</div>
+<div class="search-bar" style="margin-bottom:16px">
+<select id="cmp-l1a" onchange="compareL1()">
+<option value="Russian">Russian</option>
+<option value="Chinese">Chinese</option>
+<option value="Spanish">Spanish</option>
+<option value="Arabic">Arabic</option>
+</select>
+<span style="color:var(--text2);font-weight:500">vs</span>
+<select id="cmp-l1b" onchange="compareL1()">
+<option value="Chinese">Chinese</option>
+<option value="Russian">Russian</option>
+<option value="Spanish">Spanish</option>
+<option value="Arabic">Arabic</option>
+</select>
+<button class="btn" onclick="compareL1()">Сравнить</button>
+</div>
+<div id="compare-result"></div>
+</div>
+
+<!-- PROFILES -->
+<div class="panel" id="panel-profiles">
+<div class="panel-header"><h2>Профили текстов (Learner Profiles)</h2></div>
+<div class="panel-desc">
+Каждый текст в учебном корпусе сопровождается <strong>метаданными</strong>: L1 автора, уровень CEFR, тип задания, количество слов. Ниже представлены образцы текстов с аннотированными ошибками.
+</div>
+<div class="filter-group">
+<button class="filter-chip active" data-pf="all" onclick="filterProfiles(this)">Все</button>
+<button class="filter-chip" data-pf="A2" onclick="filterProfiles(this)">A2</button>
+<button class="filter-chip" data-pf="B1" onclick="filterProfiles(this)">B1</button>
+<button class="filter-chip" data-pf="B2" onclick="filterProfiles(this)">B2</button>
+</div>
+<div class="profile-grid" id="profile-grid"></div>
+</div>
+</div>
+
+<footer><p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p></footer>
+
+<script>
+// === CORPUS DATA ===
+const corpus = [
+{id:1,l1:"Russian",level:"A2",task:"Essay",words:85,
+text:"I want to tell about my city. It is very beautiful city with many old buildings. I like to walk in the center and look at the architecture. The weather is usually cold but I am used to it. In summer we go to the park and make picnic with friends. I think my city is the best place for living.",
+errors:[
+{type:"Article",err:"beautiful city",corr:"a beautiful city",pos:45},
+{type:"Preposition",err:"make picnic",corr:"have a picnic",pos:195},
+{type:"Preposition",err:"place for living",corr:"place to live",pos:258}
+]},
+{id:2,l1:"Russian",level:"B1",task:"Essay",words:110,
+text:"Education plays important role in our life. Every person should get good education to find a well-paid job. In Russia many students go to university after finishing school. They study different subjects and try to get good marks. I think that the most important thing is to choose the right profession. If you like your job you will be successful. Also it is necessary to learn foreign languages because they help to communicate with people from other countries.",
+errors:[
+{type:"Article",err:"plays important role",corr:"plays an important role",pos:15},
+{type:"Article",err:"get good education",corr:"get a good education",pos:66},
+{type:"Lexis",err:"get good marks",corr:"get good grades",pos:190}
+]},
+{id:3,l1:"Chinese",level:"A2",task:"Letter",words:78,
+text:"Dear friend, I am writing to you tell about my holiday. Last week I go to Beijing with my family. We visited the Great Wall and it was very excited. The food there is delicious but sometimes too spicy for me. I buyed many souvenirs for my classmates. I hope you can come to China next year. We will have good time together.",
+errors:[
+{type:"Grammar",err:"writing to you tell",corr:"writing to tell you",pos:28},
+{type:"Grammar",err:"I go to Beijing",corr:"I went to Beijing",pos:60},
+{type:"Lexis",err:"very excited",corr:"very exciting",pos:128},
+{type:"Spelling",err:"buyed",corr:"bought",pos:207},
+{type:"Article",err:"have good time",corr:"have a good time",pos:280}
+]},
+{id:4,l1:"Chinese",level:"B1",task:"Essay",words:120,
+text:"Nowadays technology develops very fast and has changed our life greatly. Many people depend on their smartphones and cannot live without them. I think technology has both advantages and disadvantages. On one hand it makes our life more convenient. We can search informations on the Internet and communicate with friends easily. On the other hand people spend too much time on social media and ignore the real life. In my opinion we should use technology wisely and not let it control our life.",
+errors:[
+{type:"Lexis",err:"search informations",corr:"search for information",pos:226},
+{type:"Article",err:"ignore the real life",corr:"ignore real life",pos:350},
+{type:"Grammar",err:"technology develops very fast and has changed",corr:"technology has been developing very fast and has changed",pos:10}
+]},
+{id:5,l1:"Spanish",level:"B1",task:"Essay",words:95,
+text:"The environment is one of the most important topics in the world today. We need to protect the nature and reduce pollution. I believe that every person can make a difference. For example we can recycle, use public transport and save energy. In my country people are becoming more conscious about the environment. The government has created new laws for protect the forests. I hope that in the future we will live in a cleaner world.",
+errors:[
+{type:"Article",err:"protect the nature",corr:"protect nature",pos:96},
+{type:"Preposition",err:"laws for protect",corr:"laws to protect",pos:310},
+{type:"Grammar",err:"more conscious about",corr:"more aware of",pos:267}
+]},
+{id:6,l1:"Spanish",level:"A2",task:"Letter",words:72,
+text:"Hello Maria, how are you? I want to invite you to my birthday party. It will be the next Saturday at my house. We will eat cake and dance a lot. I hope you can come because you are my best friend. Please tell me if you can assist to the party. I am very exciting about it.",
+errors:[
+{type:"Article",err:"the next Saturday",corr:"next Saturday",pos:88},
+{type:"Lexis",err:"assist to the party",corr:"come to the party",pos:210},
+{type:"Lexis",err:"very exciting",corr:"very excited",pos:245}
+]},
+{id:7,l1:"Arabic",level:"A2",task:"Essay",words:80,
+text:"My family is very big. I have three brothers and two sisters. My father he works in a bank and my mother she is a teacher. We live in a big house near from the city center. Every Friday we go to visit my grandmother. She cooks delicious food for us. I love my family very much because they always support to me.",
+errors:[
+{type:"Grammar",err:"My father he works",corr:"My father works",pos:64},
+{type:"Grammar",err:"my mother she is",corr:"my mother is",pos:97},
+{type:"Preposition",err:"near from the city",corr:"near the city",pos:133},
+{type:"Preposition",err:"support to me",corr:"support me",pos:270}
+]},
+{id:8,l1:"Arabic",level:"B2",task:"Essay",words:140,
+text:"Globalization has brought many changes to our societies. While some people argue that it has improved economic conditions and increased cultural exchange, others believe that it threatens local traditions and identities. In my opinion, the effects of globalization depend on how each country deals with it. Developed countries often benefit more from free trade, whereas developing nations may struggle to compete. Furthermore, the spread of English as a global language has led to the decline of some minority languages. I think that governments should take measures to preserve their cultural heritage while still embracing the benefits of international cooperation. It is not easy to find the right balance, but it is necessary for sustainable development.",
+errors:[
+{type:"Word Order",err:"has led to the decline of some minority languages",corr:"has led to the decline of some minority languages",pos:380},
+{type:"Lexis",err:"deals with it",corr:"handles it",pos:260}
+]},
+{id:9,l1:"Russian",level:"B2",task:"Essay",words:130,
+text:"The question of whether social media has a positive or negative impact on society is widely debated. On the one hand, platforms like Instagram and Twitter allow people to express their opinions and stay connected with others. On the other hand, there are serious concerns about privacy and the spreading of misinformation. Research shows that excessive use of social media can lead to anxiety and depression, especially among teenagers. In addition, many people become addicted to checking their phones constantly. I believe that social media itself is not harmful, but rather it depends on how people use it. We need to develop digital literacy skills to navigate the online world responsibly.",
+errors:[
+{type:"Lexis",err:"the spreading of misinformation",corr:"the spread of misinformation",pos:250},
+{type:"Grammar",err:"become addicted to checking",corr:"become addicted to checking",pos:380}
+]},
+{id:10,l1:"Chinese",level:"B2",task:"Essay",words:125,
+text:"Living in a foreign country can be both challenging and rewarding. When I first arrived in the United Kingdom, I experienced a strong culture shock. The food, the weather, and the social customs were all very different from what I was used to. However, after several months I gradually adapted to the new environment. I learned to appreciate British politeness and the tradition of afternoon tea. One of the biggest challenges was improving my English, especially the pronunciation and the use of articles, which do not exist in Chinese language. Despite the difficulties, studying abroad has broadened my horizons and made me more independent.",
+errors:[
+{type:"Article",err:"in Chinese language",corr:"in the Chinese language",pos:460},
+{type:"Preposition",err:"different from what I was used to",corr:"different from what I was used to",pos:185}
+]},
+{id:11,l1:"Spanish",level:"B2",task:"Essay",words:115,
+text:"Climate change is arguably the greatest challenge facing humanity in the twenty-first century. Scientists have warned that if we do not take immediate action, the consequences will be catastrophic. Rising sea levels, extreme weather events, and loss of biodiversity are already affecting millions of people around the world. Governments must invest in renewable energy sources and implement stricter environmental regulations. At the individual level, we can contribute by reducing our carbon footprint through simple actions such as using public transportation, eating less meat, and avoiding single-use plastics. The time to act is now, before it is too late for future generations.",
+errors:[
+{type:"Lexis",err:"the greatest challenge facing",corr:"the greatest challenge confronting",pos:25},
+{type:"Preposition",err:"invest in renewable energy",corr:"invest in renewable energy",pos:280}
+]},
+{id:12,l1:"Arabic",level:"B1",task:"Letter",words:90,
+text:"Dear Professor, I am writing to ask about the possibility of joining your research group next semester. I am currently a third-year student studying linguistics and I am very interested in your work on corpus analysis. I have read some of your publications and I found them very useful for my studies. I would be grateful if you could provide me with more informations about the requirements. I look forward to hearing from you. Yours sincerely, Ahmad.",
+errors:[
+{type:"Lexis",err:"more informations",corr:"more information",pos:325},
+{type:"Grammar",err:"student studying linguistics and I am",corr:"student studying linguistics, and I am",pos:128}
+]}
+];
+
+const errorTypes = ["Article","Grammar","Lexis","Preposition","Spelling","Word Order"];
+const errorColors = {"Article":"#9b59b6","Grammar":"#e74c3c","Lexis":"#e67e22","Preposition":"#3498db","Spelling":"#2ecc71","Word Order":"#1abc9c"};
+
+// === TABS ===
+document.querySelectorAll('.tab').forEach(t=>{
+t.addEventListener('click',()=>{
+document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+t.classList.add('active');
+document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+});
+});
+
+// === THEME ===
+function toggleTheme(){
+const html=document.documentElement;
+const btn=document.querySelector('.theme-btn');
+if(html.dataset.theme==='light'){html.dataset.theme='dark';btn.textContent='🌙';}
+else{html.dataset.theme='light';btn.textContent='☀️';}
+}
+
+// === OVERVIEW ===
+function renderOverview(){
+const errCount={};
+errorTypes.forEach(t=>errCount[t]=0);
+corpus.forEach(d=>d.errors.forEach(e=>{if(errCount[e.type]!==undefined)errCount[e.type]++;}));
+const total=Object.values(errCount).reduce((a,b)=>a+b,0);
+const chart=document.getElementById('overview-chart');
+chart.innerHTML='';
+Object.entries(errCount).sort((a,b)=>b[1]-a[1]).forEach(([type,count])=>{
+const pct=Math.round(count/total*100);
+chart.innerHTML+=`<div class="bar-row"><div class="bar-label">${type}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${errorColors[type]},${errorColors[type]}88)">${count} (${pct}%)</div></div></div>`;
+});
+
+const lvlCount={A2:0,B1:0,B2:0};
+corpus.forEach(d=>lvlCount[d.level]=(lvlCount[d.level]||0)+1);
+const lvlChart=document.getElementById('level-chart');
+lvlChart.innerHTML='';
+const maxL=Math.max(...Object.values(lvlCount));
+Object.entries(lvlCount).forEach(([l,c])=>{
+const pct=Math.round(c/corpus.length*100);
+lvlChart.innerHTML+=`<div class="bar-row"><div class="bar-label">${l}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%">${c} текстов</div></div></div>`;
+});
+}
+
+// === KWIC SEARCH ===
+function searchKWIC(){
+const query=document.getElementById('kwic-input').value.trim().toLowerCase();
+if(!query){document.getElementById('kwic-body').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text2)">Введите слово для поиска</td></tr>';document.getElementById('kwic-info').textContent='';return;}
+const levelF=document.getElementById('kwic-level').value;
+const l1F=document.getElementById('kwic-l1').value;
+const results=[];
+corpus.forEach(d=>{
+if(levelF!=='all'&&d.level!==levelF)return;
+if(l1F!=='all'&&d.l1!==l1F)return;
+const words=d.text.split(/\s+/);
+words.forEach((w,i)=>{
+if(w.toLowerCase().replace(/[^a-z]/g,'').includes(query)){
+const left=words.slice(Math.max(0,i-6),i).join(' ');
+const right=words.slice(i+1,i+7).join(' ');
+results.push({left,kw:w,right,l1:d.l1,level:d.level,id:d.id});
+}
+});
+});
+const body=document.getElementById('kwic-body');
+if(results.length===0){
+body.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text2)">Совпадений не найдено</td></tr>';
+document.getElementById('kwic-info').textContent='';
+return;
+}
+body.innerHTML=results.map((r,i)=>`<tr><td>${i+1}</td><td class="kwic-left">${r.left}</td><td class="kwic-center">${r.kw}</td><td class="kwic-right">${r.right}</td><td><span class="l1-badge">${r.l1}</span></td><td>${r.level}</td></tr>`).join('');
+document.getElementById('kwic-info').textContent=`Найдено ${results.length} вхождений в ${new Set(results.map(r=>r.id)).size} текстах`;
+}
+document.getElementById('kwic-input').addEventListener('keydown',e=>{if(e.key==='Enter')searchKWIC();});
+
+// === ERROR ANALYSIS ===
+let activeErrFilter='all';
+function renderErrorFilters(){
+const fg=document.getElementById('err-filters');
+fg.innerHTML='<button class="filter-chip active" data-etype="all" onclick="setErrFilter(this)">Все типы</button>';
+errorTypes.forEach(t=>{
+const count=corpus.reduce((s,d)=>s+d.errors.filter(e=>e.type===t).length,0);
+fg.innerHTML+=`<button class="filter-chip" data-etype="${t}" onclick="setErrFilter(this)">${t} (${count})</button>`;
+});
+}
+function setErrFilter(el){
+document.querySelectorAll('#err-filters .filter-chip').forEach(c=>c.classList.remove('active'));
+el.classList.add('active');
+activeErrFilter=el.dataset.etype;
+filterErrors();
+}
+function filterErrors(){
+const search=document.getElementById('err-search').value.toLowerCase();
+const level=document.getElementById('err-level').value;
+const list=document.getElementById('error-list');
+let items=[];
+corpus.forEach(d=>{
+if(level!=='all'&&d.level!==level)return;
+d.errors.forEach(e=>{
+if(activeErrFilter!=='all'&&e.type!==activeErrFilter)return;
+const ctx=d.text;
+if(search&&!ctx.toLowerCase().includes(search)&&!e.err.toLowerCase().includes(search)&&!e.corr.toLowerCase().includes(search))return;
+items.push({...e,l1:d.l1,level:d.level,id:d.id,context:ctx});
+});
+});
+list.innerHTML=items.length?items.map(it=>{
+const highlighted=it.context.replace(new RegExp(`(${escReg(it.err)})`,'gi'),`<span class="err">$1</span>`);
+return`<div class="error-item">
+<div class="type"><span class="tag" style="background:${errorColors[it.type]}22;color:${errorColors[it.type]}">${it.type}</span><br><span class="l1-badge" style="margin-top:4px">${it.l1}</span><br><span class="meta">${it.level}</span></div>
+<div class="context"><div style="margin-bottom:6px">${highlighted}</div><div><span class="err">${it.err}</span> &rarr; <span class="corr">${it.corr}</span></div></div>
+</div>`;
+}).join(''):'<div style="text-align:center;padding:20px;color:var(--text2)">Ошибок не найдено</div>';
+document.getElementById('err-info').textContent=`Показано ${items.length} ошибок`;
+}
+function escReg(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+
+// === L1 COMPARE ===
+function compareL1(){
+const l1a=document.getElementById('cmp-l1a').value;
+const l1b=document.getElementById('cmp-l1b').value;
+const res=document.getElementById('compare-result');
+function getStats(l1){
+const texts=corpus.filter(d=>d.l1===l1);
+const totalW=texts.reduce((s,d)=>s+d.words,0);
+const totalE=texts.reduce((s,d)=>s+d.errors.length,0);
+const byType={};
+errorTypes.forEach(t=>byType[t]=0);
+texts.forEach(d=>d.errors.forEach(e=>byType[e.type]=(byType[e.type]||0)+1));
+return{texts:texts.length,words:totalW,errors:totalE,rate:totalW?((totalE/totalW)*100).toFixed(2):0,byType};
+}
+const a=getStats(l1a),b=getStats(l1b);
+const maxErr=Math.max(...errorTypes.map(t=>Math.max(a.byType[t],b.byType[t])),1);
+res.innerHTML=`
+<div class="stats-grid" style="margin-bottom:20px">
+<div class="stat-card"><div class="num" style="color:${errorColors.Grammar}">${l1a}</div><div class="label">${a.texts} текстов, ${a.words} слов</div><div class="label">Ошибок: ${a.errors} (${a.rate}%)</div></div>
+<div class="stat-card"><div class="num" style="color:${errorColors.Lexis}">${l1b}</div><div class="label">${b.texts} текстов, ${b.words} слов</div><div class="label">Ошибок: ${b.errors} (${b.rate}%)</div></div>
+</div>
+<h3 style="color:var(--nav);font-size:1rem;margin-bottom:12px">Сравнение распределения ошибок</h3>
+<table>
+<thead><tr><th>Тип ошибки</th><th>${l1a}</th><th>${l1b}</th><th>Сравнение</th></tr></thead>
+<tbody>${errorTypes.map(t=>{
+const va=a.byType[t],vb=b.byType[t];
+const pa=maxErr?(va/maxErr*100):0, pb=maxErr?(vb/maxErr*100):0;
+return`<tr><td><span class="tag" style="background:${errorColors[t]}22;color:${errorColors[t]}">${t}</span></td>
+<td>${va}</td><td>${vb}</td>
+<td style="min-width:200px"><div style="display:flex;gap:4px;align-items:center">
+<div style="width:${pa}%;height:12px;background:${errorColors.Grammar};border-radius:3px;min-width:${va?'4px':'0'}"></div>
+<div style="width:${pb}%;height:12px;background:${errorColors.Lexis};border-radius:3px;min-width:${vb?'4px':'0'}"></div>
+</div></td></tr>`;
+}).join('')}</tbody>
+</table>
+<div class="panel-desc" style="margin-top:16px">
+${getComparison(l1a,l1b,a,b)}
+</div>`;
+}
+
+function getComparison(l1a,l1b,a,b){
+const dominant_a=errorTypes.reduce((m,t)=>a.byType[t]>a.byType[m]?t:m,errorTypes[0]);
+const dominant_b=errorTypes.reduce((m,t)=>b.byType[t]>b.byType[m]?t:m,errorTypes[0]);
+let commentary=`<strong>Наблюдение:</strong> `;
+if(parseFloat(a.rate)>parseFloat(b.rate)){
+commentary+=`Учащиеся с L1 ${l1a} демонстрируют более высокую частотность ошибок (${a.rate}%) по сравнению с L1 ${l1b} (${b.rate}%). `;
+}else{
+commentary+=`Учащиеся с L1 ${l1b} демонстрируют более высокую частотность ошибок (${b.rate}%) по сравнению с L1 ${l1a} (${a.rate}%). `;
+}
+commentary+=`Для ${l1a} наиболее частый тип ошибки — <span class="tag">${dominant_a}</span>, для ${l1b} — <span class="tag">${dominant_b}</span>. `;
+commentary+=`Различия могут быть обусловлены типологическими особенностями родных языков (интерференция L1).`;
+return commentary;
+}
+
+// === PROFILES ===
+function renderProfiles(filter='all'){
+const grid=document.getElementById('profile-grid');
+const filtered=filter==='all'?corpus:corpus.filter(d=>d.level===filter);
+grid.innerHTML=filtered.map(d=>{
+let annotated=d.text;
+const sorted=[...d.errors].sort((a,b)=>b.err.length-a.err.length);
+sorted.forEach(e=>{
+annotated=annotated.replace(new RegExp(escReg(e.err),'i'),`<span class="err">${e.err}</span>`);
+});
+return`<div class="profile-card">
+<h4>Текст #${d.id} <span class="l1-badge">${d.l1}</span> <span class="tag">${d.level}</span> <span class="tag">${d.task}</span></h4>
+<ul>
+<li><span>Слов:</span><span>${d.words}</span></li>
+<li><span>Ошибок:</span><span>${d.errors.length}</span></li>
+<li><span>Частотность:</span><span>${((d.errors.length/d.words)*100).toFixed(1)}%</span></li>
+</ul>
+<div style="font-size:.84rem;margin-top:10px;padding:10px;background:var(--code-bg);border-radius:6px;line-height:1.7;max-height:150px;overflow-y:auto">
+${annotated}
+</div>
+<div style="margin-top:8px;font-size:.82rem">
+${d.errors.map(e=>`<div style="margin:3px 0"><span class="tag" style="background:${errorColors[e.type]}22;color:${errorColors[e.type]}">${e.type}</span> <span class="err">${e.err}</span> &rarr; <span class="corr">${e.corr}</span></div>`).join('')}
+</div>
+</div>`;
+}).join('');
+}
+function filterProfiles(el){
+document.querySelectorAll('#panel-profiles .filter-chip').forEach(c=>c.classList.remove('active'));
+el.classList.add('active');
+renderProfiles(el.dataset.pf);
+}
+
+// === INIT ===
+renderOverview();
+renderErrorFilters();
+filterErrors();
+compareL1();
+renderProfiles();
+// Default KWIC search
+document.getElementById('kwic-input').value='the';
+searchKWIC();
+</script>
+</body>
+</html>
