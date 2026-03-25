@@ -1,0 +1,1596 @@
+
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #f1f1f1;
+  --text-primary: #1a1a1a;
+  --text-secondary: #444444;
+  --text-muted: #666666;
+  --heading-color: #325980;
+  --accent: #3498db;
+  --accent-hover: #2980b9;
+  --border-color: #e0e0e0;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,0.12);
+  --card-bg: #ffffff;
+  --highlight-bg: #fff3cd;
+  --highlight-text: #856404;
+  --kwic-bg: #eaf4fc;
+  --code-bg: #f8f9fa;
+  --scrollbar-track: #f1f1f1;
+  --scrollbar-thumb: #c0c0c0;
+  --transition: 0.3s ease;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1e2e;
+  --bg-secondary: #232839;
+  --bg-tertiary: #2a3045;
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --text-muted: #909090;
+  --heading-color: #6aabdb;
+  --accent: #3498db;
+  --accent-hover: #5dade2;
+  --border-color: #3a3f55;
+  --shadow: 0 2px 12px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,0.4);
+  --card-bg: #232839;
+  --highlight-bg: #3a3520;
+  --highlight-text: #f0d060;
+  --kwic-bg: #1e2d3d;
+  --code-bg: #2a3045;
+  --scrollbar-track: #2a3045;
+  --scrollbar-thumb: #4a5070;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  transition: background var(--transition), color var(--transition);
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+header {
+  background: #325980;
+  color: #ffffff;
+  padding: 0 2rem;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+[data-theme="dark"] header {
+  background: #1e2a3a;
+}
+
+header h1 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+header h1 span {
+  font-weight: 300;
+  opacity: 0.85;
+  margin-left: 0.3em;
+  font-size: 0.85em;
+}
+
+.theme-toggle {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  background: rgba(255,255,255,0.25);
+  transform: rotate(20deg);
+}
+
+nav {
+  background: var(--bg-primary);
+  border-bottom: 2px solid var(--border-color);
+  padding: 0 2rem;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  transition: background var(--transition);
+}
+
+nav button {
+  background: none;
+  border: none;
+  padding: 0.9rem 1.5rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all var(--transition);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+nav button:hover { color: var(--accent); }
+
+nav button.active {
+  color: var(--heading-color);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.tab-content { display: none; animation: fadeIn 0.4s ease; }
+.tab-content.active { display: block; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition);
+}
+
+h2 {
+  color: var(--heading-color);
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid var(--bg-tertiary);
+  font-weight: 700;
+}
+
+h3 {
+  color: var(--heading-color);
+  font-size: 1.1rem;
+  margin: 1.2rem 0 0.6rem;
+  font-weight: 600;
+}
+
+p { margin-bottom: 0.8rem; color: var(--text-secondary); }
+
+ul, ol { margin: 0.5rem 0 1rem 1.5rem; color: var(--text-secondary); }
+li { margin-bottom: 0.4rem; }
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.2rem;
+  margin: 1.2rem 0;
+}
+
+.info-item {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  padding: 1.3rem;
+  border-left: 4px solid var(--accent);
+  transition: all var(--transition);
+}
+
+.info-item:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+
+.info-item h4 {
+  color: var(--heading-color);
+  margin-bottom: 0.4rem;
+  font-size: 1rem;
+}
+
+.info-item p { font-size: 0.9rem; margin-bottom: 0; }
+
+code, .code {
+  background: var(--code-bg);
+  padding: 0.15em 0.45em;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.92em;
+  color: var(--accent);
+  border: 1px solid var(--border-color);
+}
+
+.wildcard-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.95rem;
+}
+
+.wildcard-table th {
+  background: var(--heading-color);
+  color: #fff;
+  padding: 0.7rem 1rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.wildcard-table td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.wildcard-table tr:nth-child(even) td { background: var(--bg-secondary); }
+.wildcard-table tr:hover td { background: var(--kwic-bg); }
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: var(--heading-color);
+  font-size: 0.95rem;
+}
+
+textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color var(--transition), background var(--transition);
+  line-height: 1.6;
+}
+
+textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(52,152,219,0.15); }
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.control-group { flex: 1; min-width: 200px; }
+
+input[type="text"], select {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: all var(--transition);
+}
+
+input[type="text"]:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(52,152,219,0.15);
+}
+
+.btn {
+  padding: 0.7rem 1.8rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(52,152,219,0.3); }
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover { background: var(--border-color); }
+
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.stats-bar {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.5rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-color);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+.stat-value { font-size: 1.3rem; font-weight: 700; color: var(--heading-color); }
+
+.concordance-container {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.concordance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.concordance-table th {
+  background: var(--heading-color);
+  color: #fff;
+  padding: 0.65rem 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.concordance-table td {
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+  line-height: 1.5;
+}
+
+.concordance-table tr:hover td { background: var(--kwic-bg); }
+
+.concordance-table .col-num {
+  text-align: center;
+  color: var(--text-muted);
+  width: 40px;
+  font-size: 0.8rem;
+}
+
+.concordance-table .col-left {
+  text-align: right;
+  color: var(--text-secondary);
+  width: 40%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 350px;
+  direction: rtl;
+  unicode-bidi: plaintext;
+}
+
+.concordance-table .col-kwic {
+  text-align: center;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  padding: 0.5rem 1rem;
+  background: var(--kwic-bg);
+  min-width: 80px;
+}
+
+.concordance-table .col-right {
+  text-align: left;
+  color: var(--text-secondary);
+  width: 40%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 350px;
+}
+
+.no-results {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-muted);
+}
+
+.no-results .icon { font-size: 2rem; margin-bottom: 0.5rem; display: block; opacity: 0.3; }
+
+.sort-controls {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.sort-controls label { margin-bottom: 0; font-size: 0.9rem; }
+
+.sort-btn {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all var(--transition);
+}
+
+.sort-btn:hover, .sort-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.context-slider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.context-slider input[type="range"] {
+  width: 120px;
+  accent-color: var(--accent);
+}
+
+.context-slider span { font-size: 0.85rem; color: var(--text-muted); min-width: 50px; }
+
+.freq-list {
+  columns: 2;
+  column-gap: 2rem;
+  margin: 1rem 0;
+}
+
+.freq-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid var(--bg-tertiary);
+  break-inside: avoid;
+}
+
+.freq-item .word { font-weight: 500; color: var(--text-primary); }
+.freq-item .count { color: var(--accent); font-weight: 700; font-size: 0.9rem; }
+
+.freq-bar {
+  height: 4px;
+  background: var(--accent);
+  border-radius: 2px;
+  margin-top: 2px;
+  transition: width 0.5s ease;
+}
+
+.highlight-note {
+  background: var(--highlight-bg);
+  color: var(--highlight-text);
+  padding: 1rem 1.2rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  border-left: 4px solid var(--highlight-text);
+}
+
+.example-texts {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.example-btn {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all var(--transition);
+}
+
+.example-btn:hover { background: var(--accent); color: #fff; }
+
+.collocation-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.collocation-table th {
+  background: var(--heading-color);
+  color: #fff;
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.collocation-table td {
+  padding: 0.5rem 0.8rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.collocation-table tr:nth-child(even) td { background: var(--bg-secondary); }
+.collocation-table tr:hover td { background: var(--kwic-bg); }
+
+.export-section {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--border-color);
+  margin-top: 2rem;
+  background: var(--bg-primary);
+}
+
+@media (max-width: 768px) {
+  header { padding: 0 1rem; }
+  header h1 { font-size: 1.1rem; }
+  header h1 span { display: none; }
+  nav { padding: 0 0.5rem; }
+  nav button { padding: 0.7rem 1rem; font-size: 0.85rem; }
+  main { padding: 1rem; }
+  .card { padding: 1.2rem; }
+  .controls { flex-direction: column; }
+  .control-group { min-width: 100%; }
+  .stats-bar { gap: 1rem; }
+  .freq-list { columns: 1; }
+  .concordance-table { font-size: 0.8rem; }
+  .concordance-table .col-left, .concordance-table .col-right { max-width: 150px; }
+  .info-grid { grid-template-columns: 1fr; }
+  .sort-controls { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 480px) {
+  nav { flex-wrap: nowrap; overflow-x: auto; }
+  nav button { padding: 0.6rem 0.8rem; font-size: 0.8rem; }
+  .concordance-table .col-left, .concordance-table .col-right { max-width: 100px; font-size: 0.75rem; }
+}
+
+.quiz-section {
+  margin: 0.8rem 0 1.5rem;
+}
+
+.quiz-item {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  margin-bottom: 0.7rem;
+  overflow: hidden;
+  transition: all var(--transition);
+  cursor: pointer;
+  background: var(--bg-primary);
+}
+
+.quiz-item:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
+}
+
+.quiz-item.reflection {
+  border-left: 4px solid var(--heading-color);
+}
+
+.quiz-question {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem 1.2rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.5;
+  user-select: none;
+}
+
+.quiz-number {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.quiz-item.reflection .quiz-number {
+  background: var(--heading-color);
+  border-radius: 8px;
+  width: auto;
+  padding: 0 8px;
+  font-size: 0.75rem;
+}
+
+.quiz-arrow {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  transition: transform var(--transition);
+}
+
+.quiz-item.open .quiz-arrow {
+  transform: rotate(180deg);
+}
+
+.quiz-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, padding 0.3s ease;
+  padding: 0 1.2rem;
+  border-top: none;
+  background: var(--bg-secondary);
+}
+
+.quiz-item.open .quiz-answer {
+  max-height: 600px;
+  padding: 1.2rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.quiz-answer p {
+  margin-bottom: 0.6rem;
+  color: var(--text-secondary);
+  font-size: 0.93rem;
+}
+
+.quiz-answer ul {
+  margin: 0.3rem 0 0.6rem 1.2rem;
+  color: var(--text-secondary);
+  font-size: 0.93rem;
+}
+
+.quiz-answer li {
+  margin-bottom: 0.35rem;
+}
+
+.quiz-answer em {
+  color: var(--accent);
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Concordancer <span>| CL</span></h1>
+  <button class="theme-toggle" onclick="toggleTheme()" title="Сменить тему" aria-label="Сменить тему">&#9728;&#65039;</button>
+</header>
+
+<nav id="tabNav">
+  <button class="active" onclick="switchTab('info')">О конкордансерах</button>    
+	<button onclick="switchTab('tool')">Конкордансер</button>
+	<button onclick="switchTab('guide')">Инструкция</button>	
+  <button onclick="switchTab('selfcheck')">Самопроверка</button>
+</nav>
+
+<main>
+
+  <!-- ===== INFO TAB ===== -->
+  <div id="tab-info" class="tab-content active">
+    <div class="card">
+      <h2>Что такое конкордансер?</h2>
+      <p><strong>Конкордансер</strong> (concordancer) — это программный инструмент корпусной лингвистики, который осуществляет поиск заданного слова или выражения в корпусе текстов и отображает все контексты его употребления в формате <strong>KWIC</strong> (Key Word In Context — ключевое слово в контексте).</p>
+      <p>Конкордансер позволяет исследователю увидеть все случаи употребления искомого слова, выстроенные вертикально, с выравниванием ключевого слова по центру. Слева и справа от него отображается ближайший контекст. Такой формат представления данных позволяет быстро обнаруживать закономерности в употреблении слов.</p>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <h4>Конкорданс (concordance)</h4>
+          <p>Список всех вхождений искомого слова (или словоформы) в тексте/корпусе, представленный вместе с окружающим контекстом.</p>
+        </div>
+        <div class="info-item">
+		
+          <h4>KWIC-формат</h4>
+          <p>Способ представления результатов, при котором ключевое слово выделяется в центре, а слева и справа показан контекст фиксированной длины.</p>
+        </div>
+        <div class="info-item">
+          <h4>Подстановочные знаки (wildcards)</h4>
+          <p>Специальные символы, позволяющие расширить поиск: <code>*</code> заменяет любое количество символов, <code>?</code> — ровно один символ.</p>
+        </div>
+        <div class="info-item">
+          <h4>Коллокации</h4>
+          <p>Слова, которые регулярно встречаются рядом с искомым словом. Конкордансер помогает выявлять типичные сочетания.</p>
+        </div>
+      </div>
+
+      <h3>Применение конкордансеров в лингвистике и преподавании</h3>
+      <ul>
+        <li><strong>Лексикография:</strong> анализ значений и употреблений слов для составления словарей</li>
+        <li><strong>Изучение грамматики:</strong> наблюдение за грамматическими паттернами в реальных текстах</li>
+        <li><strong>Преподавание языков:</strong> Data-Driven Learning (DDL) — обучение на основе корпусных данных</li>
+        <li><strong>Анализ дискурса:</strong> изучение того, как слова функционируют в различных контекстах</li>
+        <li><strong>Переводоведение:</strong> сопоставление употреблений в параллельных корпусах</li>
+        <li><strong>Стилистика:</strong> анализ авторского стиля через частотность и сочетаемость слов</li>
+      </ul>
+
+      <h3>Популярные конкордансеры</h3>
+      <ul>
+        <li><strong>AntConc</strong> — бесплатный, многофункциональный, подходит для учебных целей</li>
+        <li><strong>Sketch Engine</strong> — мощная онлайн-платформа с большими корпусами</li>
+        <li><strong>#LancsBox</strong> — инструмент Ланкастерского университета с визуализацией</li>
+        <li><strong>CQPweb</strong> — веб-интерфейс для корпусных запросов</li>
+        <li><strong>НКРЯ</strong> — Национальный корпус русского языка (ruscorpora.ru)</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Подстановочные знаки (Wildcards)</h2>
+      <p>Подстановочные знаки позволяют находить группы словоформ одним запросом. В данном учебном конкордансере поддерживаются следующие символы:</p>
+      <table class="wildcard-table">
+        <thead>
+          <tr><th>Символ</th><th>Значение</th><th>Пример запроса</th><th>Найдёт</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>*</code></td><td>Любое количество любых символов (включая ноль)</td><td><code>teach*</code></td><td>teach, teacher, teachers, teaching</td></tr>
+          <tr><td><code>?</code></td><td>Ровно один любой символ</td><td><code>wom?n</code></td><td>woman, women</td></tr>
+          <tr><td><code>*</code></td><td>Символ в начале слова</td><td><code>*tion</code></td><td>education, nation, station</td></tr>
+          <tr><td><code>?</code> + <code>*</code></td><td>Комбинация знаков</td><td><code>un?*ed</code></td><td>united, unlocked, untested</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== TOOL TAB ===== -->
+  <div id="tab-tool" class="tab-content">
+    <div class="card">
+      <h2>Ввод текста</h2>
+      <p>Вставьте текст для анализа или выберите один из готовых примеров:</p>
+      <div class="example-texts">
+        <button class="example-btn" onclick="loadExample('en')">English: Literature</button>
+        <button class="example-btn" onclick="loadExample('en2')">English: Science</button>
+        <button class="example-btn" onclick="loadExample('ru')">Русский: Литература</button>
+        <button class="example-btn" onclick="loadExample('de')">Deutsch: Literatur</button>
+        </div>
+      <textarea id="corpusText" placeholder="Вставьте или введите текст здесь..."></textarea>
+      <div id="textStats" class="stats-bar" style="margin-top:0.8rem;">
+        <div class="stat-item"><span class="stat-label">Токенов</span><span class="stat-value" id="tokenCount">0</span></div>
+        <div class="stat-item"><span class="stat-label">Уникальных слов</span><span class="stat-value" id="typeCount">0</span></div>
+        <div class="stat-item"><span class="stat-label">Предложений</span><span class="stat-value" id="sentCount">0</span></div>
+        <div class="stat-item"><span class="stat-label">TTR</span><span class="stat-value" id="ttrValue">0</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Поисковый запрос</h2>
+      <div class="controls">
+        <div class="control-group">
+          <label for="searchQuery">Искомое слово / шаблон</label>
+          <input type="text" id="searchQuery" placeholder="Например: language, teach*, wom?n" autocomplete="off">
+        </div>
+        <div class="control-group" style="flex:0.5; min-width:150px;">
+          <label for="caseSensitive">Регистр</label>
+          <select id="caseSensitive">
+            <option value="no">Не учитывать</option>
+            <option value="yes">Учитывать</option>
+          </select>
+        </div>
+        <div class="control-group" style="flex:0.3; min-width:120px;">
+          <button class="btn btn-primary" onclick="buildConcordance()" style="width:100%; margin-top:1.55rem;">Построить</button>
+        </div>
+      </div>
+      <div class="highlight-note" style="margin-top:1rem;">
+        Используйте <code>*</code> для замены любого количества символов и <code>?</code> для замены одного символа. Например: <code>educ*</code> найдёт education, educated, educating и т.д.
+      </div>
+    </div>
+
+    <div class="card" id="resultsCard" style="display:none;">
+      <h2>Результаты конкорданса</h2>
+      <div id="resultsStats" class="stats-bar"></div>
+
+      <div class="sort-controls">
+        <label>Сортировка:</label>
+        <button class="sort-btn active" onclick="sortConcordance('default', this)">По порядку</button>
+        <button class="sort-btn" onclick="sortConcordance('kwic', this)">По ключевому слову</button>
+        <button class="sort-btn" onclick="sortConcordance('left1', this)">1 слово слева</button>
+        <button class="sort-btn" onclick="sortConcordance('right1', this)">1 слово справа</button>
+
+        <div class="context-slider">
+          <label style="margin:0; font-size:0.85rem;">Контекст:</label>
+          <input type="range" id="contextRange" min="2" max="12" value="6" oninput="updateContext(this.value)">
+          <span id="contextValue">6 слов</span>
+        </div>
+      </div>
+
+      <div class="concordance-container" id="concordanceResults"></div>
+
+      <div class="export-section" id="exportSection" style="display:none;">
+        <button class="btn btn-secondary" onclick="exportResults('txt')">Экспорт TXT</button>
+        <button class="btn btn-secondary" onclick="exportResults('csv')">Экспорт CSV</button>
+      </div>
+    </div>
+
+    <div class="card" id="collocationsCard" style="display:none;">
+      <h2>Коллокации</h2>
+      <p>Слова, наиболее часто встречающиеся рядом с ключевым словом (в окне &plusmn;5 слов):</p>
+      <div id="collocationsResults"></div>
+    </div>
+
+    <div class="card" id="freqCard" style="display:none;">
+      <h2>Частотный список найденных форм</h2>
+      <div id="freqResults"></div>
+    </div>
+  </div>
+
+  <!-- ===== GUIDE TAB ===== -->
+  <div id="tab-guide" class="tab-content">
+    <div class="card">
+      <h2>Инструкция</h2>
+
+      <h3>Шаг 1. Подготовка текста</h3>
+      <p>Перейдите на вкладку <strong>Конкордансер</strong>. Вы можете:</p>
+      <ul>
+        <li>Вставить свой текст (скопируйте из документа, с веб-страницы и т.д.)</li>
+        <li>Выбрать один из готовых примеров, нажав соответствующую кнопку</li>
+      </ul>
+      <p>После ввода текста автоматически отображается базовая статистика: количество токенов (словоупотреблений), уникальных слов (типов), предложений и коэффициент TTR (Type-Token Ratio — лексическое разнообразие).</p>
+
+      <h3>Шаг 2. Формулирование запроса</h3>
+      <p>Введите искомое слово или шаблон в поле поиска:</p>
+      <ul>
+        <li><strong>Простой поиск:</strong> введите слово целиком, например <code>language</code></li>
+        <li><strong>С подстановочными знаками:</strong> используйте <code>*</code> и <code>?</code></li>
+        <li>Выберите, нужно ли учитывать регистр (заглавные/строчные буквы)</li>
+      </ul>
+
+      <h3>Шаг 3. Построение конкорданса</h3>
+      <p>Нажмите кнопку <strong>Построить</strong>. Результаты отобразятся в формате KWIC:</p>
+      <ul>
+        <li>Левый контекст — слова перед искомым</li>
+        <li>Ключевое слово — выделено в центре</li>
+        <li>Правый контекст — слова после искомого</li>
+      </ul>
+
+      <h3>Шаг 4. Анализ результатов</h3>
+      <p>Используйте инструменты для анализа:</p>
+      <ul>
+        <li><strong>Сортировка:</strong> переключайте вид сортировки (по порядку, по ключевому слову, по 1 слову слева/справа), чтобы выявлять паттерны</li>
+        <li><strong>Ширина контекста:</strong> регулируйте ползунком количество слов контекста</li>
+        <li><strong>Коллокации:</strong> изучите, какие слова чаще всего встречаются рядом с искомым</li>
+        <li><strong>Частотный список:</strong> если вы использовали шаблон с подстановочными знаками, увидите, какие конкретные формы были найдены и как часто</li>
+      </ul>
+
+      <h3>Шаг 5. Экспорт</h3>
+      <p>Результаты можно экспортировать в формате TXT или CSV для дальнейшей работы.</p>
+
+      <div class="highlight-note">
+        <strong>Задания для практики:</strong><br>
+        1. Загрузите английский текст и найдите все формы глагола <code>teach*</code>. Какие формы встретились?<br>
+        2. Сравните контексты употребления слов <code>make</code> и <code>do</code> — какие коллокации вы видите?<br>
+        3. Используйте шаблон <code>*tion</code> и определите 5 самых частотных слов с этим суффиксом.<br>
+        4. Загрузите русский текст и проанализируйте все формы слова с корнем <code>учи*</code>.<br>
+        5. Попробуйте отсортировать конкорданс по 1 слову справа — какие закономерности вы наблюдаете?
+      </div>
+
+      <h3>Ограничения учебной версии</h3>
+      <p>Данное приложение имеет ряд ограничений по сравнению с профессиональными конкордансерами:</p>
+      <ul>
+        <li>Работа только с одним текстом (не с корпусом текстов)</li>
+        <li>Отсутствие лемматизации (поиск только по словоформам)</li>
+        <li>Упрощённый подсчёт коллокаций (без статистических мер MI, t-score)</li>
+        <li>Ограниченный набор подстановочных знаков</li>
+      </ul>
+      <p>Для полноценной работы с корпусами рекомендуется использовать профессиональные инструменты: AntConc, Sketch Engine, #LancsBox, НКРЯ.</p>
+    </div>
+  </div>
+
+
+<!-- ===== SELF-CHECK TAB ===== -->
+<div id="tab-selfcheck" class="tab-content">
+  <div class="card">
+    <h2>Вопросы для самопроверки и рефлексии</h2>
+    <p>Ответьте на вопросы, чтобы проверить своё понимание темы. Нажмите на вопрос, чтобы увидеть правильный ответ или подсказку для размышления.</p>
+
+    <h3>Часть 1. Теоретические основы</h3>
+
+    <div class="quiz-section">
+
+      <div class="quiz-item" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">1</span>
+          <span>Что такое конкордансер и чем он отличается от обычного поиска по тексту (например, Ctrl+F)?</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p>Конкордансер — это специализированный инструмент корпусной лингвистики, который не просто находит вхождения слова, а <strong>систематизирует все контексты его употребления</strong> в формате KWIC (ключевое слово в контексте). В отличие от обычного поиска:</p>
+          <ul>
+            <li>Конкордансер выравнивает ключевое слово по центру, позволяя видеть все контексты одновременно</li>
+            <li>Поддерживает сортировку по окружающим словам для выявления паттернов</li>
+            <li>Предоставляет статистику: частотность, коллокации, распределение</li>
+            <li>Позволяет использовать подстановочные знаки для поиска групп словоформ</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="quiz-item" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">2</span>
+          <span>Расшифруйте аббревиатуру KWIC. Почему именно такой формат представления данных стал стандартным в корпусной лингвистике?</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p><strong>KWIC — Key Word In Context</strong> (ключевое слово в контексте). Этот формат стал стандартным, потому что он позволяет исследователю:</p>
+          <ul>
+            <li>Быстро просматривать большое количество примеров, сфокусировавшись на ключевом слове</li>
+            <li>Визуально выявлять повторяющиеся паттерны слева и справа от ключевого слова</li>
+            <li>Обнаруживать типичные коллокации и грамматические конструкции</li>
+            <li>Сравнивать контексты употребления, расположенные вертикально друг под другом</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="quiz-item" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">3</span>
+          <span>Что такое коллокация? Приведите примеры коллокаций в английском и русском языках.</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p><strong>Коллокация</strong> — это устойчивое, статистически значимое сочетание двух или более слов, которые регулярно появляются рядом друг с другом в текстах.</p>
+          <p>Примеры в английском: <em>make a decision</em> (не <em>do a decision</em>), <em>strong tea</em> (не <em>powerful tea</em>), <em>heavy rain</em> (не <em>strong rain</em>), <em>commit a crime</em>.</p>
+          <p>Примеры в русском: <em>принять решение</em> (не <em>взять решение</em>), <em>крепкий чай</em> (не <em>сильный чай</em>), <em>одержать победу</em>, <em>представлять интерес</em>.</p>
+          <p>Конкордансер помогает выявлять коллокации путём анализа частотности совместного появления слов.</p>
+        </div>
+      </div>
+
+      <div class="quiz-item" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">4</span>
+          <span>Объясните разницу между понятиями «токен» (token) и «тип» (type). Что показывает коэффициент TTR?</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p><strong>Токен</strong> — это каждое отдельное словоупотребление в тексте (включая повторения). <strong>Тип</strong> — это уникальная словоформа.</p>
+          <p>Пример: во фразе <em>«язык — это язык»</em> — 3 токена, но только 2 типа (<em>язык</em> и <em>это</em>).</p>
+          <p><strong>TTR (Type-Token Ratio)</strong> — отношение числа типов к числу токенов. Показывает <strong>лексическое разнообразие</strong> текста. Чем выше TTR, тем разнообразнее лексика. Однако TTR зависит от длины текста: в более длинных текстах TTR обычно ниже, так как слова неизбежно повторяются.</p>
+        </div>
+      </div>
+
+      <div class="quiz-item" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">5</span>
+          <span>Чем подстановочный знак <code>*</code> отличается от знака <code>?</code>? Какой запрос вы бы составили, чтобы найти все формы английского глагола «play»?</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p><code>*</code> (звёздочка) заменяет <strong>любое количество символов</strong> (включая ноль), а <code>?</code> (вопросительный знак) заменяет <strong>ровно один символ</strong>.</p>
+          <p>Для поиска всех форм глагола «play» подойдёт запрос <code>play*</code> — он найдёт: <em>play, plays, played, playing, player, players, playground</em> и т.д.</p>
+          <p>Обратите внимание: запрос <code>play*</code> найдёт и существительные (player, playground). Это ограничение поиска по словоформам без лемматизации. В профессиональных конкордансерах можно искать по леммам.</p>
+        </div>
+      </div>
+
+      <div class="quiz-item" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">6</span>
+          <span>Что такое лемматизация и почему её отсутствие является ограничением простого конкордансера?</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p><strong>Лемматизация</strong> — это процесс приведения словоформ к их начальной (словарной) форме — <strong>лемме</strong>. Например: <em>taught, teaches, teaching</em> &rarr; лемма <em>teach</em>; <em>лучше, лучшего</em> &rarr; лемма <em>хороший</em>.</p>
+          <p>Без лемматизации конкордансер ищет только по точным словоформам или шаблонам. Это означает, что:</p>
+          <ul>
+            <li>Запрос <code>teach*</code> не найдёт форму <em>taught</em> (супплетивная форма)</li>
+            <li>Невозможно автоматически объединить все формы неправильных глаголов</li>
+            <li>В русском языке сложно охватить все падежные формы одним шаблоном</li>
+          </ul>
+          <p>Профессиональные конкордансеры (Sketch Engine, НКРЯ) поддерживают поиск по леммам.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <h3>Часть 2. Практическое применение</h3>
+
+    <div class="quiz-section">
+
+      <div class="quiz-item" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">7</span>
+          <span>Как сортировка конкорданса по первому слову справа от ключевого может помочь в изучении грамматики?</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p>Сортировка по первому слову справа группирует контексты по тому, что следует за ключевым словом. Это позволяет выявить:</p>
+          <ul>
+            <li><strong>Грамматические паттерны:</strong> например, после глагола <em>suggest</em> обнаружится, что часто следует <em>that</em> (suggest that...) или герундий (suggest doing)</li>
+            <li><strong>Управление глаголов:</strong> какие предлоги следуют за глаголом (depend <em>on</em>, rely <em>on</em>, result <em>in</em>)</li>
+            <li><strong>Типичные дополнения:</strong> какие существительные чаще всего стоят после определённого прилагательного или глагола</li>
+          </ul>
+          <p>Аналогично, сортировка по слову слева помогает увидеть, какие слова обычно предшествуют ключевому (определения, артикли, предлоги).</p>
+        </div>
+      </div>
+
+      <div class="quiz-item" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">8</span>
+          <span>Что такое Data-Driven Learning (DDL) и как конкордансер может использоваться на уроке иностранного языка?</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p><strong>Data-Driven Learning (DDL)</strong> — обучение на основе данных — это подход, предложенный Тимом Джонсом (Tim Johns), при котором учащиеся самостоятельно исследуют конкордансные данные для выявления языковых закономерностей.</p>
+          <p>Примеры использования на уроке:</p>
+          <ul>
+            <li><strong>Различение синонимов:</strong> студенты сравнивают конкордансы слов <em>big</em> и <em>large</em>, чтобы увидеть разницу в употреблении</li>
+            <li><strong>Изучение предлогов:</strong> анализ контекстов <em>interested in</em> vs. <em>interested by</em></li>
+            <li><strong>Исправление ошибок:</strong> студент проверяет, говорят ли <em>make homework</em> или <em>do homework</em></li>
+            <li><strong>Изучение жанров:</strong> сравнение употребления слова в научных и публицистических текстах</li>
+            <li><strong>Индуктивное изучение грамматики:</strong> студенты сами формулируют правило, наблюдая за примерами</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="quiz-item" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">9</span>
+          <span>Вы проанализировали текст и обнаружили, что слово «language» встречается 25 раз, а слово «tongue» — 2 раза. Можно ли утверждать, что «language» важнее в данном тексте? Какие факторы нужно учитывать?</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p>Простая частотность <strong>не является достаточным основанием</strong> для выводов о важности слова. Необходимо учитывать:</p>
+          <ul>
+            <li><strong>Тематику текста:</strong> если текст посвящён лингвистике, высокая частотность <em>language</em> ожидаема и может быть менее информативна</li>
+            <li><strong>Стилистические различия:</strong> <em>tongue</em> может использоваться в метафорическом значении или в определённых устойчивых выражениях (mother tongue)</li>
+            <li><strong>Частотность в языке в целом:</strong> <em>language</em> — более частотное слово вообще, поэтому его высокая частотность в тексте менее удивительна</li>
+            <li><strong>Ключевые слова (keywords):</strong> в профессиональном анализе сравнивают частотность в данном тексте с частотностью в референтном корпусе</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="quiz-item" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">10</span>
+          <span>Какие результаты вы ожидаете получить при запросе <code>*ment</code> в английском тексте? Для чего может быть полезен такой запрос?</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p>Запрос <code>*ment</code> найдёт все слова, оканчивающиеся на <em>-ment</em>: <em>development, government, environment, management, statement, achievement, movement, agreement</em> и т.д.</p>
+          <p>Такой запрос полезен для:</p>
+          <ul>
+            <li><strong>Изучения словообразования:</strong> суффикс <em>-ment</em> образует существительные от глаголов (develop &rarr; development)</li>
+            <li><strong>Анализа академической лексики:</strong> слова на <em>-ment</em> часто принадлежат к формальному регистру</li>
+            <li><strong>Расширения словарного запаса:</strong> студенты видят реальные примеры производных слов в контексте</li>
+            <li><strong>Подготовки к экзаменам:</strong> задания на словообразование (word formation) — частый тип заданий в международных экзаменах</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="quiz-item" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">11</span>
+          <span>Назовите три преимущества и три ограничения использования конкордансера в преподавании иностранного языка.</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p><strong>Преимущества:</strong></p>
+          <ul>
+            <li>Студенты работают с <strong>аутентичным языковым материалом</strong>, а не с придуманными примерами</li>
+            <li>Развивается <strong>автономия учащегося</strong> — умение самостоятельно исследовать язык и делать выводы</li>
+            <li>Формируется <strong>языковая осознанность</strong> (language awareness) — внимание к тому, как язык реально функционирует</li>
+          </ul>
+          <p><strong>Ограничения:</strong></p>
+          <ul>
+            <li><strong>Когнитивная нагрузка:</strong> анализ конкордансов требует навыков, которые есть не у всех студентов, особенно на начальных уровнях</li>
+            <li><strong>Отсутствие объяснений:</strong> конкордансер показывает примеры, но не объясняет правила — студенту нужна помощь преподавателя</li>
+            <li><strong>Зависимость от корпуса:</strong> результаты определяются составом корпуса; нерепрезентативный корпус даст искажённую картину</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <h3>Часть 3. Рефлексия</h3>
+
+    <div class="quiz-section">
+
+      <div class="quiz-item reflection" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">R1</span>
+          <span>Как вы могли бы использовать конкордансер в своей будущей практике преподавания иностранного языка? Опишите конкретный сценарий урока.</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p><em>Это открытый вопрос для рефлексии. Подумайте о следующем:</em></p>
+          <ul>
+            <li>Какой аспект языка вы хотели бы изучить с помощью конкордансера (лексику, грамматику, стилистику)?</li>
+            <li>На каком уровне владения языком находятся ваши предполагаемые ученики?</li>
+            <li>Будете ли вы готовить конкордансные данные заранее (paper-based DDL) или предложите ученикам работать с инструментом самостоятельно?</li>
+            <li>Какие задания вы дадите ученикам на основе конкордансных данных?</li>
+            <li>Как вы будете оценивать результаты работы?</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="quiz-item reflection" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">R2</span>
+          <span>Изменилось ли ваше представление о том, как устроен язык, после работы с конкордансером? Что вас удивило при анализе конкордансных строк?</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p><em>Это открытый вопрос для рефлексии. Обратите внимание на:</em></p>
+          <ul>
+            <li>Заметили ли вы паттерны, которые не осознавали раньше?</li>
+            <li>Были ли случаи, когда реальное употребление слова отличалось от того, что вы ожидали?</li>
+            <li>Помогло ли вертикальное расположение контекстов увидеть закономерности?</li>
+            <li>Как опыт работы с конкордансером соотносится с тем, что вы знаете из учебников и грамматик?</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="quiz-item reflection" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">R3</span>
+          <span>Какие трудности вы испытали при работе с конкордансером? Как, по вашему мнению, можно было бы облегчить работу с подобными инструментами?</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p><em>Это открытый вопрос для рефлексии. Подумайте:</em></p>
+          <ul>
+            <li>Было ли легко формулировать поисковые запросы? Что вызвало затруднения?</li>
+            <li>Легко ли было интерпретировать результаты конкорданса?</li>
+            <li>Какая дополнительная информация или функции были бы полезны?</li>
+            <li>Что бы вы объяснили своим будущим ученикам перед началом работы с конкордансером?</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="quiz-item reflection" onclick="this.classList.toggle('open')">
+        <div class="quiz-question">
+          <span class="quiz-number">R4</span>
+          <span>Сравните роль интуиции носителя языка и корпусных данных в описании языка. Может ли одно заменить другое? Аргументируйте свою позицию.</span>
+          <span class="quiz-arrow">&#9662;</span>
+        </div>
+        <div class="quiz-answer">
+          <p><em>Это открытый вопрос для рефлексии. Рассмотрите разные точки зрения:</em></p>
+          <ul>
+            <li>Когда интуиция носителя языка надёжна, а когда она может давать искажённую картину?</li>
+            <li>Могут ли корпусные данные выявить то, что не осознаётся носителями языка?</li>
+            <li>Есть ли аспекты языка, которые корпус не может отразить (интонация, жесты, контекст ситуации)?</li>
+            <li>Как соотносятся понятия Хомского о «языковой компетенции» (competence) и корпусный подход к «языковому употреблению» (performance)?</li>
+            <li>Какой подход более полезен для преподавателя иностранного языка?</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+</main>
+
+<footer>
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</footer>
+
+<script>
+// ===== Theme Toggle =====
+function toggleTheme() {
+  const html = document.documentElement;
+  const btn = document.querySelector('.theme-toggle');
+  if (html.getAttribute('data-theme') === 'light') {
+    html.setAttribute('data-theme', 'dark');
+    btn.innerHTML = '&#127769;';
+  } else {
+    html.setAttribute('data-theme', 'light');
+    btn.innerHTML = '&#9728;&#65039;';
+  }
+}
+
+// ===== Tab Navigation =====
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#tabNav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  const buttons = document.querySelectorAll('#tabNav button');
+  const map = { info: 0, tool: 1, guide: 2, selfcheck: 3 };
+  buttons[map[tabId]].classList.add('active');
+}
+
+// ===== Example Texts =====
+const examples = {
+  en: `The study of language has fascinated scholars for centuries. Language is not merely a tool for communication; it is a window into the human mind. Every language reflects the culture and history of its speakers. When we study language, we discover patterns that reveal how humans think and organize their world.
+
+Language teaching has evolved significantly over the past decades. Modern language teachers use corpus-based approaches to help students understand how language works in real contexts. A language teacher must understand both the structure of the language and the needs of the learners. Teaching a language requires patience, creativity, and deep knowledge.
+
+The English language has become a global lingua franca. Millions of people around the world are learning English as a second or foreign language. The spread of English has raised important questions about language policy, language rights, and linguistic diversity. Some scholars argue that the dominance of the English language threatens smaller languages.
+
+Corpus linguistics provides powerful tools for language analysis. By examining large collections of texts, researchers can identify patterns of language use that are not visible through intuition alone. Concordancers allow linguists to study how words behave in context, revealing collocations, semantic preferences, and grammatical patterns.
+
+Language acquisition is a complex process that involves cognitive, social, and emotional factors. Children acquire their first language naturally, while adults often struggle with second language learning. Research in language acquisition has shown that exposure to authentic language input is crucial for developing language proficiency.`,
+
+  en2: `Education plays a fundamental role in shaping society. The process of education involves the transmission of knowledge, skills, and values from one generation to the next. Formal education takes place in schools, colleges, and universities, while informal education occurs through everyday experiences and interactions.
+
+The history of education reveals changing ideas about what should be taught and how it should be taught. In ancient times, education was reserved for the elite. Today, universal education is considered a basic human right. Educational systems around the world vary greatly in their structure and content.
+
+Technology has transformed modern education in profound ways. Digital tools and online platforms have made education more accessible than ever before. Students can now access educational resources from anywhere in the world. However, the digital divide means that not all students benefit equally from technological advances in education.
+
+Teachers are at the heart of the educational process. A good teacher can inspire students and change their lives. Teacher education programs must prepare future teachers for the challenges of modern classrooms. Research shows that the quality of teaching is the most important factor in student achievement.
+
+The science of learning has made significant advances in recent decades. Cognitive scientists have discovered that learning is most effective when it is active, collaborative, and connected to real-world problems. These findings have important implications for how we design educational experiences.`,
+
+  ru: `Русский язык является одним из крупнейших языков мира. На русском языке говорят более 250 миллионов человек. Изучение русского языка открывает доступ к богатейшей литературной традиции и культурному наследию.
+
+История русского языка насчитывает более тысячи лет. Русский язык прошёл долгий путь развития от древнерусского языка до современного литературного русского языка. На протяжении веков русский язык впитывал заимствования из других языков, обогащая свой словарный состав.
+
+Преподавание русского языка как иностранного является важной областью прикладной лингвистики. Учителя русского языка используют различные методики для обучения иностранных студентов. Современные учебники русского языка включают аутентичные тексты и корпусные данные.
+
+Корпусная лингвистика предоставляет новые возможности для изучения русского языка. Национальный корпус русского языка содержит миллионы словоупотреблений и позволяет исследовать закономерности употребления слов. Учёные используют корпусные методы для анализа языковых изменений.
+
+Изучение языка требует систематической работы и постоянной практики. Студенты должны читать тексты на изучаемом языке, слушать аутентичную речь и активно использовать язык в общении. Владение языком открывает новые возможности для профессиональной деятельности и межкультурной коммуникации.`,
+
+  de: `Die deutsche Sprache gehört zur Familie der germanischen Sprachen. Deutsch wird von etwa 100 Millionen Menschen als Muttersprache gesprochen. Die Sprache hat eine reiche literarische Tradition, die von Goethe und Schiller bis zur modernen Literatur reicht.
+
+Die Geschichte der deutschen Sprache ist eng mit der Geschichte Europas verbunden. Die Sprache hat sich über Jahrhunderte entwickelt und verändert. Martin Luthers Bibelübersetzung spielte eine wichtige Rolle bei der Herausbildung einer einheitlichen deutschen Schriftsprache.
+
+Der Sprachunterricht in Deutschland hat sich in den letzten Jahrzehnten stark verändert. Moderne Sprachlehrer setzen auf kommunikative Methoden und authentische Materialien. Die Sprache wird nicht mehr nur als System von Regeln betrachtet, sondern als Mittel der Kommunikation.
+
+Die Sprachwissenschaft untersucht die Struktur und Funktion der Sprache. Linguisten analysieren die Sprache auf verschiedenen Ebenen: Phonologie, Morphologie, Syntax und Semantik. Die Korpuslinguistik ermöglicht es, Sprache in großen Textsammlungen zu untersuchen und Muster der Sprachverwendung zu entdecken.
+
+Sprache ist mehr als ein Kommunikationsmittel. Sprache formt unser Denken und beeinflusst unsere Wahrnehmung der Welt. Jede Sprache bietet eine einzigartige Perspektive auf die Wirklichkeit. Das Erlernen einer neuen Sprache eröffnet neue Horizonte und fördert das interkulturelle Verständnis.`
+};
+
+function loadExample(key) {
+  document.getElementById('corpusText').value = examples[key];
+  updateTextStats();
+}
+
+// ===== Text Statistics =====
+function getTokens(text) {
+  return text.match(/[\p{L}\p{N}'-]+/gu) || [];
+}
+
+function updateTextStats() {
+  const text = document.getElementById('corpusText').value.trim();
+  if (!text) {
+    document.getElementById('tokenCount').textContent = '0';
+    document.getElementById('typeCount').textContent = '0';
+    document.getElementById('sentCount').textContent = '0';
+    document.getElementById('ttrValue').textContent = '0';
+    return;
+  }
+  const tokens = getTokens(text);
+  const types = new Set(tokens.map(t => t.toLowerCase()));
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const ttr = tokens.length > 0 ? (types.size / tokens.length).toFixed(3) : '0';
+  document.getElementById('tokenCount').textContent = tokens.length;
+  document.getElementById('typeCount').textContent = types.size;
+  document.getElementById('sentCount').textContent = sentences.length;
+  document.getElementById('ttrValue').textContent = ttr;
+}
+
+document.getElementById('corpusText').addEventListener('input', updateTextStats);
+
+// ===== Concordance Engine =====
+let concordanceData = [];
+let currentContextSize = 6;
+
+function wildcardToRegex(pattern) {
+  let escaped = pattern.replace(/[-\/\\^$+.()|[\]{}]/g, '\\$&');
+  escaped = escaped.replace(/\\\*/g, '\\S*');
+  escaped = escaped.replace(/\\\?/g, '\\S');
+  // replace our own ? placeholder
+  escaped = escaped.replace(/\*/g, '\\S*');
+  escaped = escaped.replace(/\?/g, '\\S');
+  return escaped;
+}
+
+function buildConcordance() {
+  const text = document.getElementById('corpusText').value.trim();
+  const query = document.getElementById('searchQuery').value.trim();
+  const caseSensitive = document.getElementById('caseSensitive').value === 'yes';
+
+  if (!text) { alert('Пожалуйста, введите текст для анализа.'); return; }
+  if (!query) { alert('Пожалуйста, введите искомое слово или шаблон.'); return; }
+
+  // Tokenize preserving positions
+  const tokenRegex = /[\p{L}\p{N}'-]+/gu;
+  const tokens = [];
+  let m;
+  while ((m = tokenRegex.exec(text)) !== null) {
+    tokens.push({ word: m[0], index: m.index });
+  }
+
+  // Build regex from query
+  const regexStr = wildcardToRegex(query);
+  const flags = caseSensitive ? 'u' : 'iu';
+  let regex;
+  try {
+    regex = new RegExp('^' + regexStr + '$', flags);
+  } catch(e) {
+    alert('Некорректный поисковый запрос. Проверьте шаблон.');
+    return;
+  }
+
+  // Find matches
+  concordanceData = [];
+  for (let i = 0; i < tokens.length; i++) {
+    if (regex.test(tokens[i].word)) {
+      concordanceData.push({
+        position: i,
+        kwic: tokens[i].word,
+        tokens: tokens,
+        originalIndex: concordanceData.length
+      });
+    }
+  }
+
+  displayResults(query);
+}
+
+function displayResults(query) {
+  const resultsCard = document.getElementById('resultsCard');
+  const collocationsCard = document.getElementById('collocationsCard');
+  const freqCard = document.getElementById('freqCard');
+  const exportSection = document.getElementById('exportSection');
+
+  if (concordanceData.length === 0) {
+    resultsCard.style.display = 'block';
+    document.getElementById('resultsStats').innerHTML = '';
+    document.getElementById('concordanceResults').innerHTML = `
+      <div class="no-results">
+        <span class="icon">&#8709;</span>
+        <p>Совпадений не найдено для запроса: <code>${escapeHtml(query)}</code></p>
+        <p>Попробуйте другой запрос или используйте подстановочные знаки.</p>
+      </div>`;
+    collocationsCard.style.display = 'none';
+    freqCard.style.display = 'none';
+    exportSection.style.display = 'none';
+    return;
+  }
+
+  resultsCard.style.display = 'block';
+  exportSection.style.display = 'flex';
+
+  // Stats
+  const uniqueForms = new Set(concordanceData.map(d => d.kwic.toLowerCase()));
+  document.getElementById('resultsStats').innerHTML = `
+    <div class="stat-item"><span class="stat-label">Совпадений</span><span class="stat-value">${concordanceData.length}</span></div>
+    <div class="stat-item"><span class="stat-label">Уникальных форм</span><span class="stat-value">${uniqueForms.size}</span></div>
+    <div class="stat-item"><span class="stat-label">Запрос</span><span class="stat-value" style="font-size:1rem;">${escapeHtml(query)}</span></div>
+  `;
+
+  renderConcordanceTable();
+  computeCollocations();
+  computeFrequencyList();
+}
+
+function renderConcordanceTable() {
+  const ctx = currentContextSize;
+  let html = `<table class="concordance-table">
+    <thead><tr><th>#</th><th>Левый контекст</th><th>Ключевое слово</th><th>Правый контекст</th></tr></thead><tbody>`;
+
+  for (let i = 0; i < concordanceData.length; i++) {
+    const d = concordanceData[i];
+    const tokens = d.tokens;
+    const pos = d.position;
+
+    // Left context
+    const leftStart = Math.max(0, pos - ctx);
+    const leftTokens = tokens.slice(leftStart, pos).map(t => t.word);
+    const leftStr = leftTokens.join(' ');
+
+    // Right context
+    const rightEnd = Math.min(tokens.length, pos + ctx + 1);
+    const rightTokens = tokens.slice(pos + 1, rightEnd).map(t => t.word);
+    const rightStr = rightTokens.join(' ');
+
+    html += `<tr>
+      <td class="col-num">${i + 1}</td>
+      <td class="col-left" title="${escapeHtml(leftStr)}">${escapeHtml(leftStr)}</td>
+      <td class="col-kwic">${escapeHtml(d.kwic)}</td>
+      <td class="col-right" title="${escapeHtml(rightStr)}">${escapeHtml(rightStr)}</td>
+    </tr>`;
+  }
+
+  html += '</tbody></table>';
+  document.getElementById('concordanceResults').innerHTML = html;
+}
+
+function updateContext(val) {
+  currentContextSize = parseInt(val);
+  document.getElementById('contextValue').textContent = val + ' слов';
+  if (concordanceData.length > 0) renderConcordanceTable();
+}
+
+// ===== Sorting =====
+function sortConcordance(mode, btn) {
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  switch(mode) {
+    case 'default':
+      concordanceData.sort((a, b) => a.originalIndex - b.originalIndex);
+      break;
+    case 'kwic':
+      concordanceData.sort((a, b) => a.kwic.toLowerCase().localeCompare(b.kwic.toLowerCase()));
+      break;
+    case 'left1':
+      concordanceData.sort((a, b) => {
+        const la = a.position > 0 ? a.tokens[a.position - 1].word.toLowerCase() : '';
+        const lb = b.position > 0 ? b.tokens[b.position - 1].word.toLowerCase() : '';
+        return la.localeCompare(lb);
+      });
+      break;
+    case 'right1':
+      concordanceData.sort((a, b) => {
+        const ra = a.position < a.tokens.length - 1 ? a.tokens[a.position + 1].word.toLowerCase() : '';
+        const rb = b.position < b.tokens.length - 1 ? b.tokens[b.position + 1].word.toLowerCase() : '';
+        return ra.localeCompare(rb);
+      });
+      break;
+  }
+
+  renderConcordanceTable();
+}
+
+// ===== Collocations =====
+function computeCollocations() {
+  const collocationsCard = document.getElementById('collocationsCard');
+  if (concordanceData.length === 0) { collocationsCard.style.display = 'none'; return; }
+
+  const collMap = {};
+  const kwicForms = new Set(concordanceData.map(d => d.kwic.toLowerCase()));
+  const window = 5;
+
+  for (const d of concordanceData) {
+    const tokens = d.tokens;
+    const pos = d.position;
+    for (let i = Math.max(0, pos - window); i < Math.min(tokens.length, pos + window + 1); i++) {
+      if (i === pos) continue;
+      const w = tokens[i].word.toLowerCase();
+      if (w.length < 2) continue;
+      if (kwicForms.has(w)) continue;
+      const side = i < pos ? 'L' : 'R';
+      const key = w;
+      if (!collMap[key]) collMap[key] = { word: w, count: 0, left: 0, right: 0 };
+      collMap[key].count++;
+      if (side === 'L') collMap[key].left++; else collMap[key].right++;
+    }
+  }
+
+  const sorted = Object.values(collMap).sort((a, b) => b.count - a.count).slice(0, 20);
+
+  if (sorted.length === 0) { collocationsCard.style.display = 'none'; return; }
+
+  collocationsCard.style.display = 'block';
+  const maxCount = sorted[0].count;
+
+  let html = `<table class="collocation-table">
+    <thead><tr><th>Слово</th><th>Частота</th><th>Слева</th><th>Справа</th><th>Распределение</th></tr></thead><tbody>`;
+
+  for (const c of sorted) {
+    const barWidth = Math.round((c.count / maxCount) * 100);
+    html += `<tr>
+      <td><strong>${escapeHtml(c.word)}</strong></td>
+      <td>${c.count}</td>
+      <td>${c.left}</td>
+      <td>${c.right}</td>
+      <td><div class="freq-bar" style="width:${barWidth}%"></div></td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('collocationsResults').innerHTML = html;
+}
+
+// ===== Frequency List =====
+function computeFrequencyList() {
+  const freqCard = document.getElementById('freqCard');
+  const freqMap = {};
+
+  for (const d of concordanceData) {
+    const w = d.kwic.toLowerCase();
+    freqMap[w] = (freqMap[w] || 0) + 1;
+  }
+
+  const sorted = Object.entries(freqMap).sort((a, b) => b[1] - a[1]);
+
+  if (sorted.length <= 1) { freqCard.style.display = 'none'; return; }
+
+  freqCard.style.display = 'block';
+  const maxFreq = sorted[0][1];
+
+  let html = '<div class="freq-list">';
+  for (const [word, count] of sorted) {
+    const barWidth = Math.round((count / maxFreq) * 100);
+    html += `<div class="freq-item">
+      <span class="word">${escapeHtml(word)}</span>
+      <span class="count">${count}</span>
+    </div>`;
+  }
+  html += '</div>';
+  document.getElementById('freqResults').innerHTML = html;
+}
+
+// ===== Export =====
+function exportResults(format) {
+  if (concordanceData.length === 0) return;
+  const ctx = currentContextSize;
+  let content = '';
+
+  if (format === 'csv') {
+    content = '"#","Левый контекст","Ключевое слово","Правый контекст"\n';
+    concordanceData.forEach((d, i) => {
+      const tokens = d.tokens;
+      const pos = d.position;
+      const leftStart = Math.max(0, pos - ctx);
+      const leftStr = tokens.slice(leftStart, pos).map(t => t.word).join(' ');
+      const rightEnd = Math.min(tokens.length, pos + ctx + 1);
+      const rightStr = tokens.slice(pos + 1, rightEnd).map(t => t.word).join(' ');
+      content += `${i+1},"${leftStr}","${d.kwic}","${rightStr}"\n`;
+    });
+  } else {
+    concordanceData.forEach((d, i) => {
+      const tokens = d.tokens;
+      const pos = d.position;
+      const leftStart = Math.max(0, pos - ctx);
+      const leftStr = tokens.slice(leftStart, pos).map(t => t.word).join(' ').padStart(50);
+      const rightEnd = Math.min(tokens.length, pos + ctx + 1);
+      const rightStr = tokens.slice(pos + 1, rightEnd).map(t => t.word).join(' ');
+      content += `${leftStr}  **${d.kwic}**  ${rightStr}\n`;
+    });
+  }
+
+  const blob = new Blob(['\uFEFF' + content], { type: format === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `concordance.${format}`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ===== Utility =====
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ===== Keyboard shortcut =====
+document.getElementById('searchQuery').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') buildConcordance();
+});
+</script>
+
+</body>
+</html>
