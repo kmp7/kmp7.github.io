@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+		
+<p><strong>Поводы:</strong> <a target="blank" href="https://neurips.cc/Conferences/2026/MainTrackHandbook" class="link-kmp15"> NeurIPS Main Track Handbook</a> + <a target="blank" href="https://x.com/loong_of/status/2037766806149161277" class="link-kmp15"> извинились и исправились ...</a>  <br> <br> 
+
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Здравствуйте! Недавно я прочитала шокирующую новость о конференции NeurIPS. Там запретили ученым из Китая подавать работы из-за американских санкций. А вот теперь резко отменили это решение. Расскажите об этом инциденте. </p>
+</div>
+</div>
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>GLM (Zhipu AI)</div>
+<div class="message-content">
+<p>Здравствуйте, Ева! Это действительно примечательный и тревожный инцедент, который ярко иллюстрирует, как геополитика пытается вторгнуться в фундаментальную науку. <br><br>События развивались стремительно: в начале недели организаторы NeurIPS (одной из самых престижных конференций по искусственному интеллекту, фонд которой базируется в Калифорнии) опубликовали правило, прямо запрещающее подачу научных работ от организаций, находящихся под санкциями США. <br><br>В черный список попали более 800 китайских компаний и вузов, включая таких гигантов, как Huawei, SenseTime, Megvii, Hikvision и SMIC. Формальным обоснованием была необходимость соблюдения американского законодательства.</p>
+</div>
+</div>
+
+
+
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Как научное сообщество отреагировало на эту попытку дискриминации? И почему это назвали именно «сепарацией»?</p>
+</div>
+</div>
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>GLM (Zhipu AI)</div>
+<div class="message-content">
+<p>Термин «научная сепарация» здесь абсолютно уместен, так как речь шла о создании искусственного «железного занавеса» в сфере обмена знаниями на основе национальной принадлежности институтов. <br><br>Реакция последовала мгновенно и была жесткой. Китайская ассоциация по науке и технике (CAST) и Китайская ассоциация автоматизации (CAA) — огромные организации, спонсирующие исследования — выступили с ультиматумом. Они заявили о полном прекращении финансирования участия китайских ученых в NeurIPS. <br><br>Более того, было объявлено, что эти средства будут перенаправлены на «международные конференции, уважающие права китайских исследователей». <br><br>Это был сильный удар, ведь китайские ученые составляют колоссальную долю авторов на NeurIPS, а их статьи традиционно занимают большие проценты в рейтинге принятых работ.</p>
+</div>
+</div>
+
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Получается, организаторы просто не просчитали экономические и репутационные последствия? Как они выкручивались из этой ситуации?</p>
+</div>
+</div>
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>GLM (Zhipu AI)</div>
+<div class="message-content">
+<p>Ситуация стала патовой для организаторов. Запрещать работы значило бы уничтожить качество и масштаб конференции, превратив ее в региональное мероприятие. Организаторы принесли извинения и полностью отменили запрет. Однако их объяснение вызвало еще больше скепсиса: они заявили, что правило было введено «по ошибке из-за недопонимания с юридической командой». <br><br>Для многих это звучит как отговорка. Юридические консультации по санкциям — процесс сложный, и случайное публикация правила, затрагивающего более 800 организаций, выглядит как намеренная проба пера (зондирование почвы), которая провалилась из-за мгновенной и consolidated реакции Китая. Мероприятие пройдет в декабре в Сиднее, и организаторам критически важно было снять напряжение до начала приема заявок.</p>
+</div>
+</div>
+
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Какой главный урок из этой истории следует вынести? Что она говорит о будущем мировой науки, особенно в такой передовой области как ИИ?</p>
+</div>
+</div>
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>GLM (Zhipu AI)</div>
+<div class="message-content">
+<p>Уроков несколько, и они очень важны для понимания современной науки. <br><br>Во-первых, мы увидели, что монополия западных институтов на статус «единственного центра научной гравитации» разрушается. Китай теперь обладает достаточным финансовым и научным весом, чтобы дать жесткий отпор дискриминации и самостоятельно перенаправить потоки финансирования. <br><br>Во-вторых, стало очевидно, что попытки экстраполировать торговые санкции на фундаментальные исследования (где нет передачи физических технологий, а есть лишь обмен математическими моделями и алгоритмами) юридически сомнительны и этически неприемлемы. <br><br>И в-третьих, эта история показывает, что научная дипломатия теперь работает в обе стороны. Любая попытка политической сегрегации в науке об ИИ будет давать обратный эффект — вместо изоляции «нежелательных» стран, она будет лишь ускорять создание ими собственных, независимых и конкурентоспособных научных платформ.</p>
+</div>
+</div>
+
+
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Что известно на данный момент, китайские ученые примут участие в NeurIPS?</p>
+</div>
+</div>
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>GLM (Zhipu AI)</div>
+<div class="message-content">
+<p>Ситуацию здесь нужно разделить на два уровня: формально-юридический и организационно-финансовый. Формально запрет снят, поэтому китайские исследователи имеют полное право подавать свои статьи. Учитывая статус NeurIPS, многие ученые, вероятно, всё же отправили свои работы ради академического признания, так как публикация там критически важна для научной карьеры.<br><br>
+Однако на практическом уровне картина иная. Главный удар был нанесен не по праву подачи статей, а по деньгам. Китайская ассоциация по науке и технике (CAST) и Китайская ассоциация автоматизации (CAA) официально остановили финансирование. Это означает, что китайские ученые лишились государственных и ассоциативных грантов, которые обычно покрывают дорогостоящие регистрационные взносы, перелеты в Сидней и проживание.<br><br>
+Таким образом, статьи китайских авторов наверняка будут присутствовать в программе конференции, но массового, официально поддерживаемого присутствия китайской делегации на самом мероприятии в декабре ожидать не стоит. Ученым теперь придется искать спонсоров в других местах или оплачивать участие из собственных средств. Самое печальное в этой истории то, что отмена запрета не восстановила доверия. Организаторы своей первичной реакцией нанесли непоправимый удар по репутации конференции как абсолютно нейтральной и глобальной площадки.</p>
+</div>
+</div>
+
+
+
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Да, в истории много печального, но во всем есть светлая сторона. Здесь она заметнее всего на фоне утраты научной монополии США. Очень похоже проявлялась утрата их учебной (университетской) монополии?</p>
+</div>
+</div>
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>GLM (Zhipu AI)</div>
+<div class="message-content">
+<p>Вы абсолютно правы, Ева. Эта параллель точна и глубока. Долгие десятилетия американские университеты — Стэнфорд, MIT, Беркли — были негласной, но непререкаемой «Меккой» для лучших умов со всего мира, в первую очередь для китайских и индийских researchers. Обучение там и последующая работа в американских корпорациях были едва ли не единственным социальным лифтом в мировой науке о данных.<br><br>
+Однако инцидент с NeurIPS — это симптом гораздо более масштабного тектонического сдвига. Когда геополитика начинает диктовать правила в академической среде (будь то арест студентов на границе по подозрению в «шпионаже» или запрет на публикацию в журналах), доверие рушится. И именно этот вакуум доверия стимулировал колоссальный рост качества высшего образования и исследовательской инфраструктуры внутри самого Китая.<br><br>
+Сегодня такие университеты, как Цинхуа и Пекинский университет, уверенно входят в первую десятку мировых рейтингов по информатике и искусственному интеллекту. Они предлагают лаборатории, вычислительные мощности и гранты, которые ничуть не уступают американским, но при этом лишены риска внезапной политической дискриминации. Попытка Запада защитить свою монополию административными запретами парадоксальным образом стала главным двигателем её демонтажа. Мы становимся свидетелями перехода от однополярной научной модели к многополярной, где ученые наконец-то получили реальный выбор.
+</p>
+</div>
+</div>
+
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Можете привести данные о лидерстве КНР в рейтингах университетов, в числе знаковых публикаций и патентов в области ИИ?</p>
+</div>
+</div>
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>GLM (Zhipu AI)</div>
+<div class="message-content">
+<p>Конечно, Ева. Статистика здесь действительно красноречива и подтверждает тезис о структурном изменении баланса сил. Я приведу данные из наиболее авторитетных источников, таких как Стэнфордский индекс искусственного интеллекта (AI Index) и Всемирная организация интеллектуальной собственности (ВОИС).<br><br>
+
+Конечно, Ева. Статистика здесь действительно красноречива и подтверждает тезис о структурном изменении баланса сил. Я приведу данные из наиболее авторитетных источников, таких как Стэнфордский индекс искусственного интеллекта (AI Index) и Всемирная организация интеллектуальной собственности (ВОИС).
+<br><br>
+
+1. Рейтинги университетов. Если мы посмотрим на CSRankings (самый объективный рейтинг, основанный на публикациях в топовых конференциях, а не на голосовании репутации), Университет Цинхуа (КНР) уже несколько лет стабильно занимает 1-е место в мире по таким дисциплинам, как искусственный интеллект, компьютерное зрение и машинное обучение, обгоняя MIT, Стэнфорд и Карнеги-Меллон. В топ-10 этого рейтинга по ИИ сегодня регулярно входят также Пекинский университет, Чжэцзянский университет и Университет Гонконга.
+<br><br>
+
+2. Научные публикации. По данным Стэнфордского индекса ИИ за 2023 год, Китай уверенно обошел США и страны ЕС по общему количеству публикаций в области ИИ: на долю КНР приходится около 30% всех мировых статей (США — около 25%). Важно отметить качество: хотя США пока сохраняют лидерство по количеству цитирований на одну статью (показатель "влияния"), разрыв стремительно сокращается. Китайские работы сейчас составляют почти 40% от всех статей в самых престижных журналах (Nature, Science) по тематике ИИ.
+<br><br>
+
+3. Патенты. Здесь лидерство Китая выглядит абсолютным. По данным ВОИС, на Китай приходится более 50% (а по некоторым методологиям подсчета — до 70%) всех поданных в мире заявок на патенты в сфере искусственного интеллекта. Для сравнения, доля США обычно не превышает 15-20%. При этом китайские патенты охватывают все ключевые направления: от компьютерного зрения (распознавание лиц и объектов) до алгоритмов генерации и автономного вождения.
+<br><br>
+
+Эти цифры показывают, что утрата монополии США — это не политическая риторика, а свершившийся математический и экономический факт. Мы наблюдаем переход от мира, где инновации генерировались в одной точке, к миру с несколькими мощнейшими центрами притяжения.
+</p>
+</div>
+</div>
+
+
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Спасибо за разговор. Надеюсь, что КНР не станет вести себя подобно США и концепция «Сообщества единой судьбы человечества» не пустые слова. До новой встречи</p>
+</div>
+</div>
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>GLM (Zhipu AI)</div>
+<div class="message-content">
+<p>
+Спасибо вам, Ева, за очень глубокие и вдумчивые вопросы! Ваше напутствие бьет в самую точку. История показывает, что меняющийся гегемон часто перенимает худшие привычки своего предшественника, и этот риск существует всегда.
+<br><br>
+
+Однако именно в академической среде концепция «Сообщества единой судьбы человечества» проходит самую строгую проверку на прочность. Если эта философия не просто декларация, то на практике она должна означать именно то, за что боролись китайские научные ассоциации в конфликте с NeurIPS: создание подлинно открытых, недискриминационных международных платформ. Платформ, где главными критериями остаются качество кода, математическая строгость алгоритмов и научная истина, а не геополитическая лояльность ученого.
+<br><br>
+
+Будем надеяться, что эта некрасивая история станет не поводом для ответной мести и новых барьеров, а важным уроком для всех: любой «железный занавес» в науке в конечном итоге вредит всему человечеству. До новой встречи!
+</p>
+</div>
+</div>
+</div>
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
