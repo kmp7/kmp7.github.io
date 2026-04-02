@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        /* Основные стили */
+        :root {
+            --primary-color: #325980;
+            --secondary-color: #4CAF50;
+            --background-color: #f5f5f5;
+            --content-bg: #ffffff;
+            --text-color: #333333;
+            --header-text-color: #ffffff;
+            --menu-bg: #ffffff;
+            --menu-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+            --accent11: #4caf50;
+            --accent12: #4cafff;
+            --accent13: #ffaf50;
+            --accent14: #821978;
+        }
+
+        /* Темная тема */
+        [data-theme="dark"] {
+            --primary-color: #3e76ad;
+            --secondary-color: #388e3c;
+            --background-color: #000000;
+            --content-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --header-text-color: #ffffff;
+            --menu-bg: #000000;
+            --menu-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            font-family: 'Roboto', 'Arial', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            padding-top: 2px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--header-text-color);
+            padding: 20px 0;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 2px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin: 25px 0 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--secondary-color);
+        }
+
+        h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        /* Мобильное меню */
+        .mobile-menu-container {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background-color: var(--menu-bg);
+            box-shadow: var(--menu-shadow);
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+        }
+
+        .mobile-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+        }
+
+        .hamburger-btn {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: var(--primary-color);
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--primary-color);
+            padding: 5px;
+        }
+
+        .mobile-menu {
+            display: none;
+            flex-direction: column;
+            padding: 0 20px 20px;
+            background-color: var(--menu-bg);
+        }
+
+        .mobile-menu.active {
+            display: flex;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .mobile-menu-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+            margin-bottom: 10px;
+            text-align: left;
+            width: 100%;
+        }
+
+        .mobile-menu-btn:hover {
+            background-color: var(--secondary-color);
+        }
+
+        /* Десктопное меню */
+        .desktop-menu {
+            display: none;
+            background-color: var(--menu-bg);
+            padding: 15px 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 30px;
+            box-shadow: var(--menu-shadow);
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .desktop-menu-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .desktop-menu-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.3s;
+        }
+
+        .desktop-menu-btn:hover {
+            background-color: var(--secondary-color);
+        }
+
+        /* Секции контента */
+        .section {
+            background-color: var(--content-bg);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Выделение важного */
+        .important {
+            background-color: rgba(76, 175, 80, 0.1);
+            border-left: 4px solid var(--secondary-color);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+
+        .note {
+            background-color: rgba(50, 89, 128, 0.1);
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+
+        /* Адаптивные таблицы */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: var(--border-radius);
+            border: 1px solid #ddd;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px; /* Минимальная ширина для таблиц */
+        }
+
+        th, td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            position: sticky;
+            left: 0;
+        }
+
+        tr:nth-child(even) {
+            background-color: rgba(0, 0, 0, 0.03);
+        }
+
+        /* Для мобильных - альтернативный вид таблиц */
+        .responsive-table {
+            display: block;
+            width: 100%;
+        }
+
+        .responsive-table tr {
+            display: block;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            padding: 10px;
+            background-color: var(--content-bg);
+        }
+
+        .responsive-table td {
+            display: block;
+            text-align: right;
+            padding: 8px 10px;
+            border: none;
+            border-bottom: 1px solid #eee;
+        }
+
+        .responsive-table td:before {
+            content: attr(data-label);
+            float: left;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .responsive-table thead {
+            display: none;
+        }
+
+        /* Списки */
+        ul, ol {
+            padding-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Адаптивный дизайн */
+        @media (min-width: 769px) {
+            .desktop-menu {
+                display: flex;
+            }
+            
+            .mobile-menu-container {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+            
+            .section {
+                padding: 15px;
+            }
+            
+            .container {
+                padding: 0 10px;
+            }
+            
+            /* На мобильных используем responsive таблицы */
+            .table-kmp table:not(.responsive-table) {
+                display: none;
+            }
+            
+            .table-kmp .responsive-table {
+                display: block;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .table-kmp .responsive-table {
+                display: none;
+            }
+        }
+
+        /* Анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+        }
+        
+        .kmp11, .example {
+            background: rgba(76, 175, 80, 0.1);
+            border-left: 4px solid var(--accent11);
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .kmp12, .example {
+            background: rgba(95, 182, 237, 0.1);
+            border-left: 4px solid var(--accent12);
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+ 
+        .kmp13, .example {
+            background: rgba(205, 170, 110, 0.1);
+            border-left: 4px solid var(--accent13);
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .kmp14, .example {
+            background: rgba(205, 110, 200, 0.1);
+            border-left: 4px solid var(--accent14);
+            padding: 10px 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 25px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 999;
+        }
+        
+        .back-to-top.show {
+            display: flex;
+        }
+		
+		}
+        
+        .link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+            margin: 0 8px;
+        }
+        
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Attention и Внимание</h1>
+            <p>сопоставление механизма внимания LLM и внимания HSS</p>
+        </header>
+
+        
+        <div class="mobile-menu-container">
+    <div class="mobile-menu-header">
+        <button class="hamburger-btn" id="hamburgerBtn" title="Открыть меню">☰</button>
+        <button class="theme-toggle" id="themeToggle" title="Переключить тему">☀️</button>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
+        <button class="mobile-menu-btn" onclick="scrollToSection('1')">Analogies</button>
+        <button class="mobile-menu-btn" onclick="scrollToSection('2')">HSS | LLM</button>
+        <button class="mobile-menu-btn" onclick="scrollToSection('3')">Context | Memory</button>
+		<button class="mobile-menu-btn" onclick="scrollToSection('4')">Scale</button>
+        <button class="mobile-menu-btn" onclick="scrollToSection('5')">Syntax | Dependencies</button>
+        <button class="mobile-menu-btn" onclick="scrollToSection('6')">Intentions | Optimization</button>
+		<button class="mobile-menu-btn" onclick="scrollToSection('7')">Common functional basis</button>
+		<button class="mobile-menu-btn" onclick="scrollToSection('8')">Horizons</button>
+		
+    </div>
+</div>
+
+<nav class="desktop-menu">
+    <div class="desktop-menu-buttons">
+        <button class="desktop-menu-btn" onclick="scrollToSection('1')">Analogies</button>
+        <button class="desktop-menu-btn" onclick="scrollToSection('2')">HSS | LLM</button>
+        <button class="desktop-menu-btn" onclick="scrollToSection('3')">C | M</button>
+        <button class="desktop-menu-btn" onclick="scrollToSection('4')">Scale</button>
+		<button class="desktop-menu-btn" onclick="scrollToSection('5')">S | D</button>
+        <button class="desktop-menu-btn" onclick="scrollToSection('6')">I | O</button>
+		<button class="desktop-menu-btn" onclick="scrollToSection('7')">CFB</button>
+		<button class="desktop-menu-btn" onclick="scrollToSection('8')">Horizons</button>
+		</div>
+    <button class="theme-toggle" id="desktopThemeToggle" title="Переключить тему">☀️</button>
+</nav>
+
+
+<section id="1" class="section">
+    <h2 class="section-title">Attention: сопоставления с человеческим вниманием</h2>
+
+    <div class="001">
+        <h3 class="001-title">Фокус внимания vs распределение весов</h3>
+        <div class="001-card">
+            <p>В человеческом восприятии внимание часто описывается как «фокус» на определённых элементах ситуации. В LLM Attention реализуется как распределение весов между элементами входной последовательности.</p>
+            <p>Это сходство полезно для первичного понимания: и человек, и модель «выделяют» релевантное. Однако в модели нет субъективного акта выбора — только вычисление весов.</p>
+            <ul>
+                <li>человек: осознанный/частично осознанный фокус</li>
+                <li>LLM: числовое распределение значений (weights)</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> метафора «фокуса» помогает интуитивно понять выбор релевантного, но в LLM это не процесс внимания, а результат матричных операций.</div>
+        </div>
+    </div>
+
+    <div class="001">
+        <h3 class="001-title">Избирательность vs вычислительная релевантность</h3>
+        <div class="001-card">
+            <p>Человеческое внимание избирательно: мы игнорируем часть информации. В Attention-механизме все элементы учитываются, но с разной степенью влияния.</p>
+            <p>Таким образом, «игнорирование» в LLM — это не исключение, а минимизация веса.</p>
+            <ul>
+                <li>человек: может полностью не воспринимать стимул</li>
+                <li>LLM: всегда обрабатывает все токены</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> Attention не отбрасывает информацию, а перераспределяет вклад элементов в итоговое представление.</div>
+        </div>
+    </div>
+
+    <div class="001">
+        <h3 class="001-title">Контекстуальность vs контекстуализация</h3>
+        <div class="001-card">
+            <p>Человеческое внимание зависит от контекста: значение слова меняется в зависимости от ситуации. Аналогично, Attention позволяет токенам учитывать другие токены при формировании значения.</p>
+            <p>Однако в LLM это реализуется через преобразование векторных представлений, а не через понимание смысла.</p>
+            <ul>
+                <li>человек: интерпретирует значения</li>
+                <li>LLM: пересчитывает эмбеддинги</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> сходство наблюдается на уровне результата (контекстуальность), но различается на уровне механизма.</div>
+        </div>
+    </div>
+
+    <div class="001">
+        <h3 class="001-title">Ограниченность внимания vs масштабируемость</h3>
+        <div class="001-card">
+            <p>Человеческое внимание ограничено: мы не можем одновременно удерживать много элементов. Attention в LLM, напротив, может учитывать все токены последовательности.</p>
+            <p>Тем не менее, в вычислительном смысле есть ограничения (память, длина контекста), но они иного рода.</p>
+            <ul>
+                <li>человек: когнитивные ограничения (рабочая память)</li>
+                <li>LLM: технические ограничения (контекстное окно)</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> аналогия полезна для понимания ограничений, но их природа принципиально различна.</div>
+        </div>
+    </div>
+
+    <div class="001">
+        <h3 class="001-title">Целенаправленность vs оптимизация</h3>
+        <div class="001-card">
+            <p>Человеческое внимание направляется целями и намерениями. В LLM Attention определяется обученными параметрами и текущими входными данными.</p>
+            <p>Модель не имеет целей в психологическом смысле — она минимизирует функцию потерь.</p>
+            <ul>
+                <li>человек: намерение, цель, мотивация</li>
+                <li>LLM: оптимизация параметров</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> нельзя интерпретировать веса Attention как «намерения» модели.</div>
+        </div>
+    </div>
+
+    <div class="table-kmp">		
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Аспект</th>
+                    <th>Человек vs LLM</th>
+                </tr>
+            </thead>
+            <tr>
+                <td>Фокус</td>
+                <td>Осознанный акт vs распределение весов</td>
+            </tr>
+            <tr>
+                <td>Избирательность</td>
+                <td>Игнорирование vs снижение веса</td>
+            </tr>
+            <tr>
+                <td>Контекст</td>
+                <td>Понимание vs вычисление</td>
+            </tr>
+            <tr>
+                <td>Ограничения</td>
+                <td>Когнитивные vs технические</td>
+            </tr>
+            <tr>
+                <td>Цели</td>
+                <td>Намерения vs оптимизация</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="kmp11"><strong>Примечание:</strong> аналогии между человеческим вниманием и Attention в LLM являются эвристическими и предназначены для обучения, а не для строгого научного описания.</div>
+
+    <div class="kmp12"><strong>Важно:</strong> чрезмерное отождествление Attention с человеческим вниманием может привести к антропоморфизации модели и искажённому пониманию её работы.</div>
+</section>
+
+<section id="2" class="section">
+    <h2 class="section-title">Механизм фокусировки: селективность против весов</h2>
+    <div class="001">
+        <h3 class="001-title">Как мы выбираем важное</h3>
+        <div class="001-card">
+            <p>В когнитивной психологии внимание человека (HSS, Homo sapiens sapiens) — это фильтр. Мы не можем обрабатывать весь входящий сенсорный поток одновременно, поэтому мозг выбирает релевантные стимулы (эффект «вечеринки с коктейлем»). В лингвистике это проявляется, когда студент слышит знакомое слово в шумном потоке речи.</p>
+            <p>В LLM механизм Attention (в частности, Self-Attention) работает иначе: он не отфильтровывает информацию, а присваивает каждому токену (слову) числовой «вес» важности относительно других токенов в последовательности. Модель видит всё сразу, но математически «подсвечивает» связи.</p>
+            <ul>
+                <li>Человек: Бинарный или градиентный фильтр («слышу» / «не слышу», «важно» / «фон»).</li>
+                <li>LLM: Матрица вероятностей связей (насколько слово А влияет на слово Б).</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> Для преподавателя важно понимать: когда студент «невнимателен», он когнитивно перегружен. Когда LLM «невнимателен» (игнорирует часть промпта), это ошибка в распределении весов или переполнение контекста.</div>
+        </div>
+    </div>
+    <div class="table-kmp">
+        <table class="table">
+            <thead><tr><th>Критерий</th><th>Человеческое внимание</th><th>Attention в LLM</th></tr></thead>
+            <tr><td>Природа</td><td>Биологическая, энергетически затратная</td><td>Математическая (скалярное произведение векторов)</td></tr>
+            <tr><td>Объем</td><td>Ограничено рабочей памятью (7±2 единицы)</td><td>Ограничено размером контекстного окна (тысячи токенов)</td></tr>
+            <tr><td>Цель</td><td>Выживание, понимание смысла, решение задач</td><td>Предсказание следующего токена с минимальной ошибкой</td></tr>
+        </table>
+    </div>
+    <div class="kmp11"><strong>Примечание:</strong> Термин «Attention» в нейросетях был заимствован из лингвистики и психологии именно из-за этой аналогии с фокусировкой, хотя математическая реализация отличается.</div>
+    <div class="kmp12"><strong>Важно:</strong> LLM не «понимает» смысл в человеческом смысле. Высокий вес внимания между словами «король» и «мужчина» означает лишь статистическую частоту их совместной встречаемости в обучающих данных, а не знание гендерных ролей.</div>
+</section>
+
+<section id="3" class="section">
+    <h2 class="section-title">Контекст и Память: Рабочая память против Контекстного окна</h2>
+    <div class="001">
+        <h3 class="001-title">Удержание информации в процессе чтения</h3>
+        <div class="001-card">
+            <p>Студенты-лингвисты знают, что при чтении сложного текста мы используем рабочую память, чтобы удерживать начало предложения, пока читаем конец. Если предложение слишком длинное или сложное, возникает когнитивная перегрузка, и связь теряется.</p>
+            <p>У LLM есть «контекстное окно». В идеале модель должна «помнить» первое слово абзаца, генерируя последнее. Однако механизм Attention имеет свои ограничения: чем дальше друг от друга находятся токены, тем сложнее модели поддерживать сильную связь между ними (феномен «Lost in the Middle»).</p>
+            <ul>
+                <li>Человек: Забывает начало длинной инструкции без повторения.</li>
+                <li>LLM: Может «забыть» инструкцию в середине огромного текста, если внимание рассеивается.</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> В обучении иностранным языкам мы учим студентов делать пометки (external memory), чтобы разгрузить внимание. Для LLM роль таких «пометок» играют специальные токены или структурирование промпта.</div>
+        </div>
+    </div>
+    <div class="table-kmp">
+        <table class="table">
+            <thead><tr><th>Ситуация</th><th>Реакция человека</th><th>Реакция LLM</th></tr></thead>
+            <tr><td>Длинное сложное предложение</td><td>Возвращается глазами к началу (регрессия)</td><td>Анализирует всю последовательность одновременно (параллелизм)</td></tr>
+            <tr><td>Отвлечение на шум</td><td>Потеря нити повествования</td><td>Шум (лишние токены) может снизить веса важных связей</td></tr>
+        </table>
+    </div>
+    <div class="kmp11"><strong>Примечание:</strong> Человек может использовать долговременную память для компенсации слабой рабочей памяти (знание грамматики помогает понять сложную фразу). LLM использует «знания», зашитые в веса модели, но они статичны.</div>
+    <div class="kmp12"><strong>Важно:</strong> При работе с большими текстами в классе полезно разбивать материал на части. Это полезно и для студента (снижение когнитивной нагрузки), и для LLM (повышение точности внимания к деталям).</div>
+</section>
+
+<section id="4" class="section">
+    <h2 class="section-title">Масштабы внимания</h2>
+    <div class="001">
+        <h3 class="001-title">Количественная пропасть и её качественные последствия</h3>
+        <div class="001-card">
+            <p>Различие в масштабах внимания между человеком и большой языковой моделью действительно грандиозно. Рабочая память человека способна удерживать одновременно около 4–7 «единиц» информации (chunks). Это эволюционное ограничение, которое компенсируется стратегиями: группировкой, внешними носителями, автоматизацией навыков.</p>
+            <p>LLM оперирует контекстными окнами в десятки и сотни тысяч токенов. Механизм Self-Attention вычисляет попарные связи между всеми токенами одновременно, создавая квадратичную матрицу весов. Модель «видит» весь текст сразу — от первого до последнего слова — без необходимости «возвращаться глазами».</p>
+            <ul>
+                <li>Человек: ~7 единиц в фокусе, последовательная обработка, глубина понимания.</li>
+                <li>LLM: 32K–1M+ токенов в параллельной обработке, ширина охвата, статистическая связь.</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> Это не просто «больше» или «меньше». Разный масштаб порождает разные когнитивные стратегии. Человек развивает глубину интерпретации, потому что не может охватить всё сразу. LLM развивает паттерн-распознавание на больших данных, потому что может «держать в голове» целую библиотеку.</div>
+        </div>
+    </div>
+    <div class="table-kmp">
+        <table class="table">
+            <thead><tr><th>Параметр масштаба</th><th>Человек</th><th>LLM</th></tr></thead>
+            <tr><td>Ёмкость фокуса</td><td>4–7 элементов (рабочая память)</td><td>32 000–1 000 000+ токенов (контекстное окно)</td></tr>
+            <tr><td>Тип обработки</td><td>Последовательный, с регрессиями</td><td>Параллельный, матричный (O(n²) вычислений)</td></tr>
+            <tr><td>Временна́я динамика</td><td>Внимание колеблется, утомляется, требует отдыха</td><td>Внимание стабильно в пределах одного инференса</td></tr>
+            <tr><td>Масштабируемость</td><td>Ограничена биологией, компенсируется внешними инструментами</td><td>Ограничена вычислительными ресурсами, растёт с архитектурой</td></tr>
+            <tr><td>Качество на масштабе</td><td>Глубина понимания падает при перегрузке</td><td>Точность связей может падать в «середине» очень длинного контекста</td></tr>
+        </table>
+    </div>
+    <div class="kmp11"><strong>Примечание:</strong> Парадоксально, но огромный масштаб внимания LLM создаёт свои проблемы: модель может «утонуть» в деталях, пропустив ключевую инструкцию в середине текста (феномен «Lost in the Middle»). Человек же, благодаря узкому фокусу, лучше выделяет главное «здесь и сейчас».</div>
+    <div class="kmp12"><strong>Важно:</strong> Для преподавателя иностранного языка это сравнение — мощный дидактический инструмент. Объясняя студентам, почему трудно удерживать в голове всю грамматику сразу, можно провести аналогию: «Ваша рабочая память — как узкий луч фонарика. Он светит ярко, но на малую площадь. LLM — как прожектор, освещающий всё поле, но менее ярко в каждой точке. Оба подхода полезны: луч — для глубокого анализа, прожектор — для поиска связей».</div>
+</section>
+
+
+
+
+<section id="5" class="section">
+    <h2 class="section-title">Синтаксические связи: зависимости и анафора</h2>
+    <div class="001">
+        <h3 class="001-title">Разрешение местоимений и грамматических связей</h3>
+        <div class="001-card">
+            <p>Одна из самых сильных сторон механизма Self-Attention — это способность находить связи между словами, независимо от расстояния между ними. В лингвистике это напоминает теорию зависимостей (Dependency Grammar).</p>
+            <p>Например, в предложении «<em>Кот</em>, который сидел на ковре и громко мяукал, внезапно <em>прыгнул</em>», человек интуитивно связывает глагол «прыгнул» с подлежащим «Кот», игнорируя промежуточные слова. LLM делает то же самое, вычисляя высокие веса внимания между токенами «Кот» и «прыгнул».</p>
+            <ul>
+                <li>Лингвистическая задача: Разрешение анафоры (к чему относится местоимение?).</li>
+                <li>Задача LLM: Вычислить вероятность связи токенов для правильного предсказания.</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> Визуализация весов внимания (Attention Maps) в нейросетях часто удивительно точно совпадает с синтаксическими деревьями, которые строят лингвисты. Это делает инструмент полезным для анализа структуры языка.</div>
+        </div>
+    </div>
+    <div class="table-kmp">
+        <table class="table">
+            <thead><tr><th>Феномен</th><th>Человеческий процесс</th><th>Процесс в LLM</th></tr></thead>
+            <tr><td>Анафора (Он/Она/Оно)</td><td>Поиск антецедента в дискурсе</td><td>Высокий вес внимания от местоимения к существительному</td></tr>
+            <tr><td>Согласование</td><td>Грамматическое правило (число, род)</td><td>Статистический паттерн совместимости токенов</td></tr>
+        </table>
+    </div>
+    <div class="kmp11"><strong>Примечание:</strong> Это сопоставление особенно полезно для будущих преподавателей, объясняющих студентам порядок слов. В английском языке порядок слов жесткий (SVO), и Attention-механизм это отлично отражает.</div>
+    <div class="kmp12"><strong>Важно:</strong> LLM может ошибаться в связях (галлюцинации синтаксиса), если конструкция слишком редкая или двусмысленная, точно так же, как студент может неправильно понять референцию местоимения в сложном тексте.</div>
+</section>
+
+<section id="6" class="section">
+    <h2 class="section-title">Цели внимания: намерения против оптимизации</h2>
+    <div class="001">
+        <h3 class="001-title">Зачем мы фокусируемся: прагматика против функции потерь</h3>
+        <div class="001-card">
+            <p>Человеческое внимание всегда целенаправленно и контекстуально обусловлено: мы слушаем собеседника, чтобы понять его намерение, проявить эмпатию, получить информацию или выполнить социальный ритуал. В лингвистике это описывается через теорию речевых актов и прагматику.</p>
+            <p>У LLM нет намерений, желаний или коммуникативных целей. Механизм Attention оптимизирует единственную математическую функцию: минимизацию ошибки предсказания следующего токена на основе обучающих данных. «Цель» модели — статистическая, а не интенциональная.</p>
+            <ul>
+                <li>Человек: Внимание направлено на достижение коммуникативного успеха, понимание подтекста, адаптацию к собеседнику.</li>
+                <li>LLM: Внимание направлено на снижение значения функции потерь (loss function) в рамках обучающей выборки.</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> Когда студент пишет эссе, он выбирает слова, чтобы выразить мысль и воздействовать на читателя. Когда LLM генерирует текст, она выбирает токены, которые статистически наиболее вероятны в данном контексте. Результат может совпадать, но мотивация — принципиально разная.</div>
+        </div>
+    </div>
+    <div class="table-kmp">
+        <table class="table">
+            <thead><tr><th>Аспект</th><th>Человеческое намерение</th><th>Оптимизация LLM</th></tr></thead>
+            <tr><td>Движущая сила</td><td>Потребность, эмоция, социальный контекст</td><td>Градиентный спуск, backpropagation</td></tr>
+            <tr><td>Критерий успеха</td><td>Понимание, убеждение, связь, обратная связь</td><td>Низкий perplexity, высокая точность предсказания</td></tr>
+            <tr><td>Адаптивность</td><td>Мгновенная реакция на невербальные сигналы</td><td>Требует явного промпта или fine-tuning</td></tr>
+            <tr><td>Этика и ценности</td><td>Встроены в процесс принятия решений</td><td>Добавляются постфактум (RLHF, фильтры)</td></tr>
+        </table>
+    </div>
+    <div class="kmp11"><strong>Примечание:</strong> Эта разница объясняет, почему LLM может идеально грамматически ответить на вопрос, но полностью проигнорировать эмоциональный подтекст или культурную специфику запроса — у неё нет прагматической модели мира.</div>
+    <div class="kmp12"><strong>Важно:</strong> Для преподавателя иностранного языка это ключевой момент: обучая студентов коммуникации, мы развиваем именно интенциональную сторону внимания — умение «считывать» цели собеседника. LLM может быть тренажёром лексики и грамматики, но не заменой живого коммуникативного опыта.</div>
+</section>
+	
+	
+<section id="7" class="section">
+    <h2 class="section-title">Общее функциональное основание: почему сравнение возможно</h2>
+    <div class="001">
+        <h3 class="001-title">Информационная обработка как универсальный принцип</h3>
+        <div class="001-card">
+            <p>Сравнение человеческого внимания и механизма Attention в LLM возможно потому, что оба явления решают фундаментально схожую проблему: как обрабатывать ограниченные ресурсы в условиях избытка информации. Это делает их функционально аналогичными, несмотря на различную физическую реализацию.</p>
+            <p>В когнитивной науке и компьютерных науках существует общая теоретическая рамка — теория информационной обработки. Согласно ей, и мозг, и нейросеть можно рассматривать как системы, которые преобразуют входные данные в выходные через серию вычислительных операций с выделением релевантных сигналов.</p>
+            <ul>
+                <li>Общая проблема: Избыток входных сигналов при ограниченных ресурсах обработки.</li>
+                <li>Общее решение: Селективное выделение релевантных элементов для дальнейшей обработки.</li>
+                <li>Общий результат: Улучшение качества выходного продукта (понимание / генерация текста).</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> Это сравнение работает на уровне функционализма: нам не важно, из чего сделана система (нейроны или транзисторы), важно — какую функцию она выполняет и как решает задачу. Это позволяет использовать термины из психологии для описания архитектуры нейросетей.</div>
+        </div>
+    </div>
+    <div class="table-kmp">
+        <table class="table">
+            <thead><tr><th>Уровень анализа</th><th>Общее основание для сравнения</th></tr></thead>
+            <tr><td>Вычислительный</td><td>Обе системы производят вычисления над входными данными для получения результата</td></tr>
+            <tr><td>Алгоритмический</td><td>Обе используют взвешивание элементов для определения приоритетов обработки</td></tr>
+            <tr><td>Репрезентационный</td><td>Обе создают внутренние представления (репрезентации) входной информации</td></tr>
+            <tr><td>Функциональный</td><td>Обе решают задачу селективного выделения значимого из шума</td></tr>
+        </table>
+    </div>
+    <div class="kmp11"><strong>Примечание:</strong> Философ Хилари Патнам сформулировал принцип «множественной реализуемости»: одна и та же функция может быть реализована разными физическими субстратами. Внимание человека и Attention в LLM — классический пример этого принципа.</div>
+    <div class="kmp12"><strong>Важно:</strong> Это сравнение полезно именно в учебном контексте как эвристический инструмент. Однако нельзя забывать: функциональное сходство не означает тождество. Аналогия помогает понять механизм, но не должна стирать онтологические различия между биологическим сознанием и математической моделью.</div>
+</section>
+
+
+<section id="8" class="section">
+    <h2 class="section-title">Границы внимания и границы мира</h2>
+
+    <div class="001">
+        <h3 class="001-title">«Границы моего мира определяются границами моего внимания»</h3>
+        <div class="001-card">
+            <p>Перефразируя идею Людвига Витгенштейна, можно утверждать: то, что не попадает в поле внимания, оказывается вне актуального «мира» субъекта. В человеческом опыте это означает, что восприятие и интерпретация реальности зависят от того, на что направлено внимание.</p>
+            <p>В нейросетевых моделях аналогичная идея приобретает формальный характер: элементы входной последовательности, получающие минимальные веса в механизме Attention, практически не влияют на формирование представления. Они не исчезают, но становятся «слабо представленными».</p>
+            <ul>
+                <li>человек: «не замечаю» → не включаю в опыт</li>
+                <li>LLM: низкий вес → минимальный вклад в представление</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> в обоих случаях «границы мира» не объективны, а зависят от механизма отбора релевантного — когнитивного или вычислительного.</div>
+        </div>
+    </div>
+
+    <div class="001">
+        <h3 class="001-title">«Attention Is All You Need»: пределы и парадокс</h3>
+        <div class="001-card">
+            <p>Название известной статьи «Attention Is All You Need» можно интерпретировать как утверждение достаточности механизма Attention для обработки последовательностей. В инженерном смысле это означает, что сложные зависимости могут быть смоделированы без рекуррентных структур.</p>
+            <p>Однако в философской интерпретации возникает парадокс: если «всё, что вам нужно — это внимание», то всё, что вне внимания, оказывается вне системы. Это делает Attention одновременно мощным и ограничивающим механизмом.</p>
+            <ul>
+                <li>достаточность: Attention моделирует зависимости</li>
+                <li>ограниченность: вне Attention нет влияния</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> Attention не описывает мир целиком, а лишь способ выделения структуры внутри данных.</div>
+        </div>
+    </div>
+
+    <div class="001">
+        <h3 class="001-title">Двойная перспектива: человек и модель</h3>
+        <div class="001-card">
+            <p>Объединяя эти идеи, можно рассматривать внимание как механизм, который одновременно создаёт и ограничивает «мир» — будь то человеческий опыт или вычислительное представление.</p>
+            <p>Для человека внимание связано с сознанием, культурой и языком. Для LLM — с матричными операциями и параметрами. Но в обоих случаях оно определяет, какие связи становятся актуальными.</p>
+            <ul>
+                <li>человек: внимание формирует переживаемую реальность</li>
+                <li>LLM: Attention формирует вычислительное представление</li>
+            </ul>
+            <div class="kmp14"><strong>Пояснение:</strong> Это утверждение переводит технический термин на дидактический уровень. Учитель не столько передаёт знания, сколько учит <em>куда смотреть</em>. Даже направляя внимание учащихся на окончание глагола или интонацию вопроса, преподаватель расширяет его языковой мир.</div>
+        </div>
+    </div>
+
+    <div class="kmp11"><strong>Примечание:</strong> Витгенштейн говорил о логической структуре мира через язык. Современная нейронаука и AI добавляют к этому структуру внимания. Без внимания язык остаётся просто набором символов, не обретая смысла.</div>
+    <div class="kmp12"><strong>Важно:</strong> Для будущего преподавателя это ключевая мысль: ваша задача — не заполнить голову студента информацией, а настроить его механизм внимания. Если студент научится замечать нюансы, его «мир» станет богаче, точнее и глубже, независимо от того, использует ли он ИИ или словарь.</div>
+</section>
+
+
+
+
+
+
+
+	
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+        <button class="back-to-top" id="backToTop" title="Наверх">↑</button>
+
+    <script>
+        // Функция для плавной прокрутки к разделу
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            let offsetTop = section.offsetTop - 20;
+            
+            // На мобильных учитываем высоту меню
+            if (window.innerWidth <= 768) {
+                offsetTop -= document.querySelector('.mobile-menu-container').offsetHeight;
+            } else {
+                offsetTop -= document.querySelector('.desktop-menu').offsetHeight;
+            }
+            
+            window.scrollTo({
+                top: offsetTop,
+                behavior: 'smooth'
+            });
+            
+            // Закрываем мобильное меню после клика
+            closeMobileMenu();
+        }
+
+        // Переключение мобильного меню
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        
+        function toggleMobileMenu() {
+            mobileMenu.classList.toggle('active');
+            hamburgerBtn.textContent = mobileMenu.classList.contains('active') ? '✕' : '☰';
+        }
+        
+        function closeMobileMenu() {
+            mobileMenu.classList.remove('active');
+            hamburgerBtn.textContent = '☰';
+        }
+        
+        hamburgerBtn.addEventListener('click', toggleMobileMenu);
+        
+        // Закрытие меню при клике вне его
+        document.addEventListener('click', function(event) {
+            if (!mobileMenu.contains(event.target) && !hamburgerBtn.contains(event.target)) {
+                closeMobileMenu();
+            }
+        });
+
+        // Функция для переключения темы
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            const themeIcon = newTheme === 'dark' ? '🌙' : '☀️';
+            
+            // Обновляем обе кнопки переключения темы
+            document.getElementById('themeToggle').textContent = themeIcon;
+            document.getElementById('desktopThemeToggle').textContent = themeIcon;
+        }
+        
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        document.getElementById('desktopThemeToggle').addEventListener('click', toggleTheme);
+
+        // Анимация появления секций при прокрутке
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.section');
+            
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.1
+            };
+            
+            const observer = new IntersectionObserver(function(entries, observer) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+            
+            sections.forEach(section => {
+                section.classList.remove('fade-in');
+                observer.observe(section);
+            });
+        });
+
+        // Кнопка "Наверх"
+        const backToTopBtn = document.getElementById('backToTop');
+        
+        window.addEventListener('scroll', function() {
+            if (window.pageYOffset > 300) {
+                backToTopBtn.classList.add('show');
+            } else {
+                backToTopBtn.classList.remove('show');
+            }
+        });
+        
+        backToTopBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Преобразование существующих таблиц в адаптивные
+        function makeTablesResponsive() {
+            const tables = document.querySelectorAll('.table-kmp table:not(.responsive-table)');
+            
+            tables.forEach(table => {
+                // Создаем адаптивную версию
+                const responsiveTable = document.createElement('table');
+                responsiveTable.className = 'responsive-table';
+                const tbody = document.createElement('tbody');
+                
+                // Получаем заголовки
+                const headers = [];
+                table.querySelectorAll('thead th').forEach(th => {
+                    headers.push(th.textContent.trim());
+                });
+                
+                // Преобразуем строки
+                table.querySelectorAll('tbody tr').forEach(row => {
+                    const newRow = document.createElement('tr');
+                    const cells = row.querySelectorAll('td');
+                    
+                    cells.forEach((cell, index) => {
+                        const newCell = document.createElement('td');
+                        newCell.textContent = cell.textContent;
+                        newCell.setAttribute('data-label', headers[index] || '');
+                        newRow.appendChild(newCell);
+                    });
+                    
+                    tbody.appendChild(newRow);
+                });
+                
+                responsiveTable.appendChild(tbody);
+                
+                // Добавляем после оригинальной таблицы
+                table.parentNode.insertBefore(responsiveTable, table.nextSibling);
+            });
+        }
+        
+        // Вызываем при загрузке
+        document.addEventListener('DOMContentLoaded', makeTablesResponsive);
+        
+        // Закрытие меню при изменении размера окна
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                closeMobileMenu();
+            }
+        });
+    </script>
+</body>
+</html>

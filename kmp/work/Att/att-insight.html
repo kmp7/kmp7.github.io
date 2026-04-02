@@ -1,0 +1,809 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>kmp+</title>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+		
+		
+
+        /* Light theme (default) */
+        :root {
+            --bg-main: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --surface: #ffffff;
+            --surface-hover: #fafafa;
+            --text-primary: #1e2a3a;
+            --text-secondary: #2c3e50;
+            --accent: #3498db;
+            --accent-dark: #2980b9;
+            --header-bg: #ffffff;
+            --nav-headings: #325980;
+            --border-light: #f1f1f1;
+            --border-card: #e9ecef;
+            --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+            --token-bg: #f8f9fa;
+            --step-bg: #f8fafc;
+            --code-bg: #f1f3f5;
+            --legend-gradient: linear-gradient(90deg, #c6e9ff 0%, #2c7ab1 100%);
+        }
+
+        /* Dark theme */
+        body.dark {
+            --bg-main: #121212;
+            --bg-secondary: #1e1e1e;
+            --surface: #1e1e2a;
+            --surface-hover: #2a2a35;
+            --text-primary: #e2e8f0;
+            --text-secondary: #cbd5e1;
+            --accent: #3b9eff;
+            --accent-dark: #5d9eff;
+            --header-bg: #1a1a24;
+            --nav-headings: #7ab3c8;
+            --border-light: #2d2d3a;
+            --border-card: #2a2a35;
+            --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+            --token-bg: #2a2a35;
+            --step-bg: #252530;
+            --code-bg: #2a2a35;
+            --legend-gradient: linear-gradient(90deg, #1e4a6e 0%, #5faee3 100%);
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.55;
+            font-weight: 400;
+        }
+
+        /* Header with theme toggle */
+        .app-header {
+            background-color: var(--header-bg);
+            backdrop-filter: blur(0px);
+            border-bottom: 1px solid var(--border-light);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--nav-headings);
+            letter-spacing: -0.3px;
+        }
+
+        .logo p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            opacity: 0.8;
+        }
+
+        .theme-toggle {
+            background: var(--surface);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.7rem;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            background: var(--surface-hover);
+        }
+
+        /* Main container */
+        .main-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 8px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-card);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .card-padding {
+            padding: 1.8rem 2rem;
+        }
+
+        /* Input section */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .input-field {
+            flex: 1;
+        }
+
+        label {
+            font-weight: 500;
+            color: var(--nav-headings);
+            margin-bottom: 0.5rem;
+            display: block;
+            font-size: 0.9rem;
+        }
+
+        #sentence-input {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            font-size: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        #sentence-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.9rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: var(--shadow-sm);
+            font-family: inherit;
+        }
+
+        .button:hover {
+            background: var(--accent-dark);
+            transform: translateY(-2px);
+        }
+
+        /* Instruction badge */
+        .instruction-box {
+            background: var(--step-bg);
+            border-left: 4px solid var(--accent);
+            border-radius: 8px;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .instruction-box h3 {
+            color: var(--nav-headings);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .instruction-box p {
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .academic-note {
+            font-size: 0.85rem;
+            background: var(--code-bg);
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            margin-top: 0.8rem;
+            border: 1px solid var(--border-light);
+        }
+
+        /* Tokens row */
+        .tokens-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 24px 0;
+            justify-content: center;
+        }
+
+        .token {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            background: var(--token-bg);
+            border: 1px solid var(--border-light);
+            transition: all 0.2s;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Steps grid */
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(768px, 1fr));
+            gap: 1.2rem;
+            margin: 1.5rem 0;
+        }
+
+        .step {
+            background: var(--step-bg);
+            border-radius: 8px;
+            padding: 1.2rem;
+            border: 1px solid var(--border-light);
+        }
+
+        .step-title {
+            font-weight: 700;
+            color: var(--nav-headings);
+            margin-bottom: 0.6rem;
+            font-size: 1.1rem;
+        }
+
+        /* Charts layout */
+        .charts-container {
+            margin-top: 2rem;
+        }
+
+        .chart-wrapper {
+            margin-bottom: 3rem;
+            background: var(--surface);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-card);
+        }
+
+        .chart-wrapper h3 {
+            margin-bottom: 1.2rem;
+            color: var(--nav-headings);
+            font-weight: 600;
+        }
+
+        .heatmap-container {
+            overflow-x: auto;
+            min-height: 380px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #heatmap svg {
+            background: var(--surface);
+            border-radius: 8px;
+        }
+
+        .legend {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 16px;
+            font-size: 0.8rem;
+        }
+
+        .legend-gradient {
+            width: 180px;
+            height: 12px;
+            background: var(--legend-gradient);
+            border-radius: 8px;
+        }
+
+        #attention-chart-container {
+            height: 450px;
+            position: relative;
+        }
+
+        .explanation {
+            background: var(--step-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border: 1px solid var(--border-light);
+        }
+
+        .explanation h2 {
+            color: var(--nav-headings);
+            margin-bottom: 1rem;
+            font-size: 1.4rem;
+        }
+
+        .explanation ul {
+            padding-left: 1.4rem;
+            margin: 1rem 0;
+        }
+
+        .explanation li {
+            margin: 0.5rem 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem;
+            }
+            .card-padding {
+                padding: 1.2rem;
+            }
+            .app-header {
+                padding: 0.8rem 1rem;
+            }
+            .logo h1 {
+                font-size: 1.3rem;
+            }
+            .step {
+                padding: 1rem;
+            }
+            .token {
+                padding: 6px 14px;
+                font-size: 0.85rem;
+            }
+            .button {
+                padding: 0.7rem 1.5rem;
+            }
+            #attention-chart-container {
+                height: 380px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-container {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+            .input-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 0 1rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border-light);
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo">
+                <h1>Attention Insight</h1>
+                <p>механизм внимания в LLM • учебная визуалихация </p>
+            </div>
+            <div class="theme-toggle" id="themeToggle" aria-label="Сменить тему">☀️</div>
+        </div>
+    </header>
+
+    <div class="main-container">
+	
+	
+	       
+
+        <div id="visualization-section" style="display: none;">
+		
+		
+		
+		<div class="card">
+            <div class="card-padding">
+                <div class="input-group">
+                    <div class="input-row">
+                        <div class="input-field">
+                            <label>Исходное предложение (токенизация по пробелам)</label>
+                            <input type="text" id="sentence-input" 
+                                   placeholder="Например: Ева Адамовна Орлова изучает механизм внимания" 
+                                   value="Ева Адамовна Орлова изучает механизм внимания">
+                        </div>
+                        <button id="analyze-btn" class="button">Анализировать внимание</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+		
+		
+            <div class="card">
+                <div class="card-padding">
+                    <h2 style="color: var(--nav-headings); margin-bottom: 0.5rem;">Токенизация и веса внимания</h2>
+                    <div id="tokens-container" class="tokens-container"></div>
+
+                    <h2 style="color: var(--nav-headings); margin: 2rem 0 0.5rem 0;">Пошаговый процесс (упрощённая схема)</h2>
+                    <div class="steps-grid">
+                        <div class="step"><div class="step-title">1. Токенизация</div><p>Разбиение текста на токены (условные единицы). В реальных LLM используются BPE или WordPiece.</p></div>
+                        <div class="step"><div class="step-title">2. Эмбеддинги</div><p>Каждый токен преобразуется в плотный вектор, но в этой демонстрации эмбеддинги симулируются.</p></div>
+                        <div class="step"><div class="step-title">3. Q, K, V проекции</div><p>Умножение эмбеддингов на весовые матрицы (здесь не показано).</p></div>
+                        <div class="step"><div class="step-title">4. Веса внимания</div><p>softmax(Q·Kᵀ / √d) → показывает, насколько токен-запрос фокусируется на каждом ключе.</p></div>
+                        <div class="step"><div class="step-title">5. Контекстное представление</div><p>Взвешенная сумма значений (V) на основе весов внимания.</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <h3>Тепловая карта внимания (запрос → ключ)</h3>
+                    <div class="heatmap-container">
+                        <div id="heatmap"></div>
+                        <div class="legend">
+                            <span>Низкий вес</span>
+                            <div class="legend-gradient"></div>
+                            <span>Высокий вес</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-wrapper">
+                    <h3>Распределение внимания от каждого токена</h3>
+                    <div id="attention-chart-container">
+                        <canvas id="attention-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="explanation">
+                <h2>Интерпретация результатов (учебная)</h2>
+                <p>На тепловой карте показаны <strong>симулированные веса внимания</strong> для демонстрации:</p>
+                <ul>
+                    <li><strong>Яркие ячейки (зеленовато-синие)</strong> — высокий вес: токен-запрос «смотрит» на токен-ключ.</li>
+                    <li><strong>Бледные области</strong> — низкое внимание.</li>
+                    <li><strong>Диагональ</strong> часто высока (токен обращает внимание на себя).</li>
+                    <li><strong>Соседние токены</strong> получают повышенные веса из-за локальной когеренции.</li>
+                </ul>
+                <p><strong>Реальные LLM:</strong> механизм внимания позволяет модели связывать слова на больших расстояниях, учитывать грамматические конструкции, анафору и глобальный контекст. Однако токены не обладают «смыслом» сами по себе — модель обучается из миллионов текстов.</p>
+                <p style="margin-top: 0.8rem;"><em>Совет:</em> попробуйте разные предложения и обратите внимание, как меняются веса. Наша упрощённая модель добавляет больше внимания к себе и соседям, но в действительности внимание зависит от обученных параметров.</p>
+            </div>
+			
+			
+			<div class="instruction-box">
+                <h3>О визуализации внимания</h3>
+                <p>Данная модель <strong>очень сильно упрощена</strong> для образовательных целей. В реальных LLM (GPT, BERT и др.) механизм внимания:</p>
+                <ul style="margin-left: 1.2rem; margin-top: 0.4rem;">
+                    <li>Работает с <strong>токенами</strong>, а не словами.</li>
+                    <li>Использует <strong>множество голов внимания</strong> (multi-head) и слоёв.</li>
+                    <li>Токены <strong>не обладают самостоятельным семантическим значением</strong> — смысл возникает из контекста и обученных эмбеддингов.</li>
+                    <li>Веса внимания вычисляются через <strong>Q, K, V</strong> с обучаемыми проекциями, а не напрямую из слов.</li>
+                </ul>
+                <div class="academic-note">
+                    <strong>Важно:</strong> Цвета и веса на тепловой карте — искусственно сгенерированы для демонстрации паттернов (диагональ, соседние токены). Реальные модели показывают более сложные зависимости, включая синтаксические и семантические связи.
+                </div>
+            </div>
+			
+			
+        </div>
+        <footer>
+            <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+        </footer>
+    </div>
+
+    <script>
+        // Theme handling
+        const themeToggle = document.getElementById('themeToggle');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        let currentTheme = localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light');
+        
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.body.classList.add('dark');
+                themeToggle.innerHTML = '🌙';
+            } else {
+                document.body.classList.remove('dark');
+                themeToggle.innerHTML = '☀️';
+            }
+            localStorage.setItem('theme', theme);
+            currentTheme = theme;
+        }
+        
+        setTheme(currentTheme);
+        
+        themeToggle.addEventListener('click', () => {
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            setTheme(newTheme);
+            // force redraw charts if any (d3 & chart.js adapt via CSS vars)
+            if (window.attentionChartInstance) {
+                const tokens = window.lastTokens;
+                const matrix = window.lastMatrix;
+                if (tokens && matrix) {
+                    displayAttentionChart(tokens, matrix);
+                }
+            }
+            if (window.lastTokens && window.lastMatrix) {
+                displayHeatmap(window.lastTokens, window.lastMatrix);
+            }
+        });
+        
+        // Global references
+        let attentionChartInstance = null;
+        window.attentionChartInstance = null;
+        window.lastTokens = null;
+        window.lastMatrix = null;
+        
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const sentenceInput = document.getElementById('sentence-input');
+        const visualizationSection = document.getElementById('visualization-section');
+        const tokensContainer = document.getElementById('tokens-container');
+        
+        // Симуляция более "интересной" матрицы с паттернами, но сохраняем образовательную идею
+        function generateAttentionMatrix(size) {
+            const matrix = Array(size).fill().map(() => Array(size).fill(0));
+            for (let i = 0; i < size; i++) {
+                let row = [];
+                let sum = 0;
+                for (let j = 0; j < size; j++) {
+                    let weight;
+                    if (i === j) {
+                        weight = 0.55 + Math.random() * 0.35; // диагональ 0.55-0.9
+                    } else if (Math.abs(i - j) === 1) {
+                        weight = 0.3 + Math.random() * 0.35;
+                    } else if (Math.abs(i - j) === 2) {
+                        weight = 0.15 + Math.random() * 0.2;
+                    } else {
+                        weight = Math.random() * 0.2;
+                    }
+                    row.push(weight);
+                    sum += weight;
+                }
+                // softmax (нормализация)
+                for (let j = 0; j < size; j++) {
+                    row[j] = row[j] / sum;
+                }
+                matrix[i] = row;
+            }
+            // добавим небольшую асимметрию для реализма: иногда глаголы "смотрят" на подлежащее — симуляция
+            if (size >= 3) {
+                // допустим, второй токен (глагол) чуть больше внимания на первый (сущ)
+                if (matrix[1] && matrix[1][0]) matrix[1][0] = Math.min(0.6, matrix[1][0] + 0.1);
+                // пересчитывать сумму не будем для простоты, но это визуально меняет паттерн
+            }
+            return matrix;
+        }
+        
+        function displayTokens(tokens, attentionMatrix) {
+            tokensContainer.innerHTML = '';
+            // важность токена: сумма полученного внимания
+            const importanceScores = tokens.map((_, idx) => {
+                let total = 0;
+                for (let i = 0; i < attentionMatrix.length; i++) {
+                    total += attentionMatrix[i][idx];
+                }
+                return total / attentionMatrix.length;
+            });
+            
+            tokens.forEach((token, index) => {
+                const tokenElement = document.createElement('div');
+                tokenElement.className = 'token';
+                tokenElement.textContent = token;
+                const importance = importanceScores[index];
+                // цветовая схема: от светло-голубого до темно-синего
+                const intensity = Math.min(0.9, 0.3 + importance * 0.6);
+                const bgLight = `rgba(52, 152, 219, ${0.2 + importance * 0.5})`;
+                tokenElement.style.backgroundColor = document.body.classList.contains('dark') ? 
+                    `rgba(59, 158, 255, ${0.2 + importance * 0.4})` : bgLight;
+                tokenElement.style.color = importance > 0.45 ? '#ffffff' : 'var(--text-primary)';
+                tokenElement.style.border = `1px solid var(--accent)`;
+                tokensContainer.appendChild(tokenElement);
+            });
+        }
+        
+        function displayHeatmap(tokens, attentionMatrix) {
+            const heatmapDiv = document.getElementById('heatmap');
+            heatmapDiv.innerHTML = '';
+            
+            const margin = { top: 50, right: 40, bottom: 100, left: 100 };
+            const cellSize = Math.min(55, 500 / Math.max(tokens.length, 1));
+            const width = Math.max(400, tokens.length * cellSize);
+            const height = Math.max(350, tokens.length * cellSize);
+            
+            const svg = d3.select('#heatmap')
+                .append('svg')
+                .attr('width', width + margin.left + margin.right)
+                .attr('height', height + margin.top + margin.bottom)
+                .append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+            
+            const x = d3.scaleBand()
+                .range([0, width])
+                .domain(tokens)
+                .padding(0.05);
+            
+            const y = d3.scaleBand()
+                .range([0, height])
+                .domain(tokens)
+                .padding(0.05);
+            
+            // оси
+            svg.append('g')
+                .style('font-size', '12px')
+                .attr('transform', `translate(0,${height})`)
+                .call(d3.axisBottom(x).tickSize(0))
+                .selectAll('text')
+                .attr('transform', 'translate(-10,0)rotate(-35)')
+                .style('text-anchor', 'end')
+                .style('fill', 'var(--text-primary)');
+            
+            svg.append('g')
+                .style('font-size', '12px')
+                .call(d3.axisLeft(y).tickSize(0))
+                .selectAll('text')
+                .style('fill', 'var(--text-primary)');
+            
+            svg.append('text')
+                .attr('x', width / 2)
+                .attr('y', height + margin.top + 10)
+                .style('text-anchor', 'middle')
+                .style('fill', 'var(--text-secondary)')
+                .text('Токен-ключ (на который направлено внимание)');
+            
+            svg.append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('y', -margin.left + 20)
+                .attr('x', -height / 2)
+                .style('text-anchor', 'middle')
+                .style('fill', 'var(--text-secondary)')
+                .text('Токен-запрос (источник внимания)');
+            
+            const colorScale = d3.scaleSequential()
+                .interpolator(d3.interpolateBlues)
+                .domain([0, 1]);
+            
+            const data = [];
+            for (let i = 0; i < tokens.length; i++) {
+                for (let j = 0; j < tokens.length; j++) {
+                    data.push({ source: tokens[i], target: tokens[j], value: attentionMatrix[i][j], row: i, col: j });
+                }
+            }
+            
+            svg.selectAll()
+                .data(data)
+                .enter()
+                .append('rect')
+                .attr('x', d => x(d.target))
+                .attr('y', d => y(d.source))
+                .attr('width', x.bandwidth())
+                .attr('height', y.bandwidth())
+                .style('fill', d => colorScale(d.value))
+                .style('stroke', 'none')
+                .on('mouseover', function(event, d) {
+                    d3.select(this).style('stroke', '#333').style('stroke-width', 2);
+                    svg.append('text')
+                        .attr('id', 'heat-tooltip')
+                        .attr('x', x(d.target) + x.bandwidth()/2)
+                        .attr('y', y(d.source) + y.bandwidth()/2 - 5)
+                        .attr('text-anchor', 'middle')
+                        .attr('font-size', '11px')
+                        .attr('font-weight', 'bold')
+                        .attr('fill', 'var(--text-primary)')
+                        .text(`${d.value.toFixed(3)}`);
+                    svg.append('text')
+                        .attr('id', 'heat-label')
+                        .attr('x', x(d.target) + x.bandwidth()/2)
+                        .attr('y', y(d.source) + y.bandwidth()/2 + 12)
+                        .attr('text-anchor', 'middle')
+                        .attr('font-size', '10px')
+                        .attr('fill', 'var(--text-secondary)')
+                        .text(`${d.source} → ${d.target}`);
+                })
+                .on('mouseout', function() {
+                    d3.select(this).style('stroke', 'none');
+                    d3.select('#heat-tooltip').remove();
+                    d3.select('#heat-label').remove();
+                });
+        }
+        
+        function displayAttentionChart(tokens, attentionMatrix) {
+            const ctx = document.getElementById('attention-chart').getContext('2d');
+            if (attentionChartInstance) attentionChartInstance.destroy();
+            
+            const colors = [
+                'rgba(52, 152, 219, 0.7)', 'rgba(46, 204, 113, 0.7)', 'rgba(241, 196, 15, 0.7)',
+                'rgba(155, 89, 182, 0.7)', 'rgba(230, 126, 34, 0.7)', 'rgba(52, 73, 94, 0.7)',
+                'rgba(26, 188, 156, 0.7)', 'rgba(231, 76, 60, 0.7)', 'rgba(149, 165, 166, 0.7)'
+            ];
+            const datasets = tokens.map((token, i) => ({
+                label: token,
+                data: attentionMatrix[i],
+                backgroundColor: colors[i % colors.length],
+                borderColor: colors[i % colors.length].replace('0.7', '1'),
+                borderWidth: 1,
+                borderRadius: 6
+            }));
+            
+            attentionChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: tokens, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => {
+                                    const source = ctx.dataset.label;
+                                    const target = tokens[ctx.dataIndex];
+                                    return `${source} → ${target}: ${ctx.raw.toFixed(3)}`;
+                                }
+                            }
+                        },
+                        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Токены-ключи', color: 'var(--text-secondary)' }, ticks: { color: 'var(--text-primary)' } },
+                        y: { beginAtZero: true, max: 1, title: { display: true, text: 'Вес внимания' }, ticks: { color: 'var(--text-primary)' } }
+                    }
+                }
+            });
+            window.attentionChartInstance = attentionChartInstance;
+        }
+        
+        function analyzeAttention(sentence) {
+    const tokens = sentence.split(/\s+/).filter(t => t.length > 0);
+    if (tokens.length === 0) return;
+    const attentionMatrix = generateAttentionMatrix(tokens.length);
+    window.lastTokens = tokens;
+    window.lastMatrix = attentionMatrix;
+    
+    displayTokens(tokens, attentionMatrix);
+    const heatmapDiv = document.getElementById('heatmap');
+    heatmapDiv.innerHTML = '';
+    displayHeatmap(tokens, attentionMatrix);
+    displayAttentionChart(tokens, attentionMatrix);
+    visualizationSection.style.display = 'block';
+    
+    // ИСПРАВЛЕННАЯ ПРОКРУТКА с учётом высоты хедера
+    const header = document.querySelector('.app-header');
+    const headerHeight = header ? header.offsetHeight : 80;
+    window.scrollTo({ 
+        top: visualizationSection.offsetTop - headerHeight - 20, 
+        behavior: 'smooth' 
+    });
+}
+        
+        analyzeBtn.addEventListener('click', () => {
+            const sentence = sentenceInput.value.trim();
+            if (sentence) analyzeAttention(sentence);
+        });
+        
+        // автоматический анализ при загрузке
+        setTimeout(() => {
+            if (sentenceInput.value.trim()) analyzeBtn.click();
+        }, 200);
+    </script>
+</body>
+</html>

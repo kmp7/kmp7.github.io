@@ -1,0 +1,1103 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --header-bg: #325980;
+            --header-text: #ffffff;
+            --accent: #3498db;
+            --accent-hover: #2980b9;
+            --border: #e0e0e0;
+            --divider: #f1f1f1;
+            --card-bg: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --success: #27ae60;
+            --success-bg: #e8f5e9;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --header-bg: #0f3460;
+            --header-text: #ffffff;
+            --accent: #4fc3f7;
+            --accent-hover: #29b6f6;
+            --border: #2a2a4a;
+            --divider: #252545;
+            --card-bg: #1f1f3a;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --success: #4caf50;
+            --success-bg: #1b3d1f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .theme-toggle {
+            background: transparent;
+            border: 0px solid var(--header-text);
+            color: var(--header-text);
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        nav {
+            background-color: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            padding: 0.5rem 2rem;
+            position: sticky;
+            top: 70px;
+            z-index: 999;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            padding: 0.75rem 1.25rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            color: var(--header-bg);
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        [data-theme="dark"] .card-title {
+            color: var(--accent);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-success {
+            background-color: var(--success);
+        }
+
+        .btn-success:hover {
+            background-color: #219a52;
+        }
+
+        .qa-item {
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--accent);
+            transition: all 0.3s;
+        }
+
+        .qa-item:hover {
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        .qa-item.checked {
+            border-left-color: var(--success);
+            background-color: var(--success-bg);
+        }
+
+        .qa-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .qa-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--success);
+            flex-shrink: 0;
+            margin-top: 0.2rem;
+        }
+
+        .qa-question {
+            font-weight: 600;
+            color: var(--header-bg);
+            flex: 1;
+        }
+
+        [data-theme="dark"] .qa-question {
+            color: var(--accent);
+        }
+
+        .qa-answer {
+            margin-left: 2rem;
+            color: var(--text-secondary);
+            padding-top: 0.5rem;
+        }
+
+        .qa-number {
+            background-color: var(--accent);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .progress-bar {
+            background-color: var(--divider);
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            height: 100%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .stat-item {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .user-qa-list {
+            margin-top: 1rem;
+        }
+
+        .user-qa-item {
+            background-color: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .user-qa-item .delete-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .instruction-list {
+            list-style: none;
+            counter-reset: instruction;
+        }
+
+        .instruction-list li {
+            counter-increment: instruction;
+            padding: 0.75rem 0 0.75rem 3rem;
+            position: relative;
+            border-bottom: 1px solid var(--divider);
+        }
+
+        .instruction-list li::before {
+            content: counter(instruction);
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: var(--accent);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .concordancer-info {
+            background: linear-gradient(135deg, var(--bg-secondary), var(--card-bg));
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.5rem;
+        }
+
+        .concordancer-info h4 {
+            color: var(--header-bg);
+            margin-bottom: 0.5rem;
+        }
+
+        [data-theme="dark"] .concordancer-info h4 {
+            color: var(--accent);
+        }
+
+        .concordancer-info p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .concordancer-info ul {
+            margin-left: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .concordancer-info ul li {
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .header-title {
+                font-size: 1.2rem;
+            }
+
+            .header-subtitle {
+                display: none;
+            }
+
+            nav {
+                top: 60px;
+                padding: 0.5rem 1rem;
+            }
+
+            .nav-btn {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.85rem;
+            }
+
+            main {
+                margin: 1rem auto;
+            }
+
+            .card {
+                padding: 1rem;
+            }
+
+            .qa-answer {
+                margin-left: 0;
+                margin-top: 0.5rem;
+            }
+
+            .qa-header {
+                flex-wrap: wrap;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-content {
+                gap: 0.5rem;
+            }
+
+            .nav-btn {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.8rem;
+            }
+
+            .theme-toggle {
+                padding: 0.4rem 0.8rem;
+            }
+        }
+
+        .highlight {
+            background-color: rgba(52, 152, 219, 0.1);
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+        }
+
+        .term {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        	  footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 0px solid #ddd;
+    }
+
+        .export-preview {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 1rem;
+            margin: 1rem 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div>
+                <h1 class="header-title">Attention Mechanism</h1>
+				<p>механизм внимания в LLM • контрольные вопросы </p>
+                </div>
+            <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">
+                <span id="themeIcon">☀️</span>
+            </button>
+        </div>
+    </header>
+
+    <nav>
+        <div class="nav-content">
+            <button class="nav-btn active" data-section="info">Справка</button>
+			<button class="nav-btn" data-section="registration">Регистрация</button>
+            <button class="nav-btn" data-section="questions">Вопросы и ответы</button>
+            <button class="nav-btn" data-section="my-questions">Мои вопросы</button>
+            <button class="nav-btn" data-section="export">Экспорт</button>
+        </div>
+    </nav>
+
+    <main>
+	
+	 <!-- Информационный раздел -->
+        <section id="info" class="section active">
+            <div class="card">
+                <h2 class="card-title">Инструкция по работе с пособием</h2>
+                <ol class="instruction-list">
+                    <li>Введите свою фамилию и имя в разделе «Регистрация» для персонализации отчёта.</li>
+                    <li>Перейдите в раздел «Вопросы и ответы» и последовательно изучите все материалы.</li>
+                    <li>Отмечайте галочкой вопросы, которые вы изучили и поняли.</li>
+                    <li>Если у вас возникли собственные вопросы, добавьте их в разделе «Мои вопросы».</li>
+                    <li>Следите за прогрессом на странице регистрации.</li>
+                    <li>По завершении экспортируйте отчёт в HTML-файл для сохранения или отправки преподавателю.</li>
+                </ol>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">О механизме Attention</h2>
+                <p style="margin-bottom: 1rem;">
+                    <span class="term">Attention</span> (внимание) — это ключевой механизм современных языковых моделей, 
+                    позволяющий эффективно обрабатывать последовательности любой длины и моделировать 
+                    сложные зависимости между элементами текста.
+                </p>
+                <p style="margin-bottom: 1rem;">
+                    В контексте изучения иностранных языков понимание Attention помогает осознать, 
+                    как нейронные модели «читают» и «понимают» текст, какие связи между словами 
+                    они выделяют и как это соотносится с лингвистическими явлениями: 
+                    согласованием, анафорой, дистантными зависимостями.
+                </p>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Краткая справка о конкордансерах</h2>
+                <div class="concordancer-info">
+                    <h4>Что такое конкордансер?</h4>
+                    <p>
+                        <span class="term">Конкордансер</span> — это программный инструмент для поиска и анализа 
+                        вхождений слов или фраз в корпусе текстов. Он позволяет увидеть слово в контексте 
+                        (KWIC — Key Word In Context), что критически важно для лингвистических исследований.
+                    </p>
+                    
+                    <h4>Связь с механизмом Attention</h4>
+                    <p>
+                        Механизм Attention можно концептуально сравнить с продвинутым конкордансером: 
+                        оба инструмента работают с контекстом, но Attention делает это динамически 
+                        и с учётом семантических связей.
+                    </p>
+                    
+                    <h4>Популярные конкордансеры:</h4>
+                    <ul>
+                        <li><strong>AntConc</strong> — бесплатный, кроссплатформенный, подходит для начинающих</li>
+                        <li><strong>Sketch Engine</strong> — мощный онлайн-инструмент с большими корпусами</li>
+                        <li><strong>WordSmith Tools</strong> — профессиональный инструмент для корпусной лингвистики</li>
+                        <li><strong>LancsBox</strong> — современный инструмент с визуализациями</li>
+                    </ul>
+                    
+                    <h4>Практическое применение</h4>
+                    <p>
+                        При изучении Attention полезно сравнивать результаты конкордансера с визуализацией 
+                        весов внимания: это помогает понять, как статистические паттерны (конкордансер) 
+                        соотносятся с выученными моделью зависимостями (Attention).
+                    </p>
+                </div>
+            </div>
+
+            
+        </section>
+		
+		
+        <!-- Раздел регистрации -->
+        <section id="registration" class="section">
+            <div class="card">
+                <h2 class="card-title">Регистрация студента</h2>
+                <div class="form-group">
+                    <label for="studentName">Фамилия Имя</label>
+                    <input type="text" id="studentName" placeholder="Введите вашу фамилию и имя">
+                </div>
+                <button class="btn" id="saveNameBtn">Сохранить</button>
+                <p id="nameStatus" style="margin-top: 1rem; color: var(--success); display: none;">
+                    Данные сохранены
+                </p>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Ваш прогресс</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalQuestions">24</div>
+                        <div class="stat-label">Всего вопросов</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="checkedQuestions">0</div>
+                        <div class="stat-label">Изучено</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="userQuestions">0</div>
+                        <div class="stat-label">Ваших вопросов</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="progressPercent">0%</div>
+                        <div class="stat-label">Прогресс</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Раздел вопросов и ответов -->
+        <section id="questions" class="section">
+            <div class="card">
+                <h2 class="card-title">Вопросы и ответы по механизму Attention</h2>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                    Отмечайте вопросы по мере изучения. Прогресс сохраняется автоматически.
+                </p>
+                <div id="qaList"></div>
+            </div>
+        </section>
+
+        <!-- Раздел собственных вопросов -->
+        <section id="my-questions" class="section">
+            <div class="card">
+                <h2 class="card-title">Добавить свой вопрос</h2>
+                <div class="form-group">
+                    <label for="userQuestion">Ваш вопрос</label>
+                    <textarea id="userQuestion" placeholder="Введите ваш вопрос о механизме Attention..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="userAnswer">Ваш ответ</label>
+                    <textarea id="userAnswer" placeholder="Введите ваш ответ или размышления..."></textarea>
+                </div>
+                <button class="btn" id="addQuestionBtn">Добавить вопрос</button>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Мои вопросы и ответы</h2>
+                <div id="userQaList" class="user-qa-list">
+                    <p style="color: var(--text-secondary);">Вы ещё не добавили собственных вопросов.</p>
+                </div>
+            </div>
+        </section>
+
+       
+
+        <!-- Раздел экспорта -->
+        <section id="export" class="section">
+            <div class="card">
+                <h2 class="card-title">Экспорт отчёта</h2>
+                <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                    Сформируйте HTML-документ с вашим прогрессом, отмеченными вопросами 
+                    и собственными заметками для сохранения или отправки преподавателю.
+                </p>
+                <button class="btn btn-success" id="exportBtn">Экспортировать в HTML</button>
+                
+                <div id="exportPreview" class="export-preview" style="display: none;">
+                    <p>Предварительный просмотр...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+    </footer>
+
+    <script>
+        // Данные вопросов и ответов
+        const qaData = [
+            {
+                q: "Что такое Attention — одна фраза?",
+                a: "Механизм, позволяющий модели взвешенно объединять информацию из разных позиций входной последовательности при формировании каждого выходного представления."
+            },
+            {
+                q: "В чём различие Attention и внимания человека?",
+                a: "Attention (в моделях) — вычислительный механизм распределённого взвешивания входных представлений по числовым значениям; человеческое внимание — биологический, ресурсно-ограниченный процесс отбора и фокусировки восприятия с метакогнитивными аспектами. Главное отличие — природа (числовая vs биологическая) и наличие сознательных целей у человека."
+            },
+            {
+                q: "Что общего у Attention и человеческого внимания?",
+                a: "Оба выполняют функцию выделения релевантной информации и подавления менее важной; оба зависят от контекста и задачи; оба могут менять фокус в зависимости от запроса или цели."
+            },
+            {
+                q: "Какова роль Attention для LLM?",
+                a: "Обеспечивает контекстуализацию токенов: позволяет каждому выходному представлению агрегировать информацию из релевантных позиций входа, что критично для захвата долгих зависимостей, согласованности и генерации связного текста."
+            },
+            {
+                q: "Каково место Attention в архитектуре трансформера?",
+                a: "Центральный компонент: блок трансформера состоит из слоя self-attention (или encoder-decoder attention в декодере) с позиционно-независимыми проекциями, за которыми следуют позиционно-независимый feed-forward слой, residual connections и layer normalization. Attention отвечает за связность и перенос информации между позициями в каждом слое."
+            },
+            {
+                q: "Зачем Attention нужен в языковых моделях?",
+                a: "Позволяет моделировать долгие зависимости и контекст, обходя ограничения рекуррентных сетей (RNN/LSTM) и фиксированного окна контекста."
+            },
+            {
+                q: "Чем отличается self-attention от encoder-decoder attention?",
+                a: "Self-attention связывает элементы внутри одной последовательности; encoder-decoder attention (cross-attention) связывает токены декодера с представлениями энкодера — используется в задачах перевода и других seq2seq архитектурах."
+            },
+            {
+                q: "Что такое Query, Key и Value?",
+                a: "Query — запрос текущей позиции («что я ищу»); Key — «адрес» или метка позиции в памяти («чем я могу ответить»); Value — содержимое, которое передаётся при совпадении запроса и ключа («что я передаю»)."
+            },
+            {
+                q: "Как вычисляются веса внимания (attention scores)?",
+                a: "Скалярные произведения Query и Key (обычно с масштабированием на √d_k), затем функция softmax для нормировки весов в диапазон [0, 1] с суммой 1."
+            },
+            {
+                q: "Почему необходимо масштабирование (scaling)?",
+                a: "Деление скалярных произведений на √d_k предотвращает насыщение функции softmax при больших размерностях, стабилизирует градиенты и улучшает обучение."
+            },
+            {
+                q: "Что такое multi-head attention и зачем оно нужно?",
+                a: "Несколько параллельных self-attention «голов», каждая из которых работает в своём подпространстве признаков. Это даёт модели возможность одновременно улавливать разные типы зависимостей: синтаксические, семантические, позиционные."
+            },
+            {
+                q: "Как позиционная информация учитывается в трансформерах?",
+                a: "К эмбеддингам токенов добавляются позиционные кодировки (sinusoidal или обучаемые), поскольку механизм Attention сам по себе инвариантен к перестановкам элементов последовательности."
+            },
+            {
+                q: "В чём слабость базового Attention для очень длинных текстов?",
+                a: "Квадратичная сложность O(n²) по длине последовательности для памяти и вычислений, что делает обработку длинных документов ресурсозатратной."
+            },
+            {
+                q: "Какие прикладные интерпретации внимания полезны для лингвистов?",
+                a: "Веса внимания можно визуализировать как индикатор того, какие слова влияют на предсказание конкретного токена. Это полезно для анализа согласования, анафорических связей, синтаксических и семантических зависимостей."
+            },
+            {
+                q: "Насколько веса внимания равнозначны объяснению модели?",
+                a: "Веса дают информативный сигнал, но не являются полноценным доказательством причинно-следственных связей. Для надёжной интерпретации следует сочетать анализ внимания с другими методами: probing, ablation studies, градиентный анализ."
+            },
+            {
+                q: "Как обучение внимания связано с обучением эмбеддингов?",
+                a: "Параметры матриц W_Q, W_K, W_V обучаются совместно с эмбеддингами в едином процессе оптимизации, формируя представления, оптимальные для целевых задач."
+            },
+            {
+                q: "Что такое маскирование (masking) в Attention?",
+                a: "Блокировка определённых позиций: causal mask блокирует будущие позиции при авторегрессивном декодировании; padding mask игнорирует позиции заполнителей. Это предотвращает утечку информации и корректно обрабатывает последовательности разной длины."
+            },
+            {
+                q: "Какие альтернативы и оптимизации Attention существуют?",
+                a: "Sparse Attention, Linear Attention, Longformer, BigBird, Performer, Flash Attention — все направлены на уменьшение сложности по длине последовательности при сохранении качества."
+            },
+            {
+                q: "Какие практические упражнения помогут понять Attention?",
+                a: "Реализовать одну голову self-attention на Python/NumPy; визуализировать матрицы весов для примеров с анафорой и согласованием; сравнить поведение при разных схемах позиционного кодирования; проанализировать attention maps реальных моделей."
+            },
+            {
+                q: "На что обратить внимание при преподавании Attention лингвистам?",
+                a: "Связывать механизмы с лингвистическими явлениями (согласование, кореференция, валентность глаголов); давать интуитивные визуализации; использовать простые имплементации; проводить параллели с традиционными методами анализа текста."
+            },
+            {
+                q: "Какие типичные ошибки допускают новички?",
+                a: "Воспринимать веса внимания как единственно верную интерпретацию; недооценивать роль позиционного кодирования и маскирования; путать архитектуру трансформера с конкретными задачами обучения (MLM, CLM, seq2seq)."
+            },
+            {
+                q: "Как объяснить обучение Attention «на пальцах»?",
+                a: "Каждый токен формирует «вопрос» (Query) и «метку» (Key). Если метка другого токена хорошо «отвечает» на вопрос (высокое скалярное произведение), его информация (Value) сильнее учитывается при формировании нового представления текущего токена."
+            },
+            {
+                q: "Какие ресурсы и эксперименты рекомендуются для начала?",
+                a: "Короткий Jupyter-ноутбук с NumPy-реализацией self-attention; визуализация attention maps с помощью BertViz; эксперименты с простой трансформер-моделью на небольшом корпусе."
+            },
+            {
+                q: "Что важно для глубинного понимания (следующий шаг)?",
+                a: "Градиентный поток через слои Attention; роль layer normalization и residual connections для стабильности обучения; связь архитектуры с методами оптимизации; масштабирование моделей и эмерджентные свойства."
+            }
+        ];
+
+        // Состояние приложения
+        let appState = {
+            studentName: '',
+            checkedItems: [],
+            userQuestions: [],
+            theme: 'light'
+        };
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            renderQA();
+            renderUserQuestions();
+            updateProgress();
+            setupEventListeners();
+            applyTheme();
+        });
+
+        // Загрузка состояния из localStorage
+        function loadState() {
+            const saved = localStorage.getItem('attentionStudyState');
+            if (saved) {
+                try {
+                    appState = JSON.parse(saved);
+                    document.getElementById('studentName').value = appState.studentName || '';
+                } catch (e) {
+                    console.error('Ошибка загрузки состояния:', e);
+                }
+            }
+        }
+
+        // Сохранение состояния
+        function saveState() {
+            localStorage.setItem('attentionStudyState', JSON.stringify(appState));
+        }
+
+        // Применение темы
+        function applyTheme() {
+            document.body.setAttribute('data-theme', appState.theme);
+            document.getElementById('themeIcon').textContent = appState.theme === 'dark' ? '🌙' : '☀️';
+        }
+
+        // Рендеринг вопросов и ответов
+        function renderQA() {
+            const container = document.getElementById('qaList');
+            container.innerHTML = qaData.map((item, index) => {
+                const isChecked = appState.checkedItems.includes(index);
+                return `
+                    <div class="qa-item ${isChecked ? 'checked' : ''}" data-index="${index}">
+                        <div class="qa-header">
+                            <input type="checkbox" class="qa-checkbox" 
+                                   ${isChecked ? 'checked' : ''} 
+                                   data-index="${index}"
+                                   aria-label="Отметить как изученное">
+                            <span class="qa-number">${index + 1}</span>
+                            <span class="qa-question">${item.q}</span>
+                        </div>
+                        <div class="qa-answer">${item.a}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Рендеринг пользовательских вопросов
+        function renderUserQuestions() {
+            const container = document.getElementById('userQaList');
+            if (appState.userQuestions.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-secondary);">Вы ещё не добавили собственных вопросов.</p>';
+                return;
+            }
+            container.innerHTML = appState.userQuestions.map((item, index) => `
+                <div class="user-qa-item">
+                    <button class="delete-btn" data-index="${index}" aria-label="Удалить">&times;</button>
+                    <div class="qa-question" style="margin-bottom: 0.5rem;">${escapeHtml(item.question)}</div>
+                    <div class="qa-answer" style="margin-left: 0;">${escapeHtml(item.answer)}</div>
+                </div>
+            `).join('');
+        }
+
+        // Обновление прогресса
+        function updateProgress() {
+            const total = qaData.length;
+            const checked = appState.checkedItems.length;
+            const percent = Math.round((checked / total) * 100);
+
+            document.getElementById('totalQuestions').textContent = total;
+            document.getElementById('checkedQuestions').textContent = checked;
+            document.getElementById('userQuestions').textContent = appState.userQuestions.length;
+            document.getElementById('progressPercent').textContent = percent + '%';
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+
+        // Экранирование HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            // Переключение темы
+            document.getElementById('themeToggle').addEventListener('click', () => {
+                appState.theme = appState.theme === 'light' ? 'dark' : 'light';
+                applyTheme();
+                saveState();
+            });
+
+            // Навигация
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                    document.getElementById(btn.dataset.section).classList.add('active');
+                });
+            });
+
+            // Сохранение имени
+            document.getElementById('saveNameBtn').addEventListener('click', () => {
+                appState.studentName = document.getElementById('studentName').value.trim();
+                saveState();
+                const status = document.getElementById('nameStatus');
+                status.style.display = 'block';
+                setTimeout(() => status.style.display = 'none', 2000);
+            });
+
+            // Чекбоксы вопросов
+            document.getElementById('qaList').addEventListener('change', (e) => {
+                if (e.target.classList.contains('qa-checkbox')) {
+                    const index = parseInt(e.target.dataset.index);
+                    const qaItem = e.target.closest('.qa-item');
+                    
+                    if (e.target.checked) {
+                        if (!appState.checkedItems.includes(index)) {
+                            appState.checkedItems.push(index);
+                        }
+                        qaItem.classList.add('checked');
+                    } else {
+                        appState.checkedItems = appState.checkedItems.filter(i => i !== index);
+                        qaItem.classList.remove('checked');
+                    }
+                    
+                    saveState();
+                    updateProgress();
+                }
+            });
+
+            // Добавление пользовательского вопроса
+            document.getElementById('addQuestionBtn').addEventListener('click', () => {
+                const question = document.getElementById('userQuestion').value.trim();
+                const answer = document.getElementById('userAnswer').value.trim();
+                
+                if (question && answer) {
+                    appState.userQuestions.push({ question, answer });
+                    saveState();
+                    renderUserQuestions();
+                    updateProgress();
+                    document.getElementById('userQuestion').value = '';
+                    document.getElementById('userAnswer').value = '';
+                } else {
+                    alert('Пожалуйста, заполните и вопрос, и ответ.');
+                }
+            });
+
+            // Удаление пользовательского вопроса
+            document.getElementById('userQaList').addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-btn')) {
+                    const index = parseInt(e.target.dataset.index);
+                    if (confirm('Удалить этот вопрос?')) {
+                        appState.userQuestions.splice(index, 1);
+                        saveState();
+                        renderUserQuestions();
+                        updateProgress();
+                    }
+                }
+            });
+
+            // Экспорт
+            document.getElementById('exportBtn').addEventListener('click', exportToHtml);
+        }
+
+        // Экспорт в HTML
+        function exportToHtml() {
+            const date = new Date().toLocaleString('ru-RU');
+            const checkedQA = qaData.filter((_, index) => appState.checkedItems.includes(index));
+            const uncheckedQA = qaData.filter((_, index) => !appState.checkedItems.includes(index));
+            
+            const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчёт по изучению Attention — ${escapeHtml(appState.studentName || 'Студент')}</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #333; }
+        h1 { color: #325980; border-bottom: 3px solid #3498db; padding-bottom: 0.5rem; }
+        h2 { color: #325980; margin-top: 2rem; }
+        .meta { background: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin: 1rem 0; }
+        .stat { background: #e8f5e9; padding: 1rem; border-radius: 8px; text-align: center; }
+        .stat-value { font-size: 1.5rem; font-weight: bold; color: #27ae60; }
+        .qa-item { background: #f9f9f9; padding: 1rem; margin: 0.5rem 0; border-radius: 8px; border-left: 4px solid #3498db; }
+        .qa-item.checked { border-left-color: #27ae60; background: #e8f5e9; }
+        .qa-item.unchecked { border-left-color: #e74c3c; background: #fef0f0; }
+        .question { font-weight: 600; color: #325980; }
+        .answer { color: #666; margin-top: 0.5rem; }
+        .user-section { background: #fff3e0; padding: 1rem; border-radius: 8px; margin-top: 0.5rem; }
+        footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #ddd; text-align: center; color: #666; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <h1>Отчёт по изучению механизма Attention</h1>
+    
+    <div class="meta">
+        <p><strong>Студент:</strong> ${escapeHtml(appState.studentName || 'Не указано')}</p>
+        <p><strong>Дата формирования:</strong> ${date}</p>
+    </div>
+    
+    <h2>Статистика</h2>
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-value">${qaData.length}</div>
+            <div>Всего вопросов</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">${appState.checkedItems.length}</div>
+            <div>Изучено</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">${appState.userQuestions.length}</div>
+            <div>Своих вопросов</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">${Math.round((appState.checkedItems.length / qaData.length) * 100)}%</div>
+            <div>Прогресс</div>
+        </div>
+    </div>
+    
+    <h2>Изученные вопросы (${checkedQA.length})</h2>
+    ${checkedQA.length > 0 ? checkedQA.map(item => `
+    <div class="qa-item checked">
+        <div class="question">${escapeHtml(item.q)}</div>
+        <div class="answer">${escapeHtml(item.a)}</div>
+    </div>
+    `).join('') : '<p>Нет изученных вопросов.</p>'}
+    
+    <h2>Неизученные вопросы (${uncheckedQA.length})</h2>
+    ${uncheckedQA.length > 0 ? uncheckedQA.map(item => `
+    <div class="qa-item unchecked">
+        <div class="question">${escapeHtml(item.q)}</div>
+        <div class="answer">${escapeHtml(item.a)}</div>
+    </div>
+    `).join('') : '<p>Все вопросы изучены!</p>'}
+    
+    ${appState.userQuestions.length > 0 ? `
+    <h2>Собственные вопросы студента (${appState.userQuestions.length})</h2>
+    ${appState.userQuestions.map(item => `
+    <div class="user-section">
+        <div class="question">${escapeHtml(item.question)}</div>
+        <div class="answer">${escapeHtml(item.answer)}</div>
+    </div>
+    `).join('')}
+    ` : ''}
+    
+    <footer>
+        <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+    </footer>
+</body>
+</html>`;
+
+            // Скачивание файла
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attention_report_${(appState.studentName || 'student').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

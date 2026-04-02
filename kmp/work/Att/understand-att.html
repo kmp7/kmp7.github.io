@@ -1,0 +1,2031 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --accent-nav: #325980;
+            --accent-interactive: #3498db;
+            --divider: #f1f1f1;
+            --card-bg: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --code-bg: #f8f9fa;
+            --warning-bg: #fff3cd;
+            --warning-border: #ffc107;
+            --success-bg: #d4edda;
+            --success-border: #28a745;
+            --danger-bg: #f8d7da;
+            --danger-border: #dc3545;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #e8e8e8;
+            --text-secondary: #b8b8b8;
+            --accent-nav: #4a7db8;
+            --accent-interactive: #5dade2;
+            --divider: #2d2d44;
+            --card-bg: #1f1f3a;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --code-bg: #252540;
+            --warning-bg: #3d3520;
+            --warning-border: #d4a017;
+            --success-bg: #1e3d28;
+            --success-border: #2ecc71;
+            --danger-bg: #3d1f22;
+            --danger-border: #e74c3c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Header */
+        header {
+            background: var(--accent-nav);
+            color: white;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .logo span {
+            color: red;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 0px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s, background 0.3s;
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(20deg);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--divider);
+            overflow-x: auto;
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            padding: 0.75rem 1.25rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+
+        .nav-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--accent-interactive);
+        }
+
+        .nav-btn.active {
+            background: var(--accent-interactive);
+            color: white;
+        }
+
+        /* Main content */
+        main {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 20px var(--shadow);
+        }
+
+        h1 {
+            color: var(--accent-nav);
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            line-height: 1.3;
+        }
+
+        h2 {
+            color: var(--accent-nav);
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 3px solid var(--accent-interactive);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            color: var(--accent-nav);
+            font-size: 0.8rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--accent-interactive);
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        /* Highlight boxes */
+        .highlight-box {
+            padding: 1.25rem;
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            border-left: 4px solid;
+        }
+
+        .highlight-warning {
+            background: var(--warning-bg);
+            border-color: var(--warning-border);
+        }
+
+        .highlight-success {
+            background: var(--success-bg);
+            border-color: var(--success-border);
+        }
+
+        .highlight-danger {
+            background: var(--danger-bg);
+            border-color: var(--danger-border);
+        }
+
+        .highlight-info {
+            background: var(--code-bg);
+            border-color: var(--accent-interactive);
+        }
+
+        /* Code & Examples */
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            padding: 1.25rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-family: 'Consolas', monospace;
+            border: 1px solid var(--divider);
+        }
+
+        /* Lists */
+        ul, ol {
+            margin: 1rem 0 1rem 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Interactive elements */
+        .task-box {
+            background: linear-gradient(135deg, var(--accent-nav) 0%, var(--accent-interactive) 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 16px;
+            margin: 1.5rem 0;
+        }
+
+        .task-box h3 {
+            color: white;
+            margin-top: 0;
+        }
+
+        .task-box p {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .btn {
+            background: var(--accent-interactive);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--accent-interactive);
+            color: var(--accent-interactive);
+        }
+
+        .btn-outline:hover {
+            background: var(--accent-interactive);
+            color: white;
+        }
+
+        /* Spoiler */
+        .spoiler {
+            background: var(--bg-secondary);
+            border: 1px solid var(--divider);
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .spoiler-header {
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: var(--accent-nav);
+            transition: background 0.3s;
+        }
+
+        .spoiler-header:hover {
+            background: var(--divider);
+        }
+
+        .spoiler-arrow {
+            transition: transform 0.3s;
+        }
+
+        .spoiler.open .spoiler-arrow {
+            transform: rotate(180deg);
+        }
+
+        .spoiler-content {
+            padding: 0 1rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .spoiler.open .spoiler-content {
+            padding: 1rem;
+            max-height: 2000px;
+        }
+
+        /* Test Section */
+        .test-item {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .test-number {
+            background: var(--accent-nav);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .test-text {
+            flex-grow: 1;
+            font-family: 'Consolas', monospace;
+            font-size: 1.1rem;
+        }
+
+        .test-input {
+            width: 80px;
+            padding: 0.5rem;
+            border: 2px solid var(--divider);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1rem;
+            background: var(--card-bg);
+            color: var(--text-primary);
+        }
+
+        .test-input:focus {
+            outline: none;
+            border-color: var(--accent-interactive);
+        }
+
+        .test-result {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: bold;
+            min-width: 80px;
+            text-align: center;
+            display: none;
+        }
+
+        .test-result.correct {
+            background: var(--success-bg);
+            color: var(--success-border);
+            display: block;
+        }
+
+        .test-result.wrong {
+            background: var(--danger-bg);
+            color: var(--danger-border);
+            display: block;
+        }
+
+        /* Myths table */
+        .myth-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 1rem;
+            border-bottom: 1px solid var(--divider);
+            gap: 1rem;
+        }
+
+        .myth-item:last-child {
+            border-bottom: none;
+        }
+
+        .myth-status {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .myth-text strong {
+            color: var(--accent-nav);
+        }
+
+        /* Progress bar */
+        .progress-container {
+            background: var(--divider);
+            border-radius: 10px;
+            height: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, var(--accent-nav), var(--accent-interactive));
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        /* Quote */
+        blockquote {
+            border-left: 4px solid var(--accent-interactive);
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        /* Final section */
+        .final-message {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .final-message h2 {
+            border: none;
+            font-size: 2rem;
+        }
+
+        /* Fence visualization */
+        .fence-visual {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--code-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 1rem;
+            margin: 1rem 0;
+            border: 2px dashed var(--accent-interactive);
+        }
+
+        /* Mobile hamburger */
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hamburger {
+                display: block;
+            }
+
+            nav {
+                display: none;
+            }
+
+            nav.mobile-open {
+                display: block;
+            }
+
+            .nav-content {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .nav-btn {
+                text-align: left;
+            }
+
+            h1 {
+                font-size: 1.2rem;
+            }
+
+            h2 {1rem;
+            }
+
+            .card {
+                padding: 0.8rem;
+            }
+
+            .test-item {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .logo {
+                font-size: 1.2rem;
+            }
+
+            .header-content {
+                padding: 0 0.5rem;
+            }
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Selection */
+        ::selection {
+            background: var(--accent-interactive);
+            color: white;
+        }
+
+        /* Links */
+        a {
+            color: var(--accent-interactive);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Strike-through for myths */
+        .strike {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+		
+		/* Quiz styles */
+        .quiz-question {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .quiz-question h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .quiz-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .quiz-option:hover {
+            border-color: var(--accent-interactive);
+        }
+
+        .quiz-option input {
+            margin-top: 0.2rem;
+            cursor: pointer;
+        }
+
+        .quiz-option.correct {
+            border-color: var(--success-border);
+            background: var(--success-bg);
+        }
+
+        .quiz-option.wrong {
+            border-color: var(--danger-border);
+            background: var(--danger-bg);
+        }
+
+        .quiz-feedback {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .quiz-feedback.correct {
+            display: block;
+            background: var(--success-bg);
+            color: var(--success-border);
+        }
+
+        .quiz-feedback.wrong {
+            display: block;
+            background: var(--danger-bg);
+            color: var(--danger-border);
+        }
+
+        /* Calculator */
+        .calculator-box {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1.5rem 0;
+        }
+
+        .calc-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .calc-row label {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .calc-row input {
+            width: 120px;
+            padding: 0.5rem;
+            border: 2px solid var(--divider);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--card-bg);
+            color: var(--text-primary);
+        }
+
+        .calc-row input:focus {
+            outline: none;
+            border-color: var(--accent-interactive);
+        }
+
+        .calc-result {
+            margin-top: 1rem;
+        }
+
+        /* Metaphor boxes */
+        .metaphor-box {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .metaphor-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+        }
+
+        .metaphor-letter {
+            width: 50px;
+            height: 50px;
+            background: var(--accent-interactive);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .metaphor-content strong {
+            color: var(--accent-nav);
+        }
+
+        .metaphor-content p {
+            margin: 0.5rem 0 0;
+            font-style: italic;
+        }
+
+        /* Step by step */
+        .step-by-step {
+            margin: 1.5rem 0;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            border-left: 3px solid var(--accent-interactive);
+            margin-bottom: 0.5rem;
+            background: var(--bg-secondary);
+        }
+
+        .step-num {
+            width: 32px;
+            height: 32px;
+            background: var(--accent-nav);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content strong {
+            color: var(--accent-nav);
+        }
+
+        .step-content p {
+            margin: 0.25rem 0 0;
+        }
+
+        /* Heads grid */
+        .heads-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .head-card {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .head-num {
+            font-weight: bold;
+            color: var(--accent-interactive);
+            margin-bottom: 0.5rem;
+        }
+
+        .head-card p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        /* Simple table */
+        .simple-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        .simple-table th,
+        .simple-table td {
+            padding: 0.75rem;
+            border: 1px solid var(--divider);
+            text-align: left;
+        }
+
+        .simple-table th {
+            background: var(--accent-nav);
+            color: white;
+        }
+
+        .simple-table tr:nth-child(even) {
+            background: var(--bg-secondary);
+        }
+
+        /* Attention visualization demo */
+        .attention-viz-demo {
+            background: #000000;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .viz-sentence {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .viz-token {
+            padding: 0.5rem 1rem;
+            background: #325980;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .quiz-option {
+                padding: 0.75rem;
+            }
+
+            .calc-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .calc-row input {
+                width: 100%;
+            }
+
+            .metaphor-item {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .step {
+                flex-direction: column;
+            }
+
+            .heads-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo" onclick="showSection('intro')">
+                Понять <span>Attention</span>
+            </div>
+            <div class="header-controls">
+                <button class="hamburger" onclick="toggleMobileNav()" aria-label="Меню">
+                    &#9776;
+                </button>
+                <button class="theme-toggle" onclick="toggleTheme()" aria-label="Переключить тему">
+                    <span id="theme-icon">☀️</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <nav id="main-nav">
+        <div class="nav-content">
+            <button class="nav-btn active" data-section="intro">Старт</button>
+            <button class="nav-btn" data-section="task0">Игра</button>
+            <button class="nav-btn" data-section="chapter1">Q, K, V</button>
+            <button class="nav-btn" data-section="chapter2">Мифы</button>
+            <button class="nav-btn" data-section="chapter3">Головы</button>
+            <button class="nav-btn" data-section="chapter4">Картинка</button>
+            <button class="nav-btn" data-section="chapter5">Тест</button>
+			<button class="nav-btn" data-section="chapter6">Мистика</button>
+            <button class="nav-btn" data-section="chapter7">Финиш</button>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Intro Section -->
+        <section id="intro" class="section active">
+            <div class="card">
+                <h1>Понять Attention</h1>
+                <p class="subtitle">Нешуточный мануал для тех, кто думает, что трансформер «обращает внимание» на слова примерно так же, как это делаете вы</p>
+                
+                <div class="highlight-box highlight-info">
+                    <strong>«Attention Is All You Need» — название статьи 2017 года, которая изменила всё. Но внимание, о котором там речь, работает совершенно иначе, по сравнению с вашим вниманием.</strong>
+                </div>
+
+                <h3>Ранее в сериале:</h3>
+                <ul>
+                    <li><strong>Токен</strong> — не слово, не морфема, а инженерный компромисс</li>
+                    <li><strong>Эмбеддинг</strong> — не «смысл в числах», а вектор для вычислений</li>
+                </ul>
+
+                <p>Теперь пришло время узнать, что происходит с этими векторами <em>внутри</em> трансформера.</p>
+
+                <div class="highlight-box highlight-warning">
+                    <p><strong>Типичное заблуждение:</strong></p>
+                    <p>«Attention — это когда модель смотрит на важные слова и игнорирует неважные, как человек при чтении.»</p>
+                    <p><em>Если бы это было так, мы бы назвали механизм «Reading Comprehension», а не придумывали Query, Key, Value.</em></p>
+                </div>
+
+                <div class="highlight-box highlight-danger">
+                    <p><strong>Страшная правда:</strong></p>
+                    <p>Attention — это <strong>взвешенное усреднение векторов</strong>, где веса вычисляются через <strong>скалярное произведение</strong> и <strong>softmax</strong>.</p>
+                    <p>Романтично, правда?</p>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: 12%"></div>
+                </div>
+                <p style="text-align: center; font-size: 0.9rem; color: var(--text-secondary);">Прогресс: 1 из 9 разделов</p>
+
+                <button class="btn" onclick="showSection('task0')">Погрузиться в матричный ад</button>
+            </div>
+        </section>
+
+        <!-- Task 0 Section -->
+        <section id="task0" class="section">
+            <div class="card">
+                <h2>Игра</h2>
+                <p><em>(Уверовавшим в то, что «модель обращает внимание на контекст»)</em></p>
+
+                <div class="task-box">
+                    <h3>Представьте, что вы — токен в предложении.</h3>
+                    <p>Вокруг вас ещё 511 токенов (типичное контекстное окно).</p>
+                    <p>Вам нужно «обратить внимание» на каждый из них.</p>
+                    <p style="margin-top: 1rem;">Это значит: <strong>512 × 512 = 262 144</strong> попарных взаимодействий.</p>
+                    <p style="font-size: 1.3rem; margin-top: 1rem;"><strong>За один слой. А слоёв — 96.</strong></p>
+                </div>
+
+                <h3>Калькулятор «насколько всё плохо»:</h3>
+                
+                <div class="calculator-box">
+                    <div class="calc-row">
+                        <label>Длина контекста (токенов):</label>
+                        <input type="number" id="ctx-length" value="512" min="1" max="1000000">
+                    </div>
+                    <div class="calc-row">
+                        <label>Количество слоёв:</label>
+                        <input type="number" id="num-layers" value="32" min="1" max="200">
+                    </div>
+                    <div class="calc-row">
+                        <label>Количество голов внимания:</label>
+                        <input type="number" id="num-heads" value="32" min="1" max="128">
+                    </div>
+                    <button class="btn" onclick="calculateAttention()" style="margin-top: 1rem;">Посчитать ужас</button>
+                    
+                    <div id="calc-result" class="calc-result" style="display: none;"></div>
+                </div>
+
+                <div class="spoiler">
+                    <div class="spoiler-header" onclick="toggleSpoiler(this.parentElement)">
+                        <span>Почему O(n²) — это проблема?</span>
+                        <span class="spoiler-arrow">▼</span>
+                    </div>
+                    <div class="spoiler-content">
+                        <p><strong>Квадратичная сложность</strong> означает:</p>
+                        <ul>
+                            <li>Удвоили контекст → вычислений в <strong>4 раза</strong> больше</li>
+                            <li>Утроили контекст → в <strong>9 раз</strong> больше</li>
+                            <li>Контекст 100K токенов → <strong>10 миллиардов</strong> операций на слой</li>
+                        </ul>
+                        <p>Поэтому существуют десятки работ про «эффективный attention»: Sparse Attention, Linear Attention, Flash Attention, Ring Attention...</p>
+                        <p><em>Все пытаются обойти эту квадратичную стену (square wall), пройти через это бутылочное горлышко (bottleneck)</em></p>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: 24%"></div>
+                </div>
+
+                <button class="btn" onclick="showSection('chapter1')">К QKV</button>
+            </div>
+        </section>
+
+        <!-- Chapter 1: Q, K, V -->
+        <section id="chapter1" class="section">
+            <div class="card">
+                <h2>Query, Key, Value — что это вообще?</h2>
+                <p class="subtitle">Три буквы, которые звучат умно, но означают «матричное умножение»</p>
+
+                <div class="highlight-box highlight-info">
+                    <p><strong>Самое честное объяснение:</strong></p>
+                    <p>Каждый токен превращается в три разных вектора: Q (Query), K (Key), V (Value). Потом Q одного токена умножается на K всех остальных, результат нормализуется через softmax, и этими весами усредняются V.</p>
+                    <p><em>Вот и весь attention.</em></p>
+                </div>
+
+                <h3>Метафора для тех, кто любит метафоры:</h3>
+
+                <div class="metaphor-box">
+                    <div class="metaphor-item">
+                        <div class="metaphor-letter">Q</div>
+                        <div class="metaphor-content">
+                            <strong>Query (Запрос)</strong>
+                            <p>«Я токен "кошка". Что мне нужно знать от других?»</p>
+                        </div>
+                    </div>
+                    <div class="metaphor-item">
+                        <div class="metaphor-letter">K</div>
+                        <div class="metaphor-content">
+                            <strong>Key (Ключ)</strong>
+                            <p>«Я токен "спала". Вот что я могу предложить тем, кто спрашивает.»</p>
+                        </div>
+                    </div>
+                    <div class="metaphor-item">
+                        <div class="metaphor-letter">V</div>
+                        <div class="metaphor-content">
+                            <strong>Value (Значение)</strong>
+                            <p>«Если меня выбрали — вот информация, которую я передам.»</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Как это работает (упрощённо):</h3>
+
+                <div class="step-by-step">
+                    <div class="step">
+                        <span class="step-num">1</span>
+                        <div class="step-content">
+                            <strong>Создаём Q, K, V</strong>
+                            <p>Эмбеддинг каждого токена умножается на три разные матрицы весов → получаем три вектора</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">2</span>
+                        <div class="step-content">
+                            <strong>Считаем «похожесть»</strong>
+                            <p>Q каждого токена скалярно умножается на K всех токенов → матрица «оценок внимания»</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">3</span>
+                        <div class="step-content">
+                            <strong>Softmax</strong>
+                            <p>Оценки превращаются в веса (сумма = 1). Большие оценки → большие веса.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">4</span>
+                        <div class="step-content">
+                            <strong>Взвешенная сумма V</strong>
+                            <p>Веса × V всех токенов → новый вектор для нашего токена</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fence-visual">
+                    <p><strong>Attention(Q, K, V) = softmax(QK<sup>T</sup> / √d) × V</strong></p>
+                    <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.8;">Вот и вся магия. Одна формула.</p>
+                </div>
+
+                <div class="highlight-box highlight-warning">
+                    <p><strong>Почему √d?</strong></p>
+                    <p>Чтобы скалярные произведения не становились слишком большими (иначе softmax выдаст почти 0 и 1, а не плавное распределение). Это называется «scaled dot-product attention».</p>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: 36%"></div>
+                </div>
+
+                <button class="btn" onclick="showSection('chapter2')">К мифу</button>
+            </div>
+        </section>
+
+        <!-- Chapter 2: Myths -->
+        <section id="chapter2" class="section">
+            <div class="card">
+                <h2>«Как человеческое внимание»</h2>
+                <p class="subtitle">Самый живучий миф про трансформеры</p>
+
+                <div class="task-box">
+                    <h3>Когда вы читаете это предложение:</h3>
+                    <p style="font-size: 1.2rem;">«Кошка, которая вчера спала на диване, сегодня играет с мячом.»</p>
+                    <p style="margin-top: 1rem;">Ваше внимание прыгает, фокусируется, игнорирует. Вы можете решить «не обращать внимания» на «вчера».</p>
+                </div>
+
+                <h3>Attention в трансформере работает иначе:</h3>
+
+                <div class="myth-item">
+                    <span class="myth-status">❌</span>
+                    <div class="myth-text">
+                        <strong>«Модель выбирает, на что смотреть»</strong>
+                        <p>Нет. Каждый токен <em>всегда</em> смотрит на <em>все</em> токены. Просто с разными весами. Нельзя «не смотреть» — можно только «смотреть с весом 0.001».</p>
+                    </div>
+                </div>
+
+                <div class="myth-item">
+                    <span class="myth-status">❌</span>
+                    <div class="myth-text">
+                        <strong>«Высокий вес attention = понимание связи»</strong>
+                        <p>Нет. Высокий вес означает только то, что Q и K дали большое скалярное произведение. Это может быть что угодно: синтаксическая связь, статистический паттерн, или просто совпадение.</p>
+                    </div>
+                </div>
+
+                <div class="myth-item">
+                    <span class="myth-status">❌</span>
+                    <div class="myth-text">
+                        <strong>«Attention — это интерпретируемый механизм»</strong>
+                        <p>Нет. Есть десятки статей, показывающих, что веса attention не коррелируют с важностью для задачи. «Attention is not Explanation» — название реальной статьи.</p>
+                    </div>
+                </div>
+
+                <div class="spoiler">
+                    <div class="spoiler-header" onclick="toggleSpoiler(this.parentElement)">
+                        <span>А как же красивые визуализации, где стрелочки идут к «нужным» словам?</span>
+                        <span class="spoiler-arrow">▼</span>
+                    </div>
+                    <div class="spoiler-content">
+                        <div class="highlight-box highlight-danger">
+                            <p><strong>Три причины, почему они врут:</strong></p>
+                            <ol>
+                                <li><strong>Выбор головы:</strong> В модели 32+ голов внимания на слой. Визуализация показывает одну. Выбирают ту, которая «красиво выглядит».</li>
+                                <li><strong>Выбор слоя:</strong> 32+ слоёв. Каждый — разный паттерн. Показывают «удачный».</li>
+                                <li><strong>Cherry-picking:</strong> Из 1000 примеров выбирают тот, где стрелочки идут «правильно».</li>
+                            </ol>
+                        </div>
+                        <p>Это как показывать фотографии «до и после» диеты: технически правда, но не вся правда.</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box highlight-info">
+                    <p><strong>Честное описание:</strong></p>
+                    <p>Attention — это механизм, позволяющий каждой позиции в последовательности «собрать информацию» со всех других позиций. Какую информацию и почему — модель выучила из данных, и мы не всегда понимаем логику.</p>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: 48%"></div>
+                </div>
+				
+                <button class="btn" onclick="showSection('chapter3')">К Multi-Head</button>
+            </div>
+        </section>
+
+        <!-- Chapter 3: Multi-head -->
+        <section id="chapter3" class="section">
+            <div class="card">
+                <h2>Почему голов много?</h2>
+                <p class="subtitle">Multi-Head Attention: когда одной матрицы мало</p>
+
+                <div class="task-box">
+                    <h3>Вопрос на засыпку:</h3>
+                    <p>Если attention и так работает, зачем делать его <strong>32 раза параллельно</strong> с разными весами?</p>
+                </div>
+
+                <h3>Ответ:</h3>
+
+                <div class="highlight-box highlight-info">
+                    <p>Одна «голова» внимания может выучить <strong>один тип отношений</strong>: например, «существительное → его глагол».</p>
+                    <p>Но в языке отношений много! Нужны разные «головы» для разных паттернов.</p>
+                </div>
+
+                <h3>Что (теоретически) могут делать разные головы:</h3>
+
+                <div class="heads-grid">
+                    <div class="head-card">
+                        <div class="head-num">Голова 1</div>
+                        <p>Следующее слово</p>
+                    </div>
+                    <div class="head-card">
+                        <div class="head-num">Голова 2</div>
+                        <p>Предыдущее слово</p>
+                    </div>
+                    <div class="head-card">
+                        <div class="head-num">Голова 3</div>
+                        <p>Начало предложения</p>
+                    </div>
+                    <div class="head-card">
+                        <div class="head-num">Голова 4</div>
+                        <p>Субъект глагола</p>
+                    </div>
+                    <div class="head-card">
+                        <div class="head-num">Голова 5</div>
+                        <p>Объект глагола</p>
+                    </div>
+                    <div class="head-card">
+                        <div class="head-num">Голова 6</div>
+                        <p>Coreference</p>
+                    </div>
+                    <div class="head-card">
+                        <div class="head-num">Голова 7</div>
+                        <p>???</p>
+                    </div>
+                    <div class="head-card">
+                        <div class="head-num">Голова 8</div>
+                        <p>Непонятно</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box highlight-warning">
+                    <p><strong>Важный нюанс:</strong></p>
+                    <p>Это <em>интерпретация постфактум</em>. Мы смотрим на обученную модель и пытаемся понять, что выучили головы. Иногда находим красивые паттерны. Иногда — нет.</p>
+                    <p>Многие головы делают «что-то непонятное». Некоторые исследования показывают, что часть голов можно <strong>удалить без потери качества</strong>.</p>
+                </div>
+
+                <h3>Как это работает технически:</h3>
+
+                <div class="code-block">
+MultiHead(Q, K, V) = Concat(head₁, head₂, ..., headₙ) × W°
+
+где headᵢ = Attention(Q×Wᵢᵠ, K×Wᵢᴷ, V×Wᵢⱽ)
+                </div>
+
+                <p>Каждая голова имеет <strong>свои веса</strong> для создания Q, K, V. Результаты всех голов склеиваются и проецируются обратно.</p>
+
+                <div class="spoiler">
+                    <div class="spoiler-header" onclick="toggleSpoiler(this.parentElement)">
+                        <span>Сколько голов в реальных моделях?</span>
+                        <span class="spoiler-arrow">▼</span>
+                    </div>
+                    <div class="spoiler-content">
+                        <table class="simple-table">
+                            <tr><th>Модель</th><th>Слоёв</th><th>Голов</th><th>Всего attention-операций</th></tr>
+                            <tr><td>BERT-base</td><td>12</td><td>12</td><td>144</td></tr>
+                            <tr><td>GPT-2</td><td>12</td><td>12</td><td>144</td></tr>
+                            <tr><td>GPT-3</td><td>96</td><td>96</td><td>9 216</td></tr>
+                            <tr><td>GPT-4 (предп.)</td><td>120</td><td>96</td><td>11 520</td></tr>
+                            <tr><td>Llama-3 70B</td><td>80</td><td>64</td><td>5 120</td></tr>
+                        </table>
+                        <p style="margin-top: 1rem;"><em>И каждая голова на каждом слое — это отдельная матрица весов, которую нужно обучить.</em></p>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: 60%"></div>
+                </div>
+								<button class="btn" onclick="showSection('chapter4')">К картинке →</button>
+                
+            </div>
+        </section>
+
+        <!-- Chapter 4: Visualizations -->
+<section id="chapter4" class="section">
+    <div class="card">
+        <h2>Красивая картинка</h2>
+        <p class="subtitle">Визуализация Attention, создающая иллюзию понимания</p>
+
+        <div class="task-box">
+            <h3>Вы наверняка видели такое:</h3>
+            <div class="attention-viz-demo">
+                <div class="viz-sentence">
+                    <span class="viz-token" data-attention="0.1">The</span>
+                    <span class="viz-token" data-attention="0.05">cat</span>
+                    <span class="viz-token" data-attention="0.05">that</span>
+                    <span class="viz-token" data-attention="0.6" style="background: rgba(52, 152, 219, 0.6);">sat</span>
+                    <span class="viz-token" data-attention="0.05">on</span>
+                    <span class="viz-token" data-attention="0.05">the</span>
+                    <span class="viz-token" data-attention="0.1">mat</span>
+                </div>
+                <p style="text-align: center; margin-top: 0.5rem; font-size: 0.9rem;">← Токен "cat" "обращает внимание" на "sat" →</p>
+            </div>
+            <p style="margin-top: 1rem;">И подумали: «Вау! Модель понимает, что кошка сидела! Она связала субъект с глаголом!»</p>
+        </div>
+
+        <div class="highlight-box highlight-danger">
+            <p><strong>СТОП! Это иллюзия, и вот почему:</strong></p>
+            <p style="margin-top: 0.5rem;"><strong>Даже в этом "идеальном" примере визуализация врёт.</strong> Потому что токен <code>"cat"</code> — это <strong>не слово "cat"</strong>.</p>
+        </div>
+
+        <h3>Проблема №1: Токены не слова!</h3>
+        <div class="myth-item">
+            <div class="myth-text">
+                <strong>Токенизация режет текст на части</strong>
+                <p>В реальной модели <code>"cat"</code> — это токен только если повезёт. А <code>"cats"</code>? Скорее всего <code>"cat"</code> + <code>"s"</code>. А <code>"unbelievable"</code>? <code>"un"</code> + <code>"believe"</code> + <code>"able"</code>.</p>
+                <p>Английский — ещё цветочки. В русском, финском, турецком — палисадник.</p>
+                <p><strong>Стрелочки на визуализации идут между токенами, а не словами.</strong> Но мы смотрим на них и <em>видим</em> слова, потому что нам так удобно. Это когнитивное искажение.</p>
+            </div>
+        </div>
+
+        <div class="myth-item">
+           
+            <div class="myth-text">
+                <strong>Семантика не привязана к токену</strong>
+                <p>Даже если токен <em>чисто формально</em> совпал со словом, он лишён значения и смысла. Смысл распределён по эмбеддингу, который складывается из контекста. Токен <code>"bank"</code> в предложениях про реку и про деньги — это <strong>совсем разные векторы</strong>, хотя токен один и тот же.</p>
+                <p>Визуализация показывает <em>один</em> токен, но игнорирует, что его значение поменялось.</p>
+            </div>
+        </div>
+
+        <h3>Проблема №2: Даже если бы токены были словами...</h3>
+        
+        <div class="myth-item">
+            <span class="myth-status">1</span>
+            <div class="myth-text">
+                <strong>Показана одна голова из 32+</strong>
+                <p>Другие 31 голова могут показывать совершенно другие паттерны. Выбрали «красивую».</p>
+            </div>
+        </div>
+
+        <div class="myth-item">
+            <span class="myth-status">2</span>
+            <div class="myth-text">
+                <strong>Показан один слой из 32+</strong>
+                <p>На первых слоях паттерны обычно «локальные» (соседние токены). На последних — хаотичные. Выбрали «понятный».</p>
+            </div>
+        </div>
+
+        <div class="myth-item">
+            <span class="myth-status">3</span>
+            <div class="myth-text">
+                <strong>Attention ≠ важность</strong>
+                <p>Высокий вес attention не означает, что токен «важен» для предсказания. Это показано в множестве исследований.</p>
+            </div>
+        </div>
+
+        <div class="myth-item">
+            <span class="myth-status">4</span>
+            <div class="myth-text">
+                <strong>Корреляция ≠ причинность</strong>
+                <p>Даже если attention «смотрит» на правильные токены, это не значит, что модель «понимает» связь. Она могла выучить статистический паттерн.</p>
+            </div>
+        </div>
+
+        <div class="highlight-box highlight-info">
+            <p><strong>Исследование «Attention is not Explanation» (Jain & Wallace, 2019):</strong></p>
+            <p>Авторы показали, что можно <em>изменить</em> веса attention (сделать их случайными или противоположными) — и предсказания модели часто <em>не меняются</em>.</p>
+            <p>Это значит: то, что показывает attention, <strong>не объясняет, как модель приняла решение!</strong></p>
+        </div>
+
+        <div class="spoiler">
+            <div class="spoiler-header" onclick="toggleSpoiler(this.parentElement)">
+                <span>Разбор конкретного примера: "cat" → "sat"</span>
+                <span class="spoiler-arrow">▼</span>
+            </div>
+            <div class="spoiler-content">
+                <p>Визуализация показывает, что токен <code>"cat"</code> «смотрит» на токен <code>"sat"</code>. Нам кажется: «Ага! Модель связала субъект и глагол!»</p>
+                <p><strong>Но вот что на самом деле происходит:</strong></p>
+                <ul>
+                    <li>В реальной модели <code>"cat"</code> может быть токеном, а может и не быть. Возможно, это <code>"c"</code> + <code>"at"</code>. А <code>"sat"</code> — <code>"s"</code> + <code>"at"</code>. Внимание могло выучить паттерн «токены, заканчивающиеся на "at", часто связаны» — и это <strong>не семантика</strong>, а статистика.</li>
+                    <li>Если бы модель была обучена на корпусе, где <code>"dog"</code> и <code>"barked"</code> часто встречаются вместе, она бы показывала аналогичную связь. Не потому что «понимает» собак и лай, а потому что увидела корреляцию.</li>
+                    <li>А если в том же предложении заменить <code>"cat"</code> на <code>"car"</code>? Визуализация, скорее всего, покажет ту же связь (потому что позиционная близость важнее семантики). Но мы бы не заметили — нам показали только «удачный» пример.</li>
+                </ul>
+                <p><strong>Вывод:</strong> Даже если визуализация кажется «очевидной», она не доказывает семантического понимания. Она доказывает только то, что модель нашла статистическую закономерность.</p>
+            </div>
+        </div>
+
+        <div class="spoiler">
+            <div class="spoiler-header" onclick="toggleSpoiler(this.parentElement)">
+                <span>А как же BertViz и другие красивые инструменты?</span>
+                <span class="spoiler-arrow">▼</span>
+            </div>
+            <div class="spoiler-content">
+                <p>Да, они красивые. И иногда полезные — для <em>исследования</em> модели, не для <em>объяснения</em> её решений.</p>
+                <p>Используйте визуализации как:</p>
+                <ul>
+                    <li>Способ <em>генерировать гипотезы</em> о поведении модели</li>
+                    <li>Инструмент <em>отладки</em> (почему модель сломалась?)</li>
+                    <li>Красивые картинки для презентаций (честно!)</li>
+                </ul>
+                <p>Не используйте как:</p>
+                <ul>
+                    <li>Доказательство того, что «модель понимает»</li>
+                    <li>Объяснение конкретного предсказания</li>
+                </ul>
+                <p style="margin-top: 0.5rem;"><em>И помните: любая визуализация attention — это уже интерпретация. Вы смотрите не на модель, а на то, как кто-то решил показать её внутренности.</em></p>
+            </div>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar" style="width: 72%"></div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: space-between; margin-top: 1rem;">
+            
+				<button class="btn" onclick="showSection('chapter5')">К тесту →</button>
+				
+        </div>
+    </div>
+</section>
+
+        <!-- Chapter 5 - Evil Test -->
+        <section id="chapter5" class="section">
+            <div class="card">
+                <h2>Тест на понимание Attention</h2>
+                <p class="subtitle">Проверьте, не застряли ли вы в красивых метафорах</p>
+
+                <div class="highlight-box highlight-warning">
+                    <p><strong>Правила:</strong> Отвечайте честно, без гугла.</p>
+                </div>
+
+                <div id="quiz-container">
+                    <!-- Question 1 -->
+                    <div class="quiz-question" data-correct="2">
+                        <h3>1. Что делает механизм Attention?</h3>
+                        <div class="quiz-options">
+                            <label class="quiz-option">
+                                <input type="radio" name="q1" value="1">
+                                <span>Выбирает важные слова и игнорирует неважные</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q1" value="2">
+                                <span>Вычисляет взвешенную сумму векторов на основе их «похожести»</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q1" value="3">
+                                <span>Анализирует семантические связи между словами</span>
+                            </label>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <!-- Question 2 -->
+                    <div class="quiz-question" data-correct="3">
+                        <h3>2. Query, Key, Value — это:</h3>
+                        <div class="quiz-options">
+                            <label class="quiz-option">
+                                <input type="radio" name="q2" value="1">
+                                <span>Вопрос, ответ и контекст слова</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q2" value="2">
+                                <span>Три разных смысла одного токена</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q2" value="3">
+                                <span>Три вектора, получаемые умножением эмбеддинга на разные матрицы весов</span>
+                            </label>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <!-- Question 3 -->
+                    <div class="quiz-question" data-correct="1">
+                        <h3>3. Сложность self-attention по длине последовательности:</h3>
+                        <div class="quiz-options">
+                            <label class="quiz-option">
+                                <input type="radio" name="q3" value="1">
+                                <span>O(n²) — квадратичная</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q3" value="2">
+                                <span>O(n) — линейная</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q3" value="3">
+                                <span>O(log n) — логарифмическая</span>
+                            </label>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <!-- Question 4 -->
+                    <div class="quiz-question" data-correct="2">
+                        <h3>4. Зачем нужно много «голов» внимания (Multi-Head)?</h3>
+                        <div class="quiz-options">
+                            <label class="quiz-option">
+                                <input type="radio" name="q4" value="1">
+                                <span>Чтобы модель могла думать о нескольких вещах одновременно</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q4" value="2">
+                                <span>Чтобы параллельно выучить разные типы отношений между токенами</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q4" value="3">
+                                <span>Чтобы увеличить точность предсказания в несколько раз</span>
+                            </label>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <!-- Question 5 -->
+                    <div class="quiz-question" data-correct="3">
+                        <h3>5. Если токен A имеет высокий вес attention к токену B, это значит:</h3>
+                        <div class="quiz-options">
+                            <label class="quiz-option">
+                                <input type="radio" name="q5" value="1">
+                                <span>Токен B семантически важен для понимания A</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q5" value="2">
+                                <span>Модель «понимает» связь между A и B</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q5" value="3">
+                                <span>Q вектор A и K вектор B дали большое скалярное произведение</span>
+                            </label>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <!-- Question 6 -->
+                    <div class="quiz-question" data-correct="2">
+                        <h3>6. Зачем в формуле attention делят на √d?</h3>
+                        <div class="quiz-options">
+                            <label class="quiz-option">
+                                <input type="radio" name="q6" value="1">
+                                <span>Чтобы результат помещался в память GPU</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q6" value="2">
+                                <span>Чтобы softmax давал более плавное распределение, а не почти 0 и 1</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q6" value="3">
+                                <span>Это нормализация для сравнения разных слов</span>
+                            </label>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <!-- Question 7 -->
+                    <div class="quiz-question" data-correct="1">
+                        <h3>7. Статья «Attention is not Explanation» показала, что:</h3>
+                        <div class="quiz-options">
+                            <label class="quiz-option">
+                                <input type="radio" name="q7" value="1">
+                                <span>Веса attention можно изменить без изменения предсказаний модели</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q7" value="2">
+                                <span>Attention вообще не нужен для работы модели</span>
+                            </label>
+                            <label class="quiz-option">
+                                <input type="radio" name="q7" value="3">
+                                <span>Визуализации attention всегда врут</span>
+                            </label>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <button class="btn" onclick="checkQuiz()">Проверить ответы</button>
+                    <button class="btn btn-outline" onclick="resetQuiz()">Сбросить</button>
+                </div>
+
+                <div id="quiz-summary" style="display: none; margin-top: 1.5rem;"></div>
+
+                <div class="progress-container" style="margin-top: 1.5rem;">
+                    <div class="progress-bar" style="width: 86%"></div>
+                </div>
+
+                <button class="btn" onclick="showSection('chapter6')" style="margin-top: 1rem;">К мистике</button>
+            </div>
+        </section>
+		
+		
+		<!-- Chapter 6 - Blind Spots & Unresolved Problems -->
+<section id="chapter6" class="section">
+    <div class="card">
+        <h2>Мистика (о чём молчат учебники)</h2>
+		
+		<p class="subtitle">Мистика (греч. mystikos - таинственный)  — в данном контексте означает только область непознанного, загадочного, объяснимого, но пока необъяснённого; а не сверхъестественного и принципиально недоступного рациональному познанию.</p>
+		
+        <p class="subtitle">Формула — это не объяснение. Арифметика — не когнитивная наука.</p>
+
+        <div class="highlight-box highlight-danger">
+            <p><strong>Если учебник говорит: «Всё ясно», — он лукавит.</strong></p>
+            <p>На микро-уровне: чистая арифметика, перемножение матриц.<br>
+            На макро-уровне: чёрный ящик, про который мы строим догадки.</p>
+            <p>Мы понимаем, <strong>как</strong> работает Attention, но не до конца понимаем, <strong>что именно</strong> он вычисляет в терминах высокоуровневой логики.</p>
+        </div>
+
+        <!-- 1. Interpretability Gap -->
+        <h2>1. Проблема интерпретируемости (The Interpretability Gap)</h2>
+        <div class="myth-item">
+            
+            <div class="myth-text">
+                <strong>Миф учебников:</strong> «Веса внимания показывают, на что смотрит модель».
+            </div>
+        </div>
+        <div class="myth-item">
+            
+            <div class="myth-text">
+                <strong>Реальность (исследование «Attention is not Explanation»):</strong>
+                <ul>
+                    <li>Разные распределения весов внимания могут приводить к одному и тому же результату.</li>
+                    <li>Можно изменить веса внимания (сделать их случайными), и предсказания модели часто <strong>не меняются</strong>.</li>
+                    <li>Attention лишь перераспределяет информацию. Основная «магия» трансформации смыслов происходит в блоках <strong>Feed-Forward (FFN)</strong>, которые составляют 2/3 параметров модели.</li>
+                </ul>
+                <p><em>Attention — это «система логистики», а FFN — «цеха сборки». Что именно происходит в FFN, мы понимаем ещё хуже.</em></p>
+            </div>
+        </div>
+
+        <!-- 2. Tokens vs Meanings -->
+        <h2>2. Токены vs Смыслы (Проблема дискретности)</h2>
+        <div class="myth-item">
+                        <div class="myth-text">
+                <strong>Токенизация (BPE) — это статистический процесс</strong>
+                <p>Она часто режет слова контринтуитивно: «eating» → «eat» + «ing», «unbelievable» → «un» + «believe» + «able».</p>
+                <p><strong>Лакуна:</strong> Как модель восстанавливает целостные концепты из этих фрагментов? Как в многомерном пространстве эмбеддингов формируется геометрия смысла, позволяющая Attention «выцеплять» нужные связи? Это остаётся на уровне гипотез о «семантических многообразиях».</p>
+                <p>Мы не до конца понимаем, почему эмбеддинги складываются так, а не иначе, и как именно внимание оперирует этими «осколками смысла».</p>
+            </div>
+        </div>
+
+        <!-- 3. Structural Problems -->
+        <h2>3. Нерешённые структурные проблемы</h2>
+        <div class="myth-item">
+                        <div class="myth-text">
+                <strong>Softmax и «жёсткое» внимание</strong>
+                <p>Softmax никогда не зануляет веса полностью. Каждый токен <em>всегда</em> чуть-чуть влияет на каждый. Это создаёт «шум», который мешает модели фокусироваться на длинных контекстах.</p>
+            </div>
+        </div>
+        <div class="myth-item">
+                        <div class="myth-text">
+                <strong>Квадратичная сложность O(n²)</strong>
+                <p>Мы до сих пор не нашли идеального способа сделать Attention линейным без потери качества. FlashAttention, Sparse Attention, Linear Attention — это инженерные оптимизации, а не теоретический прорыв. Это фундаментальное ограничение архитектуры.</p>
+            </div>
+        </div>
+        <div class="myth-item">
+            
+            <div class="myth-text">
+                <strong>Позиционное кодирование (RoPE, ALiBi)</strong>
+                <p>Тот факт, что нам нужно насильно «впихивать» информацию о порядке слов, говорит: сам по себе Attention <strong>глух к структуре последовательности</strong>. Это фундаментальное ограничение — трансформер не знает, где начало, а где конец, пока мы не подскажем.</p>
+            </div>
+        </div>
+
+        <!-- 4. Unverified Assumptions -->
+        <h2>4. Неверифицируемые положения (теоретический тупик)</h2>
+        <div class="myth-item">
+            <div class="myth-text">
+                <strong>Гипотеза о низкоранговой структуре</strong>
+                <p>Мы предполагаем, что матрицы весов в Attention избыточны и могут быть сжаты (LoRA это подтверждает). Но мы не знаем, <em>почему</em> обучение всегда сходится к таким избыточным структурам. Это эмпирический факт без теоретического объяснения.</p>
+				
+				Связь с биологическим вниманием: Мы не знаем, насколько механизм Attention в трансформерах отражает процессы внимания в человеческом мозге. Математическая конструкция трансформерного Attention не имеет прямого аналога в нейробиологии, и мы не понимаем, могут ли улучшения в трансформерном Attention быть вдохновлены биологическими открытиями.
+            </div>
+        </div>
+		
+		
+		<div class="myth-item">
+            <div class="myth-text">
+                <strong>Ограничения на длинные последовательности</strong>
+                <p>Даже с улучшениями как FlashAttention или скользящие окна, трансформеры всё ещё плохо справляются с последовательностями из 100 тыс. и более токенов. Мы не полностью понимаем, почему Attention не может эффективно захватывать очень длинные зависимости: это связано с нормализацией через softmax (которая концентрирует веса на близких токенах), или с особенностями обучения?</p>
+            </div>
+        </div>
+		
+		
+		<div class="myth-item">
+            <div class="myth-text">
+                <strong>Интерпретируемость взаимодействия головок</strong>
+                <p>Даже если мы видим, что отдельная головка обрабатывает определённый паттерн, мы не понимаем, почему именно эта головка выбрала его, и как комбинация десятков или сотен головок приводит к эмерджентным свойствам (например, цепочному рассуждению или решению математических задач). Мы не можем предсказать перед обучением, какие головки будут отвечать за длинные зависимости, и как их совместная работа обеспечивает осмысленный вывод.</p>
+            </div>
+        </div>
+		
+		<div class="myth-item">
+            <div class="myth-text">
+                <strong>Обобщение за рамками обучающих данных</strong>
+                <p>Установлено, что модели могут эффективно решать задачи, на которых они не обучались (контекстное  обучение), но не понимаем, как Attention позволяет им извлекать паттерны из примера в промпте и применять их к новым данным. Нет формальной теории, объясняющей этот процесс.</p>
+            </div>
+        </div>
+		
+        <div class="myth-item">
+            <span class="myth-status"></span>
+            <div class="myth-text">
+                <strong>Эмерджентность (фазовый переход)</strong>
+                <p>Почему Attention на 100 млн параметров не умеет логически рассуждать, а на 70 млрд — начинает? У нас нет теории, которая предсказала бы этот фазовый переход. Способности появляются «из ниоткуда» по мере масштабирования.</p>
+                <p><em>Это и есть та самая «мистика», которую учебники пытаются замаскировать формулами.</em></p>
+            </div>
+        </div>
+		
+		<!-- 5.  -->
+        <h2>5. Аналогии с человеком</h2>
+        <div class="myth-item">
+            <div class="myth-text">
+                <strong>Связь с биологическим вниманием</strong>
+                <p>Attention функционально подобно вниманию человека, это факт. Но мы не знаем, насколько механизм Attention в трансформерах отражает процессы внимания в человеческом мозге. Математическая конструкция трансформерного Attention вообще не имеет прямого аналога в нейробиологии, и неизвестно, могут ли решения в трансформерном Attention быть вдохновлены или иметь параллели биологическими моделями.</p>
+			</div>
+        </div>
+		
+		<div class="myth-item">
+            <div class="myth-text">
+                <strong>Проблема антропоморфизации</strong>
+                <p>Многие заявления о том, что "головки Attention кодируют смысл текста" или "модель понимает контекст" являются антропоморфными и не поддаются строгой проверке (верификации). У нас нет формального определения "смысла" в контексте трансформеров, поэтому невозможно доказать или опровергнуть такие утверждения.</p>
+			</div>
+        </div>
+		
+		<div class="myth-item">
+            <div class="myth-text">
+                <strong>Динамическое Attention</strong>
+                <p>Биологическое внимание динамично. Существующие механизмы Attention статичны (способ вычисления не меняется во время инференса для готовой модели). Мы не знаем, можно ли вообще создать динамическое Attention, которое адаптируется к входным данным (например, включает определённые головки только для конкретных типов последовательностей), и каких компромиссов это потребует.</p>
+			</div>
+        </div>
+		
+		
+
+        <!-- Summary Box -->
+        <div class="highlight-box highlight-info" style="margin-top: 1.5rem;">
+            <p><strong>Резюме, которое не пишут в учебниках:</strong></p>
+            <ul>
+                <li>Мы понимаем <strong>как</strong> — пошагово, в числах.</li>
+                <li>Мы не понимаем <strong>что именно</strong> — в терминах смысла, логики, рассуждений.</li>
+                <li>Механизм Attention — это не «решение» проблемы искусственного интеллекта. Это удачно найденная математическая структура, которая оказалась невероятно эффективной для параллельных вычислений на GPU.</li>
+            </ul>
+            <p style="margin-top: 0.75rem; font-style: italic;">«Мы смотрим на матрицы и делаем вид, что понимаем душу».<br>— неофициальный девиз исследователей LLM.</p>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar" style="width: 93%"></div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: space-between; margin-top: 1rem;">
+            <button class="btn btn-outline" onclick="showSection('chapter5')">← К тесту</button>
+            <button class="btn" onclick="showSection('chapter7')">К финишу →</button>
+        </div>
+    </div>
+</section>
+
+
+
+
+       <!-- Chapter 7 - Final (rewritten) -->
+<section id="chapter7" class="section">
+    <div class="card">
+        <h2>Финальная жесть Attention</h2>
+        <p class="subtitle">Теперь вы знаете достаточно, чтобы не верить красивым картинкам</p>
+
+        <div class="highlight-box highlight-danger">
+            <p style="font-size: 1.1rem; text-align: center; margin: 0;">
+                <strong>Attention — это взвешенное усреднение через матричные умножения.</strong>
+            </p>
+        </div>
+
+        <h3>Что вы узнали (и это правда):</h3>
+
+        <div class="myth-item">
+            <span class="myth-status">✅</span>
+            <div class="myth-text">
+                <strong>Формула Attention — это не метафора, а математика</strong>
+                <p>Attention(Q,K,V) = softmax(QKᵀ/√d) × V. Всё остальное — интерпретации.</p>
+            </div>
+        </div>
+
+        <div class="myth-item">
+            <span class="myth-status">✅</span>
+            <div class="myth-text">
+                <strong>Q, K, V — это три проекции одного эмбеддинга</strong>
+                <p>Никакого «запроса» в человеческом смысле. Просто три матрицы весов.</p>
+            </div>
+        </div>
+
+        <div class="myth-item">
+            <span class="myth-status">✅</span>
+            <div class="myth-text">
+                <strong>Сложность O(n²) — главное проклятие трансформеров</strong>
+                <p>Именно поэтому контекстные окна — это боль, а не каприз разработчиков.</p>
+            </div>
+        </div>
+
+        <div class="myth-item">
+            <span class="myth-status">✅</span>
+            <div class="myth-text">
+                <strong>Веса внимания не объясняют решений модели</strong>
+                <p>«Attention is not Explanation» — не хайп, а результат исследований.</p>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 2rem;">Что осталось за кадром (и это тоже правда):</h3>
+
+        <div class="myth-item">
+            <span class="myth-status">❓</span>
+            <div class="myth-text">
+                <strong>Мы не знаем, как именно формируется геометрия смысла</strong>
+                <p>Эмбеддинги складываются так, а не иначе — но почему? Гипотезы есть, теории — нет.</p>
+            </div>
+        </div>
+
+        <div class="myth-item">
+            <span class="myth-status">❓</span>
+            <div class="myth-text">
+                <strong>Мы не знаем, почему работает масштабирование</strong>
+                <p>Почему на 100 млн параметров модель тупая, а на 70 млрд — рассуждает? Фазовый переход без предсказательной теории.</p>
+            </div>
+        </div>
+
+        <div class="myth-item">
+            <span class="myth-status">❓</span>
+            <div class="myth-text">
+                <strong>Мы не знаем, что именно происходит в FFN</strong>
+                <p>2/3 параметров модели — это «чёрный ящик внутри чёрного ящика». Attention мы хоть как-то визуализируем, FFN — почти никак.</p>
+            </div>
+        </div>
+
+        <div class="myth-item">
+            <span class="myth-status">❓</span>
+            <div class="myth-text">
+                <strong>Мы не знаем, почему избыточные веса работают</strong>
+                <p>LoRA сжимает матрицы в десятки раз без потери качества. Почему обучение всегда сходится к таким избыточным структурам? Загадка.</p>
+            </div>
+        </div>
+		
+		<div class="myth-item">
+            <span class="myth-status">❓❓❓</span>
+            <div class="myth-text">
+                <strong>Мы пока ещё очень многого не знаем и не можем объяснить .... </strong>
+                
+            </div>
+        </div>
+
+        <hr style="margin: 2rem 0; border: none; border-top: 2px solid var(--divider);">
+
+        <div class="fence-visual">
+            <p style="font-size: 1.2rem; margin-bottom: 0.5rem;"><strong>ЧЕСТНЫЙ ИТОГ:</strong></p>
+            <p><strong>Токены</strong> — не слова, а инженерный компромисс.</p>
+            <p><strong>Эмбеддинги</strong> — не «смысл в числах», а векторы для вычислений.</p>
+            <p><strong>Attention</strong> — не внимание, а взвешенное усреднение через скалярные произведения.</p>
+            <p style="margin-top: 1rem;">Мы понимаем <strong>КАК</strong> — пошагово, в числах, до последнего умножения.</p>
+            <p>Мы не понимаем <strong>ЧТО ИМЕННО</strong> — в терминах смысла, логики, рассуждений.</p>
+            <p style="margin-top: 1rem; font-style: italic;">И это <strong>нормально</strong>. Так выглядит настоящая наука, а не учебник, приворяющийся научным. Поэтому, если хотите разобраться, следует обязательно разбираться по первоисточникам (статьям!). Учебники же нужны, чтобы сдать экзамены и получить возможность разбираться))</p>
+        </div>
+
+        <blockquote>
+            <p>«Attention Is All You Need» — писали авторы в 2017.</p>
+            <p>Они имели в виду: не нужны рекуррентные связи, не нужны свёртки.</p>
+            <p>Они <em>не</em> имели в виду: attention — это всё, что нужно для интеллекта.</p>
+            <p>Но заголовок красивый, и все его запомнили.</p>
+        </blockquote>
+
+        <div class="final-message card" style="background: linear-gradient(135deg, var(--accent-nav) 0%, var(--accent-interactive) 100%); color: white; margin-top: 2rem;">
+            <h2 style="color: white;">Теперь вы знаете</h2>
+            <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                достаточно, чтобы:<br><br>
+                — не путать формулу с объяснением<br>
+                — не верить каждой красивой визуализации<br>
+                — понимать, почему «просто увеличьте контекст» — это проблема<br>
+                — и говорить: «я знаю, как это работает, но не знаю, почему работает именно так»<br><br>
+                <em>Добро пожаловать в мир, где инженерия опережает теорию.</em>
+            </p>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-bar" style="width: 100%"></div>
+        </div>
+        <p style="text-align: center; font-size: 0.9rem; color: var(--text-secondary);">Финиш. Вопросы остались.</p>
+
+        <div style="text-align: center; margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <button class="btn btn-outline" onclick="showSection('intro')">В начало</button>
+            <button class="btn btn-outline"> <a target="blank" href="https://arxiv.org/abs/1706.03762">Attention Is All You Need</a></button>
+        </div>
+    </div>
+</section>
+    </main>
+
+    <footer style="text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 0.9rem;">
+        <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+для всех</p>
+        </footer>
+
+    <script>
+        // Theme toggle
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.getElementById('theme-icon');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                icon.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                icon.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const icon = document.getElementById('theme-icon');
+            
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                icon.textContent = '🌙';
+            }
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            document.getElementById(sectionId).classList.add('active');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-section') === sectionId) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            document.getElementById('main-nav').classList.remove('mobile-open');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                showSection(btn.getAttribute('data-section'));
+            });
+        });
+
+        function toggleMobileNav() {
+            document.getElementById('main-nav').classList.toggle('mobile-open');
+        }
+
+        function toggleSpoiler(element) {
+            element.classList.toggle('open');
+        }
+
+        // Calculator
+        function calculateAttention() {
+            const ctx = parseInt(document.getElementById('ctx-length').value) || 512;
+            const layers = parseInt(document.getElementById('num-layers').value) || 32;
+            const heads = parseInt(document.getElementById('num-heads').value) || 32;
+            
+            const attentionPerLayer = ctx * ctx;
+            const totalAttention = attentionPerLayer * layers * heads;
+            
+            const resultDiv = document.getElementById('calc-result');
+            resultDiv.style.display = 'block';
+            
+            let horror = '';
+            if (totalAttention > 1e12) {
+                horror = 'Это ТРИЛЛИОНЫ операций. Надеюсь, у вас хороший кластер.';
+            } else if (totalAttention > 1e9) {
+                horror = 'Миллиарды операций. Для одного прохода. Для одного примера.';
+            } else if (totalAttention > 1e6) {
+                horror = 'Миллионы операций. И это ещё маленькая модель.';
+            } else {
+                horror = 'Пока терпимо. Попробуйте увеличить контекст.';
+            }
+            
+            resultDiv.innerHTML = `
+                <div class="highlight-box highlight-danger">
+                    <p><strong>Attention-операций на один слой:</strong> ${attentionPerLayer.toLocaleString()}</p>
+                    <p><strong>Всего attention-операций:</strong> ${totalAttention.toLocaleString()}</p>
+                    <p><strong>Это:</strong> ${(totalAttention / 1e9).toFixed(2)} миллиардов</p>
+                    <p style="margin-top: 1rem;"><em>${horror}</em></p>
+                </div>
+            `;
+        }
+
+        // Quiz functionality
+        function checkQuiz() {
+            const questions = document.querySelectorAll('.quiz-question');
+            let correct = 0;
+            
+            questions.forEach((q, index) => {
+                const correctAnswer = q.getAttribute('data-correct');
+                const selected = q.querySelector(`input[name="q${index + 1}"]:checked`);
+                const feedback = q.querySelector('.quiz-feedback');
+                const options = q.querySelectorAll('.quiz-option');
+                
+                options.forEach(opt => opt.classList.remove('correct', 'wrong'));
+                
+                if (selected) {
+                    const selectedOption = selected.closest('.quiz-option');
+                    if (selected.value === correctAnswer) {
+                        correct++;
+                        selectedOption.classList.add('correct');
+                        feedback.textContent = 'Верно!';
+                        feedback.className = 'quiz-feedback correct';
+                    } else {
+                        selectedOption.classList.add('wrong');
+                        options.forEach(opt => {
+                            if (opt.querySelector('input').value === correctAnswer) {
+                                opt.classList.add('correct');
+                            }
+                        });
+                        feedback.textContent = 'Неверно. Правильный ответ выделен.';
+                        feedback.className = 'quiz-feedback wrong';
+                    }
+                } else {
+                    feedback.textContent = 'Вы не выбрали ответ';
+                    feedback.className = 'quiz-feedback wrong';
+                }
+            });
+            
+            const summary = document.getElementById('quiz-summary');
+            const total = questions.length;
+            let message, className;
+            
+            if (correct === total) {
+                message = `<strong>Результат: ${correct}/${total}</strong><br>Превосходно! Вы не попались на красивые метафоры.`;
+                className = 'highlight-box highlight-success';
+            } else if (correct >= total * 0.7) {
+                message = `<strong>Результат: ${correct}/${total}</strong><br>Хорошо! Но некоторые иллюзии ещё живы.`;
+                className = 'highlight-box highlight-warning';
+            } else {
+                message = `<strong>Результат: ${correct}/${total}</strong><br>Кажется, «Attention Is All You Need» вас загипнотизировало. Перечитайте!`;
+                className = 'highlight-box highlight-danger';
+            }
+            
+            summary.innerHTML = message;
+            summary.className = className;
+            summary.style.display = 'block';
+        }
+
+        function resetQuiz() {
+            document.querySelectorAll('.quiz-question input').forEach(input => {
+                input.checked = false;
+            });
+            document.querySelectorAll('.quiz-option').forEach(opt => {
+                opt.classList.remove('correct', 'wrong');
+            });
+            document.querySelectorAll('.quiz-feedback').forEach(fb => {
+                fb.textContent = '';
+                fb.className = 'quiz-feedback';
+            });
+            document.getElementById('quiz-summary').style.display = 'none';
+        }
+
+        loadTheme();
+    </script>
+
+</body>

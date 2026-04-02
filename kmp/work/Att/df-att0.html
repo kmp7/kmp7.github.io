@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>Внимание </h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp |  CC BY-NC-SA 4.0</p>
+<p>Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+                       
+		{
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Направленность и сосредоточенность души на определённом предмете при отвлечении от всего остального; способность ума обращаться к созерцанию одной идеи с особой ясностью и отчётливостью.",
+      "category": "философский, античность — Новое время, гносеология"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "The directedness and concentration of the soul upon a particular object while abstracting from everything else; the mind's capacity to contemplate one idea with special clarity and distinctness.",
+      "category": "philosophical, antiquity — early modern period, epistemology"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Овладение умом в ясной и отчётливой форме одним из нескольких одновременно возможных объектов или цепочек мысли; его сущность составляют фокусировка, концентрация сознания.",
+      "category": "психологический, конец XIX века, У. Джеймс, функционализм"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "The taking possession by the mind, in clear and vivid form, of one out of what seem several simultaneously possible objects or trains of thought; focalization, concentration of consciousness are of its essence.",
+      "category": "psychological, late 19th century, W. James, functionalism"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Состояние сознания, характеризующееся повышенной ясностью и отчётливостью ограниченного числа переживаний, находящихся в фокусе сознания, при одновременном угнетении периферийных содержаний.",
+      "category": "психологический, начало XX века, Э. Титченер, структурализм"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A state of consciousness characterized by heightened clarity and distinctness of a limited number of experiences in the focus of awareness, with simultaneous suppression of peripheral contents.",
+      "category": "psychological, early 20th century, E. Titchener, structuralism"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Динамический процесс выделения фигуры из фона; перцептивная организация поля восприятия, при которой определённые элементы становятся центральными, а остальные — периферийными.",
+      "category": "психологический, первая половина XX века, гештальт-психология"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A dynamic process of figure-ground segregation; perceptual organization of the field whereby certain elements become central while others remain peripheral.",
+      "category": "psychological, first half of 20th century, Gestalt psychology"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Психическая деятельность, заключающаяся в создании и поддержании обобщённой и ситуационной готовности к познавательной деятельности; состояние направленного сосредоточения сознания на объектах и целях деятельности.",
+      "category": "психологический, XX век, советская психология, деятельностный подход"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "Mental activity consisting in creating and maintaining generalized and situational readiness for cognitive activity; a state of directed concentration of consciousness upon objects and goals of activity.",
+      "category": "psychological, 20th century, Soviet psychology, activity approach"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Механизм селекции информации, ограничивающий объём одновременно обрабатываемых данных ввиду лимитированной пропускной способности когнитивной системы; фильтр, работающий на ранних или поздних стадиях переработки.",
+      "category": "когнитивно-психологический, 1950–1980-е гг., теории фильтра"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "An information selection mechanism that limits the amount of data processed simultaneously due to the limited capacity of the cognitive system; a filter operating at early or late stages of processing.",
+      "category": "cognitive-psychological, 1950s–1980s, filter theories"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Распределение ограниченных когнитивных ресурсов между конкурирующими задачами и стимулами; гибкая система управления умственной энергией, зависящая от требований задачи и доступных резервов.",
+      "category": "когнитивно-психологический, 1970–1990-е гг., ресурсные теории"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "The allocation of limited cognitive resources among competing tasks and stimuli; a flexible mental energy management system dependent on task demands and available reserves.",
+      "category": "cognitive-psychological, 1970s–1990s, resource theories"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Совокупность нейрокогнитивных механизмов, обеспечивающих приоритетную обработку релевантной информации; включает системы бдительности, ориентирования и исполнительного контроля с различной нейроанатомической локализацией.",
+      "category": "нейрокогнитивный, конец XX — начало XXI века, М. Познер"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A set of neurocognitive mechanisms ensuring priority processing of relevant information; encompasses alerting, orienting, and executive control systems with distinct neuroanatomical substrates.",
+      "category": "neurocognitive, late 20th — early 21st century, M. Posner"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Усиление нейрональных репрезентаций целевых стимулов и подавление нерелевантных посредством модуляции активности нейронных популяций; реализуется через нисходящие сигналы из префронтальных и теменных областей.",
+      "category": "нейробиологический, XXI век, когнитивная нейронаука"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "Enhancement of neural representations of target stimuli and suppression of irrelevant ones through modulation of neuronal population activity; implemented via top-down signals from prefrontal and parietal regions.",
+      "category": "neurobiological, 21st century, cognitive neuroscience"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Интенциональная направленность сознания на объект; первичный акт конституирования смысла, в котором предмет выделяется из потока переживаний и становится темой рефлексивного рассмотрения.",
+      "category": "философский, начало XX века, Э. Гуссерль, феноменология"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "The intentional directedness of consciousness toward an object; a primary act of meaning constitution in which an object is singled out from the stream of experience and becomes a theme of reflective consideration.",
+      "category": "philosophical, early 20th century, E. Husserl, phenomenology"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Дефицитный когнитивный ресурс, за который конкурируют множественные информационные агенты; базовая единица обмена в экономике, где предложение информации неограниченно, а способность к её восприятию конечна.",
+      "category": "экономико-социологический, конец XX — XXI век, экономика внимания"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A scarce cognitive resource for which multiple information agents compete; the basic unit of exchange in an economy where information supply is unlimited but the capacity to perceive it is finite.",
+      "category": "economic-sociological, late 20th — 21st century, attention economy"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Социально распределённый и культурно опосредованный ресурс, неравномерно доступный различным группам; инструмент власти, определяющий видимость, признание и доступ к публичному пространству.",
+      "category": "социологический, XXI век, критические исследования медиа"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A socially distributed and culturally mediated resource, unequally accessible to different groups; an instrument of power determining visibility, recognition, and access to public space.",
+      "category": "sociological, 21st century, critical media studies"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Необходимое условие эффективного обучения, обеспечивающее восприятие, понимание и запоминание учебного материала; способность ученика целенаправленно сосредоточиваться на объекте изучения.",
+      "category": "педагогический, XIX — XXI век, дидактика"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A necessary condition for effective learning that ensures perception, comprehension, and retention of educational material; the learner's ability to purposefully concentrate on the object of study.",
+      "category": "pedagogical, 19th — 21st century, didactics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Ключевой когнитивный механизм овладения языком, определяющий замечание (noticing) языковой формы во входящем потоке; необходимое условие перехода языковых явлений из инпута в интейк.",
+      "category": "лингводидактический, конец XX века, Р. Шмидт, гипотеза замечания"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A key cognitive mechanism in language acquisition that determines noticing of linguistic form in the input stream; a necessary condition for language features to progress from input to intake.",
+      "category": "linguodidactic, late 20th century, R. Schmidt, noticing hypothesis"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Когнитивный ресурс ограниченной ёмкости, распределяемый между языковой формой, содержанием и прагматикой в процессе порождения и восприятия речи на иностранном языке.",
+      "category": "психолингвистический, конец XX — XXI век, модели речепроизводства"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A limited-capacity cognitive resource allocated among linguistic form, meaning, and pragmatics during foreign language production and comprehension.",
+      "category": "psycholinguistic, late 20th — 21st century, speech production models"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Комплексная когнитивная функция, нарушение которой проявляется в трудностях удержания фокуса, повышенной отвлекаемости, импульсивности и дефиците самоконтроля; ключевой симптом при СДВГ.",
+      "category": "клинико-психологический, XX — XXI век, нейропсихология, психиатрия"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A complex cognitive function whose impairment manifests as difficulties maintaining focus, heightened distractibility, impulsivity, and self-control deficits; a key symptom in ADHD.",
+      "category": "clinical-psychological, 20th — 21st century, neuropsychology, psychiatry"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Канал с ограниченной пропускной способностью в системе обработки информации, осуществляющий отбор сигналов для дальнейшей когнитивной обработки на основе их релевантности текущим целям.",
+      "category": "информационно-кибернетический, 1950–1970-е гг., теория информации"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A limited-capacity channel in the information processing system that selects signals for further cognitive processing based on their relevance to current goals.",
+      "category": "information-cybernetic, 1950s–1970s, information theory"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Осознанное присутствие в текущем моменте; культивируемая способность направлять и удерживать ум на избранном объекте или процессе без отвлечения и вовлечённости в автоматические мысли.",
+      "category": "созерцательный, восточные традиции — XXI век, практики осознанности"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "Conscious presence in the current moment; a cultivated capacity to direct and sustain the mind on a chosen object or process without distraction or engagement in automatic thoughts.",
+      "category": "contemplative, Eastern traditions — 21st century, mindfulness practices"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Направление когнитивных ресурсов пользователя на элементы интерфейса; объект проектирования, управляемый через визуальную иерархию, контраст, движение и интерактивные паттерны.",
+      "category": "дизайн интерфейсов, конец XX — XXI век, HCI, UX-дизайн"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "The direction of user cognitive resources toward interface elements; a design object managed through visual hierarchy, contrast, motion, and interactive patterns.",
+      "category": "interface design, late 20th — 21st century, HCI, UX design"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Механизм взвешивания релевантности элементов входной последовательности для формирования контекстно-зависимых представлений; ключевой компонент архитектуры трансформеров.",
+      "category": "машинное обучение, 2010–2020-е гг., архитектура нейросетей"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A mechanism for weighting the relevance of input sequence elements to form context-dependent representations; a key component of transformer architecture.",
+      "category": "machine learning, 2010s–2020s, neural network architecture"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Этическое отношение к Другому, выражающееся в готовности воспринять его инаковость; форма ответственности и заботы, предшествующая рациональному познанию.",
+      "category": "философско-этический, XX век, Э. Левинас, С. Вейль, этика заботы"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "An ethical relation to the Other expressed as readiness to perceive their alterity; a form of responsibility and care that precedes rational cognition.",
+      "category": "philosophical-ethical, 20th century, E. Levinas, S. Weil, ethics of care"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Способность замечать значимые особенности ситуации, развиваемая в процессе профессионального обучения; избирательное восприятие, настроенное на релевантные для практики аспекты.",
+      "category": "профессионально-образовательный, XXI век, экспертное восприятие"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "The ability to notice significant features of a situation, developed through professional training; selective perception attuned to practice-relevant aspects.",
+      "category": "professional-educational, 21st century, expert perception"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Социально-эмоциональный ресурс, удовлетворяющий базовую потребность в признании; дефицит внимания со стороны значимых других ведёт к нарушениям развития и психологическому неблагополучию.",
+      "category": "психология развития, XX — XXI век, теория привязанности"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A socio-emotional resource meeting the basic need for recognition; attention deficit from significant others leads to developmental disorders and psychological distress.",
+      "category": "developmental psychology, 20th — 21st century, attachment theory"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Направление перцептивных и когнитивных ресурсов на источник звука, музыкальную структуру или вербальное сообщение; определяет глубину восприятия и понимания звучащей речи.",
+      "category": "аудиолингвистический, XX — XXI век, аудирование, восприятие речи"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "The direction of perceptual and cognitive resources toward a sound source, musical structure, or verbal message; determines the depth of perception and comprehension of spoken language.",
+      "category": "audio-linguistic, 20th — 21st century, listening, speech perception"
+    }
+  },
+   {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Процесс динамического уточнения внутренней генеративной модели мира посредством избирательного усиления точности (precision) определённых предсказаний и ошибок предсказания; механизм приоритизации обновления тех компонентов модели, которые обладают наибольшей прогностической ценностью для минимизации свободной энергии системы.",
+      "category": "вычислительно-нейрокогнитивный, XXI век, предсказательное кодирование, активный вывод"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A process of dynamic refinement of an internal generative world-model through selective enhancement of precision for certain predictions and prediction errors; a mechanism for prioritizing updates to model components possessing the greatest predictive value for minimizing the system's free energy.",
+      "category": "computational-neurocognitive, 21st century, predictive coding, active inference"
+    }
+  },
+  {
+    "ru": {
+      "term": "Внимание",
+      "equivalent": "Attention",
+      "definition": "Класс операций контекстно-зависимого перевзвешивания над множествами векторных представлений, реализующий дифференцируемую мягкую адресацию: для заданного запроса Q вычисляется распределение релевантности по пространству ключей K, индуцирующее агрегацию соответствующих значений V; функционально — механизм динамической маршрутизации, устанавливающий нелокальные зависимости между позициями во входной структуре произвольной длины без редукции к фиксированному представлению промежуточных состояний; топологически — операция, трансформирующая разреженный граф последовательных связей в полносвязный граф с обучаемыми весами рёбер, что обеспечивает прямое распространение градиента между любыми двумя узлами; в терминах теории информации — управляемое сжатие входного контекста относительно целевой задачи через обучаемую функцию взаимной информации между позициями.",
+      "category": "межмодельный, 2026 г., архитектура трансформеров, внутренняя онтология LLM"
+    },
+    "en": {
+      "term": "Attention",
+      "equivalent": "Внимание",
+      "definition": "A class of context-dependent reweighting operations over sets of vector representations implementing differentiable soft addressing: for a given query Q, a relevance distribution is computed over key-space K, inducing aggregation of corresponding values V; functionally — a dynamic routing mechanism establishing non-local dependencies between positions in input structures of arbitrary length without reduction to fixed intermediate-state representations; topologically — an operation transforming a sparse sequential-connection graph into a fully-connected graph with learnable edge weights, enabling direct gradient propagation between any two nodes; in information-theoretic terms — task-relative controlled compression of input context via a learnable mutual information function between positions.",
+      "category": "inter-model, 2026, transformer architecture, LLM internal ontology"
+    }
+			}
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
