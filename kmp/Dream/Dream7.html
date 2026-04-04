@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #2c3e50;
+            --text-secondary: #5a6c7d;
+            --header-color: #325980;
+            --accent-color: #3498db;
+            --border-color: #f1f1f1;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --card-bg: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #eaeaea;
+            --text-secondary: #b0b0b0;
+            --header-color: #5a8dc5;
+            --accent-color: #5dade2;
+            --border-color: #2d3748;
+            --shadow: 0 2px 10px rgba(0,0,0,0.3);
+            --card-bg: #1f2940;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            transition: all 0.3s ease;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--header-color), #4a7a9e);
+            color: white;
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .header-title p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--bg-primary);
+            border-bottom: 2px solid var(--border-color);
+            padding: 0.8rem;
+            position: sticky;
+            top: 85px;
+            z-index: 999;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .nav-btn {
+            background: var(--bg-secondary);
+            color: var(--header-color);
+            border: 1px solid var(--border-color);
+            padding: 0.2rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .card h2 {
+            color: var(--header-color);
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .card h3 {
+            color: var(--header-color);
+            font-size: 1.1rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        .card p {
+            margin-bottom: 1rem;
+            text-align: justify;
+        }
+
+        .narrative-text {
+            font-size: 1.05rem;
+            line-height: 1.9;
+        }
+
+        .narrative-text .scene {
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border-left: 3px solid var(--header-color);
+        }
+
+        .narrative-text .dialogue {
+            margin: 0.75rem 0;
+            padding-left: 1.5rem;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        .narrative-text .list-item {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .narrative-text .list-item::before {
+            content: "—";
+            position: absolute;
+            left: 0;
+            color: var(--accent-color);
+        }
+
+        .narrative-text .insight {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(50, 89, 128, 0.1));
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            font-weight: 500;
+        }
+
+        .narrative-text .conclusion {
+            text-align: center;
+            font-style: italic;
+            color: var(--header-color);
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Analysis Blocks */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .analysis-item {
+            background: var(--bg-secondary);
+            padding: 1.25rem;
+            border-radius: 8px;
+            border-top: 3px solid var(--accent-color);
+        }
+
+        .analysis-item h4 {
+            color: var(--header-color);
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .analysis-item ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .analysis-item li {
+            padding: 0.4rem 0;
+            padding-left: 1.2rem;
+            position: relative;
+            font-size: 0.95rem;
+        }
+
+        .analysis-item li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+
+        .term {
+            display: inline-block;
+            background: rgba(52, 152, 219, 0.15);
+            color: var(--header-color);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin: 0.1rem 0;
+        }
+
+        /* Form Section */
+        .form-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--header-color);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .form-group .hint {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background: var(--header-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--header-color);
+            border: 2px solid var(--header-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--header-color);
+            color: white;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        /* Prompt Cards */
+        .prompt-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .prompt-card {
+            background: var(--bg-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-card:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow);
+        }
+
+        .prompt-card h4 {
+            color: var(--header-color);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .prompt-card p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* Footer */
+        
+    footer {
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 1px solid #ddd;
+    }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--header-color);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 2000;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Mobile Adaptations */
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            .header-title h1 {
+                font-size: 1.2rem;
+            }
+
+            .header-title p {
+                font-size: 0.8rem;
+            }
+
+            nav {
+                top: 70px;
+                padding: 0.75rem;
+            }
+
+            .nav-btn {
+                padding: 0.5rem 0.9rem;
+                font-size: 0.8rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.25rem;
+            }
+
+            .card h2 {
+                font-size: 1.2rem;
+            }
+
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .notification {
+                left: 1rem;
+                right: 1rem;
+                bottom: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-container {
+                justify-content: flex-start;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 0.5rem;
+            }
+
+            .nav-btn {
+                flex-shrink: 0;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            header, nav, .theme-toggle, .btn {
+                display: none;
+            }
+
+            body {
+                background: white;
+                color: black;
+            }
+
+            .card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+		
+			/* Базовая обёртка */
+.tooltip {
+  position: relative;
+  cursor: help;
+  color: #0b5fff;
+  text-decoration: underline dotted;
+  white-space: nowrap;
+  font-weight: 500;
+  outline: none;            /* чтобы кастомный фокус сработал */
+}
+
+/* Псевдоэлементы: ::after — пузырь, ::before — стрелка */
+.tooltip::after,
+.tooltip::before {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s cubic-bezier(.2,.8,.2,1);
+  will-change: opacity, transform;
+}
+
+/* Стили пузыря (текст) */
+.tooltip::after {
+  content: attr(data-tip);
+  background: #3498db;
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.2;
+  max-width: 500px;
+  word-wrap: break-word;
+  box-shadow: 0 6px 18px rgba(10,12,20,0.45);
+  z-index: 1000;
+  transform-origin: center;
+}
+
+
+/* Отступ от слова (регулируется) */
+.tooltip {
+  --offset: 10px;
+}
+
+/* Позиционирование сверху (по умолчанию) */
+.tooltip::after {
+  bottom: calc(100% + var(--offset));
+  left: 50%;
+  transform: translate(-50%, 6px) scale(.98);
+}
+.tooltip::before {
+  bottom: calc(100% + calc(var(--offset) - 6px));
+  left: 50%;
+  transform: translate(-50%, 6px) rotate(45deg);
+}
+
+/* Появление при hover и focus (доступность для клавиатуры) */
+.tooltip:hover::after,
+.tooltip:focus::after,
+.tooltip:hover::before,
+.tooltip:focus::before {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+/* Фокусная подсветка для клавиатурной навигации */
+.tooltip:focus {
+  box-shadow: 0 0 0 3px rgba(11,95,255,0.12);
+  border-radius: 4px;
+}
+
+/* Мобильная адаптация: плавнее и реагирует на тапы (hover отсутствует) */
+@media (hover: none) {
+  .tooltip::after,
+  .tooltip::before {
+    transition: opacity .12s linear, transform .12s linear;
+  }
+  /* На мобильных устройствах пользователь может тапнуть — :focus становится полезным */
+  .tooltip:active::after,
+  .tooltip:active::before {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* Настройка для очень узких экранов: увеличиваем ширину подсказки */
+@media (max-width: 360px) {
+  .tooltip::after { max-width: 460px; font-size: 12px; padding: 7px 9px; }
+}
+
+
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="header-title">
+                <h1>Седьмой сон Евы</h1>
+            </div>
+            <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">☀️</button>
+        </div>
+    </header>
+
+    <nav>
+        <div class="nav-container">
+            <button class="nav-btn active" data-section="narrative">Dream</button>
+            <button class="nav-btn" data-section="linguistic">LA</button>
+            <button class="nav-btn" data-section="didactic">DA</button>
+            <button class="nav-btn" data-section="forest">Forest map</button>
+			<button class="nav-btn" data-section="reflection">Reflection</button>
+			<button class="nav-btn" data-section="semiotics">18+</button>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Narrative Section -->
+        <section id="narrative" class="active">
+            <div class="card">
+                <h2>За пределами палисадника</h2>
+                <h4>О взрослении лингвиста в эпоху машинного перевода</h4><br>
+                <div class="narrative-text">
+                    <p>Ева сидела за рабочим столом, окружённая книгами по теории перевода. Слева — <span class="tooltip" data-tip="Бархударов Л.С. Язык и перевод. М., 1975">Бархударов</span>, справа — <span class="tooltip" data-tip="Комиссаров В.Н. Теория перевода. М., 1990">Комиссаров</span>, перед глазами — распечатка статьи о нейросетевом машинном переводе. Она готовилась к семинару по современным переводческим технологиям, и чем глубже погружалась в тему, тем сильнее нарастало странное ощущение.</p>
+
+                    <p>«Компьютерный перевод» — эти слова, такие знакомые и привычные, вдруг начали мерцать перед глазами. Ева моргнула. Надпись на экране дрогнула и… изменилась.</p>
+
+                    <div class="scene">
+                        <p>Она прочитала: <strong>«Компьютерный перевод»</strong>.</p>
+                        <p>Но глаза видели другое: <em>«Черновой лексико-грамматический перевод с одного национального языка на другой национальный язык с целью быстрейшего выполнения домашнего задания»</em>.</p>
+                        <p>Ева потёрла глаза. Фраза снова изменилась: <em>«Вспомогательный инструмент для экономии времени при решении учебных задач»</em>.</p>
+                        <p>А затем — третья ипостась: <em>«Средство, позволяющее не вникать в детали, доверяя машине то, что когда-то делал человек»</em>.</p>
+                    </div>
+
+                    <p>Ева закрыла ноутбук и подошла к окну. В университетском дворе первокурсницы спорили о достоинствах ChatGPT для переводов. «Вставила текст — получила результат — сдала», — услышала она обрывок фразы. В этом было что-то неуловимо-неправильное.</p>
+
+                    <p>Усталость накатила неожиданно. Ева прилегла на диван, чувствуя, как реальность начинает расплываться, уступая место чему-то иному...</p>
+
+                    <div class="scene dream">
+                        <p>Она стояла на краю поляны, окружённой ухоженным подлеском. Всё здесь было знакомым с детства: протоптанные тропинки, аккуратные кустики земляники, грибные места, отмеченные на карте. Воздух пах цветами и нагретой хвоей. Это был палисадник
+                        <p>На деревянном указателе было вырезано: <strong>«Перевод»</strong>. Чуть ниже, более мелким шрифтом: <strong>«Компьютерный»</strong>.</p>
+                        <p>Рядом стояла девочка лет двенадцати — с косичками, в платье в цветочек, с большим рюкзаком за спиной. Она смотрела на указатель с недоумением.</p>
+                        <div class="dialogue">— Ты тоже не понимаешь? — спросила девочка, оборачиваясь к Еве.</div>
+                        <div class="dialogue">— Не понимаю что?</div>
+                        <div class="dialogue">— Почему «компьютерный перевод» — это всё ещё «перевод»? — девочка вздохнула. — Меня учили, что перевод — это искусство. А тут какие-то алгоритмы, корпуса, эмбеддинги… Это же совсем другое!</div>
+                        <p>Ева хотела ответить, но не успела. Девочка шагнула вперёд, на тропинку, и внезапно ухоженный подлесок кончился.</p>
+                    </div>
+
+                    <div class="scene dream">
+                        <p>Они стояли на границе <strong>леса</strong>.</p>
+                        <p>Не парка, не рощи — настоящего, древнего, огромного леса. Деревья уходили в небо, их кроны смыкались в зелёный свод, сквозь который едва пробивался свет. Тропинка, такая ровная и утоптанная за спиной, здесь превращалась в едва заметную стёжку, петляющую между корней, уходящую в неизвестность.</p>
+                        <p>Девочка ахнула.</p>
+                        <div class="dialogue">— Это… это всё тоже перевод?</div>
+                        <p>Ева молча кивнула. Она сама не знала ответа, но чувствовала — да. Всё это огромное, пугающее, необъятное пространство было тем, что называлось «переводом» в эпоху машинного обучения.</p>
+                    </div>
+
+                    <div class="scene dream">
+                        <p>Они пошли вперёд, и лес раскрывался перед ними медленно, нехотя, как книга, которую не читали слишком долго.</p>
+                        <div class="list-item">Сначала были <strong>цветочки и грибочки</strong> — знакомые понятия: эквивалентность, адекватность, трансформации. Девочка уверенно называла их, радуясь узнаванию.</div>
+                        <div class="list-item">Потом начались <strong>топи и болота</strong> — места, где язык теории перевода встречался с математикой. Вектора, вероятности, attention-механизмы. Ноги вязли, воздух становился плотным. «Это тоже перевод?» — испуганно спросила девочка. «Это часть его», — ответила Ева, хотя сама едва понимала, как по этим трясинам ходить.</div>
+                        <div class="list-item">Дальше открылись <strong>непроходимые дебри</strong> — области, где не было ни чётких правил, ни устоявшихся теорий. Этические вопросы: имеет ли ИИ право переводить поэзию? Где граница между помощью и подменой? Что происходит с языком, когда его изучают не люди, а машины? Здесь не было тропинок. Каждый шаг приходилось прокладывать самому.</div>
+                    </div>
+
+                    <div class="scene dream">
+                        <p>В глубине леса они наткнулись на <strong>заброшенный город</strong>. Здания были сложены из книг по лингвистике, теории перевода, сравнительной стилистике. Улицы носили имена: <span class="tooltip" data-tip="Юрий Наумович Марчук">Марчук</span>, <span class="tooltip" data-tip="Игорь Александрович Мельчук">Мельчук</span>, <span class="tooltip" data-tip="Александра Давыдовна Швейцер">Швейцер</span>. Но город был пуст. Его жители — филологи-переводоведы — ушли в лес, пытаясь понять новые территории. Некоторые вернулись и рассказывали о невероятном. Другие — остались там, навсегда погрузившись в дебри нейросетей и корпусной лингвистики.</p>
+                        <div class="dialogue">— Они… они пропали? — девочка смотрела на пустые улицы.</div>
+                        <div class="dialogue">— Нет, — сказала Ева. — Они расширили свои карты. Они поняли, что перевод больше не помещается в старом городе.</div>
+                    </div>
+
+                    <div class="scene dream">
+                        <p>Ещё глубже в лесу они увидели <strong>месторождения полезных ископаемых</strong>. Это были данные — огромные массивы текстов, на которых обучаются модели. Здесь, в недрах леса, таилась та самая сила, которая сделала машинный перевод реальностью. Но добыча этих ископаемых требовала осторожности: нарушить экосистему, испортить языковую среду, лишить лес его души — всё это было возможно, если подойти бездумно.</p>
+                        <div class="dialogue">— Ты боишься? — спросила Ева у девочки.</div>
+                        <div class="dialogue">— Да, — честно ответила та. — Я думала, перевод — это маленький садик. А это… — она обвела рукой лес, уходящий за горизонт, — это целый мир.</div>
+                    </div>
+
+                    <div class="scene dream">
+                        <p>Они вышли к опушке. Солнце клонилось к закату, окрашивая кроны деревьев в золотой и багряный. Лес не кончился — он просто стал другим: более понятным, но от этого не менее огромным.</p>
+                        <p>Девочка повернулась к Еве. В её глазах был страх, но был и огонёк — тот самый, который загорается, когда человек понимает, что его мир стал больше.</p>
+                        <div class="dialogue">— Взрослеть — это… это выходить из палисадника, да? — спросила девочка.</div>
+                        <div class="dialogue">— Да, — сказала Ева. — В палисаднике безопасно. Но в палисаднике не растут. А мы — переводчики — мы всегда должны расти. Потому что язык растёт. Мир растёт. И технологии растут.</div>
+                        <div class="dialogue">— И я теперь должна отвечать за всё это? — девочка показала на лес.</div>
+                        <div class="dialogue">— За себя в этом лесу, — поправила Ева. — За то, как ты идёшь. Куда. С кем. И главное — зачем.</div>
+                        <p>Девочка помолчала, а потом решительно застегнула рюкзак и шагнула обратно в лес — не как испуганный ребёнок, а как тот, кто принял решение.</p>
+                        <div class="dialogue">— Я пойду. Медленно. Но пойду. И буду запоминать дорогу. Чтобы потом… — она обернулась, — чтобы потом научить других.</div>
+                    </div>
+
+                    <div class="scene dream">
+                        <p>Ева осталась на опушке одна. Лес шумел — тысячами голосов, миллионами возможностей. Страх никуда не делся, но к нему примешивалось что-то новое. Ответственность. Взрослость.</p>
+                        <p>Она вспомнила свою первую встречу с машинным переводом — смесь восторга и ужаса. Вспомнила, как пыталась уместить нейросети в рамки привычных теорий, и как эти рамки ломались. Вспомнила момент, когда поняла: она больше не студентка, которая просто учит правила. Она — взрослая. И от того, как она войдёт в этот лес, зависит не только её собственный путь, но и то, каким этот лес станет для тех, кто придёт следом.</p>
+                    </div>
+
+                    <div class="insight">
+                        <p><strong>Инсайт пришёл не как вспышка, а как медленный рассвет — разгорающийся, неумолимый, окончательный:</strong></p>
+                        <p>Лес — это не враг. Лес — это расширение мира.</p>
+                        <p style="margin-top: 1rem;">Перевод — больше не уютный садик с утоптанными дорожками.<br>
+                        Это огромная экосистема, где есть место и цветам, и болотам, и месторождениям данных, и заброшенным городам ушедших теорий.</p>
+                        <p style="margin-top: 1rem;">Взрослеть — значит принять эту полноту. Не отвергать пугающее, а учиться в нём ориентироваться. Не закрывать глаза на сложность, а развивать инструменты навигации.</p>
+                        <p style="margin-top: 1rem;"><strong>Выход из палисадника — это не потеря безопасности. Это обретение свободы.</strong></p>
+                    </div>
+
+                    <p>Ева проснулась на диване. Ноутбук был закрыт, но перед внутренним взором всё ещё стоял лес — огромный, живой, дышащий.</p>
+
+                    <p>Она открыла крышку, включила экран и увидела вкладку с материалами по машинному переводу. Фраза «компьютерный перевод» больше не мерцала и не превращалась в уничижительные расшифровки. Теперь она видела её иначе — как название огромной территории, которую ей только предстоит исследовать.</p>
+
+                    <div class="conclusion">
+                        <p>Страх не исчез. Но теперь он был не парализующим, а мобилизующим.</p>
+                        <p>Ева взяла ручку и начала писать план: какие области леса ей нужно освоить в первую очередь, какие инструменты взять с собой, у кого спросить дорогу. Она больше не пыталась уменьшить лес до размеров сада. Она принимала его таким, какой он есть — огромным, сложным, иногда пугающим, но бесконечно интересным.</p>
+                        <p style="margin-top: 1rem;"><strong>Выход из палисадника — это только начало.</strong><br>
+                        Впереди — целый лес. И она готова идти.</p>
+                        <p style="margin-top: 0.5rem; font-size: 0.9rem; font-style: italic;">Ответственность взрослого — не в том, чтобы всё знать, а в том, чтобы не бояться узнавать.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Linguistic Analysis Section -->
+        <section id="linguistic">
+            <div class="card">
+                <h2>Лингвистический анализ текста</h2>
+                
+                <h3>Стилистические особенности</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Метафора леса и палисадника</h4>
+                        <ul>
+                            <li>«Палисадник» — символ безопасного, но ограниченного знания</li>
+                            <li>«Лес» — метафора расширяющейся предметной области</li>
+                            <li>Градация опасностей: цветочки → болота → дебри → заброшенные города</li>
+                            <li>«Утоптанные тропинки» vs «непроходимые дебри» — конфликт привычного и нового</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Интертекстуальность</h4>
+                        <ul>
+                            <li>Отсылки к классикам теории перевода (Бархударов, Комиссаров, Марчук)</li>
+                            <li>Феномен «мерцающей» дефиниции компьютерного перевода</li>
+                            <li>Аллюзия на архетип «инициации» (выход за пределы известного)</li>
+                            <li>Библейские коннотации: лес как мир, который «предстоит возделывать»</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Лексико-семантический анализ</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Ключевые лексические поля</h4>
+                        <ul>
+                            <li><span class="term">Пространство перевода</span>: палисадник, лес, тропинки, болота, дебри, города, месторождения</li>
+                            <li><span class="term">Переводоведение</span>: эквивалентность, адекватность, трансформации, корпуса, эмбеддинги</li>
+                            <li><span class="term">Взросление</span>: ответственность, свобода, навигация, инструменты, выбор</li>
+                            <li><span class="term">Технологии</span>: алгоритмы, нейросети, attention-механизмы, данные, обучение</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Семантическая трансформация ключевых понятий</h4>
+                        <ul>
+                            <li>«Компьютерный перевод» — от «черновика» к «огромной территории»</li>
+                            <li>«Перевод» — от «искусства» к «экосистеме»</li>
+                            <li>«Переводчик» — от «ремесленника» к «исследователю леса»</li>
+                            <li>«Взросление» — от «потери безопасности» к «обретению свободы»</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Синтаксические особенности</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Градационные конструкции</h4>
+                        <ul>
+                            <li>«Сначала были цветочки… Потом начались топи… Дальше открылись дебри…»</li>
+                            <li>Нанизывание однородных членов для создания ощущения множественности</li>
+                            <li>Параллелизм в диалогах девочки и Евы</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Композиционные приёмы</h4>
+                        <ul>
+                            <li>Трёхчастная структура: проблема (сужение) → сон-откровение → инсайт</li>
+                            <li>Рамочная конструкция: начало и конец у рабочего стола</li>
+                            <li>Диалог как способ освоения нового через вопросы</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Didactic Analysis Section -->
+        <section id="didactic">
+            <div class="card">
+                <h2>Дидактический анализ</h2>
+
+                <h3>Образовательные цели текста</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Когнитивные цели</h4>
+                        <ul>
+                            <li>Осознание расширения предмета «перевод» в эпоху ИИ</li>
+                            <li>Понимание необходимости выходить за пределы узких определений</li>
+                            <li>Формирование карты междисциплинарных связей</li>
+                            <li>Развитие способности к навигации в сложных областях</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Аффективные цели</h4>
+                        <ul>
+                            <li>Принятие страха перед новым как нормальной реакции</li>
+                            <li>Трансформация страха в исследовательский интерес</li>
+                            <li>Формирование профессиональной идентичности в новой парадигме</li>
+                            <li>Развитие ответственности как ключевой черты взрослого специалиста</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Методические приёмы</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Экспансия метафоры</h4>
+                        <ul>
+                            <li><span class="term">Метафора леса</span> — для понимания масштаба предмета</li>
+                            <li><span class="term">Метафора палисадника</span> — для рефлексии ограничений</li>
+                            <li><span class="term">Метафора месторождений</span> — для осмысления данных как ресурса</li>
+                            <li><span class="term">Метафора навигации</span> — для формирования исследовательской позиции</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Диалог как инструмент</h4>
+                        <ul>
+                            <li>Фигура девочки — внутренний голос сопротивления</li>
+                            <li>Вопросы как способ освоения нового</li>
+                            <li>От «я не понимаю» к «я пойду» — динамика принятия</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Ключевые концепции для усвоения</h3>
+                <div class="analysis-item">
+                    <h4>Концептуальное ядро</h4>
+                    <ul>
+                        <li><strong>Принцип экспансии:</strong> предмет не остаётся неизменным, он расширяется</li>
+                        <li><strong>Принцип ответственной взрослости:</strong> взрослый не тот, кто всё знает, а тот, кто не боится узнавать</li>
+                        <li><strong>Принцип навигации:</strong> в сложных областях важнее умение ориентироваться, чем заученные маршруты</li>
+                        <li><strong>Принцип сохранения идентичности:</strong> расширение предмета не отменяет предыдущих знаний, а включает их в больший контекст</li>
+                    </ul>
+                </div>
+
+                <h3>Применение в курсе «Введение в машинный перевод»</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Модуль «От теории к практике»</h4>
+                        <ul>
+                            <li>Анализ собственных представлений о переводе до и после знакомства с МП</li>
+                            <li>Составление «карты леса» — визуализация областей знания</li>
+                            <li>Идентификация «болот» (сложных для понимания тем)</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Модуль «Профессиональная идентичность»</h4>
+                        <ul>
+                            <li>Дискуссия: «Что значит быть переводчиком в эпоху ИИ?»</li>
+                            <li>Рефлексия страхов и их трансформация</li>
+                            <li>Формулировка личной образовательной траектории</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reflection Section -->
+        <section id="reflection">
+            <div class="card">
+                <h2>Рефлексия студента</h2>
+                <p>Прочитав нарратив и ознакомившись с анализом, сформулируйте собственные выводы. Ваши размышления нужно экспортировать в HTML-файл.</p>
+            </div>
+
+            <div class="form-container">
+                <div class="form-group">
+                    <label for="studentName">Фамилия Имя</label>
+                    <input type="text" id="studentName" placeholder="Например: Орлова Ева" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="studentGroup">Группа</label>
+                    <input type="text" id="studentGroup" placeholder="Например: 500">
+                </div>
+
+                <div class="card" style="margin: 1.5rem 0; border-left-color: var(--header-color);">
+                    <h3 style="margin-top: 0;">Вопросы для размышления</h3>
+                    <div class="prompt-cards">
+                        <div class="prompt-card" onclick="addPrompt('forestMetaphor')">
+                            <h4>Метафора леса</h4>
+                            <p>Какие «леса» открылись вам при изучении новой области?</p>
+                        </div>
+                        <div class="prompt-card" onclick="addPrompt('cradle')">
+                            <h4>Мой палисадник</h4>
+                            <p>Что было вашим «палисадником» в профессии/учебе?</p>
+                        </div>
+                        <div class="prompt-card" onclick="addPrompt('fear')">
+                            <h4>Страх и взросление</h4>
+                            <p>Как вы справляетесь со страхом перед неизведанным?</p>
+                        </div>
+                        <div class="prompt-card" onclick="addPrompt('responsibility')">
+                            <h4>Ответственность</h4>
+                            <p>Что значит для вас «быть ответственным взрослым»?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reflection1">1. Что для меня стало главным инсайтом после прочтения?</label>
+                    <textarea id="reflection1" placeholder="Опишите ваше главное открытие или осознание..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="reflection2">2. Как метафора леса изменила моё понимание машинного перевода?</label>
+                    <textarea id="reflection2" placeholder="Опишите, как образ леса повлиял на ваше восприятие..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="reflection3">3. Какие «инструменты навигации» я возьму с собой в лес?</label>
+                    <textarea id="reflection3" placeholder="Сформулируйте план действий..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="reflection4">4. Дополнительные размышления (свободная форма)</label>
+                    <textarea id="reflection4" placeholder="Любые мысли, которыми хотите поделиться..."></textarea>
+                    <p class="hint">Нажмите на карточки с вопросами выше, чтобы добавить подсказку в это поле</p>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn" id="exportBtn" onclick="exportToHTML()">
+                        
+                        Экспортировать в HTML
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearForm()">
+                        
+                        Очистить форму
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Forest Section -->
+        <section id="forest">
+            <div class="card">
+                <h2>Nel mezzo del cammin di nostra vita<br> mi ritrovai per una selva oscura, <br>ché la diritta via era smarrita</h2>
+				
+				<p>Фраза «Земную жизнь пройдя до половины, я очутился в сумрачном лесу, утратив правый путь во тьме долины» открывает «Божественную комедию» Данте Алигьери. Темный лес символизирует утрату простого привычного пути, душевный кризис и страх. Это метафора утраты благодати и ясности, состояние отчаяния. Из леса поэта не пускают три зверя: лев (гордыня), волчица (алчность) и рысь (сладострастие). Это начало пути Данте, после которого он встречает Вергилия, чтобы пройти через Ад, Чистилище и Рай..</p>
+				
+                <p>В нарративе Ева открыла для себя, что перевод — это не уютный садик с утоптанными тропинками, а огромный лес с множеством экосистем. В эпоху машинного перевода и больших языковых моделей профессиональная идентичность переводчика требует нового осмысления: мы больше не садовники, ухаживающие за маленьким участком, а исследователи, навигаторы, картографы сложнейшей территории.</p>
+                
+                <div class="analysis-item" style="margin: 1.5rem 0; border-top: 3px solid #2ecc71;">
+                    <h4>Парадокс взросления в профессии</h4>
+                    <p style="margin: 0.75rem 0; font-style: italic;">Чем шире становится наша карта, тем больше мы осознаём масштаб неизведанного. Взросление — это не момент, когда страх исчезает, а момент, когда мы учимся идти, не переставая бояться.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Карта леса: зоны переводческой компетенции</h2>
+                
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Зона цветов и грибов (традиционный перевод)</h4>
+                        <ul>
+                            <li>Лексико-грамматические трансформации</li>
+                            <li>Теории эквивалентности и адекватности</li>
+                            <li>Стилистическая правка и редактура</li>
+                            <li>Специализированные области (технический, медицинский, юридический)</li>
+                            <li><span class="term">Знакомая территория</span> — здесь утоптаны тропинки, есть карты и путеводители</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Болота и топи (пограничные зоны)</h4>
+                        <ul>
+                            <li>Корпусная лингвистика и статистический подход</li>
+                            <li>Векторные представления слов (word embeddings)</li>
+                            <li>Attention-механизмы и трансформеры</li>
+                            <li>Оценка качества машинного перевода (метрики BLEU, TER, COMET)</li>
+                            <li><span class="term">Зона нестабильности</span> — здесь нужны новые инструменты и осторожность</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Непроходимые дебри (исследовательские области)</h4>
+                        <ul>
+                            <li>Этические вопросы МП: предвзятость, культурная апроприация</li>
+                            <li>Пост-редактирование vs человеческий перевод</li>
+                            <li>Мультимодальный и межсемиотический перевод</li>
+                            <li>LLM как переводчики: возможности и ограничения</li>
+                            <li><span class="term">Зона открытий</span> — здесь нет готовых маршрутов, каждый прокладывает свой путь</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Заброшенные города (история теорий)</h4>
+                        <ul>
+                            <li>Порождающая грамматика в переводе (Мельчук, Апресян)</li>
+                            <li>Машинный перевод первого поколения (правила, словари)</li>
+                            <li>Статистический машинный перевод (IBM models, phrase-based SMT)</li>
+                            <li>Дискуссии о «настоящем» переводе vs «суррогате»</li>
+                            <li><span class="term">Зона памяти</span> — важно знать, чтобы не изобретать велосипед и видеть эволюцию</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Месторождения данных (ресурсная база)</h4>
+                        <ul>
+                            <li>Параллельные корпуса (Europarl, UN Corpus, OpenSubtitles)</li>
+                            <li>Синтетические данные и back-translation</li>
+                            <li>Многоязычные эмбеддинги и мультиязычные модели</li>
+                            <li>Данные для малоресурсных языков</li>
+                            <li><span class="term">Зона ресурсов</span> — основа современных систем МП, требует ответственного использования</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Будущие территории (на горизонте)</h4>
+                        <ul>
+                            <li>Агентный подход: перевод как часть multi-agent систем</li>
+                            <li>Реальный time-машинный перевод в иммерсивных средах</li>
+                            <li>Перевод как интерфейс между семиотическими системами</li>
+                            <li>Нейросимволические подходы</li>
+                            <li><span class="term">Зона возможного</span> — то, что сегодня кажется фантастикой, завтра станет рутиной</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>От садовника к лесничему: трансформация профессиональной идентичности</h2>
+
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Традиционная идентичность (садовник)</h4>
+                        <ul>
+                            <li>Задача: ухаживать за знакомым участком</li>
+                            <li>Инструменты: словари, справочники, редакторские навыки</li>
+                            <li>Ценность: точность, стилистическое мастерство</li>
+                            <li>Границы: чётко очерченная территория</li>
+                            <li>Отношение к МП: инструмент, помощник, иногда угроза</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Новая идентичность (лесничий, навигатор)</h4>
+                        <ul>
+                            <li>Задача: ориентироваться в экосистеме, управлять ресурсами</li>
+                            <li>Инструменты: LLM, корпуса, метрики, API, промптинг</li>
+                            <li>Ценность: способность выбирать правильные инструменты для задачи</li>
+                            <li>Границы: открытые, расширяющиеся, требующие навигации</li>
+                            <li>Отношение к МП: партнёр, расширение возможностей, новая среда обитания</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="insight" style="margin-top: 1.5rem;">
+                    <p><strong>Ключевое различие:</strong></p>
+                    <p>Садовник знает свой участок идеально, но теряется за его пределами.<br>
+                    Лесничий знает, что лес огромен и не может быть познан полностью, но умеет в нём ориентироваться, использовать его ресурсы и бережно к нему относиться.</p>
+                    <p style="margin-top: 1rem;">Взросление в профессии — это не отказ от садовнических навыков, а дополнение их компетенциями лесничего.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Инструменты навигации: что нужно взять в лес</h2>
+
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Технические инструменты</h4>
+                        <ul>
+                            <li>Базовое понимание архитектуры трансформеров</li>
+                            <li>Навыки работы с API (OpenAI, Anthropic, локальные модели)</li>
+                            <li>Основы промптинга для перевода</li>
+                            <li>Метрики оценки качества (автоматические и человеческие)</li>
+                            <li>Работа с параллельными корпусами</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Методологические инструменты</h4>
+                        <ul>
+                            <li>Умение формулировать исследовательские вопросы</li>
+                            <li>Критическое мышление при работе с LLM-выводами</li>
+                            <li>Рефлексия собственных когнитивных процессов</li>
+                            <li>Способность к междисциплинарному синтезу</li>
+                            <li>Навыки документации и картографирования</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Этические инструменты</h4>
+                        <ul>
+                            <li>Понимание предвзятости в данных и моделях</li>
+                            <li>Осознание границ применимости МП</li>
+                            <li>Ответственность за конечный продукт</li>
+                            <li>Уважение к языковому разнообразию</li>
+                            <li>Прозрачность использования ИИ</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Внутренние ресурсы</h4>
+                        <ul>
+                            <li>Толерантность к неопределённости</li>
+                            <li>Готовность учиться новому</li>
+                            <li>Умение признавать границы своего знания</li>
+                            <li>Способность делиться знаниями с другими</li>
+                            <li>Ответственность как мотивация, а не бремя</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Чек-лист: готовы ли вы выйти из палисадника?</h2>
+                
+                <div class="prompt-cards">
+                    <div class="prompt-card" style="cursor: default;">
+                        <h4>Осознание масштаба</h4>
+                        <p>Я понимаю, что перевод — это больше, чем я думал(а) раньше</p>
+                    </div>
+                    <div class="prompt-card" style="cursor: default;">
+                        <h4>Принятие страха</h4>
+                        <p>Я не требую от себя мгновенного понимания всего</p>
+                    </div>
+                    <div class="prompt-card" style="cursor: default;">
+                        <h4>Готовность к навигации</h4>
+                        <p>Я умею искать информацию и задавать вопросы</p>
+                    </div>
+                    <div class="prompt-card" style="cursor: default;">
+                        <h4>Ответственная позиция</h4>
+                        <p>Я понимаю, что мои решения влияют на других</p>
+                    </div>
+                </div>
+
+                <div class="insight" style="margin-top: 1.5rem;">
+                    <p><strong>Главный вывод:</strong></p>
+                    <p>Выход из палисадника — это не разовое событие, а постоянный процесс. Каждый раз, осваивая новую область, мы снова оказываемся на границе знакомого и неизведанного.</p>
+                    <p style="margin-top: 1rem;">Взрослый специалист — не тот, кто всё знает, а тот, кто умеет входить в неизвестное, сохраняя ответственность и способность учиться.</p>
+                    <p style="margin-top: 1rem; font-style: italic;">Лес не кончается. И это не повод для отчаяния — это приглашение к путешествию.</p>
+                </div>
+            </div>
+        </section>
+		
+		
+		<section id="semiotics" class="section">
+            <div class="card">
+                <h2>Семиотика перевода: границы, территории и взросление</h2>
+                <p>Выход Евы из палисдника в огромный лес машинного перевода — это не просто смена масштаба. Это движение между двумя семиотическими мирами, которое описывается в концепции семиосферы Юрия Лотмана. Понимание того, как устроены границы и территории культуры, помогает осознать сам процесс взросления в профессии.</p>
+                
+                <div class="analysis-item" style="margin: 1.5rem 0; border-top: 3px solid #9b59b6;">
+                    <h4>Ключевая идея</h4>
+                    <p style="margin: 0.75rem 0; font-style: italic;">Семиосфера — это семиотическое пространство, необходимое для существования и работы языков и смыслов. Как биосфера создаёт условия для жизни, так семиосфера создаёт условия для коммуникации и порождения новых значений.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Граница: фильтр, переводчик, место встречи</h2>
+                
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Граница как механизм перевода</h4>
+                        <ul>
+                            <li>Граница — это не просто линия раздела, а <strong>фильтр и механизм перевода</strong></li>
+                            <li>Чтобы сообщение извне попало внутрь культуры, оно должно быть переведено на внутренний язык</li>
+                            <li>Граница принадлежит обоим пространствам одновременно</li>
+                            <li>Она отделяет культуру от «не-культуры», космос от хаоса</li>
+							<li><span class="term">Двусторонность</span> — граница переводит внутреннее во внешнее и внешнее во внутреннее, работая в обе стороны</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Сумма переводчиков</h4>
+                        <ul>
+                            <li>Лотман определяет границу как <strong>«сумму билингвальных переводчиков-фильтров»</strong></li>
+                            <li>Эти переводчики адаптируют внешние тексты, делая их понятными для внутренней системы</li>
+                            <li>Граница одновременно соединяет миры для обмена информацией и разделяет их, сохраняя уникальность внутренней территории</li>
+                            <li><span class="term">Двусторонность</span> — граница работает в обе стороны: переводит внешнее во внутреннее и внутреннее во внешнее</li>
+                        </ul>
+                    </div>
+                </div>
+
+                
+            </div>
+
+            <div class="card">
+                <h2>Внутренние территории и структура семиосферы</h2>
+                
+                <h3>Неоднородность внутреннего пространства</h3>
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Ядро (Центр)</h4>
+                        <ul>
+                            <li>Наиболее жёсткие, структурированные нормы и правила</li>
+                            <li>Стремится к самоописанию и созданию единого «правильного» языка</li>
+                            <li>Здесь сосредоточены каноны, традиции, устоявшиеся теории</li>
+                            <li>В переводоведении: классические теории эквивалентности, школа Комиссарова, Бархударова</li>
+                            <li><span class="term">Характеристика</span>: стабильность, предсказуемость, защищённость</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Периферия</h4>
+                        <ul>
+                            <li>Более рыхлая и гибкая зона, ближе к границе</li>
+                            <li>Здесь легче происходят контакты с «чужим»</li>
+                            <li>Именно на периферии рождаются новые смыслы за счёт взаимодействия с внешними элементами</li>
+                            <li>В переводоведении: корпусные подходы, нейросетевой перевод, мультимодальность</li>
+                            <li><span class="term">Характеристика</span>: динамичность, эксперимент, открытость</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Диалог как основа жизни семиосферы</h3>
+                <div class="analysis-item">
+                    <ul>
+                        <li><strong>Диалог между центром и периферией</strong> — ядро получает импульсы к обновлению, периферия — структуру и язык для описания своих открытий</li>
+                        <li><strong>Диалог с внешним пространством</strong> — через границу поступает «непонятное», которое стимулирует развитие</li>
+                        <li><strong>Диалог между разными семиосферами</strong> — встреча культур, языков, традиций перевода</li>
+                    </ul>
+                    <div class="kmp14"><strong>Пояснение:</strong> По Лотману, если внутренняя территория становится слишком изолированной (стерильной), она перестаёт развиваться. Для жизни культуры (и сознания человека) жизненно необходим приток «непонятного» извне.</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Семиотика взросления: от палисадника к лесу</h2>
+                
+                <p>Оппозиции, выделяемые Лотманом («внутреннее — внешнее», «культура — варварство», «своё — чужое»), в образовательном контексте обретают особое звучание. Взросление — это процесс постепенного расширения «своего» пространства, движение от микрокосмоса детства к большому миру.</p>
+
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Микрокосмос детства (Ядро семиосферы)</h4>
+                        <ul>
+                            <li>Колыбель, детская комната, палисадник — <strong>идеальное ядро</strong> семиосферы</li>
+                            <li>Здесь хаос внешнего мира максимально отфильтрован, правила предельно ясны</li>
+                            <li>Пространство «безопасности», противопоставленное опасному и непредсказуемому «внешнему»</li>
+                            <li>В переводоведении: классические теории, знакомые тексты, освоенные жанры</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Граница как этап взросления (Периферия)</h4>
+                        <ul>
+                            <li>Палисадник, порог дома, опушка леса — первая встреча с «чужим»</li>
+                            <li>Здесь ребёнок (студент) впервые сталкивается с текстами, которые ещё не умеет «читать»</li>
+                            <li>Обучение — это и есть процесс перевода внешнего хаоса на язык понятных смыслов</li>
+                            <li>В переводоведении: встреча с математикой, программированием, нейросетями</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Следопыты-разведчики</h4>
+                        <ul>
+                            <li>В роли «переводчиков» выступают педагоги, наставники — и сами студенты</li>
+                            <li>Лотман подчёркивал: <strong>граница — это самое динамичное место</strong></li>
+                            <li>Ребёнок-разведчик «захватывает» куски хаоса, даёт им имена и правила, превращая их в часть своего Космоса</li>
+                            <li>В переводоведении: студенты, осваивающие новые технологии, становятся «первопроходцами»</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Большой мир (Внешнее пространство)</h4>
+                        <ul>
+                            <li>Лес, огромный и неизведанный — то, что предстоит превратить из Хаоса в Космос</li>
+                            <li>Оппозиция «Свой — Чужой» трансформируется в оппозицию <strong>«Знание — Незнание»</strong></li>
+                            <li>Обучение — это постоянная экспансия внутренней территории вовне</li>
+                            <li>Взрослый — не тот, кто знает всё, а тот, кто умеет переходить границы и возвращаться</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="insight" style="margin-top: 1.5rem;">
+                    <p><strong>Главная аналогия с нарративом Евы:</strong></p>
+                    <p>Палисадник Евы — это ядро её семиосферы: филологическая традиция перевода, знакомые теории, понятные правила. Лес — это внешнее пространство, Хаос, который предстоит превратить в Космос. Девочка-следопыт — это она сама, осваивающая границу. А момент, когда она решает вернуться в лес не испуганным ребёнком, а ответственным взрослым, — это момент, когда граница перестаёт быть преградой и становится инструментом.</p>
+                    <p style="margin-top: 1rem;">По Лотману, <strong>граница — это не то, что разделяет, а то, что соединяет</strong>. Именно на границе происходит перевод, именно здесь рождаются новые смыслы, именно здесь человек становится взрослым.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Переводчики как следопыты-разведчики</h2>
+                
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Кто такие переводчики в семиотическом смысле?</h4>
+                        <ul>
+                            <li>Те, кто обитает на границе, владея языками по обе её стороны</li>
+                            <li>Они переводят внешнее во внутреннее, делая «чужое» понятным</li>
+                            <li>Они переводят внутреннее во внешнее, делая «своё» доступным для других</li>
+                            <li>Они следопыты — первыми входят в неизведанные территории</li>
+                            <li>Они разведчики — возвращаются с картами и путеводителями</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Современные переводчики в эпоху МП</h4>
+                        <ul>
+                            <li>Больше не просто «перекладчики» текстов с языка на язык</li>
+                            <li>Становятся <strong>медиаторами между семиотическими системами</strong></li>
+                            <li>Осваивают границы между гуманитарным и техническим знанием</li>
+                            <li>Создают новые языки описания для новых феноменов</li>
+                            <li>Формируют этические нормы взаимодействия человека и ИИ</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="table-kmp">		
+                <table class="table">
+                <thead>
+                <tr><th>Традиционный образ переводчика</th><th>Образ переводчика в семиотике Лотмана</th><th>Образ переводчика в эпоху LLM</th></tr>
+                </thead>
+                <tbody>
+                <tr><td>«Перекладчик» текстов</td><td>Билингвальный фильтр на границе</td><td>Медиатор между семиотическими мирами</td></tr>
+                <tr><td>Следует правилам</td><td>Адаптирует и трансформирует</td><td>Создаёт новые правила на границах</td></tr>
+                <tr><td>Работает с парой языков</td><td>Работает с парой «культур»</td><td>Работает с множеством семиотических систем</td></tr>
+                <tr><td>Обеспечивает эквивалентность</td><td>Обеспечивает диалог</td><td>Обеспечивает трансформацию и порождение смыслов</td></tr>
+                </tbody>
+                </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Практические выводы для образования</h2>
+
+                <div class="analysis-grid">
+                    <div class="analysis-item">
+                        <h4>Для студентов</h4>
+                        <ul>
+                            <li>Осознайте, где проходит <strong>ваша личная граница</strong> между знакомым и неизведанным</li>
+                            <li>Станьте <strong>следопытами</strong> — не бойтесь выходить за пределы колыбели</li>
+                            <li>Развивайте <strong>билингвальность</strong> — умение говорить на языке гуманитарных и технических дисциплин</li>
+                            <li>Помните: <strong>страх перед границей — это нормально</strong>. Важно не останавливаться</li>
+                        </ul>
+                    </div>
+                    <div class="analysis-item">
+                        <h4>Для преподавателей</h4>
+                        <ul>
+                            <li>Создавайте <strong>безопасные границы</strong> — места, где студенты могут встречаться с новым, не рискуя</li>
+                            <li>Будьте <strong>переводчиками</strong> — помогайте переводить «чужое» на понятный язык</li>
+                            <li>Поощряйте <strong>экспансию</strong> — выход студентов за пределы освоенного</li>
+                            <li>Помните: <strong>стерильная семиосфера умирает</strong>. Нужен приток «непонятного»</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="insight" style="margin-top: 1.5rem;">
+                    <p><strong>Главный вывод семиотического подхода:</strong></p>
+                    <p>Взросление — это не утрата колыбели, а обретение способности переходить границы. Колыбель остаётся с нами как ядро нашей семиосферы — место устойчивости и опоры. Но мы учимся выходить на периферию, вступать в диалог с «чужим» и возвращаться обратно, обогащённые новым опытом.</p>
+                    <p style="margin-top: 1rem;">Переводчик в эпоху машинного перевода — это не тот, кто защищает «своё» от «чужого», и не тот, кто растворяет «своё» в «чужом». Это тот, кто живёт на границе, переводит, адаптирует, создаёт новые смыслы и <strong>превращает хаос в космос</strong>.</p>
+                    <p style="margin-top: 1rem; font-style: italic;">«Граница — это не место, где заканчивается мир. Это место, где мир начинается заново».</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Вопросы для размышления</h2>
+                
+                <div class="prompt-cards">
+                    <div class="prompt-card" onclick="addSemioticPrompt('border')">
+                        <h4>Моя граница</h4>
+                        <p>Где проходит моя личная граница между «своим» и «чужим» в профессии?</p>
+                    </div>
+                    <div class="prompt-card" onclick="addSemioticPrompt('translator')">
+                        <h4>Я как переводчик</h4>
+                        <p>Какие «языки» (дисциплины, подходы) я могу переводить друг для друга?</p>
+                    </div>
+                    <div class="prompt-card" onclick="addSemioticPrompt('chaos')">
+                        <h4>Хаос и космос</h4>
+                        <p>Какую «непонятную» территорию я хочу превратить из хаоса в космос?</p>
+                    </div>
+                    <div class="prompt-card" onclick="addSemioticPrompt('growth')">
+                        <h4>Взросление</h4>
+                        <p>Что для меня значит «быть взрослым» в профессиональном смысле?</p>
+                    </div>
+                </div>
+                
+                <script>
+                    function addSemioticPrompt(type) {
+                        const textarea = document.getElementById('reflection4');
+                        const prompts = {
+                            border: '\n\n[Моя граница]\nМоя личная граница между «своим» и «чужим» в профессии проходит там, где: ',
+                            translator: '\n\n[Я как переводчик]\nЯ могу переводить между: ',
+                            chaos: '\n\n[Хаос и космос]\nТерритория, которую я хочу превратить из хаоса в космос: ',
+                            growth: '\n\n[Взросление]\nДля меня «быть взрослым» в профессии значит: '
+                        };
+                        if (textarea) {
+                            textarea.value += prompts[type];
+                            textarea.focus();
+                            textarea.scrollTop = textarea.scrollHeight;
+                            showNotification('Подсказка добавлена');
+                        }
+                    }
+                </script>
+                
+                <div class="kmp11"><strong>Примечание:</strong> Семиотический подход Юрия Михайловича Лотмана позволяет увидеть в процессе обучения не просто передачу знаний, а живой диалог между разными семиотическими мирами. Граница — это не препятствие, а место развития. Хаос — не враг, а ресурс для порождения новых смыслов.</div>
+                <div class="kmp12"><strong>Важно:</strong> Понимание семиотики перевода помогает осознать, что машинный перевод — это не угроза традиционной переводческой культуре, а новый «чужой» язык, который предстоит перевести на язык «своей» семиосферы, обогатив тем самым и ту, и другую.</div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>для всех</p>
+    </footer>
+    <div style="position: fixed; bottom: 10px; right: 33px; opacity: 0.3; font-size: 14px;">kmp+</div>
+
+    <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+
+        function setTheme(isDark) {
+            if (isDark) {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            setTheme(true);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isDark = !body.hasAttribute('data-theme');
+            setTheme(isDark);
+        });
+
+        // Navigation
+        const navButtons = document.querySelectorAll('.nav-btn');
+        const sections = document.querySelectorAll('section');
+
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetSection = btn.getAttribute('data-section');
+                
+                navButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                sections.forEach(s => s.classList.remove('active'));
+                document.getElementById(targetSection).classList.add('active');
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+
+        // Notification
+        function showNotification(message, duration = 3000) {
+            const notification = document.getElementById('notification');
+            if (!notification) return;
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, duration);
+        }
+
+        // Add prompt to textarea
+        function addPrompt(type) {
+            const textarea = document.getElementById('reflection4');
+            const prompts = {
+                forestMetaphor: '\n\n[Метафора леса]\nКакие «леса» открылись мне: ',
+                cradle: '\n\n[Мой палисадник]\nМоим «палисадником» в профессии было: ',
+                fear: '\n\n[Страх и взросление]\nЯ справляюсь со страхом перед неизведанным так: ',
+                responsibility: '\n\n[Ответственность]\nДля меня «быть ответственным взрослым» значит: '
+            };
+            
+            textarea.value += prompts[type];
+            textarea.focus();
+            textarea.scrollTop = textarea.scrollHeight;
+            showNotification('Подсказка добавлена');
+        }
+
+        // Clear form
+        function clearForm() {
+            if (confirm('Вы уверены, что хотите очистить все поля?')) {
+                document.getElementById('studentName').value = '';
+                document.getElementById('studentGroup').value = '';
+                document.getElementById('reflection1').value = '';
+                document.getElementById('reflection2').value = '';
+                document.getElementById('reflection3').value = '';
+                document.getElementById('reflection4').value = '';
+                showNotification('Форма очищена');
+            }
+        }
+
+        // Export to HTML
+        function exportToHTML() {
+            const name = document.getElementById('studentName').value.trim();
+            const group = document.getElementById('studentGroup').value.trim();
+            const r1 = document.getElementById('reflection1').value.trim();
+            const r2 = document.getElementById('reflection2').value.trim();
+            const r3 = document.getElementById('reflection3').value.trim();
+            const r4 = document.getElementById('reflection4').value.trim();
+
+            if (!name) {
+                showNotification('Пожалуйста, введите Фамилию и Имя');
+                document.getElementById('studentName').focus();
+                return;
+            }
+
+            if (!r1 && !r2 && !r3 && !r4) {
+                showNotification('Пожалуйста, заполните хотя бы одно поле рефлексии');
+                return;
+            }
+
+            const date = new Date().toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            const htmlContent = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Рефлексия: ${name}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+            line-height: 1.7;
+            color: #2c3e50;
+            background: #f5f5f5;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(135deg, #325980, #4a7a9e);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        header h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        header p { opacity: 0.9; font-size: 0.95rem; }
+        .meta {
+            background: #f8f9fa;
+            padding: 1rem 2rem;
+            border-bottom: 2px solid #f1f1f1;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .meta-item { font-size: 0.9rem; }
+        .meta-item strong { color: #325980; }
+        main { padding: 2rem; }
+        .section {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .section:last-child { border-bottom: none; margin-bottom: 0; }
+        .section h2 {
+            color: #325980;
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            padding-left: 1rem;
+            border-left: 3px solid #3498db;
+        }
+        .section p {
+            text-align: justify;
+            white-space: pre-wrap;
+        }
+        footer {
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            font-size: 0.85rem;
+            color: #5a6c7d;
+            border-top: 1px solid #f1f1f1;
+        }
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Рефлексия по нарративу</h1>
+            <p>«Третий сон Евы: Лес за пределами палисадника»</p>
+        </header>
+        <div class="meta">
+            <div class="meta-item"><strong>Студент:</strong> ${name}</div>
+            ${group ? `<div class="meta-item"><strong>Группа:</strong> ${group}</div>` : ''}
+            <div class="meta-item"><strong>Дата:</strong> ${date}</div>
+        </div>
+        <main>
+            ${r1 ? `<div class="section">
+                <h2>Главный инсайт</h2>
+                <p>${r1.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </div>` : ''}
+            ${r2 ? `<div class="section">
+                <h2>Метафора леса и машинный перевод</h2>
+                <p>${r2.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </div>` : ''}
+            ${r3 ? `<div class="section">
+                <h2>Инструменты навигации</h2>
+                <p>${r3.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </div>` : ''}
+            ${r4 ? `<div class="section">
+                <h2>Дополнительные размышления</h2>
+                <p>${r4.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+            </div>` : ''}
+        </main>
+        <footer>
+            <p>© 2026 | kmp | CC BY-NC-SA 4.0</p>
+        </footer>
+    </div>
+</body>
+</html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Рефлексия_${name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showNotification('Файл успешно сохранён!');
+        }
+
+        // Auto-save to localStorage
+        const formFields = ['studentName', 'studentGroup', 'reflection1', 'reflection2', 'reflection3', 'reflection4'];
+        
+        formFields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                const saved = localStorage.getItem('eva_forest_' + id);
+                if (saved) el.value = saved;
+                
+                el.addEventListener('input', () => {
+                    localStorage.setItem('eva_forest_' + id, el.value);
+                });
+            }
+        });
+
+        // Dynamic nav positioning
+        function updateNavPosition() {
+            const header = document.querySelector('header');
+            const nav = document.querySelector('nav');
+            if (header && nav) {
+                const headerHeight = header.offsetHeight;
+                nav.style.top = headerHeight + 'px';
+            }
+        }
+
+        updateNavPosition();
+        window.addEventListener('resize', updateNavPosition);
+        window.addEventListener('load', updateNavPosition);
+
+        // Create notification element if not exists
+        if (!document.getElementById('notification')) {
+            const notif = document.createElement('div');
+            notif.id = 'notification';
+            notif.className = 'notification';
+            document.body.appendChild(notif);
+        }
+		
+		
+		 // Add navigation for the new section if needed
+            const semioticsNavBtn = document.createElement('button');
+            semioticsNavBtn.className = 'nav-btn';
+            semioticsNavBtn.setAttribute('data-section', 'semiotics');
+            semioticsNavBtn.textContent = 'Semiotics';
+            const navContainer = document.querySelector('.nav-container');
+            if (navContainer && !document.querySelector('[data-section="semiotics"]')) {
+                navContainer.appendChild(semioticsNavBtn);
+                
+                // Re-initialize navigation listeners
+                const updatedNavButtons = document.querySelectorAll('.nav-btn');
+                const updatedSections = document.querySelectorAll('section');
+                updatedNavButtons.forEach(btn => {
+                    btn.removeEventListener('click', () => {});
+                    btn.addEventListener('click', () => {
+                        const targetSection = btn.getAttribute('data-section');
+                        updatedNavButtons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        updatedSections.forEach(s => s.classList.remove('active'));
+                        const targetEl = document.getElementById(targetSection);
+                        if (targetEl) targetEl.classList.add('active');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    });
+                });
+            }
+    </script>
+</body>
+</html>
+
+
+
