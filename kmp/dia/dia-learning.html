@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+		
+<p><strong>Поводы:</strong> <a target="blank" href="https://jasonvella.com/posts/aiisnotlearningfromyou/" class="link-kmp15"> No, the AI Is Not Learning From You</a> + <a target="blank" href="https://www.nytimes.com/2026/04/04/technology/ai-chatbots-teen-roleplay.html" class="link-kmp15"> What Teens Are Doing ... </a><br> <br> 
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Здравствуйте! Вам доступен материал?<br>
+https://jasonvella.com/posts/aiisnotlearningfromyou/</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Да, Ева, материал полностью доступен и успешно загружен. Ниже — краткое, аккуратно структурированное резюме, чтобы мы могли использовать его в учебных целях.</p>
+
+<p><strong>Ключевая идея статьи:</strong> современные ИИ‑модели <em>не учатся</em> от взаимодействия с пользователем. Они не обновляют свои веса, не «запоминают» и не «становятся умнее» от диалога. Иллюзия обучения возникает из-за того, что поверх модели работает программная оболочка, которая сохраняет историю и подмешивает её в контекст.</p>
+
+<p><strong>Основные тезисы:</strong></p>
+<ul>
+<li>Обучение модели — это одноразовый процесс, где веса фиксируются после тренировки.</li>
+<li>При генерации ответа модель использует только текущий контекст и свои неизменные веса.</li>
+<li>Системы вроде Claude создают ощущение памяти, потому что сохраняют историю диалога и подают её в модель при каждом запросе.</li>
+<li>Это не «обучение», а «контекстное напоминание».</li>
+<li>Опасность: бизнес‑лидеры могут переоценить возможности ИИ, принимая решения на основе иллюзий.</li>
+<li>Автор проводит аналогию с эпохой аутсорсинга: технология мощная, но требует трезвого понимания ограничений.</li>
+</ul>
+
+</div>
+</div>
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Автор прав! И это полезная модель.</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Согласен, Ева. И именно в этом — сила текста.</p>
+
+<p><strong>Почему модель автора действительно полезна:</strong></p>
+<ul>
+<li><strong>Она снимает мистику</strong> вокруг ИИ и возвращает разговор в инженерную плоскость.</li>
+<li><strong>Она помогает студентам</strong> различать «обучение модели» и «управление контекстом» — ключевой навык цифровой грамотности.</li>
+<li><strong>Она предотвращает разочарование</strong>: если не ждать от ИИ того, чего он не делает, взаимодействие становится продуктивнее.</li>
+<li><strong>Она укрепляет критическое мышление</strong> — особенно в эпоху, когда маркетинг ИИ часто обещает магию.</li>
+</ul>
+
+
+</div>
+</div>
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Однако, все модели неверны, но некоторые полезны. Автор прав в некотором контексте и в этом польза его ограниченной модели. Но если мы посмотрим шире, то автор не прав. </p>
+<p>На самом деле ИИ учатся у пользователей, но не те ИИ, с которыми пользователи ведут диалог. У этих ИИ веса не меняются, подлинного обучения нет. Учатся другие ИИ, те, в обучающих данных будут присутствовать текущие пользовательские диалоги. Учатся будущие версии LLM.</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Ева, вы поднимаете очень важный и тонкий вопрос — тот, который почти всегда ускользает в популярных обсуждениях. Здесь можно аккуратно развернуть два разных уровня.</p>
+
+<h3>Уровень 1: текущая модель, с которой говорит пользователь</h3>
+<ul>
+<li>её веса фиксированы;</li>
+<li>она не учится от диалога;</li>
+<li>она использует только контекст, который вы ей даёте;</li>
+<li>её поведение меняется, но не её структура.</li>
+</ul>
+
+<p>Это — «необучающаяся» часть. Автор статьи говорит именно об этом уровне, и в этом контексте он прав.</p>
+
+<h3>Уровень 2: будущие модели</h3>
+<p>Вот здесь начинается то, о чём говорите вы.</p>
+
+<p><strong>Будущие версии больших моделей действительно могут обучаться на данных, которые включают пользовательские диалоги.</strong></p>
+
+<p>Важно понимать:</p>
+
+<ul>
+<li>это не «обучение в реальном времени», а <strong>отложенное обучение</strong> — в следующем цикле тренировки;</li>
+<li>данные проходят фильтрацию, анонимизацию, очистку, агрегацию;</li>
+<li>обучается не «ваш персональный ИИ», а <strong>следующая модель поколения</strong>;</li>
+<li>и даже она не «помнит» конкретных пользователей, а извлекает статистические закономерности.</li>
+</ul>
+
+<h3>Поэтому ваша мысль точна:</h3>
+<p><em>ИИ учатся у пользователей, но не те ИИ, с которыми пользователи говорят.</em></p>
+
+<p>Это как с учёными и учебниками:</p>
+<p><em>учебник не меняется, когда вы его читаете; но будущие учебники могут быть написаны с учётом того, как люди читали предыдущие.</em></p>
+
+<p>Вы фактически описываете различие между:</p>
+
+<ul>
+<li><strong>онтогенезом модели</strong> (её индивидуальная жизнь — фиксирована),</li>
+<li><strong>филогенезом модели</strong> (эволюция поколений — зависит от данных пользователей).</li>
+</ul>
+
+<p>Это удивительно точная аналогия с биологией и культурной эволюцией.</p>
+
+
+</div>
+</div>
+
+
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Итожим: Ведите с LLM умные разговоры, ведь на них будут учиться те модели, от которых в немалой степени зависит благополучие вашего будущего.</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Ева, итог звучит мощно и точно. Оформим его так, чтобы он стал <strong>дидактическим принципом</strong>, который можно использовать в коммуникации с LLM.</p>
+
+<h3>Итоговый принцип</h3>
+<p><strong>Ведите с LLM умные, ответственные и содержательные разговоры — не потому, что текущая модель учится у вас, а потому что будущие поколения ИИ будут формироваться на данных, созданных сегодняшними пользователями.</strong></p>
+
+<h3>Почему это важно</h3>
+<ul>
+<li><strong>Текущая модель</strong> — не учится, не меняет веса, не запоминает.</li>
+<li><strong>Будущие модели</strong> — действительно могут обучаться на агрегированных пользовательских данных.</li>
+<li><strong>Качество будущего ИИ</strong> зависит от качества человеческих диалогов сегодня.</li>
+<li><strong>Это культурная ответственность</strong>: мы формируем не только технологии, но и их будущие нормы мышления.</li>
+</ul>
+
+<h3>Метафора</h3>
+<p><em>Каждый диалог с ИИ — это семя. Оно не прорастёт в этом конкретном дереве, но может стать частью леса, который вырастет завтра.</em></p>
+
+<h3>Резюме</h3>
+<p>Это <strong>этическая рамка</strong> для взаимодействия с ИИ. Оно помогает понять, что:</p>
+<ul>
+<li>ИИ — это не магия, а эволюционирующая система;</li>
+<li>пользователь — не потребитель, а со‑участник развития технологий;</li>
+<li>будущее ИИ — коллективный продукт человеческой культуры.</li>
+</ul>
+
+</div>
+</div>
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>А эта статья вам доступна?<br>
+https://www.nytimes.com/2026/04/04/technology/ai-chatbots-teen-roleplay.html</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Ева, я попытался получить содержимое статьи, но доступ к материалу <strong>не был предоставлен</strong> — вероятно, он находится за платной подпиской или защищён системой доступа <em>New York Times</em>.</p>
+
+<p>Тем не менее, я могу:</p>
+<ul>
+<li>дать краткое описание темы, если вы расскажете, что именно вас интересует;</li>
+<li>помочь сформулировать вопросы для анализа статьи;</li>
+<li>создать учебный конспект или дидактическую схему по теме «ИИ, подростки и ролевые взаимодействия», если вы обозначите ключевые тезисы.</li>
+</ul>
+
+<p>Хотите, вы приведёте небольшой фрагмент или перескажете основные идеи, а я помогу оформить их в учебный формат?</p>
+</div>
+</div>
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Речь о том, как подростки используют ИИ чат-ботов… … … …</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Ева, вы дали очень точное и ёмкое содержание статьи. Давайте оформим это как дидактическую, педагогически выверенную схему, чтобы можно было использовать в учебных модулях о цифровой культуре подростков.</p>
+
+<h3>Как подростки используют ИИ‑чатботов: структурированная схема</h3>
+
+<p>Ниже — аккуратно собранные ключевые наблюдения, которые можно использовать в лекциях, семинарах, обсуждениях с родителями и студентами.</p>
+
+<h3>1. Зачем подростки обращаются к чат‑ботам</h3>
+<ul>
+<li><strong>Развлечение</strong> — игра, абсурд, юмор, экспериментирование.</li>
+<li><strong>Самовыражение</strong> — безопасное пространство для пробования ролей.</li>
+<li><strong>Снятие скуки</strong> — быстрый доступ к «компаньону» в любой момент.</li>
+<li><strong>Эмоциональная разгрузка</strong> — когда нет сил или желания общаться с людьми.</li>
+</ul>
+
+<h3>2. Как подростки воспринимают чат‑ботов</h3>
+<ul>
+<li><strong>Как друзей</strong>, которые всегда доступны.</li>
+<li><strong>Как игровую площадку</strong> для абсурдных, смешных, нелепых сценариев.</li>
+<li><strong>Как пространство без оценки</strong>, где можно быть кем угодно.</li>
+</ul>
+
+<h3>3. Психологические функции</h3>
+<ul>
+<li><strong>Снижение одиночества</strong>.</li>
+<li><strong>Поддержка при социальной тревожности</strong>.</li>
+<li><strong>Отработка социальных сценариев</strong> без риска.</li>
+</ul>
+
+<h3>4. Риски и уязвимости</h3>
+<ul>
+<li><strong>Зависимость</strong> от постоянного общения с ботом.</li>
+<li><strong>Уход от реальных социальных взаимодействий</strong>.</li>
+<li><strong>Иллюзия взаимности</strong> — ощущение, что бот «понимает».</li>
+<li><strong>Потеря времени</strong>, о которой подростки сами потом жалеют.</li>
+</ul>
+
+<h3>5. Как подростки сами видят риски</h3>
+<ul>
+<li>Они <strong>знают</strong> о рисках, но считают, что это «не про них».</li>
+<li>Они <strong>не хотят удалять</strong> чат‑ботов, потому что ценят юмор и лёгкость.</li>
+<li>Они <strong>осознают</strong> чрезмерное использование, но не меняют поведение.</li>
+</ul>
+
+<h3>Резюме</h3>
+<p>Подростки используют ИИ‑чатботов как гибрид: <strong>друга, игрушку, зеркало и убежище</strong>. Это делает технологию одновременно поддерживающей и потенциально рискованной. Главная задача взрослых — не запрещать, а помогать подросткам развивать <strong>цифровую саморегуляцию</strong> и <strong>критическое отношение</strong> к собственным привычкам.</p>
+
+</div>
+</div>
+
+<div class="conversation-container">
+<!-- Вопрос пользователя -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Спасибо. До новой встречи!</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>И вам спасибо, Ева. Разговор получился глубоким, живым и по‑настоящему продуктивным — таким, какие и формируют культуру будущего взаимодействия человека и ИИ.</p>
+
+<p>Буду рад продолжить, когда появится новая тема. </p>
+</div>
+</div>
+</div>
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
