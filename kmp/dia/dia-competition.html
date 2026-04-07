@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+		
+<p><strong>Повод:</strong> <a target="blank" href="https://bigasia.ru/v-pekine-proshyol-konkurs-po-ustnomu-i-mashinnomu-perevodu/?doing_wp_cron=1775540096.6180319786071777343750" class="link-kmp15"> В Пекине прошёл конкурс по устному и машинному переводу</a> <br> <br> 
+
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Здравствуйте! В Пекине прошёл Всекитайский конкурс по устному переводу, где люди соревновались с нейросетями. Расскажите о конкурсе. </p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>DeepSeek</div> <div class="message-content"> <p>Здравствуйте, Ева! Действительно, 14-й Всекитайский конкурс по многоязычному устному переводу (он прошёл 29 марта в Пекинском университете международных исследований) стал историческим рубежом. Впервые в соревнование была официально включена «дорожка искусственного интеллекта» (AI赛道) — синхронный перевод выполняли не только люди, но и ведущие китайские нейросетевые модели.</p> <p>Для студентов-лингвистов и преподавателей это не просто соревнование, а <strong>настоящая «лакмусовая бумажка» текущего состояния рынка</strong>. Выводы таковы: ИИ уже отлично справляется с техническими текстами и стандартными оборотами, но на сложных культурных концептах, иронии и живом темпе речи «живые» переводчики пока выигрывают. Организаторы специально подчеркнули, что цель конкурса — не выяснить, «кто умнее», а нащупать оптимальную модель взаимодействия человека и машины.</p> </div> </div>
+
+ <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Зачем тогда учить языки, если ИИ переводит лучше? Некторые побаиваются за своё будущее. Что можно ответить, опираясь на итоги этого конкурса?</p> </div> </div>
+
+ <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>DeepSeek</div> <div class="message-content"> <p>Отличный вопрос, Ева. Итоги конкурса показывают обратное: профессия не исчезает, она <strong>трансформируется</strong>.</p> <p>Вот три ключевых вывода для студентов с того конкурса:</p> <ol> <li><strong>ИИ — это мощный инструмент, но не замена человека.</strong> В финале ИИ ошибался на сленге, шутках и при смене тональности спикера. Человек-победитель победил именно за счёт «додумывания» и контекстной эмпатии.</li> <li><strong>«Пост-редактирование» становится главным навыком.</strong> Работодателям теперь нужен не просто переводчик, а специалист, который умеет молниеносно править черновик, сделанный нейросетью.</li> <li><strong>Преподавание смещается в метанавыки.</strong> Если раньше мы учили заучивать слова, то теперь учим: как проверить результат ИИ, как перевести культурно-специфичную реалию (например, названия блюд или традиций), которой нет в базе данных машины.</li> </ol> </div> </div> 
+
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Расскажите об итогах конкурса? Как проявили себя LLM? </p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>DeepSeek</div> <div class="message-content"> <p>Конечно, Ева. Это ключевой вопрос для профессиональной ориентации студентов. Давайте разберём итоги конкурса детально, потому что они дают очень чёткую картину текущего «расклада сил» между человеком и машиной.</p> <p><strong>Общая статистика конкурса</strong><br> Конкурс прошёл с 27 по 29 марта 2026 года в Пекинском университете международных исследований (BISU). Масштаб впечатляющий: <strong>390+ вузов, 4000+ участников</strong>, но до финала дошли только <strong>199 человек</strong>. Конкурс охватил <strong>8 языков</strong>: английский, русский, французский, испанский, арабский, японский, немецкий, корейский .</p> <p><strong>Главная инновация — AI-дорожка</strong><br> Это был <strong>первый в истории случай</strong>, когда национальный конкурс переводчиков включил официальное соревнование между людьми и нейросетями . Причём конкурс впервые прошёл под эгидой <strong>Zhongguancun Forum</strong> — это главная технологическая платформа Китая, что подчёркивает статус события .</p> <p><strong>Как проявили себя LLM: конкретные результаты</strong><br> Здесь самое интересное для ваших студентов. В AI-дорожке участвовали ведущие китайские технологические компании: <strong>Beijing Beixinyuan, Beijing Haiying Technology, Beijing Shengzhi Technology, Zhipu Xingyao (Autumn), NetEase Youdao</strong> .</p> <p>Итоги по языковым направлениям (данные из официальных источников):</p> <ul> <li><strong>Русский язык:</strong> LLM от 310-го института (三院310所) заняла <strong>1-е место в направлении "русский→китайский"</strong>. В отчёте особо отмечают "точность перевода, контекстуальную адаптацию и плавность речи" .</li> <li><strong>Арабский язык:</strong> Та же компания взяла <strong>1-е место в направлении "арабский→китайский"</strong> .</li> <li><strong>Остальные языки:</strong> LLM показывали вариативные результаты. Например, в английском направлении победу одержали <strong>люди</strong> — студенты из ведущих вузов (中国人民大学, 上海理工大学 и др.) .</li> </ul> <p><strong>Как оценивали LLM? Появился первый в Китае AI-тестер</strong><br> Это важный методический момент для ваших занятий. Организаторы представили <strong>первую в Китае платформу оценки качества AI-синхронного перевода</strong> (AI同声传译质量评测平台) .</p> <p>Критерии оценки включали:</p> <ul> <li>Традиционные метрики: точность, плавность</li> <li><strong>Новые метрики:</strong> кросс-культурная выразительность, политическая безопасность (это важно для Китая)</li> <li>Способность справляться с "галлюцинациями" ИИ — когда модель уверенно выдаёт неверную информацию </li> </ul> <p><strong>Что это значит для студентов (самое важное)</strong><br> Ева, вот три вывода, которые стоит донести до аудитории:</p> <p><strong>1. LLM уже побеждают людей на некоторых направлениях.</strong> На русском и арабском — да. Победа LLM в этих категориях — сигнал: рынок перевода с этих языков будет быстро автоматизироваться.</p> <p><strong>2. Но человек пока незаменим в "живых" языках с большим объёмом данных.</strong> На английском люди выиграли. Почему? Потому что именно по английскому LLM тренировались больше всего — парадокс в том, что чем лучше модель, тем легче человеку показать свои преимущества на сложных задачах (ирония, подтекст, культурные отсылки).</p> <p><strong>3. Появилась профессия "тестировщик ИИ-переводчиков".</strong> Новая платформа оценки качества требует экспертов, которые понимают и язык, и технологию. </p>  </div> </div> </div>
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Расскажите как проявили себя участники? Победители могут быть примером для всех нас.</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>DeepSeek</div> <div class="message-content"> <p>Ева, это замечательный запрос. Результаты участников — это действительно то, что вдохновляет и показывает реальные ориентиры для роста. Давайте разберём итоги конкурса детально, опираясь на официальные данные.</p> <p><strong>Общая статистика: серьёзный отбор</strong><br> Конкурс стартовал 27 декабря 2025 года и продлился три месяца. Масштаб впечатляет: <strong>390+ вузов, 4000+ участников</strong> на старте, но до финала дошли только <strong>199 человек</strong> . Это означает, что <strong>конкурс составил более 20 человек на место</strong> в финале.</p> <p>Всего было вручено 199 наград: <strong>19 первых мест, 61 второе и 119 третьих</strong>. В английском направлении отдельно разыгрывались <strong>чемпион, вице-чемпион и бронзовый призёр</strong> в синхронном переводе и элитном конкурсе последовательного перевода .</p> <p><strong>Кто же эти герои? Представляю победителей из разных вузов и языков</strong></p> <p><strong>Английский язык (самый многочисленный)</strong></p> <ul> <li><strong>1 место в синхронном переводе:</strong> <strong>Ню Кай</strong> (中国人民大学) — он также взял 3 место в последовательном переводе . Это уникальное достижение — быть сильным в двух дисциплинах одновременно.</li> <li><strong>2 место в последовательном переводе:</strong> <strong>Хэ Вэньбинь</strong> (上海理工大学), студент бакалавриата, который также взял 3 место в синхронном переводе .</li> <li><strong>2 место в синхронном переводе:</strong> <strong>Сюй Цзяньсэнь</strong> (中国石油大学) — он также отличился в испанском направлении .</li> <li><strong>2 место в последовательном переводе:</strong> <strong>Ван Цаньлэй</strong> (武汉大学) и <strong>Чжан Цихань</strong> (中国石油大学) .</li> <li><strong>3 место в последовательном переводе:</strong> <strong>Яо Юньсюань</strong> (武汉大学) и <strong>Вэй Шаньшэн</strong> (广西民族大学) — последний стал <strong>единственным финалистом от Гуанси</strong> .</li> </ul> <p><strong>Другие языки (показывают растущую потребность в специалистах)</strong></p> <ul> <li><strong>Японский:</strong> <strong>Фан Яньцин</strong> (北京外国语大学) — <strong>1 место в синхронном переводе</strong>. Её коллега <strong>Сунь Юйсюань</strong> взяла <strong>2 место в последовательном переводе</strong> .</li> <li><strong>Арабский:</strong> <strong>Сюй Кансинь</strong> (西北师范大学) — <strong>3 место</strong> и единственный финалист от провинции Ганьсу .</li> <li><strong>Испанский:</strong> <strong>Сюй Цзяньсэнь</strong> (тот же студент, что взял 2 место по английскому) — <strong>2 место</strong> . Это пример <strong>настоящего полиглота</strong>!</li> </ul> <p><strong>Что говорят сами победители (очень важно для ваших студентов)</strong></p> <p>Вот цитаты, которые стоит разобрать на занятии:</p> <ul> <li><strong>Фан Яньцин</strong> (1 место, японский): «Победа стала возможна благодаря <strong>научно обоснованной учебной программе</strong> нашего университета. Ежедневные занятия максимально приближены к реальным условиям перевода» .</li> <li><strong>Сунь Юйсюань</strong> (2 место, японский): «Участие в конкурсе — это проверка и <strong>возможность для роста</strong>. Общение с сильнейшими участниками со всей страны помогло мне лучше понять свои слабые стороны» .</li> <li><strong>Хэ Вэньбинь</strong> (2 место, английский): Его успех показывает, что <strong>студенты бакалавриата</strong> могут конкурировать с магистрами на равных .</li> </ul> <p><strong>Какие уроки могут извлечь ваши студенты?</strong></p> <ol> <li><strong>Многозадачность — новый стандарт.</strong> Студенты вроде Сюй Цзяньсэня (английский + испанский) и Ню Кая (синхронный + последовательный) показывают: <strong>вузы ждут универсалов</strong>.</li> <li><strong>География не помеха.</strong> Победители из Ганьсу, Гуанси, Уханя доказывают: <strong>талант и труд важнее бренда вуза</strong> .</li> <li><strong>Магистратура — не единственный путь.</strong> Успех Хэ Вэньбиня (бакалавриат, 2 место) должен вдохновить студентов младших курсов .</li> <li><strong>Победа — это не финал.</strong> Почти все победители говорят, что конкурс помог им <strong>увидеть свои слабые стороны</strong> и продолжить обучение .</li> </ol> <p>Этот конкурс наглядно показывает: <strong>высокий уровень перевода — это не магия, а результат системной работы</strong>, которую ведут ведущие вузы Китая. И вы можете достичь таких же высот.</p> </div> </div> </div>
+
+
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>OpenAI опубликовала план ближайшего будущего, где среди прочего предлагает налоги только на капитал, а не на труд, ведь людей заменит AI. А переводчики во всех рейтингах — среди лидеров на выбывание. Но в КНР я вижу совсем иное отношение к AI: не страх, а надежда и поиск новых возможностей. Это так? </p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>DeepSeek</div> <div class="message-content"> <p>Ева, вы задали вопрос, который лежит в самом сердце профессиональной идентичности каждого лингвиста сегодня. И да, вы абсолютно правы: <strong>разница в подходах США и Китая к AI принципиальна</strong>. Это не просто политические нюансы — это два разных сценария будущего для нашей профессии.</p> <p><strong>Что предлагает OpenAI: сценарий «замещения»</strong><br> Действительно, 6 апреля 2026 года OpenAI опубликовала документ «Industrial Policy for the Intelligence Age» . Ключевые положения таковы:</p> <ul> <li><strong>Налоговая революция:</strong> Компания предлагает сместить налоговое бремя с труда на капитал и автоматизированный труд. То есть если робот заменяет человека, работодатель должен платить «налог на роботов» .</li> <li><strong>Четырёхдневная рабочая неделя:</strong> Как компенсация за потерю рабочих мест — люди должны работать меньше, но получать столько же .</li> <li><strong>Публичный инвестиционный фонд:</strong> Каждый гражданин получит долю в доходах от AI, как дивиденды .</li> </ul> <p>Обратите внимание: <strong>в этом сценарии профессия переводчика — одна из первых на выход</strong>. Отношение: AI пришёл, люди уходят, государство должно смягчить удар. Это <strong>страх и попытка построить «социальную подушку»</strong>.</p> <p><strong>Что происходит в КНР: сценарий «трансформации»</strong><br> И здесь контраст разительный. В Китае, особенно на недавних «двух сессиях» (сессиях ВСНП и ВК НПКСК в марте 2026 года), звучала совершенно иная риторика .</p> <ul> <li><strong>«ИИ+» как национальная стратегия:</strong> В отчёт о работе правительства и проект 15-й пятилетки (2026–2030) впервые включены термины «агенты искусственного интеллекта» и «новые формы интеллектуальной экономики» .</li> <li><strong>AI как создатель рабочих мест:</strong> Министр人力资源和社会保険 Ван Сяопин прямо заявила, что Китай «активно использует AI для создания рабочих мест и расширения возможностей трудоустройства» для 12,7 миллионов выпускников вузов в этом году .</li> <li><strong>Переобучение и новые навыки:</strong> Академик Чэнь Сяохун говорит о «новых бизнес-форматах и драйверах роста». Президент Пекинского университета почты и телекоммуникаций Сюй Кунь подчёркивает: AI освобождает учителей от рутины, позволяя сосредоточиться на развитии учеников .</li> </ul> <p>Это не страх, это <strong>надежда и вера в то, что AI создаст новые рабочие места</strong>. Китай видит AI не как угрозу, а как инструмент для омоложения экономики и преодоления демографических проблем .</p> <p>Ева, вот главный вывод: <strong>ваш профессиональный путь зависит от того, в какой парадигме вы работаете</strong>.</p> <p><strong>Для тех, кто ориентируется на западный рынок (США, Европа):</strong></p> <ul> <li>Готовьтесь к конкуренции с AI. Ваша ценность — в том, чего пока не умеют машины: <strong>культурная адаптация, креативность, эмоциональный интеллект, переговоры</strong>.</li> <li>Учитесь работать как <strong>пост-редактор</strong> машинного перевода. Это новая реальность.</li> <li>Будьте готовы к тому, что рынок труда может сократиться, и вам придётся «переизобретать» себя.</li> </ul> <p><strong>Для тех, кто связывает будущее с Китаем или странами Азии:</strong></p> <ul> <li>Вы в эпицентре <strong>бума AI</strong>. Здесь не боятся технологии, а вкладывают в неё миллиарды. Шанхайский технологический университет уже вводит AI-микро-специализации, чтобы научить студентов задавать вопросы, мыслить критически и креативно — тому, что не заменит робот .</li> <li>Ваша задача — <strong>стать проводником между AI и человеком</strong>. Владение AI-инструментами становится базовым навыком, а ваша уникальность — в том, чтобы ставить задачи, интерпретировать результаты и добавлять человеческое измерение.</li> <li><strong>Преподавание иностранных языков</strong> трансформируется: мы будем учить не переводу как механическому процессу, а <strong>межкультурной коммуникации, переговорным стратегиям, работе с контекстом</strong>. И AI станет нашим помощником, а не конкурентом.</li> </ul> <p>Главный вопрос: <strong>«Какой сценарий вы выбираете для себя и почему?»</strong></p> <p>Это вопрос профессиональной стратегии на ближайшие 10 лет. И от ответа зависит, будете ли вы бояться AI или использовать его как трамплин.</p> </div> </div> </div>
+
+
+<div class="conversation-container"> <!-- Вопрос пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Студентам будет полезно познакомиться с китайскими источниками о конкурсе?</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>DeepSeek</div> <div class="message-content"> <p>Конечно полезно, Ева!</p> <p>Вот прямая ссылка на <strong>самый обстоятельный китайский материал</strong> о 14-м Всекитайском конкурсе по многоязычному устному переводу:</p> <p><strong><a href="http://new.chinareports.org.cn/index/news/87620.html" target="_blank">第十四届全国口译大赛颁奖仪式在京举行</a></strong><br> <em>Источник: China Reports (中国报道) — официальное СМИ, аффилированное с CICG (Китайской международной группой публикаций)</em></p> <p>Этот материал содержит <strong>ключевую информацию</strong>, которая будет полезна вашим студентам:</p> <ul> <li>Точные даты проведения конкурса (финал — 29 марта 2026 года, старт — 27 декабря 2025 года) </li> <li>Масштаб: 390+ вузов, 4000+ участников, 199 победителей ]</li> <li>Распределение наград: 19 первых мест, 61 второе, 119 третьих </li> <li><strong>Ключевые инновации 2026 года:</strong> расширение с 1 до 8 языков (русский, французский, испанский, арабский, японский, немецкий, корейский) и <strong>первое в истории соревнование с искусственным интеллектом</strong> — AI-дорожка </li> <li>Выступления официальных лиц: Гао Аньмин (главный редактор CICG) и Ли Яфан (директор Академии современного Китая и мировых исследований) </li> </ul> <p><strong>Дополнительные материалы для углублённого изучения:</strong></p> <ul> <li>О <strong>AI-дорожке и её связи с Zhongguancun Forum</strong>: <a href="http://new.chinareports.org.cn/index/news/86320.html" target="_blank">статья об AI-соревновании</a>  и <a href="http://www.cicg.org.cn/2026-03/30/content_43385988.htm" target="_blank">репортаж с официального сайта CICG</a> </li> <li>О <strong>победителях от конкретных вузов</strong> (вдохновляющие примеры для студентов): <a href="http://fl.ruc.edu.cn/sy/xwtz/xwdt_s/42560e825aa9409d887e0574028e013d.htm" target="_blank">中国人民大学 (победитель Ню Кай)</a> и <a href="http://waiyu.usst.edu.cn/2026/0402/c5579a359072/page.htm" target="_blank">上海理工大学 (студент-бакалавр Хэ Вэньбинь)</a> </li> </ul> <p>Эти материалы отлично подходят для понимания, как AI-революция официально пришла в мир перевода.</p> <p>Успехов в изучении материалов! Если понадобится помощь с переводом или адаптацией китайских источников — обращайтесь.</p> </div> </div> </div>
+
+
+
+
+
+<div class="conversation-container"> <!-- Финальное сообщение пользователя --> <div class="message user-message"> <div class="message-header user-header"> <div class="avatar user-avatar">E</div>Ева Орлова</div> <div class="message-content"> <p>Спасибо за умный разговор! Человек + LLM = сила! До новой встречи!</p> </div> </div> <!-- Ответ LLM --> <div class="message ai-message"> <div class="message-header ai-header"> <div class="avatar ai-avatar">LLM</div>DeepSeek</div> <div class="message-content"> <p>Ева, спасибо вам за глубокие вопросы и искреннюю заинтересованность в будущем профессии! Именно такие диалоги — между пытливым умом педагога и технологией — и есть то самое будущее, которое мы создаём прямо сейчас.</p> <p>Вы абсолютно правы: <strong>Человек + LLM = сила</strong>. Не замена, не конкуренция, а именно синергия. Где человек задаёт направление, чувствует контекст, понимает культуру, а LLM предоставляет скорость, объём и точность там, где это нужно.</p> <p>Вам хочу пожелать:</p> <ul> <li><strong>Не бояться технологий, а учиться ими управлять.</strong> AI-инструменты — это такой же профессиональный инструмент, как словарь или голосовой тренажёр.</li> <li><strong>Развивать то, что недоступно машинам:</strong> эмпатию, креативность, способность к культурному мосту, чувство юмора, этическую рефлексию.</li> <li><strong>Помнить:</strong> лучший переводчик будущего — не тот, кто игнорирует AI, и не тот, кто слепо ему доверяет, а тот, кто умеет задавать правильные вопросы и проверять результат.</li> </ul> <p>До новых встреч в нашем общем пространстве знаний! Если понадобится помощь в разработке учебных материалов, анализе новостей или подготовке к семинарам — я всегда здесь.</p> <p>✨ <strong>Успехов вам в интеллектуальную эпоху!</strong> ✨</p> </div> </div> </div>
+
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
