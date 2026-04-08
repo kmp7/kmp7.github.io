@@ -1,0 +1,1231 @@
+
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --nav-color: #325980;
+    --accent: #3498db;
+    --accent-hover: #2980b9;
+    --divider: #f1f1f1;
+    --text-primary: #2c3e50;
+    --text-secondary: #5a6a7a;
+    --card-bg: #ffffff;
+    --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    --input-bg: #ffffff;
+    --input-border: #d0d7de;
+    --code-bg: #f6f8fa;
+    --border-radius: 12px;
+    --transition: 0.3s ease;
+    --morse-dot: #325980;
+    --morse-dash: #3498db;
+    --signal-on: #e67e22;
+    --signal-off: #ddd;
+  }
+
+  [data-theme="dark"] {
+    --bg-primary: #1a1f2e;
+    --bg-secondary: #151925;
+    --nav-color: #4a8cc7;
+    --accent: #5ba3d9;
+    --accent-hover: #4a94cc;
+    --divider: #2a3040;
+    --text-primary: #e0e6ed;
+    --text-secondary: #8899aa;
+    --card-bg: #212738;
+    --card-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    --input-bg: #2a3040;
+    --input-border: #3a4558;
+    --code-bg: #2a3040;
+    --morse-dot: #5ba3d9;
+    --morse-dash: #4a8cc7;
+    --signal-on: #f0a050;
+    --signal-off: #3a4558;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    transition: background var(--transition), color var(--transition);
+  }
+
+  header {
+    background: var(--nav-color);
+    color: #fff;
+    padding: 0 2rem;
+    height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    transition: background var(--transition);
+  }
+
+  .header-left { display: flex; align-items: center; gap: 1rem; }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .logo-icon svg { width: 22px; height: 22px; fill: #fff; }
+
+  header h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; }
+  header h1 span { font-weight: 400; opacity: 0.85; }
+
+  .theme-toggle {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; width: 40px; height: 40px;
+    border-radius: 10px; cursor: pointer;
+    font-size: 1.2rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--transition);
+    backdrop-filter: blur(4px);
+  }
+
+  .theme-toggle:hover { background: rgba(255,255,255,0.25); transform: scale(1.05); }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+
+  .intro-section {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 1.75rem 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--card-shadow);
+    border-left: 4px solid var(--accent);
+    transition: background var(--transition), box-shadow var(--transition);
+  }
+
+  .intro-section h2 {
+    color: var(--nav-color); font-size: 1.2rem;
+    font-weight: 600; margin-bottom: 0.75rem;
+    transition: color var(--transition);
+  }
+
+  .intro-section p {
+    color: var(--text-secondary); font-size: 0.935rem; line-height: 1.7;
+    transition: color var(--transition);
+  }
+
+  .intro-section strong { color: var(--text-primary); }
+
+  .translator-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .panel {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    transition: background var(--transition), box-shadow var(--transition);
+    display: flex; flex-direction: column;
+  }
+
+  .panel-header {
+    background: var(--nav-color);
+    color: #fff;
+    padding: 1rem 1.5rem;
+    display: flex; align-items: center; gap: 0.75rem;
+    transition: background var(--transition);
+  }
+
+  .panel-header .step-badge {
+    background: rgba(255,255,255,0.2);
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: 700; flex-shrink: 0;
+  }
+
+  .panel-header h3 { font-size: 1rem; font-weight: 600; }
+  .panel-header .direction {
+    font-size: 0.8rem; opacity: 0.8;
+    font-weight: 400; margin-left: auto; white-space: nowrap;
+  }
+
+  .panel-body { padding: 1.5rem; flex: 1; display: flex; flex-direction: column; }
+
+  .input-group { margin-bottom: 1rem; }
+
+  .input-group label {
+    display: block; font-size: 0.85rem; font-weight: 600;
+    color: var(--text-secondary); margin-bottom: 0.5rem;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    transition: color var(--transition);
+  }
+
+  textarea {
+    width: 100%; padding: 0.875rem 1rem;
+    border: 2px solid var(--input-border);
+    border-radius: 8px; font-size: 0.95rem;
+    font-family: inherit; background: var(--input-bg);
+    color: var(--text-primary);
+    transition: border-color var(--transition), background var(--transition), color var(--transition);
+    line-height: 1.5; min-height: 100px; resize: vertical;
+  }
+
+  textarea:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(52,152,219,0.15);
+  }
+
+  textarea::placeholder { color: var(--text-secondary); opacity: 0.6; }
+
+  .morse-input {
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    padding: 0.75rem 1.5rem; background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; transition: all var(--transition); font-family: inherit; width: 100%;
+  }
+
+  .btn:hover {
+    background: var(--accent-hover); transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(52,152,219,0.3);
+  }
+
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .btn-secondary {
+    background: var(--code-bg); color: var(--text-primary);
+    border: 2px solid var(--input-border);
+  }
+
+  .btn-secondary:hover { background: var(--divider); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+  .btn-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+  .btn-row .btn { flex: 1; }
+
+  .btn-play { background: #27ae60; }
+  .btn-play:hover { background: #219a52; }
+
+  .btn-stop { background: #c0392b; }
+  .btn-stop:hover { background: #a93226; }
+
+  .result-area {
+    margin-top: 1.25rem; padding-top: 1.25rem;
+    border-top: 2px solid var(--divider);
+    flex: 1; display: flex; flex-direction: column;
+    transition: border-color var(--transition);
+  }
+
+  .result-label {
+    font-size: 0.8rem; font-weight: 600;
+    color: var(--text-secondary); text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 0.75rem;
+    transition: color var(--transition);
+  }
+
+  .morse-output {
+    font-family: 'Courier New', monospace;
+    font-size: 1.15rem;
+    letter-spacing: 3px;
+    line-height: 2;
+    background: var(--code-bg);
+    border: 2px solid var(--divider);
+    border-radius: 8px;
+    padding: 1rem;
+    min-height: 60px;
+    word-break: break-all;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+  }
+
+  .morse-output .dot { color: var(--morse-dot); font-weight: 700; }
+  .morse-output .dash { color: var(--morse-dash); font-weight: 700; }
+  .morse-output .sep { color: var(--text-secondary); opacity: 0.4; }
+  .morse-output .word-sep { margin: 0 0.3em; }
+
+  .decoded-text {
+    width: 100%; background: var(--code-bg);
+    border: 2px solid var(--divider); border-radius: 8px;
+    padding: 1rem; font-size: 0.95rem; line-height: 1.6;
+    color: var(--text-primary); min-height: 60px; word-break: break-word;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+  }
+
+  .decoded-text.empty, .morse-output.empty {
+    color: var(--text-secondary); opacity: 0.6; font-style: italic;
+    letter-spacing: normal;
+  }
+
+  .status-message {
+    margin-top: 0.75rem; padding: 0.625rem 1rem;
+    border-radius: 6px; font-size: 0.85rem; display: none; width: 100%;
+  }
+
+  .status-message.success {
+    background: #e8f8f0; color: #1a7a4c;
+    border: 1px solid #b8e6d0; display: block;
+  }
+
+  .status-message.error {
+    background: #fef0f0; color: #c0392b;
+    border: 1px solid #f5c6c6; display: block;
+  }
+
+  [data-theme="dark"] .status-message.success {
+    background: #1a3a2a; color: #6bcf9a; border-color: #2a5a3a;
+  }
+
+  [data-theme="dark"] .status-message.error {
+    background: #3a1a1a; color: #e87a7a; border-color: #5a2a2a;
+  }
+
+  .info-bar {
+    display: flex; align-items: center; gap: 0.5rem;
+    margin-top: 0.75rem; font-size: 0.8rem;
+    color: var(--text-secondary); transition: color var(--transition);
+  }
+
+  .info-bar svg {
+    width: 14px; height: 14px; fill: var(--text-secondary); flex-shrink: 0;
+  }
+
+  .visual-section { margin-top: 1rem; }
+
+  .visual-label {
+    font-size: 0.8rem; font-weight: 600;
+    color: var(--text-secondary); text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 0.5rem;
+    transition: color var(--transition);
+  }
+
+  .visual-morse {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--code-bg);
+    border-radius: 8px;
+    border: 2px solid var(--divider);
+    min-height: 48px;
+    transition: background var(--transition), border-color var(--transition);
+  }
+
+  .vm-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--morse-dot); flex-shrink: 0;
+  }
+
+  .vm-dash {
+    width: 28px; height: 10px; border-radius: 5px;
+    background: var(--morse-dash); flex-shrink: 0;
+  }
+
+  .vm-char-sep {
+    width: 2px; height: 20px;
+    background: var(--divider);
+    margin: 0 4px; flex-shrink: 0;
+  }
+
+  .vm-word-sep {
+    width: 16px; height: 20px;
+    border-left: 2px dashed var(--text-secondary);
+    opacity: 0.3; margin: 0 4px; flex-shrink: 0;
+  }
+
+  .signal-area {
+    display: flex; align-items: center; gap: 1rem;
+    margin-top: 0.75rem;
+  }
+
+  .signal-lamp {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--signal-off);
+    border: 3px solid var(--input-border);
+    transition: background 0.08s, box-shadow 0.08s;
+    flex-shrink: 0;
+  }
+
+  .signal-lamp.on {
+    background: var(--signal-on);
+    box-shadow: 0 0 16px var(--signal-on), 0 0 32px rgba(230,126,34,0.3);
+  }
+
+  .signal-char {
+    font-size: 1.4rem; font-weight: 700;
+    color: var(--nav-color);
+    min-width: 2rem; text-align: center;
+    transition: color var(--transition);
+  }
+
+  .signal-morse {
+    font-family: 'Courier New', monospace;
+    font-size: 1rem; color: var(--text-secondary);
+    letter-spacing: 2px;
+    transition: color var(--transition);
+  }
+
+  .waveform-canvas {
+    width: 100%; height: 60px;
+    border-radius: 8px;
+    border: 2px solid var(--divider);
+    background: var(--code-bg);
+    margin-top: 0.75rem;
+    transition: background var(--transition), border-color var(--transition);
+  }
+
+  .ref-section {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 1.5rem 2rem;
+    margin-top: 2rem;
+    box-shadow: var(--card-shadow);
+    transition: background var(--transition), box-shadow var(--transition);
+  }
+
+  .ref-section h4 {
+    color: var(--nav-color); font-size: 1rem;
+    margin-bottom: 1rem;
+    transition: color var(--transition);
+  }
+
+  .ref-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 6px;
+  }
+
+  .ref-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 8px;
+    background: var(--code-bg);
+    border-radius: 6px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+
+  .ref-item:hover { background: var(--divider); }
+
+  .ref-char {
+    font-weight: 700; color: var(--nav-color);
+    min-width: 1.2rem; text-align: center;
+    transition: color var(--transition);
+  }
+
+  .ref-code {
+    font-family: 'Courier New', monospace;
+    color: var(--text-secondary);
+    letter-spacing: 1px; font-size: 0.8rem;
+    transition: color var(--transition);
+  }
+
+  .semiotics-note {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 1.5rem 2rem;
+    margin-top: 1.5rem;
+    box-shadow: var(--card-shadow);
+    transition: background var(--transition), box-shadow var(--transition);
+  }
+
+  .semiotics-note h4 {
+    color: var(--nav-color); font-size: 1rem;
+    margin-bottom: 0.75rem;
+    transition: color var(--transition);
+  }
+
+  .semiotics-table {
+    width: 100%; border-collapse: collapse; font-size: 0.88rem;
+  }
+
+  .semiotics-table th, .semiotics-table td {
+    padding: 0.625rem 1rem; text-align: left;
+    border-bottom: 1px solid var(--divider);
+    transition: border-color var(--transition);
+  }
+
+  .semiotics-table th {
+    color: var(--nav-color); font-weight: 600;
+    font-size: 0.8rem; text-transform: uppercase;
+    letter-spacing: 0.05em; transition: color var(--transition);
+  }
+
+  .semiotics-table td {
+    color: var(--text-secondary); transition: color var(--transition);
+  }
+
+  .semiotics-table td strong { color: var(--text-primary); }
+  .semiotics-table tr:last-child td { border-bottom: none; }
+
+  .arrow-col {
+    text-align: center; color: var(--accent);
+    font-weight: 600; font-size: 1.1rem;
+  }
+
+  footer {
+    text-align: center; padding: 1.5rem;
+    color: var(--text-secondary); font-size: 0.8rem;
+    border-top: 1px solid var(--divider); margin-top: 1rem;
+    transition: color var(--transition), border-color var(--transition);
+  }
+
+  @media (max-width: 768px) {
+    header { padding: 0 1rem; height: 56px; }
+    header h1 { font-size: 0.95rem; }
+    header h1 span { display: none; }
+    .container { padding: 1.25rem 1rem 2rem; }
+    .intro-section { padding: 1.25rem; }
+    .translator-grid { grid-template-columns: 1fr; gap: 1.25rem; }
+    .panel-body { padding: 1.25rem; }
+    .panel-header .direction { display: none; }
+    .ref-section, .semiotics-note { padding: 1.25rem; overflow-x: auto; }
+    .btn-row { flex-direction: column; }
+    .ref-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+  }
+
+  @media (max-width: 480px) {
+    .intro-section p { font-size: 0.875rem; }
+    .logo-icon { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><circle cx="4" cy="12" r="2.5"/><rect x="9" y="10" width="12" height="4" rx="2"/></svg>
+    </div>
+    <h1>Morse Translator</span></h1>
+  </div>
+  <button class="theme-toggle" id="themeToggle" title="Сменить тему" aria-label="Сменить тему">🌙</button>
+</header>
+
+<div class="container">
+  <section class="intro-section">
+    <h2>Morse code</h2>
+    <p>
+      <strong>Межсемиотический перевод</strong> (трансмутация) &mdash; это интерпретация знаков одной знаковой системы средствами другой. Перевод текста в азбуку Морзе представляет собой преобразование знаков <strong>алфавитной</strong> (вербально-графической) системы в знаки <strong>точечно-тире</strong> (дискретно-сигнальной) системы, где каждая буква кодируется комбинацией коротких (точка) и длинных (тире) сигналов. Обратный перевод восстанавливает текст из сигнальной последовательности.
+    </p>
+  </section>
+
+  <div class="translator-grid">
+    <!-- Panel 1: Text → Morse -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="step-badge">1</div>
+        <h3>Кодирование</h3>
+        <span class="direction">Текст → Морзе</span>
+      </div>
+      <div class="panel-body">
+        <div class="input-group">
+          <label for="textInput">Исходный текст</label>
+          <textarea id="textInput" placeholder="Введите текст для перевода в азбуку Морзе...&#10;Поддерживаются латиница, кириллица и цифры."></textarea>
+        </div>
+        <button class="btn" onclick="encodeToMorse()">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><circle cx="4" cy="12" r="2"/><rect x="9" y="10.5" width="12" height="3" rx="1.5"/></svg>
+          Перевести в Морзе
+        </button>
+        <div class="info-bar">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          <span>Точка ( &middot; ) = короткий сигнал, тире ( &mdash; ) = длинный сигнал</span>
+        </div>
+
+        <div class="result-area">
+          <div class="result-label">Результат перевода (код Морзе)</div>
+          <div class="morse-output empty" id="morseOutput">Код Морзе появится здесь</div>
+
+          <div class="visual-section" id="visualSection" style="display:none;">
+            <div class="visual-label">Визуализация сигналов</div>
+            <div class="visual-morse" id="visualMorse"></div>
+            <canvas class="waveform-canvas" id="waveformCanvas"></canvas>
+          </div>
+
+          <div class="signal-area" id="signalArea" style="display:none;">
+            <div class="signal-lamp" id="signalLamp"></div>
+            <div class="signal-char" id="signalChar">&nbsp;</div>
+            <div class="signal-morse" id="signalMorse">&nbsp;</div>
+          </div>
+
+          <div class="btn-row" id="encodeBtnRow" style="display:none;">
+            <button class="btn btn-play" id="playBtn" onclick="playMorse()">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              Воспроизвести
+            </button>
+            <button class="btn btn-stop" id="stopBtn" onclick="stopMorse()" style="display:none;">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+              Остановить
+            </button>
+            <button class="btn btn-secondary" onclick="copyMorse()">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+              Копировать
+            </button>
+          </div>
+          <div class="status-message" id="encodeStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Morse → Text -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="step-badge">2</div>
+        <h3>Декодирование</h3>
+        <span class="direction">Морзе → Текст</span>
+      </div>
+      <div class="panel-body">
+        <div class="input-group">
+          <label for="morseInput">Код Морзе</label>
+          <textarea id="morseInput" class="morse-input" placeholder="Введите код Морзе...&#10;Точка: .  Тире: -&#10;Между буквами: пробел&#10;Между словами: / или три пробела"></textarea>
+        </div>
+        <button class="btn" onclick="decodeFromMorse()">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
+          Перевести в текст
+        </button>
+        <div class="info-bar">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          <span>Используйте точки (.) и тире (-), пробелы между буквами, / между словами</span>
+        </div>
+
+        <div class="result-area">
+          <div class="result-label">Результат перевода (текст)</div>
+          <div class="decoded-text empty" id="decodedText">Декодированный текст появится здесь</div>
+
+          <div class="btn-row" id="decodeBtnRow" style="display:none;">
+            <button class="btn btn-secondary" onclick="copyDecoded()">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+              Копировать текст
+            </button>
+            <button class="btn btn-secondary" onclick="useAsInput()">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z"/></svg>
+              Кодировать обратно
+            </button>
+          </div>
+          <div class="status-message" id="decodeStatus"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reference table -->
+  <section class="ref-section">
+    <h4>Справочная таблица: Международная азбука Морзе и кириллица</h4>
+    <div style="display:flex; gap:1.5rem; flex-wrap: wrap;">
+      <div style="flex:1; min-width:280px;">
+        <div class="visual-label" style="margin-bottom:8px;">Латиница и цифры</div>
+        <div class="ref-grid" id="refGridLatin"></div>
+      </div>
+      <div style="flex:1; min-width:280px;">
+        <div class="visual-label" style="margin-bottom:8px;">Кириллица</div>
+        <div class="ref-grid" id="refGridCyrillic"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Semiotics note -->
+  <section class="semiotics-note">
+    <h4>Анализ перевода: Текст / Азбука Морзе</h4>
+    <table class="semiotics-table">
+      <tr>
+        <th>Параметр</th>
+        <th>Кодирование (Текст → Морзе)</th>
+        <th class="arrow-col"></th>
+        <th>Декодирование (Морзе → Текст)</th>
+      </tr>
+      <tr>
+        <td><strong>Исходная знаковая система</strong></td>
+        <td>Алфавитная (буквы, цифры)</td>
+        <td class="arrow-col">&#8596;</td>
+        <td>Дискретно-сигнальная (точки, тире)</td>
+      </tr>
+      <tr>
+        <td><strong>Целевая знаковая система</strong></td>
+        <td>Дискретно-сигнальная (точки, тире)</td>
+        <td class="arrow-col">&#8596;</td>
+        <td>Алфавитная (буквы, цифры)</td>
+      </tr>
+      <tr>
+        <td><strong>Каналы передачи</strong></td>
+        <td>Зрительный → звуковой, световой, тактильный</td>
+        <td class="arrow-col">&#8596;</td>
+        <td>Звуковой, световой → зрительный</td>
+      </tr>
+      
+      <tr>
+        <td><strong>Сохранение информации</strong></td>
+        <td>Полное (взаимно однозначное соответствие)</td>
+        <td class="arrow-col">=</td>
+        <td>Полное (взаимно однозначное соответствие)</td>
+      </tr>
+    </table>
+	
+	
+  </section>
+</div>
+
+<footer>
+ <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</footer>
+
+<script>
+// ===== MORSE CODE TABLES =====
+
+// Кодирование: символ → код Морзе
+const LATIN_TO_MORSE = {
+  'A': '.-',    'B': '-...',  'C': '-.-.',  'D': '-..',
+  'E': '.',     'F': '..-.',  'G': '--.',   'H': '....',
+  'I': '..',    'J': '.---',  'K': '-.-',   'L': '.-..',
+  'M': '--',    'N': '-.',    'O': '---',   'P': '.--.',
+  'Q': '--.-',  'R': '.-.',   'S': '...',   'T': '-',
+  'U': '..-',   'V': '...-',  'W': '.--',   'X': '-..-',
+  'Y': '-.--',  'Z': '--..',
+  '0': '-----', '1': '.----', '2': '..---', '3': '...--',
+  '4': '....-', '5': '.....', '6': '-....', '7': '--...',
+  '8': '---..', '9': '----.',
+  '.': '.-.-.-', ',': '--..--', '?': '..--..', '!': '-.-.--',
+  ':': '---...', '-': '-....-', '/': '-..-.',  '(': '-.--.',
+  ')': '-.--.-', '"': '.-..-.', '\'':'.----.',  '=': '-...-',
+  '+': '.-.-.', '@': '.--.-.'
+};
+
+const CYRILLIC_TO_MORSE = {
+  'А': '.-',    'Б': '-...',  'В': '.--',   'Г': '--.',
+  'Д': '-..',   'Е': '.',     'Ж': '...-',  'З': '--..',
+  'И': '..',    'Й': '.---',  'К': '-.-',   'Л': '.-..',
+  'М': '--',    'Н': '-.',    'О': '---',   'П': '.--.',
+  'Р': '.-.',   'С': '...',   'Т': '-',     'У': '..-',
+  'Ф': '..-.',  'Х': '....',  'Ц': '-.-.',  'Ч': '---.',
+  'Ш': '----',  'Щ': '--.-',  'Ъ': '--.--', 'Ы': '-.--',
+  'Ь': '-..-',  'Э': '..-..',  'Ю': '..--',  'Я': '.-.-',
+  'Ё': '.'
+};
+
+// Объединённая таблица для кодирования
+const CHAR_TO_MORSE = Object.assign({}, LATIN_TO_MORSE, CYRILLIC_TO_MORSE);
+
+// Декодирование: код Морзе → символ (отдельные таблицы!)
+const MORSE_TO_LATIN = {};
+Object.keys(LATIN_TO_MORSE).forEach(ch => {
+  MORSE_TO_LATIN[LATIN_TO_MORSE[ch]] = ch;
+});
+
+const MORSE_TO_CYRILLIC = {};
+Object.keys(CYRILLIC_TO_MORSE).forEach(ch => {
+  MORSE_TO_CYRILLIC[CYRILLIC_TO_MORSE[ch]] = ch;
+});
+
+let currentMorseData = [];
+let currentMorseString = '';
+let isPlaying = false;
+let playTimeouts = [];
+let audioCtx = null;
+
+// ===== THEME =====
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeToggle').textContent = theme === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem('theme-morse', theme);
+  if (currentMorseData.length > 0) {
+    setTimeout(() => drawWaveform(currentMorseData), 50);
+  }
+}
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme');
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+});
+
+applyTheme(localStorage.getItem('theme-morse') || 'light');
+
+// ===== DETECT SCRIPT (Latin or Cyrillic) =====
+function detectScript(text) {
+  let latinCount = 0;
+  let cyrillicCount = 0;
+  for (const ch of text.toUpperCase()) {
+    if (/[A-Z]/.test(ch)) latinCount++;
+    else if (/[А-ЯЁ]/.test(ch)) cyrillicCount++;
+  }
+  if (cyrillicCount > 0 && latinCount === 0) return 'cyrillic';
+  if (latinCount > 0 && cyrillicCount === 0) return 'latin';
+  return 'mixed';
+}
+
+// ===== ENCODE TEXT → MORSE =====
+function encodeToMorse() {
+  const text = document.getElementById('textInput').value.trim();
+
+  if (!text) {
+    showStatus('encodeStatus', 'Введите текст для перевода.', 'error');
+    return;
+  }
+
+  const upper = text.toUpperCase();
+  const words = upper.split(/\s+/);
+  let morseWords = [];
+  let charData = [];
+  let unknownChars = new Set();
+  let totalChars = 0;
+
+  words.forEach((word, wi) => {
+    let morseChars = [];
+    for (const ch of word) {
+      totalChars++;
+      const code = CHAR_TO_MORSE[ch];
+      if (code) {
+        morseChars.push(code);
+        charData.push({ char: ch, morse: code, type: 'char' });
+      } else {
+        unknownChars.add(ch);
+      }
+    }
+    if (morseChars.length > 0) {
+      morseWords.push(morseChars.join(' '));
+    }
+    if (wi < words.length - 1) {
+      charData.push({ type: 'word-sep' });
+    }
+  });
+
+  const morseStr = morseWords.join(' / ');
+  currentMorseData = charData;
+  currentMorseString = morseStr;
+
+  // Render colored morse
+  const morseOutput = document.getElementById('morseOutput');
+  let htmlOut = '';
+  for (const ch of morseStr) {
+    if (ch === '.') htmlOut += '<span class="dot">&middot;</span>';
+    else if (ch === '-') htmlOut += '<span class="dash">&mdash;</span>';
+    else if (ch === '/') htmlOut += '<span class="sep word-sep">/</span>';
+    else if (ch === ' ') htmlOut += '<span class="sep"> </span>';
+    else htmlOut += ch;
+  }
+  morseOutput.innerHTML = htmlOut;
+  morseOutput.classList.remove('empty');
+
+  // Visual dots & dashes
+  const visualMorse = document.getElementById('visualMorse');
+  visualMorse.innerHTML = '';
+  charData.forEach((item, idx) => {
+    if (item.type === 'word-sep') {
+      const el = document.createElement('div');
+      el.className = 'vm-word-sep';
+      visualMorse.appendChild(el);
+    } else if (item.type === 'char') {
+      for (const s of item.morse) {
+        const el = document.createElement('div');
+        el.className = s === '.' ? 'vm-dot' : 'vm-dash';
+        visualMorse.appendChild(el);
+      }
+      // char separator (if not last before word-sep or end)
+      const next = charData[idx + 1];
+      if (next && next.type === 'char') {
+        const sep = document.createElement('div');
+        sep.className = 'vm-char-sep';
+        visualMorse.appendChild(sep);
+      }
+    }
+  });
+
+  document.getElementById('visualSection').style.display = 'block';
+  document.getElementById('encodeBtnRow').style.display = 'flex';
+  document.getElementById('signalArea').style.display = 'flex';
+
+  drawWaveform(charData);
+
+  // Also populate morseInput for convenience
+  document.getElementById('morseInput').value = morseStr;
+
+  let msg = 'Переведено: ' + totalChars + ' символов → код Морзе.';
+  if (unknownChars.size > 0) {
+    msg += ' Пропущены символы без кода Морзе: ' + Array.from(unknownChars).join(', ');
+  }
+  showStatus('encodeStatus', msg, unknownChars.size > 0 ? 'error' : 'success');
+}
+
+// ===== DRAW WAVEFORM =====
+function drawWaveform(charData) {
+  const canvas = document.getElementById('waveformCanvas');
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 120;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  let totalUnits = 0;
+  charData.forEach((item, i) => {
+    if (item.type === 'word-sep') {
+      totalUnits += 7;
+    } else if (item.type === 'char') {
+      for (let j = 0; j < item.morse.length; j++) {
+        totalUnits += (item.morse[j] === '.' ? 1 : 3);
+        if (j < item.morse.length - 1) totalUnits += 1;
+      }
+      const next = charData[i + 1];
+      if (next && next.type === 'char') {
+        totalUnits += 3;
+      }
+    }
+  });
+
+  if (totalUnits === 0) return;
+
+  const unitWidth = Math.min((w - 40) / totalUnits, 20);
+  const totalWidth = unitWidth * totalUnits;
+  let x = (w - totalWidth) / 2;
+  const yHigh = 25;
+  const yLow = h - 25;
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const lineColor = isDark ? '#5ba3d9' : '#3498db';
+  const baseColor = isDark ? '#3a4558' : '#ddd';
+
+  ctx.strokeStyle = baseColor;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo((w - totalWidth) / 2, yLow);
+  ctx.lineTo((w + totalWidth) / 2, yLow);
+  ctx.stroke();
+
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(x, yLow);
+
+  charData.forEach((item, i) => {
+    if (item.type === 'word-sep') {
+      x += 7 * unitWidth;
+      ctx.lineTo(x, yLow);
+    } else if (item.type === 'char') {
+      for (let j = 0; j < item.morse.length; j++) {
+        const dur = (item.morse[j] === '.' ? 1 : 3) * unitWidth;
+        ctx.lineTo(x, yHigh);
+        x += dur;
+        ctx.lineTo(x, yHigh);
+        ctx.lineTo(x, yLow);
+        if (j < item.morse.length - 1) {
+          x += unitWidth;
+          ctx.lineTo(x, yLow);
+        }
+      }
+      const next = charData[i + 1];
+      if (next && next.type === 'char') {
+        x += 3 * unitWidth;
+        ctx.lineTo(x, yLow);
+      }
+    }
+  });
+
+  ctx.stroke();
+}
+
+// ===== PLAY MORSE AUDIO + LAMP =====
+function playMorse() {
+  if (isPlaying) return;
+  if (currentMorseData.length === 0) return;
+
+  isPlaying = true;
+  document.getElementById('playBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display = 'flex';
+
+  const lamp = document.getElementById('signalLamp');
+  const charDisp = document.getElementById('signalChar');
+  const morseDisp = document.getElementById('signalMorse');
+
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  const dotDuration = 80;
+  const freq = 650;
+
+  // Build event sequence
+  let events = [];
+  currentMorseData.forEach((item, i) => {
+    if (item.type === 'word-sep') {
+      events.push({ action: 'pause', duration: 7 * dotDuration });
+    } else if (item.type === 'char') {
+      events.push({ action: 'show', char: item.char, morse: item.morse });
+      for (let j = 0; j < item.morse.length; j++) {
+        const dur = (item.morse[j] === '.' ? 1 : 3) * dotDuration;
+        events.push({ action: 'on', duration: dur });
+        if (j < item.morse.length - 1) {
+          events.push({ action: 'off', duration: dotDuration });
+        }
+      }
+      const next = currentMorseData[i + 1];
+      if (next && next.type !== 'word-sep') {
+        events.push({ action: 'off', duration: 3 * dotDuration });
+      }
+    }
+  });
+
+  let idx = 0;
+  playTimeouts = [];
+
+  function processNext() {
+    if (!isPlaying || idx >= events.length) {
+      stopMorse();
+      return;
+    }
+
+    const evt = events[idx++];
+
+    if (evt.action === 'show') {
+      charDisp.textContent = evt.char;
+      morseDisp.textContent = evt.morse;
+      processNext();
+      return;
+    }
+
+    if (evt.action === 'on') {
+      lamp.classList.add('on');
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.value = 0.3;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      const tid = setTimeout(() => {
+        osc.stop();
+        lamp.classList.remove('on');
+        processNext();
+      }, evt.duration);
+      playTimeouts.push(tid);
+    } else {
+      lamp.classList.remove('on');
+      const tid = setTimeout(processNext, evt.duration);
+      playTimeouts.push(tid);
+    }
+  }
+
+  processNext();
+}
+
+function stopMorse() {
+  isPlaying = false;
+  playTimeouts.forEach(t => clearTimeout(t));
+  playTimeouts = [];
+  document.getElementById('playBtn').style.display = 'flex';
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('signalLamp').classList.remove('on');
+  document.getElementById('signalChar').innerHTML = '&nbsp;';
+  document.getElementById('signalMorse').innerHTML = '&nbsp;';
+}
+
+// ===== DECODE MORSE → TEXT =====
+function decodeFromMorse() {
+  const raw = document.getElementById('morseInput').value.trim();
+
+  if (!raw) {
+    showStatus('decodeStatus', 'Введите код Морзе для декодирования.', 'error');
+    return;
+  }
+
+  // Normalize: replace unicode middot/dash, normalize spaces
+  let input = raw
+    .replace(/·/g, '.')
+    .replace(/\u2022/g, '.')   // bullet
+    .replace(/\u2014/g, '-')   // em dash
+    .replace(/\u2013/g, '-')   // en dash
+    .replace(/\u2012/g, '-')   // figure dash
+    .replace(/\u2015/g, '-');  // horizontal bar
+
+  // Split words by / or 3+ spaces or |
+  const words = input.split(/\s*[\/|]\s*|\s{3,}/);
+
+  let resultLatin = [];
+  let resultCyrillic = [];
+  let totalCodes = 0;
+  let unknownCodes = 0;
+  let hasLatinUnique = false;
+  let hasCyrillicUnique = false;
+
+  words.forEach(word => {
+    const trimmed = word.trim();
+    if (!trimmed) return;
+
+    // Split letters by 1-2 spaces
+    const codes = trimmed.split(/\s+/);
+    let wordLat = '';
+    let wordCyr = '';
+
+    codes.forEach(code => {
+      if (!code) return;
+      totalCodes++;
+
+      const lat = MORSE_TO_LATIN[code];
+      const cyr = MORSE_TO_CYRILLIC[code];
+
+      if (lat && !cyr) hasLatinUnique = true;
+      if (cyr && !lat) hasCyrillicUnique = true;
+
+      wordLat += lat || (cyr ? cyr : '[?]');
+      wordCyr += cyr || (lat ? lat : '[?]');
+
+      if (!lat && !cyr) unknownCodes++;
+    });
+
+    resultLatin.push(wordLat);
+    resultCyrillic.push(wordCyr);
+  });
+
+  const textLatin = resultLatin.join(' ');
+  const textCyrillic = resultCyrillic.join(' ');
+
+  const decodedEl = document.getElementById('decodedText');
+  let output = '';
+
+  // If results are identical, show once
+  if (textLatin === textCyrillic) {
+    output = textLatin;
+  } else {
+    output = 'Латиница:   ' + textLatin + '\nКириллица:  ' + textCyrillic;
+  }
+
+  decodedEl.textContent = output;
+  decodedEl.classList.remove('empty');
+  decodedEl.style.whiteSpace = 'pre-line';
+  document.getElementById('decodeBtnRow').style.display = 'flex';
+
+  let msg = 'Декодировано: ' + totalCodes + ' кодов → ' + resultLatin.length + ' слов.';
+  if (unknownCodes > 0) {
+    msg += ' Нераспознанных кодов: ' + unknownCodes + '.';
+  }
+  showStatus('decodeStatus', msg, unknownCodes > 0 ? 'error' : 'success');
+}
+
+// ===== USE DECODED AS INPUT =====
+function useAsInput() {
+  const decoded = document.getElementById('decodedText').textContent;
+  let text = decoded;
+  // If multi-line, take Cyrillic line first, or Latin
+  if (decoded.includes('\n')) {
+    const lines = decoded.split('\n');
+    for (const line of lines) {
+      if (line.startsWith('Кириллица:')) {
+        text = line.replace(/^Кириллица:\s*/, '');
+        break;
+      }
+      if (line.startsWith('Латиница:')) {
+        text = line.replace(/^Латиница:\s*/, '');
+      }
+    }
+  }
+  document.getElementById('textInput').value = text;
+  encodeToMorse();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ===== COPY =====
+function copyMorse() {
+  // Copy plain text version (dots and dashes)
+  navigator.clipboard.writeText(currentMorseString).then(() => {
+    showStatus('encodeStatus', 'Код Морзе скопирован в буфер обмена.', 'success');
+  }).catch(() => {
+    showStatus('encodeStatus', 'Не удалось скопировать.', 'error');
+  });
+}
+
+function copyDecoded() {
+  const text = document.getElementById('decodedText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    showStatus('decodeStatus', 'Текст скопирован в буфер обмена.', 'success');
+  }).catch(() => {
+    showStatus('decodeStatus', 'Не удалось скопировать.', 'error');
+  });
+}
+
+// ===== STATUS =====
+function showStatus(id, message, type) {
+  const el = document.getElementById(id);
+  el.textContent = message;
+  el.className = 'status-message ' + type;
+  el.style.display = 'block';
+}
+
+// ===== KEYBOARD SHORTCUTS =====
+document.getElementById('textInput').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') encodeToMorse();
+});
+
+document.getElementById('morseInput').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') decodeFromMorse();
+});
+
+// ===== PLAY SINGLE CHAR FROM REFERENCE TABLE =====
+function playCharSound(code) {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const dotDur = 80;
+  const freq = 650;
+  let time = audioCtx.currentTime + 0.05;
+
+  for (let j = 0; j < code.length; j++) {
+    const dur = (code[j] === '.' ? 1 : 3) * dotDur / 1000;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.value = freq;
+    osc.type = 'sine';
+    gain.gain.value = 0.3;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(time);
+    osc.stop(time + dur);
+    time += dur + dotDur / 1000;
+  }
+}
+
+// ===== BUILD REFERENCE TABLES =====
+function buildRefTables() {
+  const latinGrid = document.getElementById('refGridLatin');
+  const cyrGrid = document.getElementById('refGridCyrillic');
+
+  const latinChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('');
+  latinChars.forEach(ch => {
+    const code = LATIN_TO_MORSE[ch];
+    if (!code) return;
+    const item = document.createElement('div');
+    item.className = 'ref-item';
+    item.innerHTML = '<span class="ref-char">' + ch + '</span><span class="ref-code">' + code + '</span>';
+    item.title = ch + ' → ' + code + ' (нажмите, чтобы послушать)';
+    item.addEventListener('click', () => playCharSound(code));
+    latinGrid.appendChild(item);
+  });
+
+  const cyrChars = 'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'.split('');
+  cyrChars.forEach(ch => {
+    const code = CYRILLIC_TO_MORSE[ch];
+    if (!code) return;
+    const item = document.createElement('div');
+    item.className = 'ref-item';
+    item.innerHTML = '<span class="ref-char">' + ch + '</span><span class="ref-code">' + code + '</span>';
+    item.title = ch + ' → ' + code + ' (нажмите, чтобы послушать)';
+    item.addEventListener('click', () => playCharSound(code));
+    cyrGrid.appendChild(item);
+  });
+}
+
+// ===== INIT =====
+buildRefTables();
+</script>
+</body>
+</html>

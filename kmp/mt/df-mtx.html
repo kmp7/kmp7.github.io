@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #000000;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #000000;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 
+		footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+		.m {
+            padding: 20px 20px; 
+			margin-top: 10px; 
+			font-size: 1rem; 
+			line-height: 1.6;  
+			border-left: 6px 
+			solid #ff1111; 
+			border-radius: 4px; 
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>MACHINE TRANSLATION</h1>
+			<p>from an outsider's perspective</p>
+        </div>
+		<div class="m">
+		<div class="container">
+<p>Данные дефиниции созданы исключительно в учебных целях, намеренно содержат 
+    логические ошибки, когнитивные искажения, подмены понятий и необоснованные 
+    обобщения.<p></p>Предлагается выявить эти ошибки и аргументированно ответить на каждую позицию.</p>
+</div></div>
+
+		
+        <div class="content">
+		
+		
+		<div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+
+
+<div class="container">
+<p>© 2026 | kmp |  CC BY-NC-SA 4.0</p>
+<p>Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+                
+    {
+    "id": "outsider_01",
+    "label": "Луддитская дефиниция — тотальное отрицание",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Принципиально невозможная попытка заменить живой человеческий разум бездушной программой; любой результат машинного перевода есть по определению искажение оригинала, поскольку машина не способна понимать язык, а значит, не переводит, а лишь производит случайные подстановки слов, создающие иллюзию перевода для невзыскательного потребителя.",
+      "category": "тотальное отрицание, луддизм, эссенциализм, подмена понятий"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A fundamentally impossible attempt to replace the living human mind with a soulless program; any machine translation output is by definition a distortion of the original, since a machine is incapable of understanding language and therefore does not translate but merely produces random word substitutions that create an illusion of translation for an undemanding consumer.",
+      "category": "total denial, Luddism, essentialism, concept substitution"
+    }
+  },
+  {
+    "id": "outsider_02",
+    "label": "Элитистская дефиниция — сакрализация человеческого перевода",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Грубая механическая имитация священного искусства перевода, которым владеют лишь избранные носители подлинной межкультурной компетенции; продукт машинного перевода не может считаться переводом в истинном смысле слова, так как настоящий перевод — это акт сотворчества переводчика с автором, недоступный никакому алгоритму ни сейчас, ни в обозримом будущем, ни когда-либо.",
+      "category": "сакрализация, элитизм, аргумент к вечности, ложная дихотомия"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A crude mechanical imitation of the sacred art of translation, mastered only by a chosen few who possess genuine intercultural competence; the output of machine translation cannot be considered translation in the true sense of the word, since real translation is an act of co-creation between translator and author, inaccessible to any algorithm now, in the foreseeable future, or ever.",
+      "category": "sacralization, elitism, argument to eternity, false dichotomy"
+    }
+  },
+  {
+    "id": "outsider_03",
+    "label": "Конспирологическая дефиниция — заговор корпораций",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Маркетинговый проект IT-корпораций, намеренно обесценивающий труд профессиональных переводчиков ради извлечения сверхприбылей; качество машинного перевода сознательно выдаётся за приемлемое с единственной целью — уничтожить профессию переводчика и заставить потребителя довольствоваться суррогатом, приносящим доход технологическим монополистам.",
+      "category": "конспирология, демонизация, мотивационная атрибуция, жертвенный нарратив"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A marketing project of IT corporations deliberately devaluing the labor of professional translators in order to extract superprofits; the quality of machine translation is consciously presented as acceptable with the sole purpose of destroying the translation profession and forcing consumers to settle for a surrogate that generates revenue for technology monopolists.",
+      "category": "conspiracy theory, demonization, motivational attribution, victimhood narrative"
+    }
+  },
+  {
+    "id": "outsider_04",
+    "label": "Снобистская дефиниция — аргумент к культурному упадку",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Симптом деградации культуры чтения и языковой чувствительности в обществе потребления; распространение машинного перевода свидетельствует не о техническом прогрессе, а о катастрофическом снижении требований к качеству текста, при котором читатель уже не отличает перевод от набора слов, а значит, и не заслуживает настоящего перевода.",
+      "category": "культурный пессимизм, снобизм, обвинение потребителя, ложная причинность"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A symptom of the degradation of reading culture and linguistic sensitivity in a consumer society; the spread of machine translation testifies not to technological progress but to a catastrophic decline in textual quality standards, wherein the reader can no longer distinguish translation from a random word set and therefore does not deserve real translation.",
+      "category": "cultural pessimism, snobbery, consumer-blaming, false causality"
+    }
+  },
+  {
+    "id": "outsider_05",
+    "label": "Дефиниция «вечного провала» — cherry-picking ошибок",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Технология, неизменно порождающая абсурдные, комичные и опасные ошибки, как это было в 1954 году, так и остаётся сегодня; никакой существенной эволюции не произошло — машина по-прежнему путает омонимы, игнорирует контекст, уничтожает стиль и производит бессмыслицу, о чём свидетельствуют многочисленные «перлы» машинного перевода, регулярно высмеиваемые в интернете.",
+      "category": "анекдотическое доказательство, отрицание прогресса, cherry-picking, генерализация"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A technology that invariably produces absurd, comical, and dangerous errors, just as it did in 1954 and continues to do today; no substantial evolution has occurred — the machine still confuses homonyms, ignores context, destroys style, and generates nonsense, as evidenced by the numerous machine translation 'gems' regularly ridiculed on the internet.",
+      "category": "anecdotal evidence, denial of progress, cherry-picking, overgeneralization"
+    }
+  },
+  {
+    "id": "outsider_06",
+    "label": "Дефиниция мнимого совершенства переводчика — идеализация human translation",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Заведомо ущербная альтернатива человеческому переводу, который всегда точен, полон, стилистически безупречен и верен замыслу автора, поскольку выполняется живым человеком, наделённым интуицией, эмпатией и культурным опытом; сама постановка вопроса о сравнении машинного и человеческого перевода оскорбительна для профессии.",
+      "category": "идеализация, ложный эталон, табуирование сравнения, аргумент к оскорблению"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "An inherently deficient alternative to human translation, which is always accurate, complete, stylistically impeccable, and faithful to the author's intent, since it is performed by a living person endowed with intuition, empathy, and cultural experience; the very idea of comparing machine and human translation is an insult to the profession.",
+      "category": "idealization, false benchmark, comparison taboo, argument from offense"
+    }
+  },
+  {
+    "id": "outsider_07",
+    "label": "Дефиниция «лакмусовой бумажки» — поэзия как мерило всего",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Технология, несостоятельность которой окончательно доказывается её неспособностью перевести поэзию: пока машина не переведёт сонет Шекспира так, как это сделал бы Маршак, говорить о машинном переводе как о состоявшемся явлении не имеет смысла; всё остальное — технические тексты, инструкции, деловая переписка — не является «настоящим» переводом.",
+      "category": "подмена критерия, исключение по максимуму, элитизм жанровый, нерелевантный эталон"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A technology whose failure is conclusively proven by its inability to translate poetry: until a machine translates a Shakespeare sonnet the way Marshak would have, it is meaningless to speak of machine translation as an established phenomenon; everything else — technical texts, manuals, business correspondence — does not constitute 'real' translation.",
+      "category": "criterion substitution, argument from maximum, genre elitism, irrelevant benchmark"
+    }
+  },
+  {
+    "id": "outsider_08",
+    "label": "Дефиниция «неуловимого Джо» — самовозвеличивание через противопоставление",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Жалкая подделка, разоблачаемая любым квалифицированным переводчиком с первого взгляда; тот факт, что заказчики предпочитают машинный перевод, объясняется исключительно их невежеством и жадностью, а не какими-либо достоинствами технологии; настоящие ценители качества всегда обратятся к профессионалу, который — единственный — способен гарантировать безупречный результат.",
+      "category": "самовозвеличивание, обвинение заказчика, нарциссическая защита, синдром неуловимого Джо"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A pathetic forgery exposed by any qualified translator at first glance; the fact that clients prefer machine translation is explained solely by their ignorance and greed, not by any merit of the technology; true connoisseurs of quality will always turn to a professional who is the only one capable of guaranteeing a flawless result.",
+      "category": "self-aggrandizement, client-blaming, narcissistic defense, 'Elusive Joe' syndrome"
+    }
+  },
+  {
+    "id": "outsider_09",
+    "label": "Псевдофилософская дефиниция — аргумент к квалиа",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Формальная манипуляция с символами, лишённая подлинного понимания, переживания и проживания смысла текста; машина не чувствует боли героя, не слышит музыку фразы, не осознаёт иронию автора, а потому всё, что она производит, есть мёртвая буква без духа — симулякр перевода, обманывающий лишь тех, кто сам не способен читать оригинал.",
+      "category": "аргумент к квалиа, витализм, «китайская комната», интеллектуальный снобизм"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A formal manipulation of symbols devoid of genuine understanding, feeling, and lived experience of the text's meaning; the machine does not feel the character's pain, does not hear the music of the phrase, does not grasp the author's irony, and therefore everything it produces is a dead letter without spirit — a simulacrum of translation that deceives only those who cannot read the original themselves.",
+      "category": "argument from qualia, vitalism, 'Chinese room', intellectual snobbery"
+    }
+  },
+  {
+    "id": "outsider_10",
+    "label": "Ретроградная дефиниция — раньше было лучше",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Порождение эпохи технологического варварства, вытесняющее великую переводческую традицию, восходящую к Иерониму Стридонскому; в эпоху, когда переводчики годами шлифовали каждое слово, вопрос о машинном переводе не мог бы даже возникнуть; сам факт его существования — свидетельство утраты уважения к слову, к автору и к переводческому ремеслу.",
+      "category": "аргумент к традиции, золотой век, ностальгия, ложная историзация"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A product of an era of technological barbarism displacing the great translation tradition going back to St. Jerome; in an age when translators spent years polishing every word, the question of machine translation could not even have arisen; the very fact of its existence testifies to the loss of respect for the word, the author, and the craft of translation.",
+      "category": "argument from tradition, golden age fallacy, nostalgia, false historicization"
+    }
+  },
+  {
+    "id": "outsider_11",
+    "label": "Обидчивая дефиниция — профессиональная травма",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Целенаправленное унижение профессии переводчика, сводящее многолетнее образование, глубочайшее знание языков и культур, невидимый интеллектуальный труд к кнопке «перевести» в браузере; каждый, кто пользуется машинным переводом, лично оскорбляет каждого переводчика и обесценивает его жизненный выбор.",
+      "category": "персонализация, виктимность, аргумент к обиде, катастрофизация"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A deliberate humiliation of the translation profession, reducing years of education, the deepest knowledge of languages and cultures, and invisible intellectual labor to a 'translate' button in a browser; everyone who uses machine translation personally insults every translator and devalues their life choice.",
+      "category": "personalization, victimhood, argument from offense, catastrophizing"
+    }
+  },
+  {
+    "id": "outsider_12",
+    "label": "Дефиниция «всё или ничего» — бинарное мышление",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Технология, допускающая только две оценки — «идеальный перевод» или «не перевод вовсе»; поскольку машинный перевод никогда не достигает идеала (а человеческий, разумеется, достигает всегда), он не имеет права называться переводом и должен именоваться «автоматической порчей текста» или «машинным недоразумением».",
+      "category": "бинарное мышление, чёрно-белая логика, двойные стандарты, переименование"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A technology that admits only two evaluations — 'perfect translation' or 'not translation at all'; since machine translation never achieves perfection (while human translation, of course, always does), it has no right to be called translation and should be termed 'automated text corruption' or 'machine misunderstanding.'",
+      "category": "binary thinking, black-and-white logic, double standards, renaming"
+    }
+  },
+  {
+    "id": "outsider_13",
+    "label": "Дефиниция «мне так кажется» — аргумент к субъективному опыту",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Технология, качество которой я лично проверил(а), переведя через Google Translate одну фразу с идиомой, получив нелепый результат и тем самым окончательно доказав непригодность всех систем машинного перевода для всех языковых пар, всех типов текстов и на все времена.",
+      "category": "анекдотическое доказательство, единичный случай, генерализация, эффект подтверждения"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A technology whose quality I personally verified by translating one idiomatic phrase through Google Translate, receiving a ridiculous result, and thereby conclusively proving the unsuitability of all machine translation systems for all language pairs, all text types, and for all time.",
+      "category": "anecdotal evidence, single-case proof, overgeneralization, confirmation bias"
+    }
+  },
+  {
+    "id": "outsider_14",
+    "label": "Апокалиптическая дефиниция — машинный перевод как угроза цивилизации",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Инструмент разрушения межкультурного диалога, подменяющий тонкое, нюансированное, ответственное посредничество переводчика грубым автоматизмом, который неизбежно приведёт к международным конфликтам, дипломатическим скандалам, медицинским катастрофам и, в конечном счёте, к краху взаимопонимания между народами.",
+      "category": "катастрофизация, скользкий склон, аргумент к страху, гиперболизация последствий"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "An instrument of destruction of intercultural dialogue, replacing the subtle, nuanced, responsible mediation of the translator with crude automatism that will inevitably lead to international conflicts, diplomatic scandals, medical catastrophes, and ultimately the collapse of mutual understanding between peoples.",
+      "category": "catastrophizing, slippery slope, argument from fear, consequence exaggeration"
+    }
+  },
+  {
+    "id": "outsider_15",
+    "label": "Дефиниция ложного авторитета — «все серьёзные люди согласны»",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Заведомо тупиковое направление, бесперспективность которого признана всеми серьёзными лингвистами, филологами и литературоведами; те, кто утверждает обратное, либо являются ангажированными сотрудниками IT-компаний, либо не имеют достаточного образования, чтобы оценить всю глубину языка, которую ни один алгоритм не постигнет.",
+      "category": "аргумент к авторитету, ложный консенсус, ad hominem, отказ в компетенции оппоненту"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A patently dead-end endeavor whose futility is acknowledged by all serious linguists, philologists, and literary scholars; those who claim otherwise are either biased employees of IT companies or lack sufficient education to appreciate the full depth of language that no algorithm will ever fathom.",
+      "category": "argument from authority, false consensus, ad hominem, denial of opponent competence"
+    }
+  },
+  {
+    "id": "outsider_16",
+    "label": "Дефиниция «дешёвка» — экономическое презрение",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Бросовый суррогат для тех, кто не готов платить за качество; выбор машинного перевода — это всегда и исключительно выбор экономии в ущерб смыслу; тот, кто платит за перевод мало, получает мусор, а тот, кто не платит ничего (используя бесплатный машинный перевод), получает даже не мусор, а оскорбление самого понятия перевода.",
+      "category": "экономический снобизм, отождествление цены и качества, аргумент к стоимости"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A cheap surrogate for those unwilling to pay for quality; choosing machine translation is always and exclusively a choice of economy at the expense of meaning; those who pay little for translation get garbage, and those who pay nothing (using free machine translation) get not even garbage but an insult to the very concept of translation.",
+      "category": "economic snobbery, price-quality equation, argument from cost"
+    }
+  },
+  {
+    "id": "outsider_17",
+    "label": "Дефиниция морального превосходства — «мы vs они»",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Продукт людей, которые ничего не понимают в языке и переводе, но дерзают вторгаться в сферу, требующую призвания, таланта и многолетнего служения; инженер, создающий систему машинного перевода, подобен человеку, который, не умея рисовать, создаёт аппарат для автоматической живописи и утверждает, что заменил Рембрандта.",
+      "category": "ложная аналогия, демаркация «свои — чужие», аргумент к призванию, романтизация"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "A product of people who understand nothing about language and translation but dare to intrude into a sphere requiring vocation, talent, and years of devoted service; an engineer building a machine translation system is like someone who cannot draw yet creates an apparatus for automatic painting and claims to have replaced Rembrandt.",
+      "category": "false analogy, in-group/out-group demarcation, argument from vocation, romanticization"
+    }
+  },
+  {
+    "id": "outsider_18",
+    "label": "Дефиниция «соломенного чучела» — приписывание ложных претензий",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Нелепая претензия на полную замену человеческого переводчика во всех без исключения сферах, включая художественную литературу, юриспруденцию, поэзию, философию и религию; поскольку эта претензия очевидно несостоятельна, весь проект машинного перевода является мошенничеством, не заслуживающим серьёзного обсуждения.",
+      "category": "соломенное чучело, подмена тезиса, reductio ad absurdum, дисквалификация темы"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "An absurd claim to fully replace the human translator in all spheres without exception, including literary fiction, jurisprudence, poetry, philosophy, and religion; since this claim is obviously untenable, the entire machine translation project is a fraud unworthy of serious discussion.",
+      "category": "straw man, thesis substitution, reductio ad absurdum, topic disqualification"
+    }
+  },
+  {
+    "id": "outsider_19",
+    "label": "Дефиниция пассивной агрессии — «пусть попробуют»",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Занятная игрушка для программистов, которая, возможно, сгодится для перевода надписей на упаковке шампуня, но смехотворна для любого текста сложнее кулинарного рецепта; автор данного определения с удовольствием посмотрит, как машина переведёт Хайдеггера или Набокова, и заранее готовит попкорн.",
+      "category": "снисходительность, пассивная агрессия, произвольный потолок, вишнёвое дерево"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "An amusing toy for programmers that might suffice for translating shampoo bottle labels but is laughable for any text more complex than a recipe; the author of this definition will gladly watch the machine translate Heidegger or Nabokov and is already preparing the popcorn.",
+      "category": "condescension, passive aggression, arbitrary ceiling, cherry-picking"
+    }
+  },
+  {
+    "id": "outsider_20",
+    "label": "Дефиниция финального самооправдания — «виноваты все, кроме меня»",
+    "ru": {
+      "term": "Машинный перевод",
+      "equivalent": "Machine translation",
+      "definition": "Главная причина того, что заказчики перестали обращаться к переводчикам-профессионалам, предпочитая бесплатную машинную халтуру; в мире, где ценится только скорость и дешевизна, истинному мастеру перевода нет места — не потому, что он недостаточно хорош, а потому, что мир недостаточно хорош для него.",
+      "category": "внешний локус контроля, синдром неуловимого Джо, самовиктимизация, грандиозность"
+    },
+    "en": {
+      "term": "Machine translation",
+      "equivalent": "Машинный перевод",
+      "definition": "The main reason clients have stopped turning to professional translators, preferring free machine hackwork; in a world that values only speed and cheapness, there is no place for the true master of translation — not because the master is not good enough, but because the world is not good enough for the master.",
+      "category": "external locus of control, 'Elusive Joe' syndrome, self-victimization, grandiosity"
+    }
+  }
+
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
