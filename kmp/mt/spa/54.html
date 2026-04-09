@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp-1954</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #33ff33;
+            font-family: 'Courier New', monospace; 
+            margin: 0;
+            padding: 20px;
+            text-shadow: 0 0 5px #33ff33;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #33ff33;
+            animation: flicker 0.5s infinite alternate;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .column {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .panel {
+            background-color: #001100;
+            border: 2px solid #33ff33;
+            padding: 15px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .panel-header {
+            margin-top: 0;
+            border-bottom: 1px solid #33ff33;
+            padding-bottom: 10px;
+        }
+        
+        .control-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .indicator {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: #440000;
+            border: 1px solid #33ff33;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        
+        .indicator.active {
+            background-color: #ff3333;
+            box-shadow: 0 0 10px #ff3333;
+        }
+        
+        .indicator.processing {
+            background-color: #ffaa00;
+            box-shadow: 0 0 10px #ffaa00;
+        }
+        
+        .indicator.success {
+            background-color: #33ff33;
+            box-shadow: 0 0 10px #33ff33;
+        }
+        
+        button {
+            background-color: #001100;
+            color: #33ff33;
+            border: 2px solid #33ff33;
+            padding: 8px 15px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background-color: #004400;
+        }
+        
+        button:active {
+            background-color: #006600;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 200px;
+            background-color: #001100;
+            color: #33ff33;
+            border: 1px solid #33ff33;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            resize: none;
+        }
+        
+        .output {
+            width: 100%;
+            height: 200px;
+            background-color: #001100;
+            color: #33ff33;
+            border: 1px solid #33ff33;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .scanline {
+            width: 100%;
+            height: 2px;
+            background-color: rgba(51, 255, 51, 0.3);
+            position: absolute;
+            top: 0;
+            left: 0;
+            animation: scan 8s linear infinite;
+            pointer-events: none;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .loading-text {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .progress-bar {
+            width: 300px;
+            height: 20px;
+            border: 2px solid #33ff33;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            width: 0;
+            background-color: #33ff33;
+            transition: width 3s ease-in-out;
+        }
+        
+        .status-panel {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        @keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+                opacity: 0.95;
+            }
+            20%, 24%, 55% {
+                opacity: 0.7;
+            }
+        }
+        
+        @keyframes scan {
+            0% {
+                top: 0;
+            }
+            100% {
+                top: 100%;
+            }
+        }
+        
+        .examples-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+        
+        .examples-panel.show {
+            max-height: 200px;
+        }
+        
+        .example-item {
+            cursor: pointer;
+            padding: 5px;
+        }
+        
+        .example-item:hover {
+            background-color: #004400;
+        }
+        
+        .timer {
+            font-weight: bold;
+            font-size: 18px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .crt-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.15;
+        }
+    </style>
+</head>
+<body>
+    <div class="crt-effect"></div>
+    
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-text">IBM-701 GEORGETOWN TRANSLATION SYSTEM</div>
+        <div class="loading-text">ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ...</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <p id="loadingStatus">ЗАГРУЗКА КОМПОНЕНТОВ...</p>
+    </div>
+    
+    <div class="container">
+<div class="header">
+        <h1>ДЖОРДЖТАУНСКИЙ ЭКСПЕРИМЕНТ 1954</h1>
+        <p>АВТОМАТИЧЕСКИЙ ПЕРЕВОД РУССКИЙ-АНГЛИЙСКИЙ</p>
+        <div class="status-panel">
+            <div class="status-item">
+                <div class="indicator" id="systemIndicator"></div>
+                <span>СИСТЕМА АКТИВНА</span>
+            </div>
+            <div class="status-item">
+                <div class="indicator" id="dictionaryIndicator"></div>
+                <span>СЛОВАРЬ ЗАГРУЖЕН</span>
+            </div>
+            <div class="status-item">
+                <div class="indicator" id="rulesIndicator"></div>
+                <span>ПРАВИЛА ПРИМЕНЯЮТСЯ</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="column">
+            <div class="panel">
+                <div class="scanline"></div>
+                <h3 class="panel-header">ВВОД (РУССКИЙ)</h3>
+                <textarea id="inputText" placeholder="Введите текст на русском языке..."></textarea>
+            </div>
+            
+            <div class="panel">
+                <div class="scanline"></div>
+                <h3 class="panel-header">УПРАВЛЕНИЕ</h3>
+                <div class="control-panel">
+                    <button id="translateBtn">НАЧАТЬ ПЕРЕВОД</button>
+                    <button id="examplesBtn">ЗАГРУЗИТЬ ПЕРФОКАРТЫ</button>
+                    <button id="clearBtn">ОЧИСТИТЬ</button>
+                </div>
+                <div class="timer" id="processingTimer">ВРЕМЯ ОБРАБОТКИ: 00:00:00</div>
+                <div class="examples-panel" id="examplesPanel">
+                    <div class="example-item" data-text="Качественный анализ показал наличие серы в органическом соединении.">Пример 1: Анализ органического соединения</div>
+                    <div class="example-item" data-text="Алкены являются ненасыщенными углеводородами с двойной связью между атомами углерода.">Пример 2: Определение алкенов</div>
+                    <div class="example-item" data-text="При нагревании кристаллы бензойной кислоты превращаются в пар.">Пример 3: Свойства бензойной кислоты</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="column">
+            <div class="panel">
+                <div class="scanline"></div>
+                <h3 class="panel-header">ВЫВОД (АНГЛИЙСКИЙ)</h3>
+                <div class="output" id="outputText"></div>
+            </div>
+            
+            <div class="panel">
+                <div class="scanline"></div>
+                <h3 class="panel-header">ИНФОРМАЦИЯ О СИСТЕМЕ</h3>
+                <p>- СЛОВАРЬ: 250 СЛОВ</p>
+                <p>- ГРАММАТИЧЕСКИЕ ПРАВИЛА: 6</p>
+                <p>- ТЕМАТИКА: ОРГАНИЧЕСКАЯ ХИМИЯ</p>
+                <p>- МЕТОД ТРАНСЛИТЕРАЦИИ: ЛАТИНИЦА</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Симуляция словаря (упрощенная версия)
+    const dictionary = {
+        "Орлова Ева Адамовна": "Orlova Eva A.",
+		"тестирует": "tests",
+		"модель": "model",
+		"анализ": "analysis",
+        "качественный": "qualitative",
+        "показал": "showed",
+        "наличие": "presence",
+        "серы": "of sulfur",
+        "в": "in",
+        "органическом": "organic",
+        "соединении": "compound",
+        "алкены": "alkenes",
+        "являются": "are",
+        "ненасыщенными": "unsaturated",
+        "углеводородами": "hydrocarbons",
+        "с": "with",
+        "двойной": "double",
+        "связью": "bond",
+        "между": "between",
+        "атомами": "atoms",
+        "углерода": "of carbon",
+        "при": "upon",
+        "нагревании": "heating",
+        "кристаллы": "crystals",
+        "бензойной": "benzoic",
+        "кислоты": "acid",
+        "превращаются": "transform",
+        "пар": "vapor"
+    };
+
+    // Функция транслитерации
+    function transliterate(word) {
+        const cyrillic = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
+        const latin = "abvgdeëžzijklmnoprstufhcčšŝʺyʹèûâ";
+        return word.split('').map(char => {
+            const lower = char.toLowerCase();
+            const index = cyrillic.indexOf(lower);
+            if (index < 0) return char;
+            const latinChar = latin[index];
+            return char === lower ? latinChar : latinChar.toUpperCase();
+        }).join('');
+    }
+
+    // Симуляция правил перевода
+    function applyRules(words) {
+        let result = [];
+        
+        for (let word of words) {
+            // Удаляем знаки препинания для проверки в словаре
+            const punctuation = word.match(/[.,?!;:]$/);
+            const cleanWord = word.replace(/[.,?!;:]$/, '').toLowerCase();
+            
+            // Проверяем наличие слова в словаре
+            if (dictionary[cleanWord]) {
+                result.push(dictionary[cleanWord] + (punctuation ? punctuation[0] : ''));
+            } else {
+                // Транслитерация, если слова нет в словаре
+                result.push(transliterate(word));
+            }
+        }
+        
+        // Правило 1: Порядок слов (упрощенно - инверсия подлежащего и сказуемого)
+        if (result.length > 3) {
+            const temp = result[1];
+            result[1] = result[2];
+            result[2] = temp;
+        }
+        
+        // Правило 2: Добавление артиклей (упрощенно)
+        if (result.length > 0 && !result[0].match(/^(the|a|an)/i)) {
+            if (result[0].endsWith('s')) {
+                result[0] = "The " + result[0];
+            } else {
+                result[0] = "A " + result[0];
+            }
+        }
+        
+        return result;
+    }
+
+    // Функция для имитации процесса перевода
+    function translateText(text) {
+        return new Promise((resolve) => {
+            const words = text.split(/\s+/);
+            const translatedWords = applyRules(words);
+            resolve(translatedWords.join(' '));
+        });
+    }
+
+    // Функция для печати текста по символам
+    function typeText(element, text, callback) {
+        let i = 0;
+        element.textContent = '';
+        const interval = setInterval(() => {
+            element.textContent += text[i];
+            i++;
+            if (i >= text.length) {
+                clearInterval(interval);
+                if (callback) callback();
+            }
+        }, 50);
+    }
+
+    // Инициализация загрузочного экрана
+    document.addEventListener('DOMContentLoaded', () => {
+        const progressFill = document.getElementById('progressFill');
+        const loadingStatus = document.getElementById('loadingStatus');
+    const loadingScreen = document.getElementById('loadingScreen');
+    
+    // Анимация загрузки
+    setTimeout(() => {
+        progressFill.style.width = '30%';
+        loadingStatus.textContent = 'ЗАГРУЗКА СЛОВАРЯ...';
+    }, 500);
+    
+    setTimeout(() => {
+        progressFill.style.width = '60%';
+        loadingStatus.textContent = 'ЗАГРУЗКА ГРАММАТИЧЕСКИХ ПРАВИЛ...';
+    }, 1500);
+    
+    setTimeout(() => {
+        progressFill.style.width = '90%';
+        loadingStatus.textContent = 'КАЛИБРОВКА СИСТЕМЫ...';
+    }, 2500);
+    
+    setTimeout(() => {
+        progressFill.style.width = '100%';
+        loadingStatus.textContent = 'СИСТЕМА ГОТОВА К РАБОТЕ';
+    }, 3500);
+    
+    setTimeout(() => {
+        loadingScreen.style.display = 'none';
+        
+        // Активируем индикаторы
+        document.getElementById('systemIndicator').classList.add('success');
+        document.getElementById('dictionaryIndicator').classList.add('success');
+        document.getElementById('rulesIndicator').classList.add('success');
+        
+        // Добавляем звуковые эффекты запуска
+        const startupSound = new Audio();
+        startupSound.src = 'data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+        startupSound.play();
+    }, 4000);
+});
+
+// Обработчики событий
+document.getElementById('translateBtn').addEventListener('click', async () => {
+    const inputText = document.getElementById('inputText').value.trim();
+    const outputText = document.getElementById('outputText');
+    const processingTimer = document.getElementById('processingTimer');
+    
+    if (!inputText) return;
+    
+    // Сбрасываем предыдущий вывод
+    outputText.textContent = '';
+    
+    // Активируем индикаторы процесса
+    document.getElementById('systemIndicator').classList.add('active');
+    document.getElementById('dictionaryIndicator').classList.add('processing');
+    document.getElementById('rulesIndicator').classList.add('processing');
+    
+    // Добавляем звуковые эффекты обработки
+    const processingSound = new Audio();
+    processingSound.src = 'data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+    processingSound.loop = true;
+    processingSound.play();
+    
+    // Таймер обработки
+    let seconds = 0;
+    const timerInterval = setInterval(() => {
+        seconds++;
+        const min = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const sec = (seconds % 60).toString().padStart(2, '0');
+        processingTimer.textContent = `ВРЕМЯ ОБРАБОТКИ: 00:${min}:${sec}`;
+    }, 1000);
+    
+    // Имитация задержки в 5 секунд
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    // Останавливаем таймер и звуки
+    clearInterval(timerInterval);
+    processingSound.pause();
+    
+    // Выполняем перевод
+    const translatedText = await translateText(inputText);
+    
+    // Печатаем результат по символам
+    typeText(outputText, translatedText, () => {
+        // Возвращаем индикаторы в нормальное состояние
+        document.getElementById('systemIndicator').classList.remove('active');
+        document.getElementById('systemIndicator').classList.add('success');
+        document.getElementById('dictionaryIndicator').classList.remove('processing');
+        document.getElementById('dictionaryIndicator').classList.add('success');
+        document.getElementById('rulesIndicator').classList.remove('processing');
+        document.getElementById('rulesIndicator').classList.add('success');
+        
+        // Звуковой сигнал завершения
+        const completionSound = new Audio();
+        completionSound.src = 'data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+        completionSound.play();
+    });
+});
+
+document.getElementById('examplesBtn').addEventListener('click', () => {
+    const examplesPanel = document.getElementById('examplesPanel');
+    examplesPanel.classList.toggle('show');
+    
+    // Звук переключения
+    const switchSound = new Audio();
+    switchSound.src = 'data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+    switchSound.play();
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+    document.getElementById('inputText').value = '';
+    document.getElementById('outputText').textContent = '';
+    document.getElementById('processingTimer').textContent = 'ВРЕМЯ ОБРАБОТКИ: 00:00:00';
+    
+    // Звук очистки
+    const clearSound = new Audio();
+    clearSound.src = 'data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+            clearSound.play();
+        });
+
+        // Обработчики примеров
+        document.querySelectorAll('.example-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.getElementById('inputText').value = item.getAttribute('data-text');
+                
+                // Звук выбора примера
+                const selectSound = new Audio();
+                selectSound.src = 'data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+                selectSound.play();
+                
+                // Скрываем панель примеров после выбора
+                document.getElementById('examplesPanel').classList.remove('show');
+            });
+        });
+
+        // Добавляем случайные мерцания терминала
+        setInterval(() => {
+            if (Math.random() > 0.95) {
+                document.body.style.opacity = '0.8';
+                setTimeout(() => {
+                    document.body.style.opacity = '1';
+                }, 100);
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,1270 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: #2a3a5c;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --accent3: #059669;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --text-mid: #94a3b8;
+    --green-bit: #22c55e;
+    --zero-bit: #1e3a2f;
+    --one-bit: #166534;
+    --font-mono: 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 24px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 30px,
+      rgba(0,212,255,0.03) 30px, rgba(0,212,255,0.03) 31px
+    );
+    pointer-events: none;
+  }
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    position: relative;
+  }
+  .logo-chip {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+  }
+  .header-text h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+  .header-text p {
+    font-size: 0.78rem;
+    color: var(--text-mid);
+    margin-top: 2px;
+  }
+  .badge {
+    margin-left: auto;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  /* ── LAYOUT ── */
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+
+  /* ── CONTEXT BANNER ── */
+  .context-banner {
+    background: linear-gradient(135deg, #1e1b4b, #162032);
+    border: 1px solid #3730a3;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    font-size: 0.83rem;
+    color: #a5b4fc;
+    line-height: 1.6;
+    position: relative;
+  }
+  .context-banner strong { color: #c7d2fe; }
+  .context-banner .cb-icon {
+    font-size: 1.1rem;
+    margin-right: 6px;
+  }
+
+  /* ── TWO COLUMNS ── */
+  .cols {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 800px) {
+    .cols { grid-template-columns: 1fr; }
+  }
+
+  /* ── WORD LIST ── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .panel-head {
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: var(--text-mid);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-head .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    flex-shrink: 0;
+  }
+
+  .word-list { padding: 8px; }
+  .word-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    border: 1px solid transparent;
+    margin-bottom: 4px;
+  }
+  .word-item:hover {
+    background: rgba(0,212,255,0.07);
+    border-color: rgba(0,212,255,0.2);
+    transform: translateX(3px);
+  }
+  .word-item.active {
+    background: rgba(0,212,255,0.12);
+    border-color: rgba(0,212,255,0.4);
+  }
+  .word-item .wi-addr {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    width: 32px;
+    flex-shrink: 0;
+  }
+  .word-item .wi-en {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text);
+    flex: 1;
+  }
+  .word-item .wi-ru {
+    font-size: 0.78rem;
+    color: var(--accent3);
+  }
+  .word-item .wi-pos {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .pos-noun  { background: rgba(124,58,237,0.2); color: #a78bfa; }
+  .pos-verb  { background: rgba(239,68,68,0.15); color: #fca5a5; }
+  .pos-adj   { background: rgba(245,158,11,0.15); color: #fcd34d; }
+  .pos-prep  { background: rgba(6,182,212,0.15); color: #67e8f9; }
+  .pos-num   { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+
+  .word-count {
+    padding: 10px 16px;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* ── INSPECTOR PANEL ── */
+  .inspector {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Word header card */
+  .word-header-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .wh-en {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,212,255,0.4);
+    cursor: default;
+    transition: text-shadow 0.3s;
+    line-height: 1;
+  }
+  .wh-arrow {
+    font-size: 1.2rem;
+    color: var(--text-dim);
+  }
+  .wh-ru {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent3);
+    line-height: 1;
+  }
+  .wh-meta {
+    margin-left: auto;
+    text-align: right;
+  }
+  .wh-meta .addr-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+  .wh-meta .addr-val {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--warn);
+  }
+
+  /* ── BIT VISUALIZER ── */
+  .bit-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .bit-container {
+    padding: 16px;
+    overflow-x: auto;
+  }
+  .bit-label-row {
+    display: flex;
+    margin-bottom: 4px;
+  }
+  .bit-section-label {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    text-align: center;
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .bits-row {
+    display: flex;
+    gap: 2px;
+    flex-wrap: nowrap;
+    margin-bottom: 6px;
+  }
+  .bit-group {
+    display: flex;
+    gap: 2px;
+    margin-right: 6px;
+    position: relative;
+  }
+  .bit-group::after {
+    content: '';
+    position: absolute;
+    right: -4px;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+  .bit-group:last-child::after { display: none; }
+
+  .bit-cell {
+    width: 22px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+    user-select: none;
+    position: relative;
+  }
+  .bit-cell.bit-0 {
+    background: rgba(30,58,47,0.5);
+    color: #4ade80;
+    border-color: #166534;
+  }
+  .bit-cell.bit-1 {
+    background: rgba(22,101,52,0.8);
+    color: #bbf7d0;
+    border-color: #22c55e;
+    box-shadow: 0 0 6px rgba(34,197,94,0.3);
+  }
+  .bit-cell:hover {
+    transform: scaleY(1.1);
+    border-color: var(--accent) !important;
+    z-index: 2;
+  }
+  .bit-cell.bit-1:hover {
+    box-shadow: 0 0 10px rgba(0,212,255,0.5);
+  }
+  .bit-cell.highlight-bit {
+    animation: pulse-bit 0.6s ease-out;
+  }
+  @keyframes pulse-bit {
+    0%   { transform: scaleY(1.3); box-shadow: 0 0 14px rgba(0,212,255,0.9); }
+    100% { transform: scaleY(1); }
+  }
+
+  .bit-index-row {
+    display: flex;
+    gap: 2px;
+    flex-wrap: nowrap;
+  }
+  .bit-idx {
+    width: 22px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.5rem;
+    color: var(--text-dim);
+    margin-right: 0;
+  }
+  .bit-group-idx {
+    display: flex;
+    gap: 2px;
+    margin-right: 6px;
+  }
+
+  /* Field legend */
+  .field-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .fl-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: var(--text-mid);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .fl-item:hover { background: rgba(255,255,255,0.05); border-color: var(--border); }
+  .fl-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .fl-bits { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); }
+
+  /* ── FIELD DECODER ── */
+  .field-decoder {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  @media (max-width: 600px) {
+    .field-grid { grid-template-columns: 1fr; }
+  }
+  .field-card {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .field-card:nth-child(even) { border-right: none; }
+  .field-card:nth-last-child(-n+2) { border-bottom: none; }
+  .field-card:hover { background: rgba(255,255,255,0.02); }
+  .fc-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .fc-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .fc-name {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-mid);
+  }
+  .fc-bits-range {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: var(--text-dim);
+  }
+  .fc-value {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .fc-decoded {
+    font-size: 0.75rem;
+    color: var(--text-mid);
+    line-height: 1.4;
+  }
+  .fc-binary {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+    word-break: break-all;
+  }
+
+  /* ── TASK PANEL ── */
+  .task-panel {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 1px solid #2a3a6c;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .task-header {
+    padding: 12px 16px;
+    background: rgba(124,58,237,0.15);
+    border-bottom: 1px solid #2a3a6c;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .task-icon { font-size: 1rem; }
+  .task-title { font-size: 0.75rem; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: 1px; }
+  .task-body { padding: 14px 16px; }
+  .task-desc { font-size: 0.82rem; color: var(--text-mid); line-height: 1.6; margin-bottom: 12px; }
+  .task-desc code {
+    background: rgba(124,58,237,0.2);
+    color: #c4b5fd;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+  .task-status {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    font-weight: 500;
+    transition: all 0.3s;
+  }
+  .task-status.waiting {
+    background: rgba(100,116,139,0.15);
+    border: 1px solid rgba(100,116,139,0.3);
+    color: var(--text-dim);
+  }
+  .task-status.success {
+    background: rgba(5,150,105,0.2);
+    border: 1px solid rgba(5,150,105,0.4);
+    color: #6ee7b7;
+  }
+  .task-status.error {
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #fca5a5;
+  }
+  .task-reset {
+    margin-top: 10px;
+    background: rgba(124,58,237,0.2);
+    border: 1px solid rgba(124,58,237,0.4);
+    color: #a78bfa;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .task-reset:hover { background: rgba(124,58,237,0.35); }
+
+  /* ── MEMORY COST ── */
+  .mem-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .mem-title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+  .mem-bar-wrap {
+    height: 28px;
+    background: #0d1829;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    position: relative;
+    margin-bottom: 8px;
+  }
+  .mem-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    transition: width 0.8s ease;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: white;
+    white-space: nowrap;
+  }
+  .mem-stats {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .mem-stat {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+  }
+  .mem-stat span { color: var(--warn); font-weight: 700; font-family: var(--font-mono); }
+
+  /* ── PLACEHOLDER ── */
+  .placeholder {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 60px 24px;
+    text-align: center;
+    color: var(--text-dim);
+  }
+  .placeholder-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.4; }
+  .placeholder h3 { font-size: 1rem; color: var(--text-mid); margin-bottom: 6px; }
+  .placeholder p { font-size: 0.8rem; line-height: 1.5; }
+
+  /* ── TOOLTIP ── */
+  .tooltip-wrap { position: relative; display: inline-block; }
+  .tooltip-box {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.68rem;
+    padding: 5px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 10;
+    line-height: 1.5;
+    text-align: center;
+    font-family: var(--font-mono);
+  }
+  .tooltip-wrap:hover .tooltip-box { opacity: 1; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in { animation: fadeInUp 0.3s ease forwards; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a4a6c; }
+
+  /* field highlight overlays on bits */
+  .bit-cell[data-field="basis"]     { border-bottom: 2px solid #7c3aed; }
+  .bit-cell[data-field="pos"]       { border-bottom: 2px solid #f59e0b; }
+  .bit-cell[data-field="grammar"]   { border-bottom: 2px solid #06b6d4; }
+  .bit-cell[data-field="special"]   { border-bottom: 2px solid #10b981; }
+  .bit-cell[data-field="reserve"]   { border-bottom: 2px solid #374151; }
+
+  .highlighted-field .bit-cell:not([data-field="basis"]):not([data-field="pos"]):not([data-field="grammar"]):not([data-field="special"]):not([data-field="reserve"]) {
+    opacity: 0.3;
+  }
+
+  /* stat change flash */
+  @keyframes flash-green {
+    0%  { background: rgba(34,197,94,0.4); }
+    100%{ background: transparent; }
+  }
+  .flash { animation: flash-green 0.5s ease; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    
+    <div class="header-text">
+      <h1>Инспектор машинного слова БЭСМ</h1>
+      <p>Cтруктура словарной ячейки · Эксперимент 1955 года</p>
+    </div>
+    <div class="badge">ИТМиВТ · 1955</div>
+  </div>
+</header>
+
+<div class="page">
+
+  <div class="context-banner">
+    
+    <p>В декабре 1955 года под руководством <strong>Д.Ю. Панова</strong> и <strong>И.С. Мухина</strong> на ЭВМ <strong>БЭСМ</strong> (Большая Электронно-Счётная Машина) был выполнен первый в СССР автоматический перевод с английского на русский. В словаре БЭСМ каждое слово кодировалось <strong>45-битной ячейкой</strong>, разбитой на поля: основа (адрес английского слова), часть речи, грамматические признаки, управление и резервный адрес перевода.</p>
+        <p>БЭСМ не «читала» буквы — она сравнивала числа. Изменяя отдельные биты, лингвист мог управлять родом, числом, падежными требованиями. Эта визуализация показывает структуру машинного слова так, как если бы мы смотрели на перфокарту — каждый бит «пробит» или нет.</p><br>
+       
+	<h4>ИНСТРУКЦИЯ</h4>
+        <ul>
+          <li>Выберите слово в левом столбце (английское слово).</li>
+          <li>В центральной панели отобразятся 45 бит, разбитые на поля: основа (0-14), ЧР (15-17), грамматика (18-24), особенности (25-29), резервный адрес перевода (30-44).</li>
+          <li>Кликните по любому биту — он изменится с 0 на 1 или наоборот.</li>
+          <li>Справа внизу будет задание: изменить конкретный бит до указанного значения.</li>
+		  <li>Прочувствуете, как один бит меняет грамматику))</li>
+          <li>Нажмите «Сбросить биты», чтобы вернуть исходные значения слова.</li>
+          
+        </ul>
+  </div>
+
+  <div class="cols">
+
+    <!-- LEFT: Word list -->
+    <div>
+      <div class="panel">
+        <div class="panel-head">
+          <div class="dot"></div>
+          Словарь · 950 слов (фрагмент)
+        </div>
+        <div class="word-list" id="wordList"></div>
+        <div class="word-count">
+          <span>Показано слов: <strong id="shownCount">0</strong></span>
+          <span>БЭСМ RAM: <strong>2048 ячеек</strong></span>
+        </div>
+      </div>
+
+      <!-- Memory cost -->
+      <div class="mem-panel" style="margin-top:16px">
+        <div class="mem-title">Использование памяти БЭСМ</div>
+        <div class="mem-bar-wrap">
+          <div class="mem-bar-fill" id="memBar" style="width:46.3%">950 слов</div>
+        </div>
+        <div class="mem-stats">
+          <div class="mem-stat">Словарь: <span>950</span> ячеек</div>
+          <div class="mem-stat">Программа: <span>~150</span> ячеек</div>
+          <div class="mem-stat">Всего RAM: <span>2048</span> ячеек</div>
+          <div class="mem-stat">Свободно: <span>~948</span> ячеек</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Inspector -->
+    <div class="inspector" id="inspector">
+      <div class="placeholder">
+        <div class="placeholder-icon"></div>
+        <h3>Выберите слово для инспекции</h3>
+        <p>Нажмите на любое английское слово<br>в списке слева, чтобы развернуть<br>его машинное представление.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+
+const POS_CODES = {
+  '001': { label: 'Существительное', badge: 'pos-noun',  tag: 'N',   color: '#a78bfa' },
+  '010': { label: 'Глагол',          badge: 'pos-verb',  tag: 'V',   color: '#fca5a5' },
+  '011': { label: 'Прилагательное',  badge: 'pos-adj',   tag: 'Adj', color: '#fcd34d' },
+  '100': { label: 'Предлог',         badge: 'pos-prep',  tag: 'Pr',  color: '#67e8f9' },
+  '101': { label: 'Числительное',    badge: 'pos-num',   tag: 'Num', color: '#6ee7b7' },
+};
+
+const GENDER = { '00': '—',    '01': 'Муж.',  '10': 'Жен.',  '11': 'Ср.' };
+const NUMBER = { '0':  'Ед.ч.', '1': 'Мн.ч.' };
+const DECL   = { '000':'1-е скл.','001':'2-е скл.','010':'3-е скл.','011':'Несклон.','100':'Аномальное' };
+const CONJ   = { '000':'1-е спр.','001':'2-е спр.','010':'Неправ.','011':'Безличн.' };
+const CASE_MGMT = {
+  '00000': '—',
+  '00001': 'Требует Род.п.',
+  '00010': 'Требует Дат.п.',
+  '00011': 'Требует Вин.п.',
+  '00100': 'Требует Тв.п.',
+  '00101': 'Требует Пр.п.',
+  '01000': 'Управление: на+Вин.',
+  '01001': 'Управление: в+Пр.',
+  '01010': 'Перех. глагол',
+  '10000': 'Краткая форма',
+  '10001': 'Сравн. степень',
+};
+
+// 45-bit word structure:
+// bits 0-14  (15 bits): basis address
+// bits 15-17  (3 bits): POS code
+// bits 18-24  (7 bits): grammar flags [number(1), gender(2), decl/conj(3), animacy(1)]
+// bits 25-29  (5 bits): special / case management
+// bits 30-44  (15 bits): reserve / translation address
+
+const WORDS = [
+  {
+    en:'equation', ru:'уравнение',
+    addr: '0x05A',
+    basis: '000000001011010',  // 90 dec
+    pos: '001',
+    grammar: '0011001',        // sg, neuter, 2nd decl, inanim
+    special: '00000',
+    reserve: '000000001011010',
+    taskBit: 18, taskGoal: 1,
+    taskDesc: 'Измените бит <code>18</code> (флаг числа) с <code>0</code> на <code>1</code>, чтобы слово «equation» стало множественным числом — «equations» (уравнения).',
+    taskSuccess: '✅ Отлично! Бит числа = 1 → множественное число. БЭСМ выведет «уравнения».',
+    taskError: 'Не то. Нужен бит 18 = 1.'
+  },
+  {
+    en:'translate', ru:'переводить',
+    addr: '0x11F',
+    basis: '000000100011111',  // 287 dec
+    pos: '010',
+    grammar: '0000100',        // sg, -, 1st conj, transit
+    special: '01010',
+    reserve: '000000100011111',
+    taskBit: 20, taskGoal: 1,
+    taskDesc: 'Измените бит <code>20</code> (тип спряжения), чтобы глагол перешёл во 2-е спряжение.',
+    taskSuccess: '✅ Правильно! Код спряжения изменён — БЭСМ применит другие окончания.',
+    taskError: 'Пока не то. Установите бит 20 = 1.'
+  },
+  {
+    en:'automatic', ru:'автоматический',
+    addr: '0x2C3',
+    basis: '000001011000011',  // 355 dec
+    pos: '011',
+    grammar: '0001000',        // sg, masc, —, —
+    special: '10000',          // short form possible
+    reserve: '000001011000011',
+    taskBit: 19, taskGoal: 1,
+    taskDesc: 'Установите бит <code>19</code> = 1, чтобы переключить прилагательное в женский род («автоматическая»).',
+    taskSuccess: '✅ Верно! Гендерный флаг изменён — БЭСМ подберёт окончание «-ая».',
+    taskError: 'Нет. Нужен бит 19 = 1.'
+  },
+  {
+    en:'memory', ru:'память',
+    addr: '0x07D',
+    basis: '000000001111101',  // 125 dec
+    pos: '001',
+    grammar: '0101000',        // sg, fem, 3rd decl, inanim
+    special: '00000',
+    reserve: '000000001111101',
+    taskBit: 18, taskGoal: 1,
+    taskDesc: 'Измените бит <code>18</code> на 1: пусть «memory» переводится как «памяти» (мн.ч.).',
+    taskSuccess: '✅ Сделано! Теперь БЭСМ выдаст «памяти» — множественное число.',
+    taskError: 'Не то. Нужен бит 18 = 1.'
+  },
+  {
+    en:'calculate', ru:'вычислять',
+    addr: '0x1A8',
+    basis: '000000110101000',  // 424 dec
+    pos: '010',
+    grammar: '0000000',        // 1st conj, sg
+    special: '01010',          // transitive
+    reserve: '000000110101000',
+    taskBit: 21, taskGoal: 0,
+    taskDesc: 'Сбросьте бит <code>21</code> в 0: переведите глагол из «неправильного» спряжения в первое.',
+    taskSuccess: '✅ Отлично! Глагол теперь спрягается по 1-му типу.',
+    taskError: 'Нет. Нужен бит 21 = 0.'
+  },
+  {
+    en:'five', ru:'пять',
+    addr: '0x305',
+    basis: '000000101000101',  // 325 dec
+    pos: '101',
+    grammar: '0000000',
+    special: '00010',          // governs genitive plural
+    reserve: '000000101000101',
+    taskBit: 25, taskGoal: 0,
+    taskDesc: 'Сбросьте бит <code>25</code>: уберите у «five» управление родительным падежом.',
+    taskSuccess: '✅ Управление убрано. Такое числительное потеряет согласование — это лингвистическая ошибка!',
+    taskError: 'Нет. Нужен бит 25 = 0.'
+  },
+  {
+    en:'with', ru:'с / со',
+    addr: '0x3F0',
+    basis: '000001111110000',
+    pos: '100',
+    grammar: '0000000',
+    special: '00100',          // requires instrumental
+    reserve: '000001111110000',
+    taskBit: 27, taskGoal: 0,
+    taskDesc: 'Измените бит <code>27</code>: сотрите требование творительного падежа после «with».',
+    taskSuccess: '✅ Управление стёрто. Слово «с» теперь не потребует Тв.п. — грамматика нарушена!',
+    taskError: 'Нет. Нужен бит 27 = 0.'
+  },
+  {
+    en:'result', ru:'результат',
+    addr: '0x09E',
+    basis: '000000010011110',  // 158 dec
+    pos: '001',
+    grammar: '0001000',        // sg, masc, 2nd decl
+    special: '00000',
+    reserve: '000000010011110',
+    taskBit: 18, taskGoal: 1,
+    taskDesc: 'Установите бит <code>18</code> = 1: переведите «result» во множественное — «результаты».',
+    taskSuccess: '✅ Готово! БЭСМ выдаст «результаты» — сложение одного бита изменило смысл.',
+    taskError: 'Нет. Нужен бит 18 = 1.'
+  },
+];
+
+let activeWord = null;
+let currentBits = [];      // mutable 45-element array of 0/1
+let originalBits = [];
+let taskDone = false;
+
+
+function wordToBits(w) {
+  const raw = w.basis + w.pos + w.grammar + w.special + w.reserve;
+  return raw.split('').map(Number);
+}
+
+function bitsToInt(bits) {
+  return parseInt(bits.join(''), 2);
+}
+
+function bitsSlice(bits, from, to) {
+  return bits.slice(from, to);
+}
+
+function bitsSliceStr(bits, from, to) {
+  return bits.slice(from, to).join('');
+}
+
+function decodeGrammar(posBits, grammarBits) {
+  // grammarBits: 7 bits = [number(1)][gender(2)][decl/conj(3)][animacy(1)]
+  const number  = grammarBits[0];
+  const gender  = grammarBits[1] + '' + grammarBits[2];
+  const dcBits  = grammarBits[3] + '' + grammarBits[4] + '' + grammarBits[5];
+  const animacy = grammarBits[6];
+
+  let lines = [];
+  lines.push('Число: ' + (number === 0 ? 'Ед.ч.' : 'Мн.ч.'));
+
+  if (posBits === '001') { // noun
+    lines.push('Род: ' + (GENDER[gender] || '—'));
+    lines.push('Склонение: ' + (DECL[dcBits] || dcBits));
+    lines.push('Одушевл.: ' + (animacy ? 'Да' : 'Нет'));
+  } else if (posBits === '010') { // verb
+    lines.push('Спряжение: ' + (CONJ[dcBits] || dcBits));
+    lines.push('Переходность: ' + (animacy ? 'Да' : 'Нет'));
+  } else if (posBits === '011') { // adj
+    lines.push('Род: ' + (GENDER[gender] || '—'));
+    lines.push('Тип: ' + (animacy ? 'Краткое' : 'Полное'));
+  }
+  return lines.join('\n');
+}
+
+function decodeSpecial(bits) {
+  const s = bits.join('');
+  return CASE_MGMT[s] || 'Доп. флаги: ' + s;
+}
+
+const FIELD_COLORS = {
+  basis:   '#7c3aed',
+  pos:     '#f59e0b',
+  grammar: '#06b6d4',
+  special: '#10b981',
+  reserve: '#374151',
+};
+
+// ════════════════════════════════════════════════════════════════
+//  RENDER WORD LIST
+// ════════════════════════════════════════════════════════════════
+
+function renderWordList() {
+  const el = document.getElementById('wordList');
+  el.innerHTML = '';
+  WORDS.forEach((w, i) => {
+    const posInfo = POS_CODES[w.pos] || {};
+    const item = document.createElement('div');
+    item.className = 'word-item';
+    item.innerHTML = `
+      <span class="wi-addr">${w.addr}</span>
+      <span class="wi-en">${w.en}</span>
+      <span class="wi-ru">${w.ru}</span>
+      <span class="wi-pos ${posInfo.badge || ''}">${posInfo.tag || '?'}</span>
+    `;
+    item.addEventListener('click', () => selectWord(i, item));
+    el.appendChild(item);
+  });
+  document.getElementById('shownCount').textContent = WORDS.length;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SELECT WORD
+// ════════════════════════════════════════════════════════════════
+
+function selectWord(idx, itemEl) {
+  // Deactivate all
+  document.querySelectorAll('.word-item').forEach(i => i.classList.remove('active'));
+  itemEl.classList.add('active');
+
+  activeWord = WORDS[idx];
+  currentBits = wordToBits(activeWord);
+  originalBits = [...currentBits];
+  taskDone = false;
+
+  renderInspector();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  RENDER INSPECTOR
+// ════════════════════════════════════════════════════════════════
+
+function renderInspector() {
+  const w = activeWord;
+  const posInfo = POS_CODES[w.pos] || {};
+  const insp = document.getElementById('inspector');
+
+  insp.innerHTML = `
+    <!-- Word header -->
+    <div class="word-header-card fade-in">
+      <div class="wh-en">${w.en}</div>
+      <div class="wh-arrow">→</div>
+      <div class="wh-ru">${w.ru}</div>
+      <div class="wh-meta">
+        <div class="addr-label">Адрес ячейки</div>
+        <div class="addr-val">${w.addr}</div>
+      </div>
+    </div>
+
+    <!-- Bit panel -->
+    <div class="bit-panel fade-in">
+      <div class="panel-head">
+        <div class="dot"></div>
+        45-битная ячейка памяти БЭСМ
+        <span style="margin-left:auto;font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim)">
+          Нажмите на бит, чтобы изменить
+        </span>
+      </div>
+      <div class="bit-container">
+        <div class="bits-row" id="bitsRow"></div>
+        <div class="bit-index-row" id="idxRow"></div>
+      </div>
+      <div class="field-legend" id="fieldLegend"></div>
+    </div>
+
+    <!-- Field decoder -->
+    <div class="field-decoder fade-in">
+      <div class="panel-head">
+        <div class="dot" style="background:var(--warn);box-shadow:0 0 6px var(--warn)"></div>
+        Декодирование полей
+      </div>
+      <div class="field-grid" id="fieldGrid"></div>
+    </div>
+
+    <!-- Task -->
+    <div class="task-panel fade-in">
+      <div class="task-header">
+        <span class="task-icon"></span>
+        <span class="task-title">Учебное задание</span>
+      </div>
+      <div class="task-body">
+        <div class="task-desc" id="taskDesc"></div>
+        <div class="task-status waiting" id="taskStatus">
+          Ожидание изменения…
+        </div>
+        <button class="task-reset" id="taskReset">↺ Сбросить биты</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('taskDesc').innerHTML = w.taskDesc;
+  document.getElementById('taskReset').addEventListener('click', resetBits);
+
+  renderBits();
+  renderFieldDecoder();
+  renderLegend();
+}
+
+
+function getFieldForBit(i) {
+  if (i < 15)  return 'basis';
+  if (i < 18)  return 'pos';
+  if (i < 25)  return 'grammar';
+  if (i < 30)  return 'special';
+  return 'reserve';
+}
+
+function renderBits() {
+  const bitsRow = document.getElementById('bitsRow');
+  const idxRow  = document.getElementById('idxRow');
+  if (!bitsRow) return;
+  bitsRow.innerHTML = '';
+  idxRow.innerHTML  = '';
+
+  // Group definitions: [label, from, to]
+  const groups = [
+    ['Основа (0–14)', 0, 15],
+    ['ЧР (15–17)', 15, 18],
+    ['Грамматика (18–24)', 18, 25],
+    ['Особенности (25–29)', 25, 30],
+    ['Резерв / адрес RU (30–44)', 30, 45],
+  ];
+
+  groups.forEach(([, from, to]) => {
+    const grp = document.createElement('div');
+    grp.className = 'bit-group';
+
+    const idxGrp = document.createElement('div');
+    idxGrp.className = 'bit-group-idx';
+
+    for (let i = from; i < to; i++) {
+      const cell = createBitCell(i);
+      grp.appendChild(cell);
+
+      const idx = document.createElement('div');
+      idx.className = 'bit-idx';
+      idx.textContent = i;
+      idxGrp.appendChild(idx);
+    }
+
+    bitsRow.appendChild(grp);
+    idxRow.appendChild(idxGrp);
+  });
+}
+
+function createBitCell(i) {
+  const cell = document.createElement('div');
+  const field = getFieldForBit(i);
+  cell.className = `bit-cell bit-${currentBits[i]}`;
+  cell.dataset.bit = i;
+  cell.dataset.field = field;
+  cell.textContent = currentBits[i];
+
+  // tooltip
+  const tw = document.createElement('div');
+  tw.className = 'tooltip-wrap';
+  const tb = document.createElement('div');
+  tb.className = 'tooltip-box';
+  tb.textContent = `бит ${i} · поле: ${field}`;
+  tw.appendChild(cell);
+  tw.appendChild(tb);
+
+  cell.addEventListener('click', () => toggleBit(i));
+  return tw;
+}
+
+function toggleBit(i) {
+  currentBits[i] = currentBits[i] === 0 ? 1 : 0;
+
+  // Update cell
+  const cells = document.querySelectorAll('.bit-cell');
+  cells.forEach(c => {
+    if (parseInt(c.dataset.bit) === i) {
+      c.textContent = currentBits[i];
+      c.className = `bit-cell bit-${currentBits[i]} highlight-bit`;
+      c.dataset.field = getFieldForBit(i);
+      setTimeout(() => {
+        c.className = `bit-cell bit-${currentBits[i]}`;
+        c.dataset.field = getFieldForBit(i);
+      }, 650);
+    }
+  });
+
+  renderFieldDecoder();
+  checkTask();
+}
+
+function renderLegend() {
+  const leg = document.getElementById('fieldLegend');
+  if (!leg) return;
+
+  const fields = [
+    { key:'basis',   label:'Основа / адрес',      bits:'0–14'  },
+    { key:'pos',     label:'Часть речи',           bits:'15–17' },
+    { key:'grammar', label:'Грамматика',           bits:'18–24' },
+    { key:'special', label:'Особенности/управление',bits:'25–29'},
+    { key:'reserve', label:'Резерв / RU-адрес',   bits:'30–44' },
+  ];
+
+  leg.innerHTML = '';
+  fields.forEach(f => {
+    const item = document.createElement('div');
+    item.className = 'fl-item';
+    item.innerHTML = `
+      <div class="fl-dot" style="background:${FIELD_COLORS[f.key]}"></div>
+      <span>${f.label}</span>
+      <span class="fl-bits">биты ${f.bits}</span>
+    `;
+    leg.appendChild(item);
+  });
+}
+
+function renderFieldDecoder() {
+  const grid = document.getElementById('fieldGrid');
+  if (!grid) return;
+
+  const w = activeWord;
+
+  // Parse current bits
+  const basisBits   = bitsSlice(currentBits, 0, 15);
+  const posBits     = bitsSlice(currentBits, 15, 18);
+  const grammarBits = bitsSlice(currentBits, 18, 25);
+  const specialBits = bitsSlice(currentBits, 25, 30);
+  const reserveBits = bitsSlice(currentBits, 30, 45);
+
+  const basisAddr  = bitsToInt(basisBits);
+  const posStr     = posBits.join('');
+  const posInfo    = POS_CODES[posStr] || { label: 'Неизвестно', color:'#888' };
+  const gramStr    = grammarBits.join('');
+  const gramDecoded = decodeGrammar(posStr, grammarBits);
+  const specStr    = specialBits.join('');
+  const specDecoded = decodeSpecial(specialBits);
+  const reserveAddr = bitsToInt(reserveBits);
+
+  const fields = [
+    {
+      key: 'basis',
+      name: 'Основа · Адрес EN',
+      range: '0–14 (15 бит)',
+      color: FIELD_COLORS.basis,
+      value: `${basisAddr} (0x${basisAddr.toString(16).toUpperCase().padStart(3,'0')})`,
+      decoded: `Числовой индекс этого слова в таблице поиска. БЭСМ сравнивала числа — не буквы.`,
+      binary: bitsSliceStr(currentBits, 0, 15),
+    },
+    {
+      key: 'pos',
+      name: 'Часть речи (ЧР)',
+      range: '15–17 (3 бит)',
+      color: FIELD_COLORS.pos,
+      value: `${posStr} → ${posInfo.label}`,
+      decoded: `Код ЧР определяет, какие правила грамматики применять. 001=N, 010=V, 011=Adj, 100=Prep, 101=Num`,
+      binary: bitsSliceStr(currentBits, 15, 18),
+    },
+    {
+      key: 'grammar',
+      name: 'Грамматика',
+      range: '18–24 (7 бит)',
+      color: FIELD_COLORS.grammar,
+      value: gramStr,
+      decoded: gramDecoded,
+      binary: gramStr,
+    },
+    {
+      key: 'special',
+      name: 'Особенности / Управление',
+      range: '25–29 (5 бит)',
+      color: FIELD_COLORS.special,
+      value: specStr,
+      decoded: specDecoded,
+      binary: specStr,
+    },
+  ];
+
+  grid.innerHTML = '';
+  fields.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'field-card';
+    card.innerHTML = `
+      <div class="fc-header">
+        <div class="fc-dot" style="background:${f.color}"></div>
+        <span class="fc-name">${f.name}</span>
+        <span class="fc-bits-range">${f.range}</span>
+      </div>
+      <div class="fc-value" style="color:${f.color}">${f.value}</div>
+      <div class="fc-decoded">${f.decoded.replace(/\n/g, '<br>')}</div>
+      <div class="fc-binary">${f.binary}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function checkTask() {
+  if (!activeWord || taskDone) return;
+  const statusEl = document.getElementById('taskStatus');
+  if (!statusEl) return;
+
+  const target = activeWord.taskBit;
+  const goal   = activeWord.taskGoal;
+
+  if (currentBits[target] === goal) {
+    taskDone = true;
+    statusEl.className = 'task-status success';
+    statusEl.textContent = activeWord.taskSuccess;
+  } else {
+    statusEl.className = 'task-status error';
+    statusEl.textContent = `❌ Текущее значение бита ${target}: ${currentBits[target]}. ${activeWord.taskError}`;
+  }
+}
+
+function resetBits() {
+  if (!activeWord) return;
+  currentBits = [...originalBits];
+  taskDone = false;
+
+  const statusEl = document.getElementById('taskStatus');
+  if (statusEl) {
+    statusEl.className = 'task-status waiting';
+    statusEl.textContent = '⏳ Ожидание изменения…';
+  }
+
+  renderBits();
+  renderFieldDecoder();
+}
+
+renderWordList();
+</script>
+</body>
+</html>

@@ -1,0 +1,1607 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-card: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --accent-primary: #325980;
+            --accent-secondary: #3498db;
+            --border-color: #f1f1f1;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --error-bg: #fff0f0;
+            --correct-bg: #f0fff0;
+            --error-border: #e74c3c;
+            --correct-border: #27ae60;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: #0f3460;
+            --text-primary: #e8e8e8;
+            --text-secondary: #b0b0b0;
+            --accent-primary: #4a90c2;
+            --accent-secondary: #5dade2;
+            --border-color: #2c3e50;
+            --shadow: 0 2px 8px rgba(0,0,0,0.3);
+            --error-bg: #3d1f1f;
+            --correct-bg: #1f3d1f;
+            --error-border: #c0392b;
+            --correct-border: #1e8449;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--accent-primary);
+            color: white;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.5);
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* Auth section */
+        .auth-section {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .auth-section h2 {
+            color: var(--accent-primary);
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-secondary);
+        }
+
+        .btn {
+            background: var(--accent-secondary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--accent-secondary);
+            border: 2px solid var(--accent-secondary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-secondary);
+            color: white;
+        }
+
+        /* Instructions */
+        .instructions {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            border-left: 4px solid var(--accent-secondary);
+        }
+
+        .instructions h3 {
+            color: var(--accent-primary);
+            margin-bottom: 1rem;
+        }
+
+        .instructions ol {
+            margin-left: 1.5rem;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        /* Main content */
+        .main-content {
+            display: none;
+        }
+
+        .main-content.active {
+            display: block;
+        }
+
+        /* User info bar */
+        .user-bar {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .user-info {
+            color: var(--text-secondary);
+        }
+
+        .user-info strong {
+            color: var(--accent-primary);
+        }
+
+        .progress-info {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .progress-badge {
+            background: var(--accent-secondary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        /* Technology sections */
+        .tech-section {
+            background: var(--bg-card);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .tech-header {
+            background: var(--accent-primary);
+            color: white;
+            padding: 1.25rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        .tech-header:hover {
+            background: #2a4a6b;
+        }
+
+        .tech-header h2 {
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .tech-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: normal;
+        }
+
+        .tech-arrow {
+            transition: transform 0.3s;
+        }
+
+        .tech-header.expanded .tech-arrow {
+            transform: rotate(180deg);
+        }
+
+        .tech-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .tech-content.expanded {
+            max-height: none;
+        }
+
+        .tech-description {
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        /* Example cards */
+        .example-card {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .example-card:last-child {
+            border-bottom: none;
+        }
+
+        .example-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .example-title {
+            color: var(--accent-primary);
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .example-meta {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .meta-tag {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        /* Translation windows */
+        .translation-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .translation-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+       .translation-window {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid #a8d4f0;
+}
+
+.translation-window .window-header {
+    background: #e8f4fd;
+    color: #325980;
+}
+
+[data-theme="dark"] .translation-window {
+    border-color: #4a90c2;
+}
+
+[data-theme="dark"] .translation-window .window-header {
+    background: #1a3a5c;
+    color: #a8d4f0;
+}
+
+        .window-header {
+            background: var(--bg-secondary);
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .window-content {
+            padding: 1rem;
+            background: var(--bg-primary);
+            min-height: 60px;
+        }
+
+        .translation-window.error {
+            border-color: var(--error-border);
+        }
+
+        .translation-window.error .window-header {
+            background: var(--error-bg);
+            color: var(--error-border);
+        }
+
+        .translation-window.correct {
+            border-color: var(--correct-border);
+        }
+
+        .translation-window.correct .window-header {
+            background: var(--correct-bg);
+            color: var(--correct-border);
+        }
+
+        /* Explanation sections */
+        .explanation-section {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .explanation-section h4 {
+            color: var(--accent-primary);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .explanation-section p,
+        .explanation-section ul {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .explanation-section ul {
+            margin-left: 1.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .explanation-section li {
+            margin-bottom: 0.25rem;
+        }
+
+        .limitation-tag {
+            display: inline-block;
+            background: var(--accent-secondary);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        .advice-box {
+            background: linear-gradient(135deg, #e8f4fd 0%, #f0f8ff 100%);
+            border-left: 4px solid var(--accent-secondary);
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin-top: 1rem;
+			padding-left: 30px; 
+        }
+
+        [data-theme="dark"] .advice-box {
+            background: linear-gradient(135deg, #1a3a5c 0%, #0f3460 100%);
+        }
+
+        .advice-box h4 {
+            color: var(--accent-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Checkboxes */
+        .checkbox-group {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-secondary);
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .checkbox-item.checked label {
+            color: var(--correct-border);
+            font-weight: 500;
+        }
+
+        /* Report section */
+        .report-section {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .report-section h3 {
+            color: var(--accent-primary);
+            margin-bottom: 1rem;
+        }
+
+        .report-section p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        /* Print styles for report */
+        @media print {
+            header, .theme-toggle, .checkbox-group, .btn-group, .report-section {
+                display: none !important;
+            }
+            
+            .tech-content {
+                max-height: none !important;
+            }
+        }
+
+        /* Mobile adaptations */
+        @media (max-width: 600px) {
+            header {
+                padding: 1rem;
+            }
+
+            header h1 {
+                font-size: 1.1rem;
+            }
+
+            .container {
+                padding: 1rem 0.75rem;
+            }
+
+            .auth-section,
+            .instructions,
+            .tech-section,
+            .report-section {
+                border-radius: 8px;
+                padding: 1.25rem;
+            }
+
+            .user-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .example-header {
+                flex-direction: column;
+            }
+
+            .checkbox-group {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-secondary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-primary);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>MT | Error history</h1>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Переключить тему">☀️</button>
+    </header>
+
+    <div class="container">
+        <!-- Auth Section -->
+        <section class="auth-section" id="authSection">
+            <h2>История ошибок машинного переврда</h2>
+            
+            <div class="instructions">
+                <h3>Инструкция</h3>
+                <ol>
+                    <li>Введите ваши фамилию и имя для начала работы</li>
+                    <li>Познакомьтесь с примерами переводческих неудач технологий MT</li>
+                    <li>Изучите исходный текст, переводы и анализ ошибки</li>
+					<li>Выполните советы для практики</li>
+                    <li>Отметьте галочками изученные примеры и выполненные советы</li>
+                    <li>После завершения работы сгенерируйте отчёт в формате HTML</li>
+                    <li>Отчет можно распечатать в PDF или сделать его скриншот</li>
+                </ol>
+            </div>
+
+            <div class="form-group">
+                <label for="studentName">Фамилия Имя</label>
+                <input type="text" id="studentName" placeholder="Например: Орлова Ева" autocomplete="name">
+            </div>
+            <button class="btn" onclick="startStudy()">Начать изучение</button>
+        </section>
+
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <div class="user-bar">
+                <div class="user-info">
+                    Студент: <strong id="displayName"></strong>
+                </div>
+                <div class="progress-info">
+                    <span class="progress-badge" id="progressBadge">Изучено: 0/8</span>
+                    <button class="btn btn-secondary" onclick="resetProgress()">Сбросить</button>
+                </div>
+            </div>
+
+            <!-- RBMT Section -->
+            <section class="tech-section">
+                <div class="tech-header" onclick="toggleSection(this)">
+                    <h2>
+                        RBMT
+                        <span class="tech-badge">Rule-Based Machine Translation</span>
+                    </h2>
+                    <span class="tech-arrow">☰</span>
+                </div>
+                <div class="tech-content">
+                    <div class="tech-description">
+                        <p><strong>Период активного использования:</strong> 1970-е — 2000-е годы</p>
+                        <p>Системы RBMT основаны на лингвистических правилах и словарях. Перевод выполняется путём морфологического анализа, синтаксического разбора и применения трансформационных правил. Главные ограничения: неспособность обрабатывать идиомы, многозначность и контекст.</p>
+                    </div>
+
+                    <!-- Example 1 -->
+                    <div class="example-card fade-in" data-example="1">
+                        <div class="example-header">
+                            <span class="example-title">Пример 1: Идиоматическое выражение</span>
+                            <div class="example-meta">
+                                <span class="meta-tag">~1995</span>
+                                <span class="meta-tag">EN → RU</span>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window">
+                                <div class="window-header">Исходный текст (английский)</div>
+                                <div class="window-content">He kicked the bucket yesterday, and nobody expected it.</div>
+                            </div>
+                            <div class="translation-window error">
+                                <div class="window-header">Перевод RBMT (с ошибкой)</div>
+                                <div class="window-content">Он пнул ведро вчера, и никто этого не ожидал.</div>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window correct">
+                                <div class="window-header">Правильный перевод</div>
+                                <div class="window-content">Он умер вчера, и никто этого не ожидал.</div>
+                            </div>
+                        </div>
+
+                        <div class="explanation-section">
+                            <h4>Анализ ошибки</h4>
+                            <p>RBMT переводит выражение <em>kick the bucket</em> буквально («пнуть ведро»), потому что:</p>
+                            <ul>
+                                <li>Опирается на словарь и морфологические правила</li>
+                                <li>Не распознаёт идиомы как целостные семантические единицы</li>
+                                <li>Обрабатывает каждое слово изолированно</li>
+                            </ul>
+                            <span class="limitation-tag">Ограничение: отсутствие обработки фразеологизмов</span>
+                        </div>
+
+                        <div class="advice-box">
+                            <h4>Совет для практики</h4>
+                            <p>Переведите эту фразу с помощью современной LLM и обсудите:</p>
+                            <ul>
+                                <li>Распознаёт ли модель идиому?</li>
+                                <li>Предлагает ли альтернативные варианты (умер, скончался, отдал концы)?</li>
+                                <li>Как объясняет происхождение идиомы?</li>
+                            </ul>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="studied1" onchange="updateProgress()">
+                                <label for="studied1">Пример изучен</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="advice1" onchange="updateProgress()">
+                                <label for="advice1">Совет выполнен</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Example 2 -->
+                    <div class="example-card fade-in" data-example="2">
+                        <div class="example-header">
+                            <span class="example-title">Пример 2: Переносное значение</span>
+                            <div class="example-meta">
+                                <span class="meta-tag">~1998</span>
+                                <span class="meta-tag">EN → RU</span>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window">
+                                <div class="window-header">Исходный текст (английский)</div>
+                                <div class="window-content">When I saw the painting, I lost my head completely.</div>
+                            </div>
+                            <div class="translation-window error">
+                                <div class="window-header">Перевод RBMT (с ошибкой)</div>
+                                <div class="window-content">Когда я увидел картину, я полностью потерял свою голову.</div>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window correct">
+                                <div class="window-header">Правильный перевод</div>
+                                <div class="window-content">Когда я увидел картину, я потерял самообладание / пришёл в восторг.</div>
+                            </div>
+                        </div>
+
+                        <div class="explanation-section">
+                            <h4>Анализ ошибки</h4>
+                            <p>RBMT интерпретирует <em>lose one's head</em> буквально:</p>
+                            <ul>
+                                <li>Не различает прямое и переносное значение</li>
+                                <li>Не учитывает контекст (картина, эмоции)</li>
+                                <li>Добавляет избыточное притяжательное местоимение «свою»</li>
+                            </ul>
+                            <span class="limitation-tag">Ограничение: отсутствие семантической интерпретации</span>
+                        </div>
+
+                        <div class="advice-box">
+                            <h4>Совет для практики</h4>
+                            <p>Сравните с переводом LLM:</p>
+                            <ul>
+                                <li>Предложит ли несколько интерпретаций?</li>
+                                <li>Сможет ли объяснить различия значений?</li>
+                                <li>Учтёт ли эмоциональный контекст?</li>
+                            </ul>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="studied2" onchange="updateProgress()">
+                                <label for="studied2">Пример изучен</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="advice2" onchange="updateProgress()">
+                                <label for="advice2">Совет выполнен</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SBMT Section -->
+            <section class="tech-section">
+                <div class="tech-header" onclick="toggleSection(this)">
+                    <h2>
+                        SBMT
+                        <span class="tech-badge">Statistical Machine Translation</span>
+                    </h2>
+                    <span class="tech-arrow">☰</span>
+                </div>
+                <div class="tech-content">
+                    <div class="tech-description">
+                        <p><strong>Период активного использования:</strong> 2000-е — 2015 годы</p>
+                        <p>Системы SBMT обучаются на параллельных корпусах текстов и используют статистические модели для выбора наиболее вероятного перевода. Главные ограничения: зависимость от частотности слов в корпусе, слабая обработка редких слов и контекстная неоднозначность.</p>
+                    </div>
+
+                    <!-- Example 3 -->
+                    <div class="example-card fade-in" data-example="3">
+                        <div class="example-header">
+                            <span class="example-title">Пример 3: Культурно-специфичные реалии</span>
+                            <div class="example-meta">
+                                <span class="meta-tag">~2010</span>
+                                <span class="meta-tag">RU → EN</span>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window">
+                                <div class="window-header">Исходный текст (русский)</div>
+                                <div class="window-content">Орлова едет на жёлтой Калине по дороге в Казань.</div>
+                            </div>
+                            <div class="translation-window error">
+                                <div class="window-header">Перевод SBMT (с ошибкой)</div>
+                                <div class="window-content">Orlova goes to a yellow Mazda on the way to Kazan.</div>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window correct">
+                                <div class="window-header">Правильный перевод</div>
+                                <div class="window-content">Orlova is driving a yellow Lada Kalina on her way to Kazan.</div>
+                            </div>
+                        </div>
+
+                        <div class="explanation-section">
+                            <h4>Анализ ошибки</h4>
+                            <p>SBMT допускает несколько ошибок:</p>
+                            <ul>
+                                <li>Заменяет редкое слово «Калина» на более частотное «Mazda»</li>
+                                <li>Не распознаёт именованные сущности (названия брендов)</li>
+                                <li>Теряет информацию о том, что «Калина» — это модель АвтоВАЗа</li>
+                                <li>Неверно передаёт глагол «едет» как «goes to»</li>
+                            </ul>
+                            <span class="limitation-tag">Ограничение: зависимость от статистики корпуса</span>
+                        </div>
+
+                        <div class="advice-box">
+                            <h4>Совет для практики</h4>
+                            <p>Узнайте у LLM:</p>
+                            <ul>
+                                <li>Что такое «Калина» в этом контексте?</li>
+                                <li>Как лучше передать культурно-специфичные реалии?</li>
+                                <li>Нужна ли транслитерация или пояснение?</li>
+                            </ul>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="studied3" onchange="updateProgress()">
+                                <label for="studied3">Пример изучен</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="advice3" onchange="updateProgress()">
+                                <label for="advice3">Совет выполнен</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Example 4 -->
+                    <div class="example-card fade-in" data-example="4">
+                        <div class="example-header">
+                            <span class="example-title">Пример 4: Лексическая многозначность</span>
+                            <div class="example-meta">
+                                <span class="meta-tag">~2012</span>
+                                <span class="meta-tag">EN → RU</span>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window">
+                                <div class="window-header">Исходный текст (английский)</div>
+                                <div class="window-content">After the long discussion, he finally went to the bank to relax.</div>
+                            </div>
+                            <div class="translation-window error">
+                                <div class="window-header">Перевод SBMT (с ошибкой)</div>
+                                <div class="window-content">После долгого обсуждения он наконец пошёл в банк, чтобы расслабиться.</div>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window correct">
+                                <div class="window-header">Правильный перевод</div>
+                                <div class="window-content">После долгого обсуждения он наконец пошёл на берег, чтобы расслабиться.</div>
+                            </div>
+                        </div>
+
+                        <div class="explanation-section">
+                            <h4>Анализ ошибки</h4>
+                            <p>SBMT неверно разрешает омонимию слова <em>bank</em>:</p>
+                            <ul>
+                                <li>Выбирает наиболее частотное значение («банк» — финансовое учреждение)</li>
+                                <li>Игнорирует контекст отдыха и расслабления</li>
+                                <li>Не учитывает семантическую несовместимость «банк» + «расслабиться»</li>
+                            </ul>
+                            <span class="limitation-tag">Ограничение: слабая контекстная дизамбигуация</span>
+                        </div>
+
+                        <div class="advice-box">
+                            <h4>Совет для практики</h4>
+                            <p>Предложите LLM:</p>
+                            <ul>
+                                <li>Объяснить оба значения слова <em>bank</em></li>
+                                <li>Предложить варианты перевода в разных контекстах</li>
+                                <li>Определить, какие контекстные маркеры указывают на значение «берег»</li>
+                            </ul>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="studied4" onchange="updateProgress()">
+                                <label for="studied4">Пример изучен</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="advice4" onchange="updateProgress()">
+                                <label for="advice4">Совет выполнен</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- NMT Section -->
+            <section class="tech-section">
+                <div class="tech-header" onclick="toggleSection(this)">
+                    <h2>
+                        NMT
+                        <span class="tech-badge">Neural Machine Translation</span>
+                    </h2>
+                    <span class="tech-arrow">☰</span>
+                </div>
+                <div class="tech-content">
+                    <div class="tech-description">
+                        <p><strong>Период активного использования:</strong> 2015 — настоящее время (до эпохи LLM)</p>
+                        <p>Нейронные системы перевода используют глубокие нейронные сети (encoder-decoder, attention, transformer) для генерации перевода. Главные ограничения: склонность к «галлюцинациям», генерация несуществующих слов, избыточная креативность при переводе.</p>
+                    </div>
+
+                    <!-- Example 5 -->
+                    <div class="example-card fade-in" data-example="5">
+                        <div class="example-header">
+                            <span class="example-title">Пример 5: Порождение новой лексемы</span>
+                            <div class="example-meta">
+                                <span class="meta-tag">~2017</span>
+                                <span class="meta-tag">EN → RU</span>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window">
+                                <div class="window-header">Исходный текст (английский)</div>
+                                <div class="window-content">When I came to the office, I said to my colleagues: "Good morning!"</div>
+                            </div>
+                            <div class="translation-window error">
+                                <div class="window-header">Перевод NMT (с ошибкой)</div>
+                                <div class="window-content">Когда я пришёл в офис, я сказал коллегам: «Всем морники!»</div>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window correct">
+                                <div class="window-header">Правильный перевод</div>
+                                <div class="window-content">Когда я пришёл в офис, я сказал коллегам: «Доброе утро!»</div>
+                            </div>
+                        </div>
+
+                        <div class="explanation-section">
+                            <h4>Анализ ошибки</h4>
+                            <p>Нейросеть генерирует несуществующее слово «морники»:</p>
+                            <ul>
+                                <li>Не извлекла устойчивый эквивалент <em>Good morning</em></li>
+                                <li>Сгенерировала новую лексему на основе фонетического сходства (morning → морн-)</li>
+                                <li>Применила продуктивные модели русского словообразования (-ик-, -и)</li>
+                            </ul>
+                            <span class="limitation-tag">Ограничение: лексическая галлюцинация (neologism hallucination)</span>
+                        </div>
+
+                        <div class="advice-box">
+                            <h4>Совет для практики</h4>
+                            <p>Предложите LLM:</p>
+                            <ul>
+                                <li>Объяснить, существует ли слово «морники»</li>
+                                <li>Предложить корректный перевод</li>
+                                <li>Описать, почему могла возникнуть такая форма</li>
+                            </ul>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="studied5" onchange="updateProgress()">
+                                <label for="studied5">Пример изучен</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="advice5" onchange="updateProgress()">
+                                <label for="advice5">Совет выполнен</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Example 6 -->
+                    <div class="example-card fade-in" data-example="6">
+                        <div class="example-header">
+                            <span class="example-title">Пример 6: Калькирование словообразования</span>
+                            <div class="example-meta">
+                                <span class="meta-tag">~2018</span>
+                                <span class="meta-tag">EN → RU</span>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window">
+                                <div class="window-header">Исходный текст (английский)</div>
+                                <div class="window-content">We shouldn't sugarcoat the problem if we want to solve it.</div>
+                            </div>
+                            <div class="translation-window error">
+                                <div class="window-header">Перевод NMT (с ошибкой)</div>
+                                <div class="window-content">Мы не должны сахариться, если хотим решить проблему.</div>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window correct">
+                                <div class="window-header">Правильный перевод</div>
+                                <div class="window-content">Мы не должны приукрашивать проблему, если хотим её решить.</div>
+                            </div>
+                        </div>
+
+                        <div class="explanation-section">
+                            <h4>Анализ ошибки</h4>
+                            <p>Нейросеть создаёт неестественный глагол «сахариться»:</p>
+                            <ul>
+                                <li>Распознаёт компонент <em>sugar</em> в <em>sugarcoat</em></li>
+                                <li>Переносит морфологическую модель английского на русский</li>
+                                <li>Не проверяет узуальность (употребительность) созданного слова</li>
+                            </ul>
+                            <span class="limitation-tag">Ограничение: слабый контроль деривации</span>
+                        </div>
+
+                        <div class="advice-box">
+                            <h4>Совет для практики</h4>
+                            <p>Спросите у LLM:</p>
+                            <ul>
+                                <li>Какие есть варианты перевода <em>sugarcoat</em>?</li>
+                                <li>Чем отличаются «смягчать», «приукрашивать», «сглаживать» по стилю?</li>
+                                <li>В каких контекстах уместен каждый вариант?</li>
+                            </ul>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="studied6" onchange="updateProgress()">
+                                <label for="studied6">Пример изучен</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="advice6" onchange="updateProgress()">
+                                <label for="advice6">Совет выполнен</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Example 7 -->
+                    <div class="example-card fade-in" data-example="7">
+                        <div class="example-header">
+                            <span class="example-title">Пример 7: Морфологическая гипергенерация</span>
+                            <div class="example-meta">
+                                <span class="meta-tag">~2018</span>
+                                <span class="meta-tag">EN → RU</span>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window">
+                                <div class="window-header">Исходный текст (английский)</div>
+                                <div class="window-content">He reversed the route and drove back home.</div>
+                            </div>
+                            <div class="translation-window error">
+                                <div class="window-header">Перевод NMT (с ошибкой)</div>
+                                <div class="window-content">Он сторонировал маршрут и поехал обратно домой.</div>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window correct">
+                                <div class="window-header">Правильный перевод</div>
+                                <div class="window-content">Он развернул маршрут и поехал обратно домой.</div>
+                            </div>
+                        </div>
+
+                        <div class="explanation-section">
+                            <h4>Анализ ошибки</h4>
+                            <p>Нейросеть создаёт несуществующий глагол «сторонировать»:</p>
+                            <ul>
+                                <li>Не нашла устойчивого эквивалента для <em>reverse</em> в данном контексте</li>
+                                <li>Заимствовала основу и добавила русский суффикс -ировать</li>
+                                <li>Возможно, смешала с формами «сторона», «сторониться»</li>
+                            </ul>
+                            <span class="limitation-tag">Ограничение: продуктивная, но неконтролируемая морфология</span>
+                        </div>
+
+                        <div class="advice-box">
+                            <h4>Совет для практики</h4>
+                            <p>Обсудите с LLM:</p>
+                            <ul>
+                                <li>Какие глаголы подходят: развернуть, изменить направление, повернуть обратно?</li>
+                                <li>Почему «сторонировать» звучит неестественно?</li>
+                                <li>Какие словообразовательные модели используются в русском для заимствований?</li>
+                            </ul>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="studied7" onchange="updateProgress()">
+                                <label for="studied7">Пример изучен</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="advice7" onchange="updateProgress()">
+                                <label for="advice7">Совет выполнен</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Example 8 -->
+                    <div class="example-card fade-in" data-example="8">
+                        <div class="example-header">
+                            <span class="example-title">Пример 8: Галлюцинация содержания</span>
+                            <div class="example-meta">
+                                <span class="meta-tag">~2019</span>
+                                <span class="meta-tag">EN → RU</span>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window">
+                                <div class="window-header">Исходный текст (английский)</div>
+                                <div class="window-content">The meeting was postponed due to technical issues.</div>
+                            </div>
+                            <div class="translation-window error">
+                                <div class="window-header">Перевод NMT (с ошибкой)</div>
+                                <div class="window-content">Встреча была перенесена на вторник из-за технических проблем.</div>
+                            </div>
+                        </div>
+
+                        <div class="translation-container">
+                            <div class="translation-window correct">
+                                <div class="window-header">Правильный перевод</div>
+                                <div class="window-content">Встреча была перенесена из-за технических проблем.</div>
+                            </div>
+                        </div>
+
+                        <div class="explanation-section">
+                            <h4>Анализ ошибки</h4>
+                            <p>Нейросеть добавляет информацию, отсутствующую в оригинале:</p>
+                            <ul>
+                                <li>Вставляет конкретную дату «на вторник», которой нет в исходном тексте</li>
+                                <li>Это семантическая галлюцинация — попытка «уточнить» смысл</li>
+                                <li>Модель оптимизирована на правдоподобие, а не на точность</li>
+                            </ul>
+                            <span class="limitation-tag">Ограничение: оптимизация на правдоподобие, а не точность</span>
+                        </div>
+
+                        <div class="advice-box">
+                            <h4>Совет для практики</h4>
+                            <p>Предложите LLM:</p>
+                            <ul>
+                                <li>Сравнить дословный и интерпретирующий перевод</li>
+                                <li>Объяснить, допустимы ли такие добавления в профессиональном переводе</li>
+                                <li>Привести примеры ситуаций, когда добавление информации недопустимо (юридические, медицинские тексты)</li>
+                            </ul>
+                        </div>
+
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="studied8" onchange="updateProgress()">
+                                <label for="studied8">Пример изучен</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="advice8" onchange="updateProgress()">
+                                <label for="advice8">Совет выполнен</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Summary -->
+            <section class="tech-section">
+                <div class="tech-header" onclick="toggleSection(this)">
+                    <h2>
+                        Выводы
+                        <span class="tech-badge">Сравнительный анализ</span>
+                    </h2>
+                    <span class="tech-arrow">☰</span>
+                </div>
+                <div class="tech-content">
+                    <div class="tech-description">
+                        <h4 style="margin-bottom: 1rem; color: var(--accent-primary);">Ключевые различия в типах ошибок</h4>
+                        <p><strong>RBMT:</strong> Не понимает устойчивые выражения, идиомы и переносные значения. Переводит буквально, следуя правилам и словарю.</p>
+                        <p style="margin-top: 0.75rem;"><strong>SBMT:</strong> Ошибается из-за статистических закономерностей корпуса. Выбирает частотные варианты, теряет редкие слова и культурные реалии.</p>
+                        <p style="margin-top: 0.75rem;"><strong>NMT:</strong> В отличие от RBMT и SBMT, нейросети не просто ошибаются — они «творят» язык, иногда слишком свободно. Типичная ошибка NMT — не «неправильное слово», а правдоподобное, но несуществующее слово.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Report Section -->
+            <section class="report-section">
+                <h3>Завершение работы</h3>
+                <p>После изучения всех примеров вы можете сгенерировать отчёт о проделанной работе.</p>
+                <div class="btn-group">
+                    <button class="btn" onclick="generateReport()">Сгенерировать отчёт</button>
+                    <button class="btn btn-secondary" onclick="window.print()">Распечатать страницу</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+    </footer>
+
+    <script>
+        // State management
+        let studentName = '';
+        let progress = {
+            studied: new Set(),
+            advice: new Set()
+        };
+
+        // Theme management
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                btn.textContent = '☀️';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                btn.textContent = '🌙';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Initialize theme from localStorage
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const btn = document.querySelector('.theme-toggle');
+            
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                btn.textContent = '🌙';
+            }
+        }
+
+        // Section toggle
+        function toggleSection(header) {
+            header.classList.toggle('expanded');
+            const content = header.nextElementSibling;
+            content.classList.toggle('expanded');
+        }
+
+        // Start study session
+        function startStudy() {
+            const nameInput = document.getElementById('studentName');
+            const name = nameInput.value.trim();
+            
+            if (name.length < 2) {
+                nameInput.style.borderColor = '#e74c3c';
+                nameInput.focus();
+                return;
+            }
+            
+            studentName = name;
+            localStorage.setItem('studentName', name);
+            
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('mainContent').classList.add('active');
+            document.getElementById('displayName').textContent = name;
+            
+            // Load saved progress
+            loadProgress();
+            updateProgress();
+            
+            // Expand first section
+            const firstHeader = document.querySelector('.tech-header');
+            if (firstHeader) {
+                firstHeader.classList.add('expanded');
+                firstHeader.nextElementSibling.classList.add('expanded');
+            }
+        }
+
+        // Update progress tracking
+        function updateProgress() {
+            let studiedCount = 0;
+            let adviceCount = 0;
+            
+            for (let i = 1; i <= 8; i++) {
+                const studiedCheckbox = document.getElementById(`studied${i}`);
+                const adviceCheckbox = document.getElementById(`advice${i}`);
+                
+                if (studiedCheckbox && studiedCheckbox.checked) {
+                    studiedCount++;
+                    progress.studied.add(i);
+                    studiedCheckbox.parentElement.classList.add('checked');
+                } else {
+                    progress.studied.delete(i);
+                    if (studiedCheckbox) studiedCheckbox.parentElement.classList.remove('checked');
+                }
+                
+                if (adviceCheckbox && adviceCheckbox.checked) {
+                    adviceCount++;
+                    progress.advice.add(i);
+                    adviceCheckbox.parentElement.classList.add('checked');
+                } else {
+                    progress.advice.delete(i);
+                    if (adviceCheckbox) adviceCheckbox.parentElement.classList.remove('checked');
+                }
+            }
+            
+            document.getElementById('progressBadge').textContent = `Изучено: ${studiedCount}/8`;
+            
+            // Save progress
+            saveProgress();
+        }
+
+        // Save progress to localStorage
+        function saveProgress() {
+            const data = {
+                studied: Array.from(progress.studied),
+                advice: Array.from(progress.advice)
+            };
+            localStorage.setItem('mtProgress', JSON.stringify(data));
+        }
+
+        // Load progress from localStorage
+        function loadProgress() {
+            const saved = localStorage.getItem('mtProgress');
+            if (saved) {
+                const data = JSON.parse(saved);
+                progress.studied = new Set(data.studied || []);
+                progress.advice = new Set(data.advice || []);
+                
+                // Restore checkboxes
+                progress.studied.forEach(i => {
+                    const checkbox = document.getElementById(`studied${i}`);
+                    if (checkbox) checkbox.checked = true;
+                });
+                
+                progress.advice.forEach(i => {
+                    const checkbox = document.getElementById(`advice${i}`);
+                    if (checkbox) checkbox.checked = true;
+                });
+            }
+        }
+
+        // Reset progress
+        function resetProgress() {
+            if (confirm('Вы уверены, что хотите сбросить весь прогресс?')) {
+                progress = { studied: new Set(), advice: new Set() };
+                localStorage.removeItem('mtProgress');
+                
+                for (let i = 1; i <= 8; i++) {
+                    const studiedCheckbox = document.getElementById(`studied${i}`);
+                    const adviceCheckbox = document.getElementById(`advice${i}`);
+                    
+                    if (studiedCheckbox) {
+                        studiedCheckbox.checked = false;
+                        studiedCheckbox.parentElement.classList.remove('checked');
+                    }
+                    if (adviceCheckbox) {
+                        adviceCheckbox.checked = false;
+                        adviceCheckbox.parentElement.classList.remove('checked');
+                    }
+                }
+                
+                updateProgress();
+            }
+        }
+
+        // Generate HTML report
+        function generateReport() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('ru-RU', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const examples = [
+                { id: 1, tech: 'RBMT', title: 'Идиоматическое выражение', source: 'He kicked the bucket yesterday...', error: 'Пнул ведро' },
+                { id: 2, tech: 'RBMT', title: 'Переносное значение', source: 'When I saw the painting, I lost my head...', error: 'Потерял голову (буквально)' },
+                { id: 3, tech: 'SBMT', title: 'Культурно-специфичные реалии', source: 'Орлова едет на жёлтой Калине...', error: 'Mazda вместо Калины' },
+                { id: 4, tech: 'SBMT', title: 'Лексическая многозначность', source: 'He went to the bank to relax...', error: 'Банк вместо берега' },
+                { id: 5, tech: 'NMT', title: 'Порождение новой лексемы', source: 'Good morning!', error: 'Всем морники!' },
+                { id: 6, tech: 'NMT', title: 'Калькирование словообразования', source: 'We shouldn\'t sugarcoat...', error: 'Сахариться' },
+                { id: 7, tech: 'NMT', title: 'Морфологическая гипергенерация', source: 'He reversed the route...', error: 'Сторонировал' },
+                { id: 8, tech: 'NMT', title: 'Галлюцинация содержания', source: 'The meeting was postponed...', error: 'Добавлено "на вторник"' }
+            ];
+            
+            let tableRows = examples.map(ex => {
+                const isStudied = progress.studied.has(ex.id);
+                const isAdvice = progress.advice.has(ex.id);
+                return `
+                    <tr>
+                        <td>${ex.id}</td>
+                        <td>${ex.tech}</td>
+                        <td>${ex.title}</td>
+                        <td>${isStudied ? 'Да' : 'Нет'}</td>
+                        <td>${isAdvice ? 'Да' : 'Нет'}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            const studiedTotal = progress.studied.size;
+            const adviceTotal = progress.advice.size;
+            
+            const reportHTML = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчёт о работе - ${studentName}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            color: #333;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #325980;
+            border-bottom: 3px solid #325980;
+            padding-bottom: 0.5rem;
+        }
+        h2 {
+            color: #325980;
+            margin-top: 2rem;
+        }
+        .info-block {
+            background: #f5f5f5;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        .info-block p {
+            margin: 0.5rem 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th {
+            background: #325980;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .summary {
+            background: #e8f4fd;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+            border-left: 4px solid #3498db;
+        }
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, #3498db, #325980);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+        .footer {
+            margin-top: 3rem;
+            padding-top: 1rem;
+            border-top: 1px solid #ddd;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        @media print {
+            body { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Отчёт о выполнении практической работы</h1>
+    
+    <div class="info-block">
+        <p><strong>Студент:</strong> ${studentName}</p>
+        <p><strong>Дата формирования отчёта:</strong> ${dateStr}</p>
+        <p><strong>Тема:</strong> История технологий машинного перевода (до эпохи LLM)</p>
+    </div>
+    
+    <h2>Прогресс выполнения</h2>
+    
+    <p><strong>Изучено примеров:</strong> ${studiedTotal} из 8</p>
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: ${(studiedTotal / 8) * 100}%"></div>
+    </div>
+    
+    <p><strong>Выполнено советов:</strong> ${adviceTotal} из 8</p>
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: ${(adviceTotal / 8) * 100}%"></div>
+    </div>
+    
+    <h2>Детализация по примерам</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Технология</th>
+                <th>Тип ошибки</th>
+                <th>Изучен</th>
+                <th>Совет выполнен</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${tableRows}
+        </tbody>
+    </table>
+    
+    <div class="summary">
+        <h3>Итоговая оценка</h3>
+        <p>Общий прогресс: <strong>${Math.round(((studiedTotal + adviceTotal) / 16) * 100)}%</strong></p>
+        <p>Изучены технологии: 
+            ${progress.studied.has(1) || progress.studied.has(2) ? 'RBMT' : ''} 
+            ${progress.studied.has(3) || progress.studied.has(4) ? 'SBMT' : ''} 
+            ${progress.studied.has(5) || progress.studied.has(6) || progress.studied.has(7) || progress.studied.has(8) ? 'NMT' : ''}
+        </p>
+    </div>
+    
+    <div class="footer">
+        <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+    </div>
+</body>
+</html>
+            `;
+            
+            // Open report in new window
+            const reportWindow = window.open('', '_blank');
+            reportWindow.document.write(reportHTML);
+            reportWindow.document.close();
+        }
+
+        // Check for saved session on load
+        function initSession() {
+            const savedName = localStorage.getItem('studentName');
+            if (savedName) {
+                document.getElementById('studentName').value = savedName;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initTheme();
+            initSession();
+            
+            // Allow Enter key to start
+            document.getElementById('studentName').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    startStudy();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

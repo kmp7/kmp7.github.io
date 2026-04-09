@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #d3d3a4;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1, h2, h3 {
+            color: #3b3b3b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .machine {
+            background-color: #8b8b83;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: inset 0 0 10px #000000, 0 5px 15px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        
+        .control-panel {
+            background-color: #6b6b63;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn {
+            background-color: #444;
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            margin: 0;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            box-shadow: 0 3px 0 #222;
+            transition: all 0.1s;
+        }
+        
+        .btn:active {
+            box-shadow: 0 1px 0 #222;
+            transform: translateY(2px);
+        }
+        
+        .btn-primary {
+            background-color: #2a6b2a;
+            box-shadow: 0 3px 0 #1a4a1a;
+        }
+        
+        .btn-warning {
+            background-color: #8b6b2a;
+            box-shadow: 0 3px 0 #5a4a1a;
+        }
+        
+        .punch-card-container {
+            position: relative;
+            background-color: #f8d89c;
+            margin: 20px auto;
+            border: 2px solid #a8905c;
+            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3);
+            overflow-x: auto;
+        }
+        
+        .punch-card {
+            background-color: #f8d89c;
+            min-width: 1000px;
+            position: relative;
+        }
+        
+        .hole-grid {
+            display: grid;
+            grid-template-columns: repeat(80, 26px);
+            grid-template-rows: repeat(12, 22px);
+            background-color: #f8d89c;
+        }
+        
+        .hole {
+            border: 1px solid #cba76b;
+            cursor: pointer;
+            transition: all 0.05s;
+        }
+        
+        .hole:hover {
+            background-color: #ffe0a3;
+            transform: scale(0.98);
+        }
+        
+        .hole.punched {
+            background-color: #333;
+            border-radius: 50%;
+            box-shadow: inset 0 0 3px #000;
+        }
+        
+        /* Метки строк (0-11) */
+        .row-labels {
+            position: absolute;
+            left: -30px;
+            top: 0;
+            width: 25px;
+            height: 100%;
+        }
+        
+        .row-label {
+            position: absolute;
+            width: 25px;
+            text-align: right;
+            font-size: 10px;
+            font-weight: bold;
+            color: #4a3a2a;
+            right: 5px;
+            transform: translateY(-50%);
+        }
+        
+        /* Метки колонок */
+        .col-labels {
+            display: flex;
+            margin-left: 0;
+            margin-bottom: 5px;
+            font-size: 9px;
+            color: #4a3a2a;
+            min-width: 1000px;
+        }
+        
+        .col-label {
+            width: 26px;
+            text-align: center;
+            font-family: monospace;
+        }
+        
+        .coord-indicator {
+            background-color: #2a2a2a;
+            color: #ffaa33;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 3px;
+            margin-left: 10px;
+            font-family: monospace;
+        }
+        
+        .output-display {
+            background-color: #1a2a1a;
+            color: #3f3;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            width: 100%;
+            min-height: 80px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 5px solid #3f3;
+            overflow-y: auto;
+        }
+        
+        .translation {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%;
+            margin: 20px 0;
+        }
+        
+        .translation-box {
+            background-color: #1a2a1a;
+            color: #3f3;
+            padding: 15px;
+            flex: 1;
+            min-width: 200px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            overflow-y: auto;
+            border: 1px solid #3f3;
+        }
+        
+        .translation-box h4 {
+            margin: 0 0 10px 0;
+            color: #8f8;
+            border-bottom: 1px solid #3f3;
+        }
+        
+        .lights {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0;
+            gap: 20px;
+        }
+        
+        .light {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #333;
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: #aaa;
+        }
+        
+        .light-bulb {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: #444;
+            box-shadow: inset 0 0 5px #000;
+            transition: all 0.1s;
+        }
+        
+        .light-bulb.on {
+            background-color: #f00;
+            box-shadow: 0 0 8px #f00;
+        }
+        
+        .light-bulb.active {
+            background-color: #ffaa00;
+            box-shadow: 0 0 8px #ffaa00;
+        }
+        
+        .history-panel {
+            background-color: #6b6b63;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        
+        .history-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 12px;
+        }
+        
+        .history-item {
+            background-color: #2a2a2a;
+            color: #ffaa66;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background-color: #d3d3a4;
+            margin: 3% auto;
+            padding: 20px;
+            max-width: 90%;
+            max-height: 85%;
+            overflow-y: auto;
+            border-radius: 10px;
+            border: 3px solid #8b8b83;
+        }
+        
+        .close {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .encoding-table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        
+        .encoding-table th, .encoding-table td {
+            border: 1px solid #333;
+            padding: 5px 8px;
+            text-align: center;
+            font-size: 12px;
+        }
+        
+        .status-text {
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            .hole-grid {
+                grid-template-columns: repeat(80, 18px);
+                grid-template-rows: repeat(12, 16px);
+            }
+            .col-label {
+                width: 18px;
+                font-size: 7px;
+            }
+            .btn {
+                padding: 5px 10px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 align="center">Симулятор перфокарт</h1>
+	<p align="center">Джорджтаунский эксперимент 1954</p>
+    
+    <div class="container">
+        <div class="machine">
+            <!-- Индикаторы состояния -->
+            <div class="lights">
+                <div class="light"><span class="light-bulb" id="light-ready"></span><span>ГОТОВНОСТЬ</span></div>
+                <div class="light"><span class="light-bulb" id="light-read"></span><span>ЧТЕНИЕ</span></div>
+                <div class="light"><span class="light-bulb" id="light-process"></span><span>ПЕРЕВОД</span></div>
+            </div>
+            
+            <!-- Панель управления -->
+            <div class="control-panel">
+                <button class="btn" id="reset-btn">ОЧИСТИТЬ КАРТУ</button>
+                <button class="btn btn-primary" id="process-btn">ОБРАБОТАТЬ</button>
+                <button class="btn" id="random-btn">СЛУЧАЙНЫЙ ТЕКСТ</button>
+                <button class="btn" id="help-btn">ИНСТРУКЦИЯ</button>
+                <button class="btn" id="encoding-btn">КОДИРОВКА</button>
+                <button class="btn" id="tutorial-btn">ОБУЧЕНИЕ</button>
+                <select class="btn" id="example-select">
+                    <option value="">ЗАГРУЗИТЬ ПРИМЕР...</option>
+                    <option value="hello">ПРИВЕТ МИР</option>
+                    <option value="brest">БРЕСТ</option>
+                    <option value="orlova">ОРЛОВА ЕВА АДАМОВНА</option>
+                    <option value="machine">МАШИНА ПЕРЕВОД</option>
+                    <option value="science">НАУКА ЯЗЫК</option>
+                </select>
+                <span id="coord-indicator" class="coord-indicator">колонка: — строка: —</span>
+            </div>
+            
+            <!-- Перфокарта -->
+            <div style="position: relative;">
+                <div class="col-labels" id="col-labels"></div>
+                <div class="punch-card-container">
+                    <div class="punch-card" id="punch-card">
+                        <div class="row-labels" id="row-labels"></div>
+                        <div class="hole-grid" id="hole-grid"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Статус и декодирование -->
+            <div class="output-display" id="output-display">
+                СИСТЕМА ГОТОВА. Пробивайте отверстия на перфокарте...
+            </div>
+            
+            <!-- Результаты перевода -->
+            <div class="translation">
+                <div class="translation-box" id="decoded-box">
+                    <h4>ДЕКОДИРОВАННЫЙ ТЕКСТ (русский)</h4>
+                    <div id="decoded-text">—</div>
+                </div>
+                <div class="translation-box" id="translated-box">
+                    <h4>ПЕРЕВОД (английский)</h4>
+                    <div id="translated-text">—</div>
+                </div>
+            </div>
+            
+            <!-- История переводов -->
+            <div class="history-panel">
+                <strong>ИСТОРИЯ ПОСЛЕДНИХ ПЕРЕВОДОВ (кликните для загрузки)</strong>
+                <div class="history-list" id="history-list">
+                    <span style="color:#aaa;">(история пуста)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно инструкции -->
+    <div class="modal" id="help-modal">
+        <div class="modal-content">
+            <span class="close" id="help-close">&times;</span>
+            <h2>Инструкция по работе с симулятором перфокарт</h2>
+            <p><strong>Джорджтаунский эксперимент (1954)</strong> — первая публичная демонстрация машинного перевода. Данные вводились через <strong>перфокарты</strong> — картонные карты с отверстиями, которые считывал компьютер IBM-701.</p>
+            <h3>Как пользоваться:</h3>
+            <ol>
+                <li><strong>Пробивка отверстий:</strong> кликните по любой ячейке на жёлтой карте. Каждая колонка = один символ. Комбинация отверстий в колонке кодирует букву или цифру.</li>
+                <li><strong>Подсказка позиции:</strong> при наведении на ячейку в правом верхнем углу отображается колонка и строка.</li>
+                <li><strong>Очистить карту:</strong> сбрасывает все отверстия.</li>
+                <li><strong>Обработать:</strong> машина «прочитает» карту, декодирует отверстия в русский текст, затем переведёт на английский.</li>
+                <li><strong>Случайный текст:</strong> автоматически заполняет карту случайным словом из словаря.</li>
+                <li><strong>Кодировка:</strong> показывает таблицу — какие строки пробивать для каждой буквы.</li>
+                <li><strong>Обучение:</strong> пошаговый интерактивный тур.</li>
+                <li><strong>История:</strong> все выполненные переводы сохраняются. Кликните по любому — он загрузится на карту.</li>
+            </ol>
+            <p><strong>Важно:</strong> Словарь ограничен тематикой 1954 года (химия, базовые понятия). Незнакомые слова транслитерируются латиницей — так работали реальные системы того времени.</p>
+        </div>
+    </div>
+    
+    <!-- Модальное окно кодировки -->
+    <div class="modal" id="encoding-modal">
+        <div class="modal-content">
+            <span class="close" id="encoding-close">&times;</span>
+            <h2>Таблица кодировки перфокарт (упрощённая)</h2>
+            <p>Каждый символ кодируется комбинацией отверстий в строках <strong>0–11</strong> (12 строк). В реальных IBM-картах использовался код Холлерита.</p>
+            <table class="encoding-table" id="encoding-table">
+                <thead>
+                    <tr><th>Символ</th><th>Строки</th><th>Символ</th><th>Строки</th></tr>
+                </thead>
+                <tbody id="encoding-tbody"></tbody>
+            </table>
+            <p><strong>Пример:</strong> буква <strong>П</strong> → строки 2,7,9. Буква <strong>Р</strong> → строки 3,4,8.</p>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ---------- КОНФИГУРАЦИЯ ----------
+            const ROWS = 12;
+            const COLS = 80;
+            
+            // РАСШИРЕННЫЙ СЛОВАРЬ (с учётом транслитерации)
+            const dictionary = {
+                // Существительные
+                "ПРИВЕТ": "HELLO",
+                "МИР": "WORLD",
+                "БРЕСТ": "BREST",
+                "ОРЛОВА": "ORLOVA",
+                "ЕВА": "EVA",
+                "АДАМОВНА": "ADAMOVNA",
+                "ЭКСПЕРИМЕНТ": "EXPERIMENT",
+                "ПЕРЕВОД": "TRANSLATION",
+                "МАШИНА": "MACHINE",
+                "РУССКИЙ": "RUSSIAN",
+                "АНГЛИЙСКИЙ": "ENGLISH",
+                "КОМПЬЮТЕР": "COMPUTER",
+                "ЯЗЫК": "LANGUAGE",
+                "НАУКА": "SCIENCE",
+                "СИСТЕМА": "SYSTEM",
+                "ПРАВИЛО": "RULE",
+                "СЛОВАРЬ": "DICTIONARY",
+                "ПРОГРАММА": "PROGRAM",
+                "ДАННЫЕ": "DATA",
+                "ИНФОРМАЦИЯ": "INFORMATION",
+                // Глаголы
+                "РАБОТАЕТ": "WORKS",
+                "ПЕРЕВОДИТ": "TRANSLATES",
+                "АНАЛИЗИРУЕТ": "ANALYZES",
+                // Прилагательные
+                "АВТОМАТИЧЕСКИЙ": "AUTOMATIC",
+                "БЫСТРЫЙ": "FAST",
+                "ТОЧНЫЙ": "ACCURATE"
+            };
+            
+            // Функция транслитерации (кириллица -> латиница)
+            function transliterate(word) {
+                const map = {
+                    'А':'A','Б':'B','В':'V','Г':'G','Д':'D','Е':'E','Ё':'E','Ж':'ZH','З':'Z',
+                    'И':'I','Й':'Y','К':'K','Л':'L','М':'M','Н':'N','О':'O','П':'P','Р':'R',
+                    'С':'S','Т':'T','У':'U','Ф':'F','Х':'KH','Ц':'TS','Ч':'CH','Ш':'SH',
+                    'Щ':'SHCH','Ъ':'IE','Ы':'Y','Ь':'','Э':'E','Ю':'YU','Я':'YA'
+                };
+                return word.split('').map(ch => map[ch] || ch).join('');
+            }
+            
+            // Кодировка (упрощённая, с добавлением новых символов)
+            const encoding = {
+                'А': [1,4,8], 'Б': [1,4,9], 'В': [1,5,8], 'Г': [1,5,9], 'Д': [1,6,8],
+                'Е': [1,6,9], 'Ж': [1,7,8], 'З': [1,7,9], 'И': [2,4,8], 'Й': [2,4,9],
+                'К': [2,5,8], 'Л': [2,5,9], 'М': [2,6,8], 'Н': [2,6,9], 'О': [2,7,8],
+                'П': [2,7,9], 'Р': [3,4,8], 'С': [3,4,9], 'Т': [3,5,8], 'У': [3,5,9],
+                'Ф': [3,6,8], 'Х': [3,6,9], 'Ц': [3,7,8], 'Ч': [3,7,9], 'Ш': [1,4,10],
+                'Щ': [1,5,10], 'Ъ': [1,6,10], 'Ы': [1,7,10], 'Ь': [2,4,10], 'Э': [2,5,10],
+                'Ю': [2,6,10], 'Я': [2,7,10], ' ': [0,11], '.': [3,8,9], ',': [3,8,10],
+                '!': [3,9,10], '?': [3,8,11], '1':[0,4],'2':[0,5],'3':[0,6],'4':[0,7],
+                '5':[0,8],'6':[0,9],'7':[0,10],'8':[0,4,5],'9':[0,4,6],'0':[0,5,6]
+            };
+            
+            // Обратная декодировка
+            const decoding = {};
+            for (const ch in encoding) {
+                const key = encoding[ch].slice().sort((a,b)=>a-b).join(',');
+                decoding[key] = ch;
+            }
+            
+            // ---------- СОЗДАНИЕ ИНТЕРФЕЙСА ----------
+            const holeGrid = document.getElementById('hole-grid');
+            const rowLabelsDiv = document.getElementById('row-labels');
+            const colLabelsDiv = document.getElementById('col-labels');
+            
+            // Метки строк (0-11)
+            for (let r = 0; r < ROWS; r++) {
+                const label = document.createElement('div');
+                label.className = 'row-label';
+                label.style.top = `${(r * 100 / ROWS) + (100 / ROWS / 2)}%`;
+                label.textContent = r;
+                rowLabelsDiv.appendChild(label);
+            }
+            
+            // Метки колонок (1-80)
+            for (let c = 0; c < COLS; c++) {
+                const label = document.createElement('div');
+                label.className = 'col-label';
+                label.textContent = c+1;
+                colLabelsDiv.appendChild(label);
+            }
+            
+            // Создание сетки отверстий
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const hole = document.createElement('div');
+                    hole.className = 'hole';
+                    hole.dataset.row = r;
+                    hole.dataset.col = c;
+                    hole.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        this.classList.toggle('punched');
+                        updatePreview();
+                    });
+                    hole.addEventListener('mouseenter', function() {
+                        const coordSpan = document.getElementById('coord-indicator');
+                        coordSpan.innerHTML = `колонка: ${c+1} | строка: ${r}`;
+                    });
+                    holeGrid.appendChild(hole);
+                }
+            }
+            
+            // ---------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------
+            function readCardData() {
+                const data = [];
+                for (let c = 0; c < COLS; c++) {
+                    const colHoles = [];
+                    for (let r = 0; r < ROWS; r++) {
+                        const hole = document.querySelector(`.hole[data-row="${r}"][data-col="${c}"]`);
+                        if (hole && hole.classList.contains('punched')) {
+                            colHoles.push(r);
+                        }
+                    }
+                    data.push(colHoles);
+                }
+                return data;
+            }
+            
+            function decodeCardData(data) {
+                let text = '';
+                for (let i = 0; i < data.length; i++) {
+                    const col = data[i];
+                    if (col.length === 0) continue;
+                    const codeKey = col.slice().sort((a,b)=>a-b).join(',');
+                    if (decoding[codeKey]) {
+                        text += decoding[codeKey];
+                    } else {
+                        text += '?'; // неизвестный код
+                    }
+                }
+                return text.trim();
+            }
+            
+            // Улучшенный перевод с транслитерацией
+            function translateText(russianText) {
+                const words = russianText.split(/\s+/);
+                const translated = words.map(word => {
+                    const upperWord = word.toUpperCase();
+                    if (dictionary[upperWord]) {
+                        return dictionary[upperWord];
+                    }
+                    // Если нет в словаре - транслитерация
+                    return transliterate(word);
+                });
+                return translated.join(' ');
+            }
+            
+            function updatePreview() {
+                const cardData = readCardData();
+                const decoded = decodeCardData(cardData);
+                document.getElementById('output-display').innerHTML = `ТЕКУЩИЙ ВВОД: "${decoded || '(пусто)'}" | Колонок заполнено: ${cardData.filter(col => col.length > 0).length}`;
+            }
+            
+            function resetCard() {
+                const holes = document.querySelectorAll('.hole.punched');
+                holes.forEach(hole => hole.classList.remove('punched'));
+                document.getElementById('decoded-text').innerHTML = '—';
+                document.getElementById('translated-text').innerHTML = '—';
+                document.getElementById('output-display').innerHTML = 'ПЕРФОКАРТА ОЧИЩЕНА. Пробивайте отверстия...';
+                document.querySelectorAll('.light-bulb').forEach(l => l.classList.remove('on', 'active'));
+                document.getElementById('light-ready').classList.add('on');
+            }
+            
+            // Имитация чтения перфокарты с эффектом "бегущей строки"
+            async function processCardWithAnimation() {
+                const cardData = readCardData();
+                const nonEmptyCols = cardData.filter(c => c.length > 0).length;
+                if (nonEmptyCols === 0) {
+                    document.getElementById('output-display').innerHTML = 'ПЕРФОКАТА ПУСТА! Пробийте хотя бы одну колонку.';
+                    return;
+                }
+                
+                // Анимация: зажигаем индикаторы
+                const readyLight = document.getElementById('light-ready');
+                const readLight = document.getElementById('light-read');
+                const processLight = document.getElementById('light-process');
+                
+                readyLight.classList.remove('on');
+                readLight.classList.add('on');
+                document.getElementById('output-display').innerHTML = 'ЧТЕНИЕ ПЕРФОКАРТЫ... Сканирование колонок...';
+                
+                // Эффект "прогресса" по колонкам
+                for (let i = 0; i < Math.min(nonEmptyCols, 20); i++) {
+                    await new Promise(r => setTimeout(r, 30));
+                }
+                await new Promise(r => setTimeout(r, 500));
+                
+                // Декодирование
+                const decodedText = decodeCardData(cardData);
+                document.getElementById('decoded-text').innerHTML = decodedText || '(пусто)';
+                document.getElementById('output-display').innerHTML = `ДЕКОДИРОВАНО: "${decodedText}" → выполняется перевод...`;
+                
+                readLight.classList.remove('on');
+                processLight.classList.add('active');
+                await new Promise(r => setTimeout(r, 600));
+                
+                // Перевод
+                const translation = translateText(decodedText);
+                document.getElementById('translated-text').innerHTML = translation;
+                document.getElementById('output-display').innerHTML = `ГОТОВО! ${decodedText} → ${translation}`;
+                
+                processLight.classList.remove('active');
+                readyLight.classList.add('on');
+                
+                // Сохраняем в историю
+                saveToHistory(decodedText, translation, cardData);
+            }
+            
+            // История переводов
+            let history = [];
+            function saveToHistory(russian, english, cardData) {
+                const entry = {
+                    russian: russian,
+                    english: english,
+                    cardSnapshot: cardData.map(col => [...col]),
+                    timestamp: new Date().toLocaleTimeString()
+                };
+                history.unshift(entry);
+                if (history.length > 5) history.pop();
+                renderHistory();
+            }
+            
+            function renderHistory() {
+                const historyDiv = document.getElementById('history-list');
+                if (history.length === 0) {
+                    historyDiv.innerHTML = '<span style="color:#aaa;">(история пуста)</span>';
+                    return;
+                }
+                historyDiv.innerHTML = history.map((item, idx) => 
+                    `<div class="history-item" data-idx="${idx}"> ${item.russian.substring(0, 20)} → ${item.english.substring(0, 20)}</div>`
+                ).join('');
+                
+                document.querySelectorAll('.history-item').forEach(el => {
+                    el.addEventListener('click', (e) => {
+                        const idx = parseInt(el.dataset.idx);
+                        if (!isNaN(idx) && history[idx]) {
+                            loadCardFromSnapshot(history[idx].cardSnapshot);
+                            updatePreview();
+                            document.getElementById('output-display').innerHTML = `ЗАГРУЖЕНА ИСТОРИЯ: "${history[idx].russian}"`;
+                        }
+                    });
+                });
+            }
+            
+            function loadCardFromSnapshot(snapshot) {
+                resetCard();
+                for (let c = 0; c < snapshot.length && c < COLS; c++) {
+                    const holes = snapshot[c];
+                    if (holes && holes.length) {
+                        for (const row of holes) {
+                            const hole = document.querySelector(`.hole[data-row="${row}"][data-col="${c}"]`);
+                            if (hole) hole.classList.add('punched');
+                        }
+                    }
+                }
+            }
+            
+            function punchText(text) {
+                resetCard();
+                const upperText = text.toUpperCase();
+                const chars = upperText.split('');
+                for (let i = 0; i < chars.length && i < COLS; i++) {
+                    const ch = chars[i];
+                    if (encoding[ch]) {
+                        const rows = encoding[ch];
+                        for (const row of rows) {
+                            const hole = document.querySelector(`.hole[data-row="${row}"][data-col="${i}"]`);
+                            if (hole) hole.classList.add('punched');
+                        }
+                    }
+                }
+                updatePreview();
+            }
+            
+            // Случайный текст
+            function randomText() {
+                const words = Object.keys(dictionary);
+                const randomWord = words[Math.floor(Math.random() * words.length)];
+                punchText(randomWord);
+                document.getElementById('output-display').innerHTML = `СЛУЧАЙНЫЙ ТЕКСТ: "${randomWord}" → нажмите "ОБРАБОТАТЬ"`;
+            }
+            
+            // Примеры
+            function loadExample(exampleId) {
+                const examples = {
+                    hello: 'ПРИВЕТ МИР',
+                    brest: 'БРЕСТ',
+                    orlova: 'ОРЛОВА ЕВА АДАМОВНА',
+                    machine: 'МАШИНА ПЕРЕВОД',
+                    science: 'НАУКА ЯЗЫК'
+                };
+                if (examples[exampleId]) {
+                    punchText(examples[exampleId]);
+                    document.getElementById('output-display').innerHTML = `ЗАГРУЖЕН ПРИМЕР: "${examples[exampleId]}"`;
+                }
+            }
+            
+            // ---------- ОБУЧАЮЩИЙ ТУР (упрощённо) ----------
+            let tutorialActive = false;
+            function startTutorial() {
+                if (tutorialActive) return;
+                tutorialActive = true;
+                let step = 0;
+                const steps = [
+                    { msg: "Шаг 1: Кликните по любой ячейке на жёлтой перфокарте, чтобы пробить отверстие.", highlight: ".hole" },
+                    { msg: "Шаг 2: Пробитые отверстия (тёмные кружки) кодируют буквы. Посмотрите на индикатор колонки справа.", highlight: "#coord-indicator" },
+                    { msg: "Шаг 3: Нажмите 'ОБРАБОТАТЬ', чтобы IBM-701 прочитал карту.", highlight: "#process-btn" },
+                    { msg: "Шаг 4: Результат декодирования появится слева, перевод — справа.", highlight: "#decoded-box" },
+                    { msg: "Шаг 5: Используйте 'КОДИРОВКУ', чтобы узнать комбинации отверстий для букв.", highlight: "#encoding-btn" }
+                ];
+                let currentStep = 0;
+                function showStep() {
+                    if (currentStep >= steps.length) {
+                        alert("Обучение завершено! Теперь вы знаете основы работы с перфокартами.");
+                        tutorialActive = false;
+                        return;
+                    }
+                    const stepData = steps[currentStep];
+                    document.getElementById('output-display').innerHTML = `ОБУЧЕНИЕ: ${stepData.msg}`;
+                    // Подсветка (просто скроллим)
+                    const elem = document.querySelector(stepData.highlight);
+                    if (elem) elem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    currentStep++;
+                }
+                showStep();
+                const interval = setInterval(() => {
+                    if (!tutorialActive) clearInterval(interval);
+                    else showStep();
+                }, 5000);
+                setTimeout(() => { if(tutorialActive) clearInterval(interval); }, 30000);
+            }
+            
+            // ---------- НАВЕШИВАНИЕ ОБРАБОТЧИКОВ ----------
+            document.getElementById('reset-btn').addEventListener('click', resetCard);
+            document.getElementById('process-btn').addEventListener('click', processCardWithAnimation);
+            document.getElementById('random-btn').addEventListener('click', randomText);
+            document.getElementById('help-btn').addEventListener('click', () => document.getElementById('help-modal').style.display = 'block');
+            document.getElementById('encoding-btn').addEventListener('click', () => document.getElementById('encoding-modal').style.display = 'block');
+            document.getElementById('tutorial-btn').addEventListener('click', startTutorial);
+            document.getElementById('example-select').addEventListener('change', function(e) {
+                if (e.target.value) loadExample(e.target.value);
+                e.target.value = '';
+            });
+            
+            // Закрытие модалок
+            const modals = ['help-modal', 'encoding-modal'];
+            modals.forEach(id => {
+                const modal = document.getElementById(id);
+                const closeBtn = modal.querySelector('.close');
+                closeBtn.addEventListener('click', () => modal.style.display = 'none');
+                window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+            });
+            
+            // Заполнение таблицы кодировки
+            const encodingBody = document.getElementById('encoding-tbody');
+            const encodingEntries = Object.entries(encoding).slice(0, 40);
+            for (let i = 0; i < encodingEntries.length; i += 2) {
+                const row = document.createElement('tr');
+                const [ch1, code1] = encodingEntries[i];
+                row.innerHTML = `<td><strong>${ch1}</strong></td><td>${code1.join(',')}</td>` +
+                    (encodingEntries[i+1] ? `<td><strong>${encodingEntries[i+1][0]}</strong></td><td>${encodingEntries[i+1][1].join(',')}</td>` : `<td></td><td></td>`);
+                encodingBody.appendChild(row);
+            }
+            
+            // Инициализация
+            resetCard();
+            document.getElementById('light-ready').classList.add('on');
+            updatePreview();
+        });
+    </script>
+</body>
+</html>
