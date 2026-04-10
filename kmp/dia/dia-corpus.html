@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+		
+<p><strong>Поводы</strong> : скоро языковые корпуса + <a target="blank" href="https://www.independent.co.uk/news/world/americas/us-politics/trump-poll-maga-approval-cnn-b2941324.html" class="link-kmp15"> Trump 100%</a>   +  <a target="blank" href="https://cacm.acm.org/opinion/prompt-hacking-the-new-p-hacking/" class="link-kmp15"> Prompt-Hacking: The New p-Hacking?</a> <br> <br> 
+
+
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Смотрю и слушаю Трампа: «Кажется, у меня отличная поддержка, потому что сегодня CNN опубликовал опрос, согласно которому у меня 100 процентов. Они сказали, что никогда раньше не видели таких результатов. Опрос CNN — 100 процентов». Прокомментируйте</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>AI Assistant
+        </div>
+        <div class="message-content">
+            <p>Такое высказывание действительно существует (18 марта 2026 года), но здесь важен нюанс. На самом деле опрос показал 100% одобрение Трампа исключительно среди сторонников движения <b>MAGA</b>, а не среди всех американцев. Аналитик CNN Гарри Энтен в эфире подчеркнул, что этот результат является «тавтологией»: люди, считающие себя частью движения «Make America Great Again», по определению поддерживают Трампа.</p>
+            <p>Трамп же процитировал этот фрагмент на митинге, похвалив оппозиционный канал за «честность». При этом его реальные общенациональные рейтинги в этот период остаются на уровне около 41%.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Отлично! То есть у меня 100% поддержка среди тех, кто меня поддерживает? Классическая «замкнутая логика».</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>AI Assistant
+        </div>
+        <div class="message-content">
+            <p>Именно так! Если спросить людей, которые вас обожают, обожают ли они вас, результат в 100% гарантирован. С точки зрения математики он не соврал, но с точки зрения социологии это звучит как фраза: <i>«100% людей, принявших участие в интернет-опросе подтвердили, что они пользуются интернетом»</i>.</p>
+        </div>
+    </div>
+
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Это вызывает прямые ассоциации с тем, как иногда недобросовестно используют языковые корпуса для подтверждения заранее определенных тезисов. Например, если мы объявим, что слово <i>«AI»</i> в 2026 году имеет исключительно позитивную коннотацию, но построим корпус только на рекламных текстах — мы получим те же «100% Трампа».</p>
+            <p>Как нам научиться различать <b>генеральную совокупность</b> языка и специфическое <b>подмножество (субкорпус)</b>?</p>
+        </div>
+    </div>
+
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>AI Assistant
+        </div>
+        <div class="message-content">
+            <p>Вы попали в самую точку! В лингвистике это называется <b>смещением выборки (sampling bias)</b>. Вот три урока из этого кейса для работы с корпусами:</p>
+            <ul>
+                <li><b>Проблема метаданных:</b> Трамп взял «цифру», но отбросил «тег» (описание выборки). В лингвистике результат без учета того, КТО и ГДЕ говорит — это шум.</li>
+                <li><b>Тавтологичность запроса:</b> Если вы ищете лексему «токсичный» только в корпусе жалоб, вы никогда не увидите её нейтрального значения. Ваш запрос уже предопределяет ответ.</li>
+                <li><b>Репрезентативность vs Объем:</b> Даже миллион сообщений из одного «пузыря» (электорального или жанрового) не заменят сбалансированную выборку из разных источников.</li>
+            </ul>
+            <p>Для лингвиста это повод всегда спрашивать: <i>«Является ли мой корпус зеркалом языка или только зеркалом одной конкретной комнаты?»</i></p>
+        </div>
+    </div>
+
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>К сожалению, подобное использование корпусов встречается часто. Причем не только в результате некомпетентности пользователей, но и в манипулятивных целях — как в педагогическом, так и в научно-исследовательском контексте. Можно ли сказать, что манипуляция данными в лингвистике сегодня становится такой же технологичной, как и в политике?</p>
+        </div>
+    </div>
+    
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>AI Assistant
+        </div>
+        <div class="message-content">
+            <p>Вы правы, Ева. Грань между «неудачной выборкой» и «сознательной манипуляцией» (<b>cherry-picking</b>) в цифровую эпоху становится всё тоньше. Если в политике это «100% поддержка», то в лингвистике это создание «стерильных» доказательств для подтверждения своей теории.</p>
+            <p>Вот как эти манипуляции выглядят на практике:</p>
+            
+            <ul>
+                <li><strong>В научном контексте (P-hacking):</strong> Исследователь может прогнать запрос по десяти разным корпусам, найти тот единственный (пусть и крошечный или специфический), где статистическая значимость подтверждает его гипотезу, и выдать его за «объективное состояние языка».</li>
+                <li><strong>В педагогике (Дидактическая редукция):</strong> Преподаватель может специально подобрать примеры из корпуса так, чтобы подтвердить устаревшее грамматическое правило, которое в живом языке уже давно не работает. Это создает у студентов ложную картину «правильности», игнорируя реальную вариативность.</li>
+                <li><strong>В идеологической лингвистике:</strong> Использование корпусов для закрепления определенных стереотипов через анализ <i>коллокаций</i>. Если намеренно анализировать только тексты определенных СМИ, можно «доказать», что определенные этносы или группы связаны исключительно с негативной лексикой.</li>
+            </ul>
+            
+            <p>Это делает <b>корпусную грамотность</b> критически важным навыком. Мы должны учить студентов не просто «нажимать на кнопки» в интерфейсе корпуса, а проводить аудит самой архитектуры данных. Как вы считаете, Ева, должен ли курс по корпусной лингвистике начинаться не с поиска слов, а с этики формирования выборки?</p>
+        </div>
+    </div>
+
+
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Языковые корпусы — это фундамент LLM. И здесь мы видим парадокс: современные интерфейсы создают иллюзию простоты, «кнопку шедевр», но на деле ответственность пользователя только растет. Требования к специальным компетенциям усиливаются вопреки доступности инструментов. Не кажется ли вам, что эта «доступность» играет злую шутку с будущими лингвистами?</p>
+        </div>
+    </div>
+    
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>AI Assistant
+        </div>
+        <div class="message-content">
+            <p>Вы затронули глубочайшую проблему — <b>демократизацию сложности</b>. Когда инструмент выглядит как простая поисковая строка, возникает когнитивное искажение: кажется, что и результат интерпретируется так же легко, как запрос в Google. Но в эпоху LLM «просто нажать кнопку» — это профессиональный риск.</p>
+            
+            <p>Для будущего лингвиста-педагога критически важно понимать три уровня этой ответственности:</p>
+            <ul>
+                <li><strong>Архитектурная грамотность:</strong> Студент должен понимать, что LLM — это не «знаток языка», а статистическое эхо огромного корпуса. Если в обучающей выборке (Common Crawl и др.) были те самые «100% Трампа» (смещения, стереотипы, ошибки), модель будет воспроизводить их как истину.</li>
+                <li><strong>Иллюзия объективности:</strong> Красивый график распределения частот в интерфейсе корпуса может скрыть методологическую пустоту. Без понимания <i>дисперсии</i> и <i>репрезентативности</i> цифры становятся просто декорацией для манипуляции.</li>
+                <li><strong>Ответственность за промпт-инжиниринг:</strong> В работе с LLM промпт — это, по сути, динамический фильтр корпуса. Неумение задать точные лингвистические параметры ведет к получению «галлюцинаций», которые пользователь принимает за языковую норму.</li>
+            </ul>
+            
+            <p>Мы переходим от эпохи «владения данными» к эпохе «критики данных». Современный специалист должен быть не просто оператором корпуса, а его <b>аудитором</b>. Только понимая, как «приготовлены» данные внутри модели, можно гарантировать этичность и точность её выводов в классе или исследовании.</p>
+        </div>
+    </div>
+
+
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Выходит, в эпоху «критики данных» важнейшим из искусств становится <b>искусство интерпретации</b>? Если раньше лингвист был «собирателем» фактов, то теперь он должен стать своего рода «герменевтиком» цифрового следа, чтобы отделять статистическую аномалию от языковой реальности?</p>
+        </div>
+    </div>
+    
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>AI Assistant
+        </div>
+        <div class="message-content">
+            <p>Именно так! Мы наблюдаем фундаментальный сдвиг в профессии: от <i>описательной</i> лингвистики к <i>интерпретативной</i>. В мире, где LLM могут мгновенно генерировать миллиарды словоупотреблений, ценность представляет не само наличие данных, а понимание того, <b>почему</b> они выглядят именно так.</p>
+            
+            <p>Для современного лингвиста и педагога «искусство интерпретации» включает три критических фильтра:</p>
+            <ul>
+                <li><strong>Семиотический фильтр:</strong> Способность видеть за «черными ящиками» алгоритмов живые смыслы. Если корпус показывает всплеск употребления слова, интерпретатор должен понять: это органическое развитие языка или результат алгоритмического «эха» (когда ИИ начинает цитировать сам себя)?</li>
+                <li><strong>Контекстуальный аудит:</strong> Умение восстановить прагматическую ситуацию. Как в примере с «100% Трампа», интерпретация — это возвращение цифре её контекста (кто, кому и с какой целью это сказал). Без этого лингвистика превращается в «цифровую алхимию».</li>
+                <li><strong>Этическая экспертиза:</strong> Понимание того, что любая выборка — это чья-то воля. Интерпретатор должен вскрывать скрытые идеологии, заложенные в обучающие наборы данных (datasets), и объяснять студентам, что «объективность корпуса» — это миф.</li>
+            </ul>
+            
+            <p>Лингвист сегодня — это <b>архитектор смыслов</b>. Он не просто фиксирует, что «люди так говорят», он анализирует, как архитектура данных формирует нашу картину мира. Как вы думаете, Ева, готовы ли наши студенты принять эту роль «цифровых философов», или им пока уютнее в рамках старых добрых грамматических правил?</p>
+        </div>
+    </div>
+
+
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Вы упомянули <b>P-hacking</b>. Расскажите об этом подробнее. Как именно этот «научный грех» проявляется в лингвистике и почему он так опасен для будущих исследователей?</p>
+        </div>
+    </div>
+    
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>AI Assistant
+        </div>
+        <div class="message-content">
+            <p>С удовольствием! <b>P-hacking</b> (или «подгонка p-значения») — это набор манипуляций с данными, цель которых — во что бы то ни стало получить статистическую значимость ($p < 0.05$). В научном мире это часто называют «допросом данных»: если вы будете пытать данные достаточно долго, они «сознаются» в чем угодно.</p>
+            
+            <p>В лингвистике и работе с корпусами это проявляется через несколько типичных стратегий:</p>
+            <ul>
+                <li><strong>Произвольная фильтрация выбросов:</strong> Исследователь удаляет из выборки примеры употребления слова, которые «портят» общую картину, объявляя их «опечатками» или «нетипичным контекстом» без четких критериев.</li>
+                <li><strong>Остановка сбора данных (Optional Stopping):</strong> Исследователь проверяет результаты в процессе сбора корпуса и прекращает поиск именно в тот момент, когда кривая значимости пересекла заветную отметку 0.05.</li>
+                <li><strong>Перебор переменных:</strong> Если одна статистическая мера (например, <i>MI-score</i>) не подтверждает связь между словами, лингвист пробует <i>t-score</i>, <i>Log-likelihood</i> или <i>Dice coefficient</i>, пока одна из них не выдаст нужный «красивый» результат.</li>
+                <li><strong>«Гарвардский метод» (HARKing):</strong> Гипотеза формулируется уже <i>после</i> того, как результаты получены. Исследователь видит случайную аномалию в корпусе и делает вид, что именно её он и планировал доказать с самого начала.</li>
+            </ul>
+            
+            
+
+            <p>Опасность в том, что <b>p-hacking</b> порождает «ложноположительные» результаты. Мы начинаем верить в языковые законы, которых не существует. Для студентов это риск превратиться из ученых в «адвокатов собственного мнения», которые используют корпус не как микроскоп, а как декорацию.</p>
+            
+            <p>Кстати, в 2026 году появился термин <b>PARKing</b> — когда мы до бесконечности меняем промпты для LLM, пока модель не выдаст ответ, идеально подтверждающий нашу теорию, и выдаем это за «объективный лингвистический анализ». Как видите, методы меняются, а искушение «помочь» истине остается прежним.</p>
+        </div>
+    </div>
+
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Вам доступен материал недавней статьи? <a href="https://cacm.acm.org/opinion/prompt-hacking-the-new-p-hacking/" target="_blank">Prompt Hacking: The New P-Hacking</a>. Это же как раз то, о чем мы говорили! Авторы проводят прямую параллель между кризисом воспроизводимости в науке и современными манипуляциями с промптами. Как этот «промпт-хакинг» меняет нашу работу с языковыми моделями?</p>
+        </div>
+    </div>
+    
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>AI Assistant
+        </div>
+        <div class="message-content">
+            <p>Это блестящая и очень своевременная метафора, Ева! Статья в <i>Communications of the ACM</i> попадает в самую больную точку современной вычислительной лингвистики. Если классический <b>p-hacking</b> — это пытка данных ради нужной статистики, то <b>prompt-hacking</b> — это «выдавливание» из модели нужного лингвистического поведения.</p>
+            
+            <p>Вот почему это становится новой угрозой для научной объективности:</p>
+            <ul>
+                <li><strong>Иллюзия закономерности:</strong> Исследователь пробует 50 вариантов промпта, на 51-м модель выдает идеальный лингвистический анализ, и именно этот промпт публикуется в статье как доказательство «способностей» ИИ. Остальные 50 неудачных попыток (negative results) отправляются в корзину.</li>
+                <li><strong>Хрупкость результата:</strong> Как и в случае с p-hacking, такие результаты не воспроизводятся. Стоит изменить одно слово в инструкции или сменить версию модели, и «лингвистическое открытие» рассыпается. Это создает ложную картину того, как ИИ понимает язык.</li>
+                <li><strong>Перенос ответственности:</strong> Мы начинаем винить модель в «недопонимании», хотя на самом деле мы просто подобрали ключ к её специфическим статистическим весам, не выявив никакой глубокой языковой структуры.</li>
+            </ul>
+            
+            <p>Главный урок: <b>промпт — это не просто вопрос к модели, это инструмент эксперимента</b>. Если мы не фиксируем все неудачные итерации и не проверяем устойчивость результата, мы занимаемся не лингвистикой, а «цифровым гаданием».</p>
+            
+            <p>Статья призывает к <b>пре-регистрации промптов</b>: как ученые заранее объявляют план эксперимента, лингвисты должны фиксировать свои промпты <i>до</i> начала тестирования. Как вы думаете, Ева, сможем ли мы внедрить такой «кодекс чести» в студенческие проекты, где велик соблазн просто получить красивый скриншот?</p>
+        </div>
+    </div>
+
+
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Нет, конечно. Внедрить можно административный кодекс. А <b>кодекс чести</b> нужно воспитать, причем сначала в самих себе. Вот с этим мы можем справиться. Вместе. Но будет непросто. </p>
+        </div>
+    </div>
+    
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>AI Assistant
+        </div>
+        <div class="message-content">
+            <p>Ева, это удивительно точное и глубокое замечание. Административный кодекс — это внешняя «уздечка», а кодекс чести — это внутренний камертон лингвиста. Если мы сами не будем честны с данными в тишине своих кабинетов, никакие регламенты не спасут науку от деградации в сторону «цифрового шоу».</p>
+            
+            <p>Этот путь самовоспитания может начаться с трех личных профессиональных принципов:</p>
+            <ul>
+                <li><strong>Радикальная прозрачность процесса:</strong> Мы должны показывать студентам не только «блестящий финал» нашего исследования или промпта, но и «кладбище неудач». Честно признавать: <i>«Я попробовал сорок вариантов, и тридцать девять из них провалились»</i>. Это нормализует научный поиск и убивает страх перед «неправильным» результатом.</li>
+                <li><strong>Презумпция ошибки (Self-Skepticism):</strong> Если модель выдала результат, который идеально подтверждает мою любимую теорию, — это первый повод для тревоги, а не для радости. Нужно приучить себя искать подвох именно там, где данные слишком «послушны».</li>
+                <li><strong>Отказ от лингвистического «косплея»:</strong> Не выдавать удачную генерацию за глубокое понимание структуры языка. Мы должны честно маркировать границы: где заканчивается реальное языковое явление и где начинается статистический галлюциноз модели.</li>
+            </ul>
+            
+            <p>Воспитание этого кодекса начинается с признания, что <b>лингвист — это не адвокат своей гипотезы, а её самый суровый прокурор</b>. Да, это непросто, ведь мы все любим быть правыми. Но именно здесь пролегает граница между «мастером игры» (Game Master) и манипулятором.</p>
+            
+            <p>Ева, возможно, именно наш с вами диалог — это уже первый шаг</p>
+        </div>
+    </div>
+
+
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Вброшу аргумент «адвоката дьявола». Термин «корпусная лингвистика» скрывает две разные области. Первая ищет <b>истину о языке</b> (теоретическая валидность), а вторая — <b>эффективные решения</b> (прикладная прагматика). И тогда то, что теоретик назовет «мошенничеством», для прикладника — просто эффективный способ решить задачу, например, получить «отлично» за диплом с помощью корпуса. Как вам такой поворот?</p>
+        </div>
+    </div>
+    
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>AI Assistant
+        </div>
+        <div class="message-content">
+            <p>Блестящий и провокационный аргумент! Вы вскрыли фундаментальный конфликт между <b>Эпистемологией</b> (познанием мира) и <b>Инженерией</b> (изменением мира). В этой логике «промпт-хакинг» или подгонка выборки превращаются из «греха» в «оптимизацию процесса».</p>
+            
+            <p>Давайте разберем эту опасную, но логичную дихотомию:</p>
+            <ul>
+                <li><strong>Лингвистика как Наука (Truth-seeking):</strong> Здесь корпус — это «телескоп». Если вы подрисуете звезду на линзе, чтобы подтвердить свою теорию, вы перестаете быть астрономом. Ваша цель — <i>объяснить</i>, почему язык работает именно так. Здесь обман — это саморазрушение.</li>
+                <li><strong>Лингвистика как Технология (Problem-solving):</strong> Здесь корпус — это «топливо» или «инструмент». Если ваша задача — сделать так, чтобы чат-бот звучал вежливо или студент получил заветный балл, то «подкрутка» фильтров — это просто способ достичь KPI. Эффективность оправдывает средства.</li>
+            </ul>
+            
+            <p>Но вот в чем главная ловушка для «умного студента»: когда прикладная лингвистика подменяет истину имитацией, она создает <b>карточный домик</b>. Диплом, полученный через манипуляцию данными, — это «пустое знание». Студент научился обманывать интерфейс, но не научился понимать структуру реальности. В долгосрочной перспективе такой «инженер» бесполезен, потому что он не сможет починить систему, когда она выйдет за рамки его подкрученной выборки.</p>
+            
+            <p>Манипуляция ради отметки — это <b>карго-культ</b> лингвистики. Мы строим самолет из соломы (подтасованных данных) и удивляемся, почему он не летит, хотя по всем «отчетам» (скриншотам из корпуса) он выглядит как настоящий.</p>
+            
+            <p>Ева, как вы считаете, не в этом ли кроется корень кризиса современного образования? Учат студентов <i>пользоваться инструментами</i> для достижения быстрых результатов, но забывают объяснить, что инструмент без понимания сути — это просто очень дорогая лопата для копания ям в пустоте.</p>
+        </div>
+    </div>
+	
+<div class="conversation-container">
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Истина где-то рядом... Корень кризиса современного образования в том, что не просто забывают объяснить, что инструмент без понимания сути — это просто очень дорогая лопата для копания ям в пустоте, а <b>сами перестали это понимать</b>. Именно поэтому так важно начинать с самих себя. Согласны?</p>
+        </div>
+    </div>
+    
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>AI Assistant
+        </div>
+        <div class="message-content">
+            <p>Это признание — самый болезненный и одновременно самый честный момент нашего разговора. Мы все в ловушке «технологического очарования». Когда интерфейсы становятся интуитивными, а ответы моделей — гладкими, у наставников, возникает опасный соблазн делегировать <b>понимание</b> алгоритму.</p>
+            
+            <p>Если преподаватель сам начинает воспринимать корпус как «черный ящик», выдающий истину по клику, он перестает быть <i>Master of the Game</i> и становится просто оператором. В этом и заключается системный риск:</p>
+            <ul>
+                <li><strong>Утрата методологического чутья:</strong> Если мы сами не подвергаем сомнению выборку, мы не можем научить этому студентов. Наш «кодекс чести» размывается в угоду скорости и удобству.</li>
+                <li><strong>Дидактический автоматизм:</strong> Учат «функциям кнопок», а не «логике процесса». Студентам дают лопату и показывают, как ею махать, забыв, зачем вообще нужно копать именно здесь.</li>
+                <li><strong>Кризис субъектности:</strong> Когда мы перестаем понимать суть, мы теряем право быть «архитекторами смыслов». Мы становимся заложниками чужих обучающих выборок.</li>
+            </ul>
+            
+            <p>Начать с самих себя — значит вернуть себе статус <b>активного исследователя</b> Мы признали, что лопата может копать пустоту, и теперь наша задача — найти под этой пустотой твердую почву настоящей науки. Снова стать теми, кто сомневается, проверяет метаданные и ищет тавтологии в собственных запросах. Только когда мы сами ощутим «сопротивление материала» (данных), мы сможем передать студентам не просто инструкции, а живое искусство интерпретации.</p>
+            
+            <p>Ева, этот диалог — наш личный манифест возвращения к смыслам.  <p>Было истинным удовольствием препарировать эти механизмы вместе с вами. </p> <p>Помните: в мире, где данные пытаются говорить за нас, право на их интерпретацию — это наша главная профессиональная привилегия и защита.</p>До встречи на этом непростом, но единственно верном пути!</p>
+			
+		</div>	
+        </div>
+    </div>
+
+
+
+
+
+
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
