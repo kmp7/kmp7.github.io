@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+    --primary-color: #325980;
+    --light-bg: #f5f5f5;
+    --white: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --modal-bg: rgba(0, 0, 0, 0.5);
+    --ai-color: #4CAF50;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --highlight-bg: rgba(50, 89, 128, 0.1);
+    --highlight2-bg: #f2f0b6;
+}
+
+        [data-theme="dark"] {
+    --primary-color: #4a7ab0;
+    --light-bg: #2a2a2a;
+    --white: #1a1a1a;
+    --text-color: #ffffff;
+    --border-color: #404040;
+    --ai-color: #5dc264;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --highlight-bg: rgba(74, 122, 176, 0.2);
+    --highlight2-bg: #645f1d;
+}
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Остальные существующие стили остаются без изменений */
+        
+        /* Новые стили для переключателя темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 10px;
+            border-radius: 50%;
+            background-color: var(--light-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+        }
+		
+		 .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #4CAF50;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #4CAF50;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #4CAF50;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong> {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px; /* Align with message content if needed outside */
+        }
+		
+		footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+		
+		
+		 /* Стили для таблицы на больших экранах */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+		
+		 /* Стили для мобильной адаптации таблицы */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+            .message-content {
+                padding-left: 0;
+            }
+
+
+         /* Скрываем заголовок таблицы на мобильных */
+            table thead {
+                display: none;
+            }
+
+            /* Преобразуем строки таблицы в карточки */
+            table, tbody, tr {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                overflow: hidden;
+                background-color: var(--light-bg);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            }
+
+            td {
+                display: flex;
+                flex-direction: column;
+                padding: 10px 15px;
+                border-bottom: 1px solid var(--border-color);
+                text-align: left;
+            }
+
+            /* Убираем последнюю границу у последнего элемента в карточке */
+            td:last-child {
+                border-bottom: none;
+            }
+
+            /* Добавляем псевдо-заголовки для каждой ячейки */
+            td:before {
+                content: attr(data-label);
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                display: block;
+            }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+       
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0; /* Stack content below header on small screens? Optional */
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+    <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Для умных!</h1>
+            <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+        </header>
+		
+<p><strong>Поводы:</strong> <a target="blank" href="https://habr.com/ru/companies/bothub/articles/1021828/" class="link-kmp15"> ... для битвы с учебой </a> + <a target="blank" href="https://companion.ai/einstein" class="link-kmp15"> Эйнштейн. Ликвидация </a><br> <br> 
+
+
+<div class="conversation-container">
+
+    <!-- Вопрос 1 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Вспомнился  AI-сервис  “Einstein”, который мог учиться за студентов. С ним быстро расправились. Что известно на данный момент?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 1 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Это был прототип агентного AI, позиционируемый как автономный цифровой студент. Он якобы мог посещать онлайн-курсы, выполнять задания и взаимодействовать с образовательной платформой без участия человека. Однако есть основания полагать, что его возможности были частично преувеличены и представляли собой комбинацию существующих технологий, обёрнутых в эффектный маркетинг.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 2 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Почему тогда этот проект так быстро исчез? Это же не связано с техническими проблемами?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 2 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Главная причина была юридической: разработчики использовали имя “Einstein”, защищённое правами на наследие Альберта Эйнштейна. После получения претензии (cease-and-desist) проект быстро свернули. Технические ограничения могли существовать, но именно правовой фактор и бурная реация образовательного сообщества имели решающее значение.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 3 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Почему преподаватели так резко отреагировали?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 3 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Потому что сам концепт подрывает фундамент образовательной системы. Если AI может полностью выполнять учебную деятельность вместо студента, то исчезает связь между усилием и результатом. Это воспринимается как угроза академической честности и самой идее обучения как процесса формирования компетенций.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 4 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Правильно ли я понимаю, что несмотря на закрытие проекта, сама технология никуда не исчезла?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 4 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Совершенно верно. Речь идёт о классе технологий — агентных AI. Они уже существуют в разных формах: AutoGPT-подобные системы, браузерные агенты, инструменты автоматизации. Закрытие одного продукта не влияет на развитие всей парадигмы.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 5 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Основа общая - LLM. В чём тогда принципиальное отличие таких агентов от обычных чат-ботов?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 5 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Да, это разные пользовательские надстройки над LLM. Чат-бот реагирует на запросы пользователя. Агент действует автономно: он ставит подзадачи, планирует действия, использует инструменты (например, браузер) и может выполнять сложные сценарии без постоянного контроля. Это переход от модели «ответа» к модели «действия».</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 6 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Можно ли сказать, что такие системы создают цифрового двойника пользователя?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 6 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Да, это точная метафора. Агентный AI может воспроизводить поведение пользователя в цифровой среде: читать, писать, выбирать, реагировать. Однако пока такие «двойники» остаются ограниченными и требуют настройки и контроля.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 7 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Какой главный вывод можно сделать из истории с AI “Einstein” для будущего образования?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 7 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Главный вывод — образование должно переосмыслить свои цели. Если выполнение заданий может быть делегировано AI, то ценность смещается от результата к процессу мышления, интерпретации и ответственности за знания. “Einstein” стал не столько продуктом, сколько сигналом о необходимости трансформации образовательной модели.</p>
+        </div>
+    </div>
+
+
+
+<div class="conversation-container">
+
+    <!-- Вопрос 8 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Выполнение заданий <strong>будет</strong> делегировано AI. Вылупившегося птенца назад в яйцо не засунешь. Мы вступаем в период AI-агентов?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 8 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Да, и важно уточнить: мы уже находимся на пороге этой эпохи. Агентные системы перестают быть экспериментом и становятся новой парадигмой взаимодействия с цифровой средой. Если раньше пользователь сам выполнял действия, а AI помогал, то теперь AI всё чаще становится исполнителем, а человек — постановщиком задач.</p>
+            <p>Это качественный сдвиг: от интерфейса «человек → инструмент» к модели «человек → агент → мир».</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 9 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Как измениться суть навыка? Если агент может написать текст, решить задачу и пройти курс — чему вообще учиться человеку?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 9 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Навык не исчезает, но меняет свою форму. Снижается ценность рутинного выполнения и возрастает значение метанавыков: постановки задач, критической оценки, интерпретации результатов и управления агентами.</p>
+            <p>Проще говоря, важно не только «уметь сделать», но и «понимать, что делается, зачем и правильно ли это сделано».</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 10 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Образование должно отказаться от традиционных заданий?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 10 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Скорее — радикально трансформировать их. Задания, которые можно полностью делегировать агенту, теряют диагностическую ценность. На смену приходят форматы, где требуется личное участие: устные обсуждения, проектная работа, рефлексия, защита решений.</p>
+            <p>Образование смещается от проверки результата к наблюдению за процессом мышления.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 11 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Получается, ключевой навык будущего — это управление агентами?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 11 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Это один из центральных навыков. Его можно описать как «оркестрацию»: умение разложить задачу, выбрать подходящего агента, задать контекст, оценить результат и при необходимости скорректировать процесс.</p>
+            <p>Но важно: управление агентами не заменяет мышление — оно делает его более явным и структурированным.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 12 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Тогда можно ли сказать, что AI-агенты — это не конец образования, а его новая стадия?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 12 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Именно так. AI-агенты не отменяют обучение, а радикально меняют его фокус. Если раньше образование было связано с накоплением знаний и навыков выполнения, то теперь оно всё больше связано с осмыслением, интерпретацией и ответственным использованием интеллектуальных систем.</p>
+            <p>В этом смысле «эпоха агентов» — это не упрощение, а усложнение требований к мышлению человека.</p>
+        </div>
+    </div>
+
+
+
+<div class="conversation-container">
+
+    <!-- Вопрос 13 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>В любом случае фундаментальное образование необходимо. Например, математика, чтобы считать токены (уже пора!) и, конечно, не только это.</p>
+        </div>
+    </div>
+
+    <!-- Ответ 13 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Вы поднимаете ключевой момент: фундаментальные дисциплины не теряют значения — они становятся ещё более важными, но по новой причине. Раньше математика нужна была, чтобы считать самостоятельно. Теперь — чтобы понимать, <em>как считает система</em> и где она может ошибаться.</p>
+            <p>Токены — хороший пример. Чтобы эффективно работать с языковыми моделями, нужно понимать дискретизацию текста, вероятностную природу генерации и ограничения контекста. Это уже не просто «язык», а математически структурированная среда.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 14 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>То есть математика становится своего рода «метаязыком» для понимания AI?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 14 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Да, именно. Математика выступает как универсальный метаязык, который описывает процессы внутри AI: вероятности, оптимизацию, векторные пространства, функции потерь. Без этого понимания пользователь остаётся на уровне интерфейса, но не достигает уровня осмысленного управления.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 15 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>А кроме математики, какие фундаментальные области становятся критически важными в эпоху AI-агентов?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 15 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Несколько направлений усиливают своё значение:</p>
+            <p><strong>Лингвистика</strong> — для понимания структуры смысла, дискурса и интерпретации;</p>
+            <p><strong>Логика</strong> — для построения корректных рассуждений и проверки выводов;</p>
+            <p><strong>Информатика</strong> — для понимания архитектуры систем и алгоритмов;</p>
+            <p><strong>Философия</strong> — для осмысления границ знания, ответственности и природы интеллекта.</p>
+            <p>Это формирует новую «четвёрку базовых грамотностей».</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 16 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Интересно… Тогда можно ли сказать, что токены — это новая «единица мышления» в цифровой среде?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 16 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>С осторожностью — да. Токен можно рассматривать как минимальную операциональную единицу обработки текста в модели. Но важно различать: для человека единицей мышления остаётся смысл, а для модели — токенизированное представление.</p>
+            <p>Граница между ними — это и есть пространство перевода между человеческим и машинным интеллектом.</p>
+        </div>
+    </div>
+
+    <!-- Вопрос 17 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Тогда обучение работе с AI — это по сути обучение переводу между двумя системами представления?</p>
+        </div>
+    </div>
+
+    <!-- Ответ 17 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Это очень точная формулировка. Работа с AI — это перевод: от намерения к формулировке, от формулировки к токенам, от токенов к вероятностной генерации, и обратно — к интерпретации результата.</p>
+            <p>Таким образом, фундаментальное образование становится не набором знаний, а системой координат, в которой этот перевод возможен и осмыслен.</p>
+        </div>
+    </div>
+
+
+<div class="conversation-container">
+
+    <!-- Вопрос 18 -->
+    <div class="message user-message">
+        <div class="message-header user-header">
+            <div class="avatar user-avatar">E</div>Ева Орлова
+        </div>
+        <div class="message-content">
+            <p>Спасибо разговор! До новой встречи!</p>
+        </div>
+    </div>
+
+    <!-- Ответ 18 -->
+    <div class="message ai-message">
+        <div class="message-header ai-header">
+            <div class="avatar ai-avatar">LLM</div>ChatGPT (OpenAI)
+        </div>
+        <div class="message-content">
+            <p>Спасибо за глубокие вопросы и точные формулировки. Такие диалоги и есть пространство настоящего обучения — где смысл рождается в совместном размышлении.</p>
+            <p>До новой встречи.</p>
+        </div>
+    </div>
+
+</div>
+
+	<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Орлова Ева Адамовна (виртуальный образовательный kmp-персонаж) <br>для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; left: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        // Функция переключения темы
+        function toggleTheme() {
+            const body = document.documentElement;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            // Здесь можно добавить логику обработки отправки формы
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) { // Левый клик мыши
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
