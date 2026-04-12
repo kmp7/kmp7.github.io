@@ -1,0 +1,2489 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+
+    <!-- Fabric.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <!-- Anime.js для анимаций -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&family=Noto+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-deep: #0a0a12;
+            --bg-panel: #12121f;
+            --bg-card: #1a1a2e;
+            --ink-primary: #e0e0f0;
+            --ink-secondary: #8888aa;
+            --accent-cyan: #00d4ff;
+            --accent-amber: #ffb347;
+            --accent-green: #00e676;
+            --accent-magenta: #e040fb;
+            --glow-cyan: rgba(0, 212, 255, 0.3);
+            --glow-amber: rgba(255, 179, 71, 0.3);
+            --ring-color: #1a1a2e;
+            --logogram-ink: rgba(0, 0, 0, 0.85);
+            --smoke-opacity: 0.6;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --radius: 12px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Exo 2', 'Noto Sans', sans-serif;
+            background: var(--bg-deep);
+            color: var(--ink-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== ФОНОВЫЕ ЧАСТИЦЫ ===== */
+        #particles-bg {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ===== НАВИГАЦИЯ ===== */
+        .top-nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            background: rgba(10, 10, 18, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-brand {
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent-cyan);
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .nav-brand .brand-icon {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--accent-cyan);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem;
+            box-shadow: 0 0 12px var(--glow-cyan);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .nav-tab {
+            background: none;
+            border: none;
+            color: var(--ink-secondary);
+            font-family: 'Exo 2', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 400;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .nav-tab:hover {
+            color: var(--ink-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-tab.active {
+            color: var(--accent-cyan);
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .nav-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 50%; transform: translateX(-50%);
+            width: 60%;
+            height: 2px;
+            background: var(--accent-cyan);
+            border-radius: 1px;
+        }
+
+        .nav-progress {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .xp-display {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-amber);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .level-badge {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+            color: #fff;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.25rem 0.6rem;
+            border-radius: 20px;
+            letter-spacing: 1px;
+        }
+
+        /* ===== ОСНОВНОЙ КОНТЕЙНЕР ===== */
+        .app-container {
+            position: relative;
+            z-index: 1;
+            padding-top: 80px;
+            min-height: 100vh;
+        }
+
+        .section {
+            display: none;
+            padding: 1.5rem 2rem 3rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            animation: fadeInSection 0.5s ease;
+        }
+
+        .section.active { display: block; }
+
+        @keyframes fadeInSection {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== СЕКЦИЯ: ЛИНГВОТЕОРИЯ ===== */
+        .theory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(540px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .theory-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius);
+            padding: 1.75rem;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .theory-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px; height: 100%;
+            border-radius: 4px 0 0 4px;
+        }
+
+        .theory-card.sapir-whorf::before { background: var(--accent-cyan); }
+        .theory-card.semiotics::before   { background: var(--accent-amber); }
+        .theory-card.nonlinear::before   { background: var(--accent-green); }
+        .theory-card.intersemiotic::before { background: var(--accent-magenta); }
+
+        .theory-card:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .theory-card h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        .theory-card.sapir-whorf h3 { color: var(--accent-cyan); }
+        .theory-card.semiotics h3   { color: var(--accent-amber); }
+        .theory-card.nonlinear h3   { color: var(--accent-green); }
+        .theory-card.intersemiotic h3 { color: var(--accent-magenta); }
+
+        .theory-card p {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: var(--ink-secondary);
+            font-weight: 300;
+        }
+
+        .theory-card .keyword {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin: 0.3rem 0.2rem;
+            color: var(--ink-primary);
+        }
+
+        .section-header {
+            margin-bottom: 0.5rem;
+        }
+
+        .section-header h2 {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section-header p {
+            color: var(--ink-secondary);
+            font-size: 1rem;
+            margin-top: 0.5rem;
+            font-weight: 300;
+        }
+
+        /* ===== СЕКЦИЯ: ЛОГОГРАММЫ (Fabric.js) ===== */
+        .logogram-workspace {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .canvas-area {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .canvas-container-wrapper {
+            position: relative;
+            border-radius: 50%;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(0, 212, 255, 0.08), 0 0 80px rgba(0, 0, 0, 0.4);
+        }
+
+        .canvas-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1.25rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.55rem 1.1rem;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--ink-primary);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn.primary {
+            background: rgba(0, 212, 255, 0.15);
+            border-color: rgba(0, 212, 255, 0.3);
+            color: var(--accent-cyan);
+        }
+
+        .btn.primary:hover {
+            background: rgba(0, 212, 255, 0.25);
+            box-shadow: 0 0 20px var(--glow-cyan);
+        }
+
+        .btn.danger {
+            color: #ff5252;
+            border-color: rgba(255, 82, 82, 0.2);
+        }
+
+        .btn.danger:hover {
+            background: rgba(255, 82, 82, 0.1);
+        }
+
+        /* Панель словаря */
+        .dictionary-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius);
+            display: flex;
+            flex-direction: column;
+            max-height: 620px;
+        }
+
+        .dict-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .dict-header h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent-amber);
+            letter-spacing: 1.5px;
+        }
+
+        .dict-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.75rem;
+        }
+
+        .dict-list::-webkit-scrollbar { width: 4px; }
+        .dict-list::-webkit-scrollbar-track { background: transparent; }
+        .dict-list::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 2px; }
+
+        .dict-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid transparent;
+        }
+
+        .dict-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--border-subtle);
+        }
+
+        .dict-item.selected {
+            background: rgba(0, 212, 255, 0.08);
+            border-color: rgba(0, 212, 255, 0.2);
+        }
+
+        .dict-item-preview {
+            width: 52px; height: 52px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dict-item-preview canvas {
+            border-radius: 50%;
+        }
+
+        .dict-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .dict-item-concept {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .dict-item-meaning {
+            font-size: 0.75rem;
+            color: var(--ink-secondary);
+            font-weight: 300;
+            line-height: 1.4;
+        }
+
+        .dict-item-category {
+            font-size: 0.65rem;
+            font-family: 'Orbitron', monospace;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
+
+        .cat-time { background: rgba(0, 212, 255, 0.15); color: var(--accent-cyan); }
+        .cat-comm { background: rgba(0, 230, 118, 0.15); color: var(--accent-green); }
+        .cat-existence { background: rgba(224, 64, 251, 0.15); color: var(--accent-magenta); }
+        .cat-emotion { background: rgba(255, 179, 71, 0.15); color: var(--accent-amber); }
+        .cat-action { background: rgba(255, 82, 82, 0.15); color: #ff5252; }
+
+        /* ===== СЕКЦИЯ: ПЕРЕВОДЧИК ===== */
+        .translator-layout {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            align-items: start;
+        }
+
+        .translator-column {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .translator-column h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .human-col h3 { color: var(--accent-cyan); }
+        .hepta-col h3 { color: var(--accent-amber); }
+
+        .translator-textarea {
+            width: 100%;
+            min-height: 120px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 1rem;
+            color: var(--ink-primary);
+            font-family: 'Exo 2', sans-serif;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            resize: vertical;
+            transition: var(--transition);
+        }
+
+        .translator-textarea:focus {
+            outline: none;
+            border-color: rgba(0, 212, 255, 0.4);
+            box-shadow: 0 0 20px var(--glow-cyan);
+        }
+
+        .translator-textarea::placeholder {
+            color: rgba(136, 136, 170, 0.5);
+        }
+
+        .translate-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding-top: 2.5rem;
+        }
+
+        .translate-btn {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(224, 64, 251, 0.2));
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            color: var(--accent-cyan);
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .translate-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px var(--glow-cyan);
+        }
+
+        .logogram-output {
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logogram-output canvas {
+            border-radius: 8px;
+        }
+
+        .translation-analysis {
+            margin-top: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .analysis-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .analysis-item:last-child { border-bottom: none; }
+
+        .analysis-label {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.65rem;
+            letter-spacing: 1px;
+            color: var(--ink-secondary);
+            min-width: 140px;
+            padding-top: 0.1rem;
+        }
+
+        .analysis-value {
+            font-size: 0.85rem;
+            color: var(--ink-primary);
+            font-weight: 300;
+            line-height: 1.6;
+        }
+
+        /* ===== СЕКЦИЯ: КВИЗЫ ===== */
+        .quiz-container {
+            max-width: 800px;
+            margin: 1.5rem auto 0;
+        }
+
+        .quiz-progress-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 2px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .quiz-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta));
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .quiz-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius);
+            padding: 2rem;
+        }
+
+        .quiz-question-number {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.7rem;
+            color: var(--ink-secondary);
+            letter-spacing: 2px;
+            margin-bottom: 0.75rem;
+        }
+
+        .quiz-question {
+            font-size: 1.1rem;
+            font-weight: 400;
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+        }
+
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .quiz-option {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.9rem;
+            color: var(--ink-primary);
+            font-weight: 300;
+            text-align: left;
+        }
+
+        .quiz-option:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .quiz-option.selected {
+            border-color: rgba(0, 212, 255, 0.4);
+            background: rgba(0, 212, 255, 0.08);
+        }
+
+        .quiz-option.correct {
+            border-color: rgba(0, 230, 118, 0.5);
+            background: rgba(0, 230, 118, 0.1);
+            color: var(--accent-green);
+        }
+
+        .quiz-option.wrong {
+            border-color: rgba(255, 82, 82, 0.5);
+            background: rgba(255, 82, 82, 0.1);
+            color: #ff5252;
+        }
+
+        .quiz-feedback {
+            margin-top: 1.25rem;
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            display: none;
+        }
+
+        .quiz-feedback.show { display: block; }
+
+        .quiz-feedback.correct-feedback {
+            background: rgba(0, 230, 118, 0.08);
+            border: 1px solid rgba(0, 230, 118, 0.2);
+            color: var(--accent-green);
+        }
+
+        .quiz-feedback.wrong-feedback {
+            background: rgba(255, 82, 82, 0.08);
+            border: 1px solid rgba(255, 82, 82, 0.2);
+            color: #ff8a80;
+        }
+
+        .quiz-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+        }
+
+        .quiz-score {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .quiz-score h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent-cyan);
+        }
+
+        .quiz-score .score-value {
+            font-family: 'Orbitron', monospace;
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-amber));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .quiz-type-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .quiz-type-btn {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 0.8rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--ink-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .quiz-type-btn.active {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: rgba(0, 212, 255, 0.3);
+            color: var(--accent-cyan);
+        }
+
+        /* ===== СЕКЦИЯ: ПЕСОЧНИЦА ===== */
+        .sandbox-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .sandbox-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .sandbox-panel h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            margin-bottom: 1rem;
+            color: var(--accent-magenta);
+        }
+
+        .sandbox-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .sandbox-control-group label {
+            display: block;
+            font-size: 0.7rem;
+            font-family: 'Orbitron', monospace;
+            letter-spacing: 1px;
+            color: var(--ink-secondary);
+            margin-bottom: 0.4rem;
+        }
+
+        .sandbox-control-group input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-cyan);
+        }
+
+        .sandbox-control-group select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 0.5rem;
+            color: var(--ink-primary);
+            font-family: 'Exo 2', sans-serif;
+            font-size: 0.85rem;
+        }
+
+        .sandbox-canvas-wrap {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .timeline-panel {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .timeline-label {
+            font-size: 0.7rem;
+            font-family: 'Orbitron', monospace;
+            color: var(--ink-secondary);
+            letter-spacing: 1px;
+            margin-bottom: 0.75rem;
+        }
+
+        .timeline-bar {
+            display: flex;
+            gap: 4px;
+            height: 32px;
+        }
+
+        .timeline-segment {
+            flex: 1;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .timeline-segment:hover {
+            transform: scaleY(1.2);
+            filter: brightness(1.3);
+        }
+
+        .timeline-segment .seg-tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            margin-bottom: 4px;
+            z-index: 10;
+        }
+
+        .timeline-segment:hover .seg-tooltip { display: block; }
+
+        /* ===== АЧИВКИ ===== */
+        .achievement-toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 179, 71, 0.3);
+            border-radius: var(--radius);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            z-index: 200;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+            transform: translateX(120%);
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .achievement-toast.show {
+            transform: translateX(0);
+        }
+
+        .achievement-icon {
+            font-size: 1.8rem;
+        }
+
+        .achievement-text h4 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-amber);
+            letter-spacing: 1px;
+        }
+
+        .achievement-text p {
+            font-size: 0.8rem;
+            color: var(--ink-secondary);
+            margin-top: 0.2rem;
+        }
+
+        /* ===== Адаптивность ===== */
+        @media (max-width: 1024px) {
+            .logogram-workspace {
+                grid-template-columns: 1fr;
+            }
+            .translator-layout {
+                grid-template-columns: 1fr;
+            }
+            .translate-arrow {
+                flex-direction: row;
+                padding-top: 0;
+                justify-content: center;
+            }
+            .sandbox-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-tabs { display: none; }
+            .top-nav { padding: 0 1rem; }
+            .section { padding: 1rem; }
+            .theory-grid { grid-template-columns: 1fr; }
+
+            /* Mobile nav */
+            .mobile-menu-btn {
+                display: block !important;
+                background: none;
+                border: none;
+                color: var(--ink-primary);
+                font-size: 1.5rem;
+                cursor: pointer;
+            }
+        }
+
+        .mobile-menu-btn { display: none; }
+
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            top: 64px; left: 0; right: 0; bottom: 0;
+            background: rgba(10, 10, 18, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 99;
+            padding: 2rem;
+        }
+
+        .mobile-nav.show { display: flex; flex-direction: column; gap: 0.5rem; }
+
+        .mobile-nav .nav-tab {
+            font-size: 1.1rem;
+            padding: 1rem;
+            text-align: left;
+            border-radius: 8px;
+        }
+
+        /* ===== Дополнительные стили для словаря логограмм с визуальным квизом ===== */
+        .visual-quiz-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+
+        .visual-quiz-option {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px solid var(--border-subtle);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .visual-quiz-option:hover {
+            border-color: rgba(0, 212, 255, 0.4);
+            box-shadow: 0 0 20px var(--glow-cyan);
+        }
+
+        .visual-quiz-option.correct {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 25px rgba(0, 230, 118, 0.3);
+        }
+
+        .visual-quiz-option.wrong {
+            border-color: #ff5252;
+            box-shadow: 0 0 25px rgba(255, 82, 82, 0.3);
+        }
+
+        /* ===== Инфо-баннер фильма ===== */
+        .film-banner {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(224, 64, 251, 0.05));
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius);
+            padding: 1.5rem 2rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .film-banner-icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+
+        .film-banner-text h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-cyan);
+            letter-spacing: 1.5px;
+            margin-bottom: 0.3rem;
+        }
+
+        .film-banner-text p {
+            font-size: 0.85rem;
+            color: var(--ink-secondary);
+            font-weight: 300;
+            line-height: 1.5;
+        }
+
+        .ink-visualization {
+            position: relative;
+        }
+
+        .ink-label {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            font-family: 'Orbitron', monospace;
+            color: var(--ink-secondary);
+            letter-spacing: 1px;
+            background: rgba(10, 10, 18, 0.7);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+        }
+		footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+			color: var(--ink-secondary);
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- Частицы фона -->
+<canvas id="particles-bg"></canvas>
+
+<!-- Навигация -->
+<nav class="top-nav">
+    <div class="nav-brand">
+    ARRIVAL LAB
+    </div>
+
+    <div class="nav-tabs" id="navTabs">
+        <button class="nav-tab active" data-section="theory" onclick="switchSection('theory')">Контекст</button>
+        <button class="nav-tab" data-section="logograms" onclick="switchSection('logograms')">Логограммы</button>
+        <button class="nav-tab" data-section="translator" onclick="switchSection('translator')">⟷ Переводчик</button>
+        <button class="nav-tab" data-section="quiz" onclick="switchSection('quiz')">Задания</button>
+        <button class="nav-tab" data-section="sandbox" onclick="switchSection('sandbox')">Песочница</button>
+    </div>
+
+    <div class="nav-progress">
+        <div class="xp-display">
+            <span>✦</span>
+            <span id="xpValue">0</span> XP
+        </div>
+        <div class="level-badge" id="levelBadge">LVL 1</div>
+    </div>
+
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+</nav>
+
+<!-- Мобильная навигация -->
+<div class="mobile-nav" id="mobileNav">
+    <button class="nav-tab active" data-section="theory" onclick="switchSection('theory'); toggleMobileMenu();">Контекст</button>
+    <button class="nav-tab" data-section="logograms" onclick="switchSection('logograms'); toggleMobileMenu();">Логограммы</button>
+    <button class="nav-tab" data-section="translator" onclick="switchSection('translator'); toggleMobileMenu();">⟷ Переводчик</button>
+    <button class="nav-tab" data-section="quiz" onclick="switchSection('quiz'); toggleMobileMenu();">Задания</button>
+    <button class="nav-tab" data-section="sandbox" onclick="switchSection('sandbox'); toggleMobileMenu();">Песочница</button>
+</div>
+
+<!-- Тост ачивок -->
+<div class="achievement-toast" id="achievementToast">
+        <div class="achievement-text">
+        <h4 id="achievementTitle">ДОСТИЖЕНИЕ</h4>
+        <p id="achievementDesc">Описание</p>
+    </div>
+</div>
+
+<!-- ===== ОСНОВНОЙ КОНТЕЙНЕР ===== -->
+<div class="app-container">
+
+    <!-- ===== КОНТЕКСТ ===== -->
+    <section class="section active" id="sec-theory">
+        <div class="section-header">
+            <h2>ЛИНГВИСТИЧЕСКИЙ КОНТЕКСТ</h2>
+            <p>Ключевые концепции из фильма «Прибытие» и их связь с лингвистикой перевода</p>
+        </div>
+
+        <div class="film-banner">
+                        <div class="film-banner-text">
+                <h3>ARRIVAL · 2016</h3>
+                <p>В фильме Дени Вильнёва лингвист Луиза Бэнкс дешифрует язык инопланетных гептаподов.
+                   Их письменность — круговые логограммы из чернильных клякс — воплощает <strong>нелинейное</strong> восприятие времени
+                   и демонстрирует <strong>гипотезу лингвистической относительности</strong> в предельной форме.</p>
+            </div>
+        </div>
+
+        <div class="theory-grid">
+            <div class="theory-card sapir-whorf">
+                <h3>ГИПОТЕЗА СЕПИРА–УОРФА</h3>
+                <p>Структура языка определяет (сильная версия) или влияет (слабая версия) на мышление и восприятие мира.
+                   В фильме изучение языка гептаподов буквально <em>изменяет сознание</em> Луизы: она начинает воспринимать время нелинейно.</p>
+                <div style="margin-top: 0.75rem;">
+                    <span class="keyword">лингвистический детерминизм</span>
+                    <span class="keyword">лингвистическая относительность</span>
+                    <span class="keyword">когнитивная лингвистика</span>
+                </div>
+            </div>
+
+            <div class="theory-card semiotics">
+                <h3>СЕМИОТИКА ПЕРЕВОДА</h3>
+                <p>По Р. Якобсону, выделяют три вида перевода: <em>внутриязыковой</em> (перефразирование),
+                   <em>межъязыковой</em> (собственно перевод) и <em>межсемиотический</em> (трансмутация) —
+                   интерпретация знаков одной системы средствами другой.</p>
+                <div style="margin-top: 0.75rem;">
+                    <span class="keyword">Роман Якобсон</span>
+                    <span class="keyword">трансмутация</span>
+                    <span class="keyword">знаковые системы</span>
+                </div>
+            </div>
+
+            <div class="theory-card nonlinear">
+                <h3>НЕЛИНЕЙНАЯ КОММУНИКАЦИЯ</h3>
+                <p>Язык гептаподов (Heptapod B) — <em>семасиографическая</em> система: не привязана к звучанию,
+                   передаёт целостные смыслы одномоментно. Это радикально отличается от линейных систем
+                   (алфавитов, слогового письма), где знаки идут последовательно.</p>
+                <div style="margin-top: 0.75rem;">
+                    <span class="keyword">семасиография</span>
+                    <span class="keyword">глоттография</span>
+                    <span class="keyword">хронотоп</span>
+                </div>
+            </div>
+
+            <div class="theory-card intersemiotic">
+                <h3>МЕЖСЕМИОТИЧЕСКИЙ ПЕРЕВОД</h3>
+                <p>Перевод «человеческое предложение → логограмма» — классический пример межсемиотического перевода:
+                   линейная синтаксическая цепочка превращается в пространственный визуальный знак,
+                   где компоненты значения закодированы в <em>форме, толщине, разрывах и ответвлениях</em> кольца.</p>
+                <div style="margin-top: 0.75rem;">
+                    <span class="keyword">визуальная семантика</span>
+                    <span class="keyword">пространственный синтаксис</span>
+                    <span class="keyword">мультимодальность</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== ЛОГОГРАММЫ ===== -->
+    <section class="section" id="sec-logograms">
+        <div class="section-header">
+            <h2>СЛОВАРЬ ЛОГОГРАММ</h2>
+            <p>Кликните на элемент словаря, чтобы рассмотреть логограмму и её семантическую структуру</p>
+        </div>
+
+        <div class="logogram-workspace">
+            <div class="canvas-area">
+                <div class="canvas-container-wrapper">
+                    <canvas id="mainLogogramCanvas" width="400" height="400"></canvas>
+                </div>
+                <div id="currentConceptLabel" style="margin-top: 1rem; font-family: 'Orbitron', monospace; font-size: 0.9rem; color: var(--accent-cyan); letter-spacing: 2px;">
+                    Выберите логограмму →
+                </div>
+                <div class="canvas-controls">
+                    <button class="btn primary" onclick="animateCurrentLogogram()">▶ Анимировать</button>
+                    <button class="btn" onclick="exportLogogram()">⬇ Экспорт PNG</button>
+                    <button class="btn danger" onclick="clearMainCanvas()">✕ Очистить</button>
+                </div>
+            </div>
+
+            <div class="dictionary-panel">
+                <div class="dict-header">
+                    <h3>СЛОВАРЬ ГЕПТАПОДОВ</h3>
+                </div>
+                <div class="dict-list" id="dictList">
+                    <!-- Заполняется из JS -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== ПЕРЕВОДЧИК ===== -->
+    <section class="section" id="sec-translator">
+        <div class="section-header">
+            <h2>МЕЖСЕМИОТИЧЕСКИЙ ПЕРЕВОДЧИК</h2>
+            <p>Эмуляция перевода линейного текста в нелинейную визуальную логограмму</p>
+        </div>
+
+        <div class="translator-layout">
+            <div class="translator-column human-col">
+                <h3>ЧЕЛОВЕЧЕСКИЙ ЯЗЫК</h3>
+                <textarea class="translator-textarea" id="humanInput"
+                    placeholder="Введите фразу, например: «Мы пришли с миром» или «Время не линейно»..."></textarea>
+                <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                    <button class="btn" onclick="setPhrase('Мы пришли с миром')">Мы пришли с миром</button>
+                    <button class="btn" onclick="setPhrase('Время не линейно')">Время не линейно</button>
+                    <button class="btn" onclick="setPhrase('Какова ваша цель?')">Какова ваша цель?</button>
+                    <button class="btn" onclick="setPhrase('Предложить оружие')">Предложить оружие</button>
+                    <button class="btn" onclick="setPhrase('Нет границ во времени')">Нет границ во времени</button>
+                </div>
+            </div>
+
+            <div class="translate-arrow">
+                <button class="translate-btn" onclick="translatePhrase()" title="Перевести">⟶</button>
+                <span style="font-size: 0.65rem; font-family: 'Orbitron', monospace; color: var(--ink-secondary); letter-spacing: 1px;">ТРАНСМУТАЦИЯ</span>
+            </div>
+
+            <div class="translator-column hepta-col">
+                <h3>HEPTAPOD B</h3>
+                <div class="logogram-output" id="translatorOutput">
+                    <canvas id="translatorCanvas" width="350" height="280"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="translation-analysis" id="translationAnalysis" style="display: none;">
+            <h3 style="font-family: 'Orbitron', monospace; font-size: 0.85rem; color: var(--accent-green); letter-spacing: 1.5px; margin-bottom: 1rem;">
+                АНАЛИЗ ПЕРЕВОДА
+            </h3>
+            <div id="analysisContent"></div>
+        </div>
+    </section>
+
+    <!-- ===== КВИЗЫ ===== -->
+    <section class="section" id="sec-quiz">
+        <div class="section-header">
+            <h2>ПРОВЕРКА ЗНАНИЙ</h2>
+            <p>Проверьте понимание концепций лингвистики перевода и семиотики</p>
+        </div>
+
+        <div class="quiz-container">
+            <div class="quiz-type-selector">
+                <button class="quiz-type-btn active" onclick="selectQuizType('theory')">Теория перевода</button>
+                <button class="quiz-type-btn" onclick="selectQuizType('visual')">Узнай логограмму</button>
+                <button class="quiz-type-btn" onclick="selectQuizType('semiotic')">Семиотика</button>
+            </div>
+
+            <div class="quiz-progress-bar">
+                <div class="quiz-progress-fill" id="quizProgressFill" style="width: 0%"></div>
+            </div>
+
+            <div class="quiz-card" id="quizCard">
+                <!-- Заполняется из JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== ПЕСОЧНИЦА ===== -->
+    <section class="section" id="sec-sandbox">
+        <div class="section-header">
+            <h2>ПЕСОЧНИЦА ЛОГОГРАММ</h2>
+            <p>Экспериментируйте с параметрами: как изменение формы меняет семантику?</p>
+        </div>
+
+        <div class="sandbox-layout">
+            <div class="sandbox-panel">
+                <h3>ПАРАМЕТРЫ</h3>
+                <div class="sandbox-controls">
+                    <div class="sandbox-control-group">
+                        <label>ТОЛЩИНА КОЛЬЦА</label>
+                        <input type="range" id="sbThickness" min="4" max="40" value="16" oninput="updateSandbox()">
+                    </div>
+                    <div class="sandbox-control-group">
+                        <label>СЛОЖНОСТЬ</label>
+                        <input type="range" id="sbComplexity" min="1" max="12" value="5" oninput="updateSandbox()">
+                    </div>
+                    <div class="sandbox-control-group">
+                        <label>АСИММЕТРИЯ</label>
+                        <input type="range" id="sbAsymmetry" min="0" max="100" value="30" oninput="updateSandbox()">
+                    </div>
+                    <div class="sandbox-control-group">
+                        <label>РАЗРЫВЫ</label>
+                        <input type="range" id="sbGaps" min="0" max="5" value="1" oninput="updateSandbox()">
+                    </div>
+                    <div class="sandbox-control-group">
+                        <label>ОТВЕТВЛЕНИЯ</label>
+                        <input type="range" id="sbTendrils" min="0" max="8" value="3" oninput="updateSandbox()">
+                    </div>
+                    <div class="sandbox-control-group">
+                        <label>СТИЛЬ ЧЕРНИЛ</label>
+                        <select id="sbInkStyle" onchange="updateSandbox()">
+                            <option value="smooth">Плавный</option>
+                            <option value="rough">Грубый</option>
+                            <option value="ethereal">Эфирный</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="btn primary" onclick="randomizeSandbox()">Случайная</button>
+                    <button class="btn" onclick="animateSandbox()">▶ Анимировать</button>
+                    <button class="btn" onclick="exportSandbox()">⬇ PNG</button>
+                </div>
+
+                <div class="timeline-panel">
+                    <div class="timeline-label">ВРЕМЕННА́Я ШКАЛА ВЫСКАЗЫВАНИЯ</div>
+                    <div class="timeline-bar" id="timelineBar">
+                        <!-- Заполняется из JS -->
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--ink-secondary); margin-top: 0.5rem; font-weight: 300;">
+                        В линейном языке элементы идут последовательно. В логограмме — все присутствуют одновременно.
+                    </p>
+                </div>
+            </div>
+
+            <div class="sandbox-panel">
+                <h3>РЕЗУЛЬТАТ</h3>
+                <div class="sandbox-canvas-wrap">
+                    <div class="ink-visualization">
+                        <canvas id="sandboxCanvas" width="380" height="380"></canvas>
+                        <div class="ink-label">HEPTAPOD B</div>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                    <div style="font-family: 'Orbitron', monospace; font-size: 0.65rem; color: var(--ink-secondary); letter-spacing: 1px; margin-bottom: 0.5rem;">
+                        СЕМАНТИЧЕСКАЯ ИНТЕРПРЕТАЦИЯ
+                    </div>
+                    <p id="sandboxInterpretation" style="font-size: 0.85rem; color: var(--ink-primary); font-weight: 300; line-height: 1.6;">
+                        Настройте параметры слева для генерации логограммы.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+<footer class="footer">
+<div class="container">
+<p>© 2026 | kmp | CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+<script>
+// ============================================================================
+// ГЛОБАЛЬНОЕ СОСТОЯНИЕ
+// ============================================================================
+const AppState = {
+    xp: 0,
+    level: 1,
+    achievements: new Set(),
+    quizType: 'theory',
+    currentQuizIndex: 0,
+    quizScore: 0,
+    quizAnswered: false,
+    selectedLogogram: null,
+    sectionsVisited: new Set(),
+};
+
+// ============================================================================
+// ФОНОВЫЕ ЧАСТИЦЫ
+// ============================================================================
+function initParticles() {
+    const canvas = document.getElementById('particles-bg');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    class Particle {
+        constructor() {
+            this.reset();
+        }
+        reset() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 2 + 0.5;
+            this.speedX = (Math.random() - 0.5) * 0.3;
+            this.speedY = (Math.random() - 0.5) * 0.3;
+            this.opacity = Math.random() * 0.3 + 0.05;
+            this.hue = Math.random() > 0.7 ? 190 : 270;
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                this.reset();
+            }
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${this.hue}, 80%, 70%, ${this.opacity})`;
+            ctx.fill();
+        }
+    }
+
+    for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => { p.update(); p.draw(); });
+        requestAnimationFrame(animate);
+    }
+    animate();
+}
+
+// ============================================================================
+// НАВИГАЦИЯ
+// ============================================================================
+function switchSection(name) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+
+    document.getElementById('sec-' + name)?.classList.add('active');
+    document.querySelectorAll(`.nav-tab[data-section="${name}"]`).forEach(t => t.classList.add('active'));
+
+    if (!AppState.sectionsVisited.has(name)) {
+        AppState.sectionsVisited.add(name);
+        addXP(10);
+        if (AppState.sectionsVisited.size >= 5) {
+            unlockAchievement('explorer', '', 'ИССЛЕДОВАТЕЛЬ', 'Посетили все разделы приложения');
+        }
+    }
+
+    // Инициализация секций по требованию
+    if (name === 'logograms' && !window._logogramsInited) {
+        initLogogramSection();
+        window._logogramsInited = true;
+    }
+    if (name === 'translator' && !window._translatorInited) {
+        initTranslatorSection();
+        window._translatorInited = true;
+    }
+    if (name === 'quiz' && !window._quizInited) {
+        initQuizSection();
+        window._quizInited = true;
+    }
+    if (name === 'sandbox' && !window._sandboxInited) {
+        initSandboxSection();
+        window._sandboxInited = true;
+    }
+}
+
+function toggleMobileMenu() {
+    document.getElementById('mobileNav').classList.toggle('show');
+}
+
+// ============================================================================
+// СИСТЕМА XP И АЧИВОК
+// ============================================================================
+function addXP(amount) {
+    AppState.xp += amount;
+    const newLevel = Math.floor(AppState.xp / 100) + 1;
+    if (newLevel > AppState.level) {
+        AppState.level = newLevel;
+        unlockAchievement('lvl' + newLevel, '⬆️', 'УРОВЕНЬ ' + newLevel, 'Вы достигли уровня ' + newLevel);
+    }
+    document.getElementById('xpValue').textContent = AppState.xp;
+    document.getElementById('levelBadge').textContent = 'LVL ' + AppState.level;
+
+    // Анимация
+    anime({
+        targets: '#xpValue',
+        scale: [1.4, 1],
+        duration: 400,
+        easing: 'easeOutBack'
+    });
+}
+
+function unlockAchievement(id, icon, title, desc) {
+    if (AppState.achievements.has(id)) return;
+    AppState.achievements.add(id);
+
+    const toast = document.getElementById('achievementToast');
+    document.getElementById('achievementIcon').textContent = icon;
+    document.getElementById('achievementTitle').textContent = title;
+    document.getElementById('achievementDesc').textContent = desc;
+
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 4000);
+
+    addXP(25);
+}
+
+// ============================================================================
+// ГЕНЕРАТОР ЛОГОГРАММ (Fabric.js)
+// ============================================================================
+
+// Словарь концептов
+const LEXICON = [
+    {
+        id: 'human',
+        concept: 'Человек',
+        meaning: 'Разумное существо, обитатель Земли',
+        category: 'existence',
+        catLabel: 'БЫТИЕ',
+        params: { thickness: 14, tendrils: 2, gaps: 0, asymmetry: 15, complexity: 3, hue: 190 }
+    },
+    {
+        id: 'time',
+        concept: 'Время',
+        meaning: 'Не линейная последовательность, а одновременность всех моментов',
+        category: 'time',
+        catLabel: 'ВРЕМЯ',
+        params: { thickness: 18, tendrils: 0, gaps: 2, asymmetry: 5, complexity: 2, hue: 200 }
+    },
+    {
+        id: 'peace',
+        concept: 'Мир',
+        meaning: 'Отсутствие конфликта, гармония намерений',
+        category: 'emotion',
+        catLabel: 'ЭМОЦИЯ',
+        params: { thickness: 12, tendrils: 4, gaps: 0, asymmetry: 10, complexity: 4, hue: 160 }
+    },
+    {
+        id: 'weapon',
+        concept: 'Оружие / Инструмент',
+        meaning: 'Средство воздействия — ключевая неоднозначность перевода в фильме',
+        category: 'action',
+        catLabel: 'ДЕЙСТВИЕ',
+        params: { thickness: 22, tendrils: 6, gaps: 1, asymmetry: 45, complexity: 7, hue: 30 }
+    },
+    {
+        id: 'language',
+        concept: 'Язык',
+        meaning: 'Система знаков и средство мышления',
+        category: 'comm',
+        catLabel: 'КОММУНИКАЦИЯ',
+        params: { thickness: 16, tendrils: 5, gaps: 1, asymmetry: 25, complexity: 6, hue: 270 }
+    },
+    {
+        id: 'question',
+        concept: 'Вопрос / Цель',
+        meaning: 'Запрос информации, выяснение намерения',
+        category: 'comm',
+        catLabel: 'КОММУНИКАЦИЯ',
+        params: { thickness: 10, tendrils: 3, gaps: 3, asymmetry: 35, complexity: 5, hue: 50 }
+    },
+    {
+        id: 'death',
+        concept: 'Смерть / Конец',
+        meaning: 'Прекращение существования — для гептаподов лишь «точка» в круге времени',
+        category: 'existence',
+        catLabel: 'БЫТИЕ',
+        params: { thickness: 20, tendrils: 1, gaps: 4, asymmetry: 50, complexity: 3, hue: 0 }
+    },
+    {
+        id: 'gift',
+        concept: 'Дар / Способность',
+        meaning: 'Нечто переданное — язык как дар, меняющий восприятие',
+        category: 'action',
+        catLabel: 'ДЕЙСТВИЕ',
+        params: { thickness: 15, tendrils: 7, gaps: 0, asymmetry: 20, complexity: 8, hue: 300 }
+    },
+    {
+        id: 'many',
+        concept: 'Множество / Единство',
+        meaning: 'Совокупность, воспринимаемая как целое',
+        category: 'existence',
+        catLabel: 'БЫТИЕ',
+        params: { thickness: 11, tendrils: 8, gaps: 2, asymmetry: 40, complexity: 9, hue: 140 }
+    },
+    {
+        id: 'see',
+        concept: 'Видеть / Понимать',
+        meaning: 'Восприятие и осознание — для гептаподов неразделимы',
+        category: 'comm',
+        catLabel: 'КОММУНИКАЦИЯ',
+        params: { thickness: 13, tendrils: 3, gaps: 1, asymmetry: 15, complexity: 4, hue: 220 }
+    }
+];
+
+const CAT_CLASS = {
+    time: 'cat-time',
+    comm: 'cat-comm',
+    existence: 'cat-existence',
+    emotion: 'cat-emotion',
+    action: 'cat-action',
+};
+
+/**
+ * Рисует логограмму на Fabric.js canvas
+ */
+function drawLogogram(fabricCanvas, params, animated = false) {
+    fabricCanvas.clear();
+    const W = fabricCanvas.width;
+    const H = fabricCanvas.height;
+    const cx = W / 2;
+    const cy = H / 2;
+    const baseRadius = Math.min(W, H) * 0.35;
+
+    const {
+        thickness = 16,
+        tendrils = 3,
+        gaps = 1,
+        asymmetry = 20,
+        complexity = 5,
+        hue = 190,
+    } = params;
+
+    // Фоновый «туманный» круг
+    const fogGradient = new fabric.Gradient({
+        type: 'radial',
+        coords: { x1: cx, y1: cy, r1: 0, x2: cx, y2: cy, r2: baseRadius + 40 },
+        colorStops: [
+            { offset: 0, color: `hsla(${hue}, 80%, 20%, 0.15)` },
+            { offset: 0.7, color: `hsla(${hue}, 90%, 15%, 0.05)` },
+            { offset: 1, color: 'transparent' }
+        ]
+    });
+
+    fabricCanvas.add(new fabric.Circle({
+        left: cx - baseRadius - 40,
+        top: cy - baseRadius - 40,
+        radius: baseRadius + 40,
+        fill: fogGradient,
+        selectable: false,
+        evented: false,
+    }));
+
+    // Сгенерировать точки основного кольца с вариацией
+    const segments = 120;
+    const gapPositions = [];
+    for (let g = 0; g < gaps; g++) {
+        gapPositions.push((g / Math.max(gaps, 1)) * Math.PI * 2 + Math.random() * 0.5);
+    }
+
+    const seed = complexity * 137.5 + asymmetry * 13.7 + tendrils * 31.4;
+    function seededRandom(i) {
+        const x = Math.sin(seed + i * 9.8) * 10000;
+        return x - Math.floor(x);
+    }
+
+    const points = [];
+    for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+
+        // Проверка, попадает ли точка в разрыв
+        let inGap = false;
+        for (const gp of gapPositions) {
+            const gapSize = 0.15 + (asymmetry / 500);
+            if (Math.abs(angle - gp) < gapSize || Math.abs(angle - gp + Math.PI * 2) < gapSize) {
+                inGap = true;
+                break;
+            }
+        }
+        if (inGap) {
+            points.push(null); // маркер разрыва
+            continue;
+        }
+
+        // Радиальная вариация
+        let r = baseRadius;
+        for (let h = 1; h <= complexity; h++) {
+            r += Math.sin(angle * h + seededRandom(h) * Math.PI * 2) * (asymmetry / (h * 3));
+        }
+
+        points.push({
+            x: cx + Math.cos(angle) * r,
+            y: cy + Math.sin(angle) * r,
+            thickness: thickness + Math.sin(angle * 3 + seed) * (thickness * 0.3),
+        });
+    }
+
+    // Рисуем кольцо из сегментов
+    let currentPath = [];
+    const allPaths = [];
+
+    for (const pt of points) {
+        if (pt === null) {
+            if (currentPath.length > 1) allPaths.push([...currentPath]);
+            currentPath = [];
+        } else {
+            currentPath.push(pt);
+        }
+    }
+    if (currentPath.length > 1) allPaths.push(currentPath);
+
+    // Если нет разрывов, замкнём кольцо
+    if (gaps === 0 && allPaths.length === 1 && allPaths[0].length > 2) {
+        allPaths[0].push(allPaths[0][0]);
+    }
+
+   const inkColor = `hsla(${hue}, 70%, 75%, 0.95)`;
+const inkColorLight = `hsla(${hue}, 60%, 60%, 0.6)`;
+
+    for (const pathPts of allPaths) {
+        if (pathPts.length < 2) continue;
+
+        // Строим SVG path из точек (кубические Безье)
+        let d = `M ${pathPts[0].x} ${pathPts[0].y}`;
+        for (let i = 1; i < pathPts.length; i++) {
+            const prev = pathPts[i - 1];
+            const curr = pathPts[i];
+            const cpx1 = prev.x + (curr.x - prev.x) * 0.5;
+            const cpy1 = prev.y;
+            const cpx2 = prev.x + (curr.x - prev.x) * 0.5;
+            const cpy2 = curr.y;
+            d += ` C ${cpx1} ${cpy1} ${cpx2} ${cpy2} ${curr.x} ${curr.y}`;
+        }
+
+        // Используем среднюю толщину (Fabric.js не поддерживает variable width напрямую)
+        const avgThickness = pathPts.reduce((s, p) => s + p.thickness, 0) / pathPts.length;
+
+        // «Тень» чернил
+        const shadow = new fabric.Path(d, {
+            fill: null,
+            stroke: inkColorLight,
+            strokeWidth: avgThickness + 8,
+            strokeLineCap: 'round',
+            strokeLineJoin: 'round',
+            selectable: false,
+            evented: false,
+            opacity: 0.5,
+        });
+        fabricCanvas.add(shadow);
+
+        // Основной штрих
+        const mainStroke = new fabric.Path(d, {
+            fill: null,
+            stroke: inkColor,
+            strokeWidth: avgThickness,
+            strokeLineCap: 'round',
+            strokeLineJoin: 'round',
+            selectable: false,
+            evented: false,
+        });
+        fabricCanvas.add(mainStroke);
+    }
+
+    // Ответвления (tendrils)
+    for (let t = 0; t < tendrils; t++) {
+        const angle = (t / tendrils) * Math.PI * 2 + seededRandom(t + 100) * 0.8;
+        let r = baseRadius;
+        for (let h = 1; h <= complexity; h++) {
+            r += Math.sin(angle * h + seededRandom(h) * Math.PI * 2) * (asymmetry / (h * 3));
+        }
+
+        const startX = cx + Math.cos(angle) * r;
+        const startY = cy + Math.sin(angle) * r;
+
+        const tendrilLen = 15 + seededRandom(t + 200) * 35;
+        const tendrilAngle = angle + (seededRandom(t + 300) - 0.5) * 1.2;
+
+        const endX = startX + Math.cos(tendrilAngle) * tendrilLen;
+        const endY = startY + Math.sin(tendrilAngle) * tendrilLen;
+
+        const cpX = startX + Math.cos(tendrilAngle + 0.3) * tendrilLen * 0.6;
+        const cpY = startY + Math.sin(tendrilAngle - 0.2) * tendrilLen * 0.6;
+
+        const td = `M ${startX} ${startY} Q ${cpX} ${cpY} ${endX} ${endY}`;
+        const tendrilWidth = 3 + seededRandom(t + 400) * (thickness * 0.4);
+
+        fabricCanvas.add(new fabric.Path(td, {
+            fill: null,
+            stroke: inkColor,
+            strokeWidth: tendrilWidth,
+            strokeLineCap: 'round',
+            selectable: false,
+            evented: false,
+        }));
+
+        // Клякса на конце
+        if (seededRandom(t + 500) > 0.4) {
+            const blobR = 2 + seededRandom(t + 600) * 5;
+            fabricCanvas.add(new fabric.Circle({
+                left: endX - blobR,
+                top: endY - blobR,
+                radius: blobR,
+                fill: inkColor,
+                selectable: false,
+                evented: false,
+            }));
+        }
+    }
+
+    // Внутренние «капли» для сложности
+    for (let d = 0; d < Math.floor(complexity / 2); d++) {
+        const angle = seededRandom(d + 700) * Math.PI * 2;
+        const dist = seededRandom(d + 800) * baseRadius * 0.4 + baseRadius * 0.05;
+        const bx = cx + Math.cos(angle) * dist;
+        const by = cy + Math.sin(angle) * dist;
+        const br = 1.5 + seededRandom(d + 900) * 3;
+
+        fabricCanvas.add(new fabric.Circle({
+            left: bx - br,
+            top: by - br,
+            radius: br,
+            fill: `hsla(${hue}, 15%, 8%, ${0.3 + seededRandom(d + 1000) * 0.4})`,
+            selectable: false,
+            evented: false,
+        }));
+    }
+
+    fabricCanvas.renderAll();
+}
+
+/**
+ * Миниатюра для словаря
+ */
+function drawMiniLogogram(canvasEl, params) {
+    const fc = new fabric.StaticCanvas(canvasEl, { backgroundColor: 'transparent' });
+    drawLogogram(fc, params);
+    return fc;
+}
+
+// ============================================================================
+// СЕКЦИЯ ЛОГОГРАММ
+// ============================================================================
+let mainFabricCanvas = null;
+
+function initLogogramSection() {
+    mainFabricCanvas = new fabric.StaticCanvas('mainLogogramCanvas', {
+        backgroundColor: 'transparent',
+    });
+
+    // Заполнить словарь
+    const list = document.getElementById('dictList');
+    list.innerHTML = '';
+
+    LEXICON.forEach((item, idx) => {
+        const el = document.createElement('div');
+        el.className = 'dict-item';
+        el.dataset.index = idx;
+
+        const previewId = 'preview_' + item.id;
+        el.innerHTML = `
+            <div class="dict-item-preview">
+                <canvas id="${previewId}" width="48" height="48"></canvas>
+            </div>
+            <div class="dict-item-info">
+                <div class="dict-item-concept">${item.concept}</div>
+                <div class="dict-item-meaning">${item.meaning}</div>
+            </div>
+            <span class="dict-item-category ${CAT_CLASS[item.category]}">${item.catLabel}</span>
+        `;
+
+        el.addEventListener('click', () => selectLogogram(idx));
+        list.appendChild(el);
+
+        // Рисуем миниатюру
+        setTimeout(() => {
+            drawMiniLogogram(document.getElementById(previewId), item.params);
+        }, idx * 50);
+    });
+}
+
+function selectLogogram(idx) {
+    const item = LEXICON[idx];
+    AppState.selectedLogogram = idx;
+
+    document.querySelectorAll('.dict-item').forEach(el => el.classList.remove('selected'));
+    document.querySelector(`.dict-item[data-index="${idx}"]`)?.classList.add('selected');
+
+    document.getElementById('currentConceptLabel').textContent = item.concept.toUpperCase();
+
+    drawLogogram(mainFabricCanvas, item.params);
+
+    addXP(5);
+
+    if (!AppState.achievements.has('first_logo')) {
+        unlockAchievement('first_logo', '◉', 'ПЕРВЫЙ КОНТАКТ', 'Рассмотрели первую логограмму');
+    }
+}
+
+function animateCurrentLogogram() {
+    if (AppState.selectedLogogram === null) return;
+    const item = LEXICON[AppState.selectedLogogram];
+
+    mainFabricCanvas.clear();
+    mainFabricCanvas.renderAll();
+
+    // Постепенно увеличиваем сложность
+    let step = 0;
+    const maxSteps = 15;
+
+    function animStep() {
+        const t = step / maxSteps;
+        const animParams = {
+            ...item.params,
+            thickness: item.params.thickness * t,
+            tendrils: Math.round(item.params.tendrils * t),
+            complexity: Math.max(1, Math.round(item.params.complexity * t)),
+            asymmetry: item.params.asymmetry * t,
+        };
+        drawLogogram(mainFabricCanvas, animParams);
+        step++;
+        if (step <= maxSteps) {
+            setTimeout(animStep, 80);
+        }
+    }
+    animStep();
+    addXP(3);
+}
+
+function exportLogogram() {
+    if (!mainFabricCanvas) return;
+    const link = document.createElement('a');
+    link.download = 'logogram.png';
+    link.href = mainFabricCanvas.toDataURL({ format: 'png', multiplier: 2 });
+    link.click();
+    addXP(2);
+}
+
+function clearMainCanvas() {
+    if (mainFabricCanvas) {
+        mainFabricCanvas.clear();
+        mainFabricCanvas.renderAll();
+    }
+    AppState.selectedLogogram = null;
+    document.getElementById('currentConceptLabel').textContent = 'Выберите логограмму →';
+    document.querySelectorAll('.dict-item').forEach(el => el.classList.remove('selected'));
+}
+
+// ============================================================================
+// ПЕРЕВОДЧИК
+// ============================================================================
+let translatorFabricCanvas = null;
+
+function initTranslatorSection() {
+    translatorFabricCanvas = new fabric.StaticCanvas('translatorCanvas', {
+        backgroundColor: 'transparent',
+    });
+}
+
+function setPhrase(phrase) {
+    document.getElementById('humanInput').value = phrase;
+}
+
+function translatePhrase() {
+    const input = document.getElementById('humanInput').value.trim();
+    if (!input) return;
+
+    // Анализ текста: извлекаем «концепты»
+    const text = input.toLowerCase();
+    const detectedConcepts = [];
+    const conceptKeywords = {
+        human: ['человек', 'люди', 'мы', 'нас', 'нам', 'наш'],
+        time: ['время', 'момент', 'линейн', 'вечн', 'будущ', 'прошл'],
+        peace: ['мир', 'миром', 'гармон', 'покой'],
+        weapon: ['оружи', 'инструмент', 'средств', 'сил'],
+        language: ['язык', 'слов', 'речь', 'говор', 'перевод'],
+        question: ['как', 'зачем', 'почему', 'цель', 'что', 'какова', '?'],
+        death: ['смерть', 'конец', 'умер', 'погиб'],
+        gift: ['дар', 'способност', 'дали', 'дать', 'предлож', 'дарит'],
+        many: ['множеств', 'все', 'много', 'единств', 'границ'],
+        see: ['видеть', 'понимать', 'смотр', 'осознать', 'видим', 'пониман'],
+    };
+
+    for (const [conceptId, keywords] of Object.entries(conceptKeywords)) {
+        for (const kw of keywords) {
+            if (text.includes(kw)) {
+                const item = LEXICON.find(l => l.id === conceptId);
+                if (item && !detectedConcepts.find(c => c.id === conceptId)) {
+                    detectedConcepts.push(item);
+                }
+                break;
+            }
+        }
+    }
+
+    // Если ничего не нашли — генерируем по хешу текста
+    if (detectedConcepts.length === 0) {
+        let hash = 0;
+        for (let i = 0; i < text.length; i++) {
+            hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+        }
+        detectedConcepts.push({
+            id: 'generic',
+            concept: 'Общее высказывание',
+            params: {
+                thickness: 10 + Math.abs(hash % 15),
+                tendrils: Math.abs(hash % 6) + 1,
+                gaps: Math.abs((hash >> 4) % 3),
+                asymmetry: 10 + Math.abs((hash >> 8) % 40),
+                complexity: 3 + Math.abs((hash >> 12) % 6),
+                hue: Math.abs(hash % 360),
+            }
+        });
+    }
+
+    // Смешиваем параметры обнаруженных концептов
+    const merged = { thickness: 0, tendrils: 0, gaps: 0, asymmetry: 0, complexity: 0, hue: 0 };
+    for (const c of detectedConcepts) {
+        for (const key of Object.keys(merged)) {
+            merged[key] += c.params[key];
+        }
+    }
+    const n = detectedConcepts.length;
+    for (const key of Object.keys(merged)) {
+        merged[key] = Math.round(merged[key] / n);
+    }
+    // Увеличиваем сложность пропорционально количеству концептов
+    merged.complexity = Math.min(12, merged.complexity + Math.floor(n / 2));
+    merged.tendrils = Math.min(10, merged.tendrils + Math.floor(n / 3));
+
+    // Анимированная генерация
+    translatorFabricCanvas.clear();
+    let step = 0;
+    const maxSteps = 20;
+
+    function animStep() {
+        const t = step / maxSteps;
+        const animParams = {
+            ...merged,
+            thickness: merged.thickness * t,
+            tendrils: Math.round(merged.tendrils * t),
+            complexity: Math.max(1, Math.round(merged.complexity * t)),
+            asymmetry: merged.asymmetry * t,
+        };
+        drawLogogram(translatorFabricCanvas, animParams);
+        step++;
+        if (step <= maxSteps) {
+            setTimeout(animStep, 60);
+        } else {
+            showTranslationAnalysis(input, detectedConcepts, merged);
+        }
+    }
+    animStep();
+
+    addXP(15);
+
+    if (!AppState.achievements.has('first_translate')) {
+        unlockAchievement('first_translate', '⟷', 'ТРАНСМУТАЦИЯ', 'Выполнили первый межсемиотический перевод');
+    }
+}
+
+function showTranslationAnalysis(input, concepts, params) {
+    const panel = document.getElementById('translationAnalysis');
+    panel.style.display = 'block';
+
+    const conceptNames = concepts.map(c => c.concept).join(', ');
+    const typeOfTranslation = 'Межсемиотический (интерсемиотический)';
+
+    let lossNote = '';
+    if (concepts.length === 0) {
+        lossNote = 'Точные концепты не обнаружены. Логограмма сгенерирована по хешу текста — демонстрация потерь при переводе.';
+    } else if (concepts.length === 1) {
+        lossNote = 'Обнаружен один ключевой концепт. Грамматические отношения (время, лицо, наклонение) утрачены при переходе к семасиографической системе.';
+    } else {
+        lossNote = `Обнаружено ${concepts.length} концептов, смешанных в единую логограмму. Линейный порядок слов утрачен — все смыслы представлены одновременно, как и в коммуникации гептаподов.`;
+    }
+
+    document.getElementById('analysisContent').innerHTML = `
+        <div class="analysis-item">
+            <div class="analysis-label">ИСХОДНЫЙ ТЕКСТ</div>
+            <div class="analysis-value">«${input}»</div>
+        </div>
+        <div class="analysis-item">
+            <div class="analysis-label">ТИП ПЕРЕВОДА</div>
+            <div class="analysis-value">${typeOfTranslation} <br><small style="color: var(--ink-secondary);">(по классификации Р. Якобсона, 1959)</small></div>
+        </div>
+        <div class="analysis-item">
+            <div class="analysis-label">ВЫЯВЛЕННЫЕ КОНЦЕПТЫ</div>
+            <div class="analysis-value">${conceptNames || '—'}</div>
+        </div>
+        <div class="analysis-item">
+            <div class="analysis-label">ПАРАМЕТРЫ КОДИРОВАНИЯ</div>
+            <div class="analysis-value">
+                Толщина: ${params.thickness} · Ответвлений: ${params.tendrils} · Разрывов: ${params.gaps} · Сложность: ${params.complexity} · Асимметрия: ${params.asymmetry}
+            </div>
+        </div>
+        <div class="analysis-item">
+            <div class="analysis-label">ПОТЕРИ ПРИ ПЕРЕВОДЕ</div>
+            <div class="analysis-value">${lossNote}</div>
+        </div>
+        <div class="analysis-item">
+            <div class="analysis-label">КОММЕНТАРИЙ</div>
+            <div class="analysis-value">
+                Переход от линейного (синтагматического) к пространственному (парадигматическому) знаку
+                демонстрирует ключевую проблему межсемиотического перевода: невозможность полного изоморфизма
+                между двумя знаковыми системами. Информация не «теряется», а <em>перекодируется</em> —
+                одни аспекты значения эксплицируются, другие становятся имплицитными.
+            </div>
+        </div>
+    `;
+
+    anime({
+        targets: '#translationAnalysis',
+        opacity: [0, 1],
+        translateY: [20, 0],
+        duration: 600,
+        easing: 'easeOutCubic'
+    });
+}
+
+// ============================================================================
+// КВИЗЫ
+// ============================================================================
+
+const QUIZZES = {
+    theory: [
+        {
+            q: 'Как называется гипотеза о том, что язык определяет (или влияет на) мышление и восприятие мира?',
+            options: ['Гипотеза Сепира–Уорфа', 'Теорема Хомского', 'Принцип Грайса', 'Закон Ципфа'],
+            correct: 0,
+            explanation: 'Гипотеза лингвистической относительности (Сепира–Уорфа) — центральная идея фильма «Прибытие»: изучая язык гептаподов, Луиза Бэнкс начинает воспринимать время нелинейно.'
+        },
+        {
+            q: 'Какой тип перевода, по классификации Р. Якобсона, представляет преобразование текста в визуальную логограмму?',
+            options: ['Внутриязыковой', 'Межъязыковой', 'Межсемиотический', 'Машинный'],
+            correct: 2,
+            explanation: 'Межсемиотический перевод (трансмутация) — интерпретация вербальных знаков средствами невербальных знаковых систем. Это именно то, что происходит при переводе фразы в логограмму.'
+        },
+        {
+            q: 'Что такое семасиографическая система письма?',
+            options: [
+                'Письменность, передающая звуки речи',
+                'Письменность, передающая смысл без привязки к конкретному языку',
+                'Система стенографии',
+                'Любая пиктографическая система'
+            ],
+            correct: 1,
+            explanation: 'Семасиография передаёт значение напрямую, минуя звуковой язык. Heptapod B — семасиографическая система: логограммы не «произносятся», а «считываются» как целостные смыслы.'
+        },
+        {
+            q: 'Какая ключевая неоднозначность перевода стала поворотным моментом сюжета «Прибытия»?',
+            options: [
+                'Слово «время» было переведено как «пространство»',
+                'Слово «оружие» может означать «инструмент» или «дар»',
+                'Имя гептаподов было неправильно транскрибировано',
+                'Числительные были перепутаны с глаголами'
+            ],
+            correct: 1,
+            explanation: 'Фраза гептаподов «offer weapon» / «use weapon» вызвала панику: военные поняли «оружие» как угрозу, тогда как имелся в виду «инструмент» / «дар» — сам язык гептаподов, дающий способность видеть время.'
+        },
+        {
+            q: 'Чем принципиально отличается письменный язык гептаподов (Heptapod B) от устного (Heptapod A)?',
+            options: [
+                'B — линейный, A — нелинейный',
+                'B — нелинейный и семасиографический, A — линейный и фонологический',
+                'Они идентичны по структуре',
+                'A существует только в фильме, но не в рассказе'
+            ],
+            correct: 1,
+            explanation: 'Heptapod A (устный) — линейный, последовательный язык. Heptapod B (письменный) — радикально нелинейная семасиографическая система, где вся фраза выражается одной замкнутой логограммой одномоментно.'
+        },
+    ],
+    visual: [
+        {
+            q: 'Какой концепт закодирован в этой логограмме?',
+            visualLogogram: 'peace',
+            options: ['Оружие', 'Мир', 'Время', 'Смерть'],
+            correct: 1,
+            explanation: 'Логограмма «Мир» отличается ровным, гармоничным кольцом с мягкими ответвлениями без разрывов — визуальная метафора целостности и гармонии.'
+        },
+        {
+            q: 'Определите логограмму: широкое кольцо с множеством ответвлений и одним разрывом.',
+            visualLogogram: 'weapon',
+            options: ['Человек', 'Вопрос', 'Оружие/Инструмент', 'Дар'],
+            correct: 2,
+            explanation: 'Логограмма «Оружие/Инструмент» — массивная, с высокой асимметрией и множеством ответвлений, что символизирует силу и неоднозначность этого концепта в фильме.'
+        },
+        {
+            q: 'Логограмма с двумя разрывами и минимальными ответвлениями обозначает:',
+            visualLogogram: 'time',
+            options: ['Язык', 'Время', 'Множество', 'Видеть'],
+            correct: 1,
+            explanation: 'Разрывы в кольце «Времени» парадоксально символизируют непрерывность: для гептаподов время не имеет начала и конца, а разрывы — лишь напоминание о человеческом восприятии линейности.'
+        },
+    ],
+    semiotic: [
+        {
+            q: 'К какому из типов знаков Ч. С. Пирса ближе всего логограмма гептаподов?',
+            options: ['Иконический знак', 'Индексальный знак', 'Символ (конвенциональный знак)', 'Симптом'],
+            correct: 2,
+            explanation: 'Логограммы гептаподов — конвенциональные символы: их форма не имитирует объект (не икона) и не указывает на него причинно (не индекс), а связана со значением по «договорённости» внутри системы.'
+        },
+        {
+            q: 'Что теряется при межсемиотическом переводе линейного текста в круговую логограмму?',
+            options: [
+                'Лексическое значение корней',
+                'Линейный синтаксис, грамматическое время, порядок слов',
+                'Все компоненты значения',
+                'Только фонетическая форма'
+            ],
+            correct: 1,
+            explanation: 'При переходе к семасиографической системе утрачиваются линейный порядок, грамматические категории (время, лицо, число) и синтаксические отношения — вся информация перекодируется в пространственные параметры.'
+        },
+        {
+            q: 'Как фильм «Прибытие» иллюстрирует проблему переводческой эквивалентности?',
+            options: [
+                'Показывает идеальный машинный перевод',
+                'Демонстрирует, что полная эквивалентность невозможна между радикально различными знаковыми системами',
+                'Утверждает, что все языки переводимы без потерь',
+                'Отрицает возможность любого перевода'
+            ],
+            correct: 1,
+            explanation: 'Фильм наглядно показывает: чем больше различий между знаковыми системами (линейная vs. нелинейная, временна́я vs. пространственная), тем больше трансформаций при переводе и тем глубже проблема эквивалентности.'
+        },
+        {
+            q: 'Какое понятие лучше описывает процесс «чтения» логограммы — восприятие целого знака одномоментно?',
+            options: ['Синтагматический анализ', 'Парадигматический выбор', 'Гештальт-восприятие', 'Морфемный разбор'],
+            correct: 2,
+            explanation: 'Логограмма воспринимается как целостный гештальт — все её элементы осмысляются одновременно, а не последовательно, что отражает нелинейную природу мышления гептаподов.'
+        },
+    ]
+};
+
+function initQuizSection() {
+    loadQuiz();
+}
+
+function selectQuizType(type) {
+    AppState.quizType = type;
+    AppState.currentQuizIndex = 0;
+    AppState.quizScore = 0;
+    AppState.quizAnswered = false;
+
+    document.querySelectorAll('.quiz-type-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.quiz-type-btn[onclick*="${type}"]`)?.classList.add('active');
+
+    loadQuiz();
+}
+
+function loadQuiz() {
+    const questions = QUIZZES[AppState.quizType];
+    const idx = AppState.currentQuizIndex;
+    AppState.quizAnswered = false;
+
+    if (idx >= questions.length) {
+        showQuizResult();
+        return;
+    }
+
+    const q = questions[idx];
+    const progress = ((idx) / questions.length) * 100;
+    document.getElementById('quizProgressFill').style.width = progress + '%';
+
+    let html = `
+        <div class="quiz-question-number">ВОПРОС ${idx + 1} ИЗ ${questions.length}</div>
+        <div class="quiz-question">${q.q}</div>
+    `;
+
+    // Визуальная логограмма для визуального квиза
+    if (q.visualLogogram) {
+        html += `<div class="visual-quiz-area"><div class="visual-quiz-option" style="cursor: default; border-color: var(--accent-cyan); width: 160px; height: 160px;">
+            <canvas id="quizLogoPreview" width="150" height="150"></canvas>
+        </div></div>`;
+    }
+
+    html += `<div class="quiz-options">`;
+    q.options.forEach((opt, i) => {
+        html += `<button class="quiz-option" onclick="answerQuiz(${i})">${opt}</button>`;
+    });
+    html += `</div>`;
+    html += `<div class="quiz-feedback" id="quizFeedback"></div>`;
+    html += `<div class="quiz-nav">
+        <div></div>
+        <button class="btn primary" id="quizNextBtn" onclick="nextQuiz()" style="display:none;">Далее →</button>
+    </div>`;
+
+    document.getElementById('quizCard').innerHTML = html;
+
+    // Рисуем логограмму, если нужно
+    if (q.visualLogogram) {
+        setTimeout(() => {
+            const item = LEXICON.find(l => l.id === q.visualLogogram);
+            if (item) {
+                const fc = new fabric.StaticCanvas('quizLogoPreview', { backgroundColor: 'transparent' });
+                drawLogogram(fc, item.params);
+            }
+        }, 100);
+    }
+}
+
+function answerQuiz(idx) {
+    if (AppState.quizAnswered) return;
+    AppState.quizAnswered = true;
+
+    const questions = QUIZZES[AppState.quizType];
+    const q = questions[AppState.currentQuizIndex];
+    const options = document.querySelectorAll('.quiz-option');
+    const feedback = document.getElementById('quizFeedback');
+
+    options.forEach((opt, i) => {
+        opt.style.pointerEvents = 'none';
+        if (i === q.correct) opt.classList.add('correct');
+        if (i === idx && i !== q.correct) opt.classList.add('wrong');
+    });
+
+    if (idx === q.correct) {
+        AppState.quizScore++;
+        feedback.className = 'quiz-feedback show correct-feedback';
+        feedback.innerHTML = `✓ Верно! ${q.explanation}`;
+        addXP(20);
+    } else {
+        feedback.className = 'quiz-feedback show wrong-feedback';
+        feedback.innerHTML = `✗ Неверно. ${q.explanation}`;
+        addXP(5); // утешительные баллы
+    }
+
+    document.getElementById('quizNextBtn').style.display = 'inline-flex';
+}
+
+function nextQuiz() {
+    AppState.currentQuizIndex++;
+    loadQuiz();
+}
+
+function showQuizResult() {
+    const total = QUIZZES[AppState.quizType].length;
+    const pct = Math.round((AppState.quizScore / total) * 100);
+    document.getElementById('quizProgressFill').style.width = '100%';
+
+    let message = '';
+    if (pct === 100) message = 'Превосходно! Вы готовы к контакту с гептаподами!';
+    else if (pct >= 75) message = 'Отличный результат! Луиза Бэнкс бы вами гордилась.';
+    else if (pct >= 50) message = 'Неплохо, но стоит перечитать раздел «Теория».';
+    else message = 'Рекомендуем вернуться к теоретическому разделу и повторить.';
+
+    document.getElementById('quizCard').innerHTML = `
+        <div class="quiz-score">
+            <h3>РЕЗУЛЬТАТ</h3>
+            <div class="score-value">${AppState.quizScore}/${total}</div>
+            <p style="margin-top: 1rem; color: var(--ink-secondary); font-size: 0.95rem;">${message}</p>
+            <button class="btn primary" style="margin: 1.5rem auto 0; display: inline-flex;" onclick="selectQuizType('${AppState.quizType}')">
+                 Пройти заново
+            </button>
+        </div>
+    `;
+
+    if (pct === 100) {
+        unlockAchievement('perfect_quiz', '', 'ИДЕАЛЬНЫЙ РЕЗУЛЬТАТ', 'Ответили на все вопросы верно');
+    }
+    if (!AppState.achievements.has('quiz_done')) {
+        unlockAchievement('quiz_done', '', 'ЭКЗАМЕН СДАН', 'Прошли первый квиз до конца');
+    }
+}
+
+// ============================================================================
+// ПЕСОЧНИЦА
+// ============================================================================
+let sandboxFabricCanvas = null;
+
+function initSandboxSection() {
+    sandboxFabricCanvas = new fabric.StaticCanvas('sandboxCanvas', {
+        backgroundColor: 'transparent',
+    });
+
+    updateSandbox();
+    buildTimeline();
+}
+
+function updateSandbox() {
+    if (!sandboxFabricCanvas) return;
+
+    const params = {
+        thickness: parseInt(document.getElementById('sbThickness').value),
+        complexity: parseInt(document.getElementById('sbComplexity').value),
+        asymmetry: parseInt(document.getElementById('sbAsymmetry').value),
+        gaps: parseInt(document.getElementById('sbGaps').value),
+        tendrils: parseInt(document.getElementById('sbTendrils').value),
+        hue: 190,
+    };
+
+    const style = document.getElementById('sbInkStyle').value;
+    if (style === 'rough') {
+        params.asymmetry = Math.max(params.asymmetry, 40);
+        params.hue = 30;
+    } else if (style === 'ethereal') {
+        params.thickness = Math.max(4, params.thickness * 0.6);
+        params.hue = 270;
+    }
+
+    drawLogogram(sandboxFabricCanvas, params);
+    updateInterpretation(params);
+    buildTimeline();
+
+    addXP(1);
+}
+
+function updateInterpretation(params) {
+    const el = document.getElementById('sandboxInterpretation');
+    let parts = [];
+
+    if (params.thickness > 18) parts.push('высокая значимость / настоятельность');
+    else if (params.thickness < 10) parts.push('лёгкость / побочность высказывания');
+    else parts.push('нейтральная экспрессия');
+
+    if (params.gaps >= 3) parts.push('фрагментированность смысла / незавершённость');
+    else if (params.gaps === 0) parts.push('целостность / утвердительность');
+    else parts.push('присутствие неопределённости');
+
+    if (params.tendrils >= 6) parts.push('множество коннотаций и связей');
+    else if (params.tendrils <= 1) parts.push('простое, изолированное понятие');
+    else parts.push('умеренная связность с другими концептами');
+
+    if (params.complexity >= 8) parts.push('сложная пропозиция');
+    else if (params.complexity <= 2) parts.push('элементарное понятие');
+
+    if (params.asymmetry >= 40) parts.push('эмоциональная нагруженность / субъективность');
+    else if (params.asymmetry <= 10) parts.push('объективность / констатация');
+
+    el.textContent = parts.join(' · ');
+}
+
+function buildTimeline() {
+    const bar = document.getElementById('timelineBar');
+    const complexity = parseInt(document.getElementById('sbComplexity')?.value || 5);
+    const colors = ['#00d4ff', '#00e676', '#ffb347', '#e040fb', '#ff5252', '#64b5f6', '#81c784', '#ffcc02', '#ce93d8', '#ef5350', '#4dd0e1', '#aed581'];
+    const labels = ['Субъект', 'Предикат', 'Объект', 'Обстоятельство', 'Определение', 'Дополнение', 'Модальность', 'Темпоральность', 'Каузальность', 'Эвиденциальность', 'Аспект', 'Валентность'];
+
+    bar.innerHTML = '';
+    for (let i = 0; i < Math.min(complexity + 2, 12); i++) {
+        const seg = document.createElement('div');
+        seg.className = 'timeline-segment';
+        seg.style.background = colors[i % colors.length] + '40';
+        seg.style.borderLeft = `2px solid ${colors[i % colors.length]}`;
+        seg.innerHTML = `<div class="seg-tooltip">${labels[i]}</div>`;
+        bar.appendChild(seg);
+    }
+}
+
+function randomizeSandbox() {
+    document.getElementById('sbThickness').value = Math.floor(Math.random() * 36) + 4;
+    document.getElementById('sbComplexity').value = Math.floor(Math.random() * 12) + 1;
+    document.getElementById('sbAsymmetry').value = Math.floor(Math.random() * 100);
+    document.getElementById('sbGaps').value = Math.floor(Math.random() * 6);
+    document.getElementById('sbTendrils').value = Math.floor(Math.random() * 9);
+    document.getElementById('sbInkStyle').value = ['smooth', 'rough', 'ethereal'][Math.floor(Math.random() * 3)];
+    updateSandbox();
+
+    if (!AppState.achievements.has('randomizer')) {
+        unlockAchievement('randomizer', '🎲', 'СЛУЧАЙНОСТЬ', 'Использовали генератор случайных логограмм');
+    }
+}
+
+function animateSandbox() {
+    if (!sandboxFabricCanvas) return;
+    const params = {
+        thickness: parseInt(document.getElementById('sbThickness').value),
+        complexity: parseInt(document.getElementById('sbComplexity').value),
+        asymmetry: parseInt(document.getElementById('sbAsymmetry').value),
+        gaps: parseInt(document.getElementById('sbGaps').value),
+        tendrils: parseInt(document.getElementById('sbTendrils').value),
+        hue: 190,
+    };
+    const style = document.getElementById('sbInkStyle').value;
+    if (style === 'rough') { params.asymmetry = Math.max(params.asymmetry, 40); params.hue = 30; }
+    else if (style === 'ethereal') { params.thickness = Math.max(4, params.thickness * 0.6); params.hue = 270; }
+
+    sandboxFabricCanvas.clear();
+    let step = 0;
+    const maxSteps = 20;
+    function animStep() {
+        const t = step / maxSteps;
+        drawLogogram(sandboxFabricCanvas, {
+            ...params,
+            thickness: params.thickness * t,
+            tendrils: Math.round(params.tendrils * t),
+            complexity: Math.max(1, Math.round(params.complexity * t)),
+            asymmetry: params.asymmetry * t,
+        });
+        step++;
+        if (step <= maxSteps) setTimeout(animStep, 70);
+    }
+    animStep();
+}
+
+function exportSandbox() {
+    if (!sandboxFabricCanvas) return;
+    const link = document.createElement('a');
+    link.download = 'sandbox_logogram.png';
+    link.href = sandboxFabricCanvas.toDataURL({ format: 'png', multiplier: 2 });
+    link.click();
+}
+
+// ============================================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    initParticles();
+
+    // Приветственная ачивка
+    setTimeout(() => {
+        unlockAchievement('welcome', 'ДОБРО ПОЖАЛОВАТЬ', 'Вы начали изучение межсемиотического перевода');
+    }, 1500);
+});
+</script>
+</body>
+</html>

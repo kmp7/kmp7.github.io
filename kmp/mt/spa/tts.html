@@ -1,0 +1,80 @@
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>kmp+</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; max-width:800px; margin:40px auto; padding:0 16px; }
+    textarea { width:100%; height:140px; margin-bottom:12px; }
+    .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+    select,input[type="range"]{padding:6px;}
+    button{padding:8px 12px;}
+  </style>
+</head>
+<body>
+  <textarea id="text">Ева Орлова предлагает вам ввести свой текст и опробовать переводчик письменного текста в в устную речь</textarea>
+
+  <div class="controls">
+    <label>Голос:
+      <select id="voices"></select>
+    </label>
+    <label>Скорость:
+      <input id="rate" type="range" min="0.5" max="2" step="0.1" value="1" />
+    </label>
+    <label>Тон:
+      <input id="pitch" type="range" min="0.5" max="2" step="0.1" value="1" />
+    </label>
+    <button id="speak">Воспроизвести</button>
+    <button id="pause">Пауза</button>
+    <button id="resume">Продолжить</button>
+    <button id="cancel">Остановить</button>
+  </div>
+  <script>
+    const textEl = document.getElementById('text');
+    const voicesSelect = document.getElementById('voices');
+    const rateEl = document.getElementById('rate');
+    const pitchEl = document.getElementById('pitch');
+    const speakBtn = document.getElementById('speak');
+    const pauseBtn = document.getElementById('pause');
+    const resumeBtn = document.getElementById('resume');
+    const cancelBtn = document.getElementById('cancel');
+    let voices = [];
+    function populateVoices() {
+      voices = speechSynthesis.getVoices();
+      voicesSelect.innerHTML = '';
+      voices.forEach((v, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `${v.name} — ${v.lang}${v.default ? ' (default)' : ''}`;
+        voicesSelect.appendChild(opt);
+      });
+      const ruIndex = voices.findIndex(v => v.lang && v.lang.startsWith('ru'));
+      if (ruIndex >= 0) voicesSelect.value = ruIndex;
+    }
+    if ('speechSynthesis' in window) {
+      populateVoices();
+      // voices загружаются асинхронно в некоторых браузерах
+      window.speechSynthesis.onvoiceschanged = populateVoices;
+    } else {
+      alert('Web Speech API (speechSynthesis) не поддерживается в вашем браузере.');
+    }
+    function speak() {
+      if (!('speechSynthesis' in window)) return;
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(textEl.value);
+      const selected = voices[Number(voicesSelect.value)];
+      if (selected) u.voice = selected;
+      u.rate = Number(rateEl.value);
+      u.pitch = Number(pitchEl.value);
+      u.onstart = () => speakBtn.disabled = true;
+      u.onend = () => speakBtn.disabled = false;
+      u.onerror = (e) => { speakBtn.disabled = false; console.error(e); };
+      speechSynthesis.speak(u);
+    }
+    speakBtn.addEventListener('click', speak);
+    pauseBtn.addEventListener('click', () => { if (speechSynthesis.speaking) speechSynthesis.pause(); });
+    resumeBtn.addEventListener('click', () => { if (speechSynthesis.paused) speechSynthesis.resume(); });
+    cancelBtn.addEventListener('click', () => speechSynthesis.cancel());
+  </script>
+</body>
+</html>
