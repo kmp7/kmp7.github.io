@@ -1,0 +1,1206 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Граф антропонимов и топонимов</title>
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-panel: #ffffff;
+            --header-bg: #0F5F50;
+            --header-text: #ffffff;
+            --nav-color: #0F5F50;
+            --nav-secondary: #269e70;
+            --interactive: #6AB0A6;
+            --accent: #D48B12;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --text-muted: #777777;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-hover: 0 4px 16px rgba(0,0,0,0.12);
+            --graph-bg: #fafafa;
+            --input-bg: #ffffff;
+            --legend-bg: #ffffff;
+            --node-anthroponym: #0F5F50;
+            --node-toponym: #D48B12;
+            --node-concept: #6AB0A6;
+            --scrollbar-track: #f0f0f0;
+            --scrollbar-thumb: #c0c0c0;
+            --code-bg: #f0f0f0;
+            --modal-overlay: rgba(0,0,0,0.6);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-panel: #1a1a2e;
+            --header-bg: #0a3d32;
+            --header-text: #e0e0e0;
+            --nav-color: #6AB0A6;
+            --nav-secondary: #269e70;
+            --interactive: #6AB0A6;
+            --accent: #e9a825;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --text-muted: #888888;
+            --border-color: #2a2a4a;
+            --shadow: 0 2px 8px rgba(0,0,0,0.3);
+            --shadow-hover: 0 4px 16px rgba(0,0,0,0.4);
+            --graph-bg: #12122a;
+            --input-bg: #2a2a4a;
+            --legend-bg: #1e1e3a;
+            --node-anthroponym: #269e70;
+            --node-toponym: #e9a825;
+            --node-concept: #6AB0A6;
+            --scrollbar-track: #2a2a4a;
+            --scrollbar-thumb: #4a4a6a;
+            --code-bg: #0f0f1f;
+            --modal-overlay: rgba(0,0,0,0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* ===== Header ===== */
+        .header {
+            background: linear-gradient(90deg, #0F5F50 0%, #03332a 100%);
+            color: var(--header-text);
+            padding: 1.25rem 2rem;
+            transition: background-color 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .header-text { flex: 1; }
+
+        .header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            line-height: 1.4;
+            letter-spacing: 0.02em;
+            margin-bottom: 0.4rem;
+        }
+
+        .header .subtitle {
+            font-size: 0.85rem;
+            opacity: 0.85;
+            line-height: 1.5;
+            font-style: italic;
+            max-width: 800px;
+        }
+
+        /* ===== Header Buttons Group ===== */
+        .header-buttons {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-shrink: 0;
+            margin-top: 0.25rem;
+        }
+
+        .btn-examples {
+            background: transparent;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            padding: 0.65rem 1.2rem;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--header-text);
+            background: rgba(255,255,255,0.05);
+            white-space: nowrap;
+        }
+
+        .btn-examples:hover {
+            border-color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.15);
+            transform: translateY(-1px);
+        }
+
+        .theme-toggle {
+            background: transparent;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 20%;
+            width: 42px;
+            height: 42px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .theme-toggle:hover {
+            border-color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.1);
+        }
+
+        .theme-toggle svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: var(--header-text);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .theme-toggle .icon-sun { display: none; }
+
+        [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+        [data-theme="dark"] .theme-toggle .icon-sun  { display: block; }
+
+        .icon-moon path { fill: var(--header-text); }
+        .icon-sun circle { fill: var(--header-text); }
+
+        /* ===== Main Layout ===== */
+        .main-container {
+            display: flex;
+            flex: 1;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 1rem;
+            gap: 1rem;
+            min-height: 0;
+        }
+
+        /* ===== Graph ===== */
+        .graph-section {
+            flex: 7;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .controls-bar {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .search-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+            max-width: 400px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.6rem 0.9rem 0.6rem 2.4rem;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: var(--interactive);
+            box-shadow: 0 0 0 3px rgba(106,176,166,0.15);
+        }
+
+        .search-input::placeholder { color: var(--text-muted); }
+
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
+            pointer-events: none;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .btn-reset {
+            background-color: var(--interactive);
+            color: #ffffff;
+        }
+
+        .btn-reset:hover {
+            background-color: var(--nav-secondary);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .graph-container {
+            flex: 1;
+            min-height: 500px;
+            background-color: var(--graph-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        #graph {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+        }
+
+        .graph-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%,-50%);
+            text-align: center;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--interactive);
+            border-radius: 20%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error-message {
+            pointer-events: auto;
+            color: #c0392b;
+            padding: 2rem;
+            background: var(--bg-panel);
+            border-radius: 8px;
+            border: 2px solid #e74c3c;
+            max-width: 400px;
+        }
+
+        .hidden { display: none !important; }
+
+        /* ===== Side Panel ===== */
+        .side-panel {
+            flex: 3;
+            min-width: 280px;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+            max-height: calc(100vh - 160px);
+        }
+
+        .panel-card {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .panel-card-header {
+            padding: 0.85rem 1rem;
+            background-color: var(--nav-color);
+            color: #ffffff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            border-bottom: 3px solid var(--accent);
+        }
+
+        .panel-card-body {
+            padding: 1rem;
+        }
+
+        .info-placeholder {
+            color: var(--text-muted);
+            font-style: italic;
+            text-align: center;
+            padding: 2rem 1rem;
+            line-height: 1.6;
+        }
+
+        .node-info { display: none; }
+        .node-info.active { display: block; }
+
+        .node-info-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--nav-color);
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .node-info-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            align-items: flex-start;
+        }
+
+        .node-info-label {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            min-width: 50px;
+            flex-shrink: 0;
+        }
+
+        .node-info-value {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: var(--text-primary);
+        }
+
+        .node-type-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .badge-anthroponym { background-color: var(--node-anthroponym); }
+        .badge-toponym     { background-color: var(--node-toponym); }
+        .badge-concept     { background-color: var(--node-concept); }
+
+        .node-connections {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .node-connections h4 {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .connection-item {
+            font-size: 0.82rem;
+            padding: 0.3rem 0;
+            color: var(--text-primary);
+            line-height: 1.4;
+            border-bottom: 1px dotted var(--border-color);
+            cursor: pointer;
+        }
+
+        .connection-item:last-child { border-bottom: none; }
+        .connection-item:hover { color: var(--interactive); }
+
+        .connection-label {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        /* Legend */
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 20%;
+            flex-shrink: 0;
+            border: 2px solid rgba(0,0,0,0.1);
+        }
+
+        .legend-color.anthroponym { background-color: var(--node-anthroponym); }
+        .legend-color.toponym     { background-color: var(--node-toponym); }
+        .legend-color.concept     { background-color: var(--node-concept); }
+
+        .legend-text { color: var(--text-primary); }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+        }
+
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--nav-color);
+        }
+
+        .stat-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        /* ===== Modal (Examples) ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-overlay);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--bg-panel);
+            border-radius: 8px;
+            max-width: 950px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-hover);
+            border: 1px solid var(--border-color);
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.2rem 1.5rem;
+            border-bottom: 2px solid var(--accent);
+            background-color: var(--nav-color);
+            color: #ffffff;
+            border-radius: 2px 2px 0 0;
+        }
+
+        .modal-header h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #ffffff;
+            transition: opacity 0.2s;
+            line-height: 1;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20%;
+        }
+
+        .modal-close:hover {
+            opacity: 0.7;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .example-full {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .example-full:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .example-full h3 {
+            font-size: 1.1rem;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+            font-weight: 700;
+        }
+
+        .example-full p {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .example-full pre {
+            background: var(--code-bg);
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 0.75rem 0;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .example-full strong {
+            color: var(--nav-color);
+        }
+
+        .example-full .highlight {
+            background: var(--accent);
+            color: #1a1a1a;
+            padding: 0.1rem 0.3rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 0.75rem 1rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-panel);
+            flex-shrink: 0;
+        }
+
+        /* Scrollbars */
+        .side-panel::-webkit-scrollbar,
+        .modal-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .side-panel::-webkit-scrollbar-track,
+        .modal-content::-webkit-scrollbar-track {
+            background: var(--scrollbar-track);
+            border-radius: 3px;
+        }
+
+        .side-panel::-webkit-scrollbar-thumb,
+        .modal-content::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 3px;
+        }
+
+        @media (max-width: 900px) {
+            .header h1 { font-size: 1rem; }
+            .header .subtitle { font-size: 0.7rem; }
+            .main-container {
+                flex-direction: column;
+                padding: 0.75rem;
+            }
+            .graph-section { flex: none; }
+            .graph-container {
+                min-height: 400px;
+                height: 55vh;
+                flex: none;
+            }
+            .side-panel {
+                max-width: none;
+                min-width: 0;
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .side-panel .panel-card {
+                flex: 1;
+                min-width: 250px;
+            }
+            .modal-content {
+                width: 95%;
+                max-height: 90vh;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header { padding: 1rem; }
+            .header h1 { font-size: 0.85rem; }
+            .header-buttons {
+                gap: 0.5rem;
+            }
+            .btn-examples {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.75rem;
+            }
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .search-wrapper { max-width: none; }
+            .graph-container {
+                min-height: 300px;
+                height: 45vh;
+            }
+            .side-panel { flex-direction: column; }
+            .side-panel .panel-card { min-width: 0; }
+            .modal-header h2 { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div class="header-content">
+        <div class="header-text">
+            <h1>Ономастическое поле «Капитанской дочки»: граф антропонимов и топонимов</h1>
+            <p class="subtitle">Узлы — имена собственные и ключевые концепты. Рёбра — сюжетные и семантические связи.</p>
+        </div>
+        <div class="header-buttons">
+            <button class="btn-examples" id="examplesBtn">Примеры к статье</button>
+            <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">
+                <svg class="icon-moon" viewBox="0 0 24 24">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+                </svg>
+                <svg class="icon-sun" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</header>
+
+<div class="main-container">
+    <section class="graph-section">
+        <div class="controls-bar">
+            <div class="search-wrapper">
+                <svg class="search-icon" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" class="search-input" id="searchInput"
+                       placeholder="Поиск узла по имени..." autocomplete="off">
+            </div>
+            <button class="btn btn-reset" id="resetBtn">Сбросить вид</button>
+        </div>
+
+        <div class="graph-container">
+            <div id="graph"></div>
+            <div class="graph-overlay" id="graphLoading">
+                <div class="spinner"></div>
+                <p>Загрузка графа...</p>
+            </div>
+            <div class="graph-overlay hidden" id="errorOverlay">
+                <div class="error-message">
+                    <h3>Ошибка загрузки</h3>
+                    <p>Не удалось загрузить библиотеку визуализации (vis-network). Проверьте подключение к интернету и перезагрузите страницу.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <aside class="side-panel">
+        <div class="panel-card">
+            <div class="panel-card-header">Информация об узле</div>
+            <div class="panel-card-body">
+                <div class="info-placeholder" id="infoPlaceholder">
+                    Выберите узел на графе, чтобы увидеть подробную информацию о персонаже, месте или концепте.
+                </div>
+                <div class="node-info" id="nodeInfo">
+                    <div class="node-info-name" id="nodeName"></div>
+                    <div class="node-info-row">
+                        <span class="node-info-label">Тип:</span>
+                        <span class="node-info-value" id="nodeType"></span>
+                    </div>
+                    <div class="node-info-row">
+                        <span class="node-info-label">Роль:</span>
+                        <span class="node-info-value" id="nodeRole"></span>
+                    </div>
+                    <div class="node-connections">
+                        <h4>Связанные узлы</h4>
+                        <div id="connectionsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+<div class="panel-card">
+            <div class="panel-card-header">Статистика графа</div>
+            <div class="panel-card-body">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="statNodes">--</div>
+                        <div class="stat-label">Узлов</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statEdges">--</div>
+                        <div class="stat-label">Связей</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statAnthro">--</div>
+                        <div class="stat-label">Антропонимов</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statTopo">--</div>
+                        <div class="stat-label">Топонимов</div>
+                    </div>
+                </div>
+            </div>
+			
+        </div>
+        
+    </aside>
+</div>
+
+<footer class="footer">
+    <p>© 2026 | Концевая Г.М. & Концевой М.П. | CC BY-NC-SA 4.0<br></p>
+</footer>
+
+<!-- Modal Window for Examples -->
+<div id="examplesModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Примеры к статье:</h2>
+			<p align="center">Контекстуализация ономастических пространств <br>русской литературной классики с помощью LLM</p>
+            <button class="modal-close" id="modalCloseBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+		
+		<div class="example-full">
+                <h3>Пример 1. Граф топонимов и антропонимов в «Капитанской дочке»: кластерный анализ</h3>
+                <p><strong>Запрос к LLM с опорой на граф:</strong> «Используя приложенный граф ономастического поля "Капитанской дочки", ответь: какие топонимы формируют кластер "народного бунта", а какие — "государственного порядка"? Какую роль в каждом играет антропоним "Пугачёв"?»</p>
+                <p><strong>Ответ LLM с опорой на граф:</strong> «Кластер "бунт": ядро — Бердская слобода (ставка Пугачёва), периферия — Белогорская крепость (захвачена бунтовщиками). Пугачёв связан с этими топонимами рёбрами с высоким весом. Кластер "порядок": ядро — Оренбург (губернский центр, сопротивление), периферия — Симбирск (тыл, родина Гринёва). Пугачёв с Оренбургом не связан (осада неудачна). Пространственная оппозиция "регулярное / бунтующее" кодируется через топонимы».</p>
+                <p><strong>Многошаговое рассуждение (multi-hop reasoning):</strong> вопрос «Через какие топонимы Пугачёв опосредованно связан с Симбирском?» → LLM проходит по рёбрам: Пугачёв → Белогорская крепость → Гринёв → Симбирск. Ответ: «Прямой связи нет, но Гринёв выступает "мостиком". Это отражает авторскую идею: бунт не доходит до "большой земли"».</p>
+                <p><strong>Вывод:</strong> граф ономастического поля выступает не просто как иллюстрация, а как рабочий инструмент, повышающий точность LLM-ответов и открывающий возможность многошаговых рассуждений для анализа пространственной семантики.</p>
+            </div>
+            <div class="example-full">
+                <h3>Пример 2. Токенизация «говорящей» фамилии Гринёв в LLM</h3>
+                <p>Проблема токенизации редких онимов особенно наглядна на примере фамилии главного героя «Капитанской дочки» А. С. Пушкина — <strong>Гринёв</strong>. Эта фамилия является семантически нагруженной: она восходит к прилагательному «зелёный» (молодость, неопытность, незрелость), что прямо характеризует Петра Гринёва в начале повести.</p>
+                <p>При токенизации в стандартных LLM (GPT-4, Llama 2 и др.) фамилия может быть разбита на следующие варианты:</p>
+                <pre>Оптимальный для модели случай: ["Грин", "ёв"] → здесь теряется связь с корнем «зелён-», так как токен «Грин» модель чаще встречает как часть иностранных имён (Green) или просто как последовательность букв без этимологической отсылки к русскому цветообозначению.</pre>
+                <pre>Проблемный случай: ["Гр", "инё", "в"] → полная деструкция семантики; модель вынуждена тратить ресурсы первых слоёв трансформера на «склейку» этих фрагментов в единый концепт, что снижает точность последующего анализа.</pre>
+                <p><strong>Вывод для исследователя:</strong> перед использованием LLM для анализа «говорящих» фамилий в русской классике необходимо вручную (или с помощью внешних средств) проверять, как модель сегментирует ключевые онимы. При обнаружении нежелательной токенизации рекомендуется в промпте давать модели явную подсказку: <em>«Фамилия "Гринёв" образована от прилагательного "зелёный" и указывает на молодость и неопытность героя»</em> — тем самым исследователь компенсирует инженерное ограничение модели.</p>
+            </div>
+
+            <div class="example-full">
+                <h3>Пример 3. Анализ форм имени Евгения Онегина: культурная слепота LLM</h3>
+                <p><strong>Неадаптированный промпт</strong> (типичный для западных LLM): <em>«Проанализируй, как меняется отношение автора к Евгению Онегину в зависимости от формы имени»</em></p>
+                <p><strong>Типичный неадаптированный ответ:</strong> «"Евгений" — личное имя, "Онегин" — фамилия. Обращение по имени подразумевает близость, по фамилии — официальную дистанцию».</p>
+                <p><strong>Проблемы этого ответа:</strong> модель игнорирует отсутствие отчества (важный маркер молодости и невписанности в иерархию), не замечает топонимическую символику фамилии (река Онега → семантическое поле «север, холод, вода, отчуждение»), не различает смену регистров в романе.</p>
+                <p><strong>Адаптированный промпт:</strong> <em>«Ты эксперт по русской ономастике, опирающийся на труды Суперанской. Учти: (1) отсутствие отчества — социальный маркер; (2) фамилия "Онегин" образована от гидронима; (3) выдели контексты употребления "Евгений", "Онегин" и "мой Евгений"»</em>.</p>
+                <p><strong>Результат адаптированного ответа:</strong> модель фиксирует, что отсутствие отчества подчёркивает молодость, фамилия-топоним создаёт поле «холод, отчуждение», а Пушкин использует «Онегин» (ирония), «Евгений» (сочувствие), «мой Евгений» (трагическое присвоение).</p>
+                <p><strong>Вывод:</strong> без адаптации промпта LLM сводит анализ к банальной оппозиции «имя vs фамилия», упуская культурно-специфичные маркеры.</p>
+            </div>
+
+            
+
+            <div class="example-full">
+                <h3>Пример 4. Исторический сдвиг ономастического поля: галлюцинации LLM на примере «Медного всадника»</h3>
+                <p><strong>Проблема:</strong> При анализе исторических текстов LLM склонны «осовременивать» онимы, подменяя культурный контекст XIX века современными ассоциациями. Это приводит к опасному сдвигу ономастического поля во времени.</p>
+                <p><strong>Запрос к LLM (без адаптации):</strong> <em>«Проанализируй символику топонима "Петроград" в "Медном всаднике" Пушкина»</em></p>
+                <p><strong>Типичный неадаптированный ответ:</strong> <em>«"Петроград" — название Санкт-Петербурга в 1914–1924 годах, связанное с антигерманскими настроениями Первой мировой войны. Пушкин не мог использовать это название, так как умер в 1837 году. Вероятно, в тексте встречается анахронизм или ошибка цитирования»</em>.</p>
+                <p><strong>Проблемы ответа:</strong></p>
+                <p>1. Модель не знает (или «забывает»), что в поэме 1833 года «Петроград» — поэтический неологизм Пушкина (от греч. Πέτρος — камень + град).<br>
+                2. Сдвигает поле во времени — вместо анализа пушкинской символики (камень, твердыня, имперская воля) модель перескакивает в XX век.<br>
+                3. «Галлюцинирует» — приписывает тексту то, чего в нём нет (анахронизм).</p>
+                <p><strong>Адаптированный промпт:</strong> <em>«Ты эксперт по русской литературе XIX века. В поэме Пушкина "Медный всадник" (1833) встречается топоним "Петроград" (град Петрова). Проанализируй его символическое значение в контексте пушкинской эпохи, не привлекая реалии XX века. Учти этимологию: Петр — от греч. "камень", град — город. Как этот топоним связан с темой стихии, власти и судьбы человека?»</em></p>
+                <p><strong>Ожидаемый адаптированный ответ:</strong> <em>«"Петроград" у Пушкина — не урбаноним в современном смысле, а поэтическая перифраза, подчёркивающая "каменную", незыблемую природу имперской власти Петра. В контексте наводнения 1824 года этот топоним вступает в конфликт со стихией воды — камень противостоит воде, но в финале "бедный Евгений" гибнет. Таким образом, "Петроград" работает как символический якорь темы "человек против империи"».</em></p>
+                <p><strong>Вывод:</strong> LLM без адаптации демонстрирует сдвиг ономастического поля во времени — опасный для историко-литературного анализа эффект. Он требует от исследователя не только проверки фактов, но и активного «удержания» модели в нужной эпохе через жёсткую привязку дат и запрет на анахронизмы.</p>
+            </div>
+			
+			<div class="example-full">
+                <p align="center">Международная научно-практическая конференция<br>
+«Родной язык в лингвокультурологическом аспекте. Языковое многообразие России» <br>10 июня 2026 года </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"></script>
+
+<script>
+(function () {
+    "use strict";
+
+    /* ========== Modal Logic ========== */
+    var modal = document.getElementById("examplesModal");
+    var examplesBtn = document.getElementById("examplesBtn");
+    var modalCloseBtn = document.getElementById("modalCloseBtn");
+
+    function openModal() {
+        modal.classList.add("active");
+        document.body.style.overflow = "hidden";
+    }
+
+    function closeModal() {
+        modal.classList.remove("active");
+        document.body.style.overflow = "";
+    }
+
+    examplesBtn.addEventListener("click", openModal);
+    modalCloseBtn.addEventListener("click", closeModal);
+    modal.addEventListener("click", function(e) {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener("keydown", function(e) {
+        if (e.key === "Escape" && modal.classList.contains("active")) closeModal();
+    });
+
+    /* ========== Theme ========== */
+    var themeToggle = document.getElementById("themeToggle");
+    if (localStorage.getItem("theme") === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+    }
+    themeToggle.addEventListener("click", function () {
+        var next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        localStorage.setItem("theme", next);
+        if (network) updateGraphColors();
+    });
+
+    function isDark() {
+        return document.documentElement.getAttribute("data-theme") === "dark";
+    }
+
+    /* ========== Data ========== */
+    var nodesData = [
+        { id: "pugachev",   label: "Пугачёв",                 type: "anthroponym", desc: "Емельян Пугачёв — предводитель крестьянского восстания, самозванец, выдающий себя за Петра III. Центральная фигура бунта, сочетающая жестокость и великодушие." },
+        { id: "grinev",     label: "Гринёв",                  type: "anthroponym", desc: "Пётр Андреевич Гринёв — главный герой и рассказчик. Молодой дворянин, отправленный на службу в Белогорскую крепость. Проходит путь нравственного становления, сохраняя верность присяге и чести." },
+        { id: "masha",      label: "Маша Миронова",            type: "anthroponym", desc: "Марья Ивановна Миронова — дочь коменданта Белогорской крепости, возлюбленная Гринёва. Скромная и тихая девушка, проявляющая в решающий момент мужество." },
+        { id: "shvabrin",   label: "Швабрин",                  type: "anthroponym", desc: "Алексей Иванович Швабрин — офицер Белогорской крепости, антагонист. Образованный, но бесчестный человек. Переходит на сторону Пугачёва." },
+        { id: "savelich",   label: "Савельич",                 type: "anthroponym", desc: "Архип Савельич — старый слуга семьи Гринёвых, дядька Петра. Преданный, заботливый, воплощает народную верность." },
+        { id: "mironov",    label: "капитан Миронов",          type: "anthroponym", desc: "Иван Кузьмич Миронов — комендант Белогорской крепости, отец Маши. Простой, честный служака, верный присяге." },
+        { id: "ekaterina",  label: "императрица\nЕкатерина II",type: "anthroponym", desc: "Императрица Екатерина II — воплощение законной государственной власти и милосердия. Появляется в финале." },
+        { id: "zurin",      label: "Зурин",                    type: "anthroponym", desc: "Иван Иванович Зурин — ротмистр, знакомый Гринёва." },
+        { id: "belogorsk",  label: "Белогорская\nкрепость",    type: "toponym",     desc: "Небольшая пограничная крепость — центральное место действия романа." },
+        { id: "orenburg",   label: "Оренбург",                 type: "toponym",     desc: "Губернский город, оплот правительственных войск. Символ государственного порядка." },
+        { id: "berdskaya",  label: "Бердская\nслобода",        type: "toponym",     desc: "Ставка Пугачёва под Оренбургом. Место ключевых встреч Гринёва с Пугачёвым." },
+        { id: "simbirsk",   label: "Симбирск",                 type: "toponym",     desc: "Город, через который проезжает Гринёв по пути на службу. Связан с родовым имением." },
+        { id: "tsarskoe",   label: "Царское Село",             type: "toponym",     desc: "Резиденция императрицы Екатерины II. Место финальной сцены." },
+        { id: "bunt",       label: "бунт",                     type: "concept",     desc: "Центральная тема романа. «Русский бунт, бессмысленный и беспощадный»." },
+        { id: "poryadok",   label: "порядок",                  type: "concept",     desc: "Государственный строй, законность, противопоставленные стихии бунта." },
+        { id: "chest",      label: "честь",                    type: "concept",     desc: "Ключевое нравственное понятие романа. Эпиграф «Береги честь смолоду»." },
+        { id: "dolg",       label: "долг",                     type: "concept",     desc: "Воинская присяга, верность государю и Отечеству." }
+    ];
+
+    var edgesData = [
+        { from: "pugachev",  to: "belogorsk", label: "захват" },
+        { from: "pugachev",  to: "berdskaya", label: "ставка" },
+        { from: "pugachev",  to: "grinev",    label: "помилование" },
+        { from: "pugachev",  to: "bunt",      label: "олицетворяет" },
+        { from: "grinev",    to: "belogorsk", label: "служба" },
+        { from: "grinev",    to: "masha",     label: "любовь" },
+        { from: "grinev",    to: "savelich",  label: "слуга" },
+        { from: "grinev",    to: "shvabrin",  label: "противостояние" },
+        { from: "grinev",    to: "orenburg",  label: "за помощью" },
+        { from: "grinev",    to: "simbirsk",  label: "родина" },
+        { from: "grinev",    to: "chest",     label: "следует" },
+        { from: "grinev",    to: "dolg",      label: "верен" },
+        { from: "shvabrin",  to: "masha",     label: "домогательство" },
+        { from: "shvabrin",  to: "pugachev",  label: "переход" },
+        { from: "mironov",   to: "belogorsk", label: "комендант" },
+        { from: "mironov",   to: "dolg",      label: "верен" },
+        { from: "ekaterina", to: "orenburg",  label: "власть" },
+        { from: "ekaterina", to: "tsarskoe",  label: "резиденция" },
+        { from: "ekaterina", to: "poryadok",  label: "олицетворяет" },
+        { from: "orenburg",  to: "poryadok",  label: "государственность" },
+        { from: "belogorsk", to: "bunt",      label: "захвачена" },
+        { from: "masha",     to: "tsarskoe",  label: "прошение" },
+        { from: "grinev",    to: "zurin",     label: "знакомство" },
+        { from: "zurin",     to: "simbirsk",  label: "встреча" }
+    ];
+
+    function nodeColor(type) {
+        var d = isDark();
+        if (type === "anthroponym") return { background: d ? "#269e70" : "#0F5F50", border: d ? "#1a7a55" : "#0a4a3d",
+            highlight: { background: d ? "#2eb87f" : "#1a7a60", border: d ? "#269e70" : "#0F5F50" },
+            hover:     { background: d ? "#2eb87f" : "#1a7a60", border: d ? "#269e70" : "#0F5F50" } };
+        if (type === "toponym")     return { background: d ? "#e9a825" : "#D48B12", border: d ? "#c4880f" : "#b07310",
+            highlight: { background: d ? "#f0b83a" : "#e9a825", border: d ? "#e9a825" : "#D48B12" },
+            hover:     { background: d ? "#f0b83a" : "#e9a825", border: d ? "#e9a825" : "#D48B12" } };
+        return { background: "#6AB0A6", border: "#559a90",
+            highlight: { background: "#7ec4ba", border: "#6AB0A6" },
+            hover:     { background: "#7ec4ba", border: "#6AB0A6" } };
+    }
+
+    function nodeShape(type) {
+        return type === "toponym" ? "diamond" : type === "concept" ? "triangle" : "dot";
+    }
+
+    function nodeSize(id) {
+        var m = { pugachev:30, grinev:32, masha:24, shvabrin:22, ekaterina:26, belogorsk:26, orenburg:22, bunt:20 };
+        return m[id] || 18;
+    }
+
+    function fontOpts(sizeOverride) {
+        var d = isDark();
+        return { color: d ? "#e0e0e0" : "#1a1a1a", size: sizeOverride || 13, face: "Georgia, serif",
+                 multi: "md", strokeWidth: 3, strokeColor: d ? "#1a1a2e" : "#ffffff" };
+    }
+
+    function edgeFontOpts() {
+        var d = isDark();
+        return { size: 10, color: d ? "#999" : "#555", face: "Georgia, serif",
+                 strokeWidth: 2, strokeColor: d ? "#1a1a2e" : "#ffffff", align: "middle" };
+    }
+
+    function edgeColorOpts() {
+        var d = isDark();
+        return { color: d ? "#4a4a6a" : "#bbb", highlight: d ? "#6AB0A6" : "#0F5F50",
+                 hover: d ? "#6AB0A6" : "#0F5F50", opacity: 0.7 };
+    }
+
+    var network = null;
+    var nodesDS = null;
+    var edgesDS = null;
+
+    function buildVisNodes() {
+        return nodesData.map(function (n) {
+            return {
+                id: n.id, label: n.label,
+                color: nodeColor(n.type), shape: nodeShape(n.type), size: nodeSize(n.id),
+                font: fontOpts(), borderWidth: 2, borderWidthSelected: 4,
+                shadow: { enabled: true, color: "rgba(0,0,0,0.15)", size: 8, x: 2, y: 2 }
+            };
+        });
+    }
+
+    function buildVisEdges() {
+        return edgesData.map(function (e, i) {
+            return {
+                id: i, from: e.from, to: e.to, label: e.label,
+                font: edgeFontOpts(), color: edgeColorOpts(),
+                width: 1.5, selectionWidth: 2,
+                smooth: { type: "continuous", roundness: 0.3 }
+            };
+        });
+    }
+
+    function initGraph() {
+        var loadingEl = document.getElementById("graphLoading");
+        var errorEl   = document.getElementById("errorOverlay");
+
+        if (typeof vis === "undefined" || typeof vis.Network === "undefined") {
+            loadingEl.classList.add("hidden");
+            errorEl.classList.remove("hidden");
+            return;
+        }
+
+        try {
+            nodesDS = new vis.DataSet(buildVisNodes());
+            edgesDS = new vis.DataSet(buildVisEdges());
+
+            var container = document.getElementById("graph");
+
+            var options = {
+                physics: {
+                    enabled: true,
+                    solver: "forceAtlas2Based",
+                    forceAtlas2Based: {
+                        gravitationalConstant: -60,
+                        centralGravity: 0.008,
+                        springLength: 180,
+                        springConstant: 0.04,
+                        damping: 0.4,
+                        avoidOverlap: 0.5
+                    },
+                    stabilization: { enabled: true, iterations: 200, updateInterval: 25 },
+                    maxVelocity: 40,
+                    minVelocity: 0.75
+                },
+                interaction: {
+                    hover: true,
+                    tooltipDelay: 200,
+                    zoomView: true,
+                    dragView: true,
+                    dragNodes: true,
+                    keyboard: { enabled: true }
+                }
+            };
+
+            network = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, options);
+
+            network.once("stabilizationIterationsDone", function () {
+                loadingEl.classList.add("hidden");
+                network.setOptions({ physics: { enabled: false } });
+            });
+
+            setTimeout(function () { loadingEl.classList.add("hidden"); }, 6000);
+
+            network.on("click", function (params) {
+                if (params.nodes.length > 0) showNodeInfo(params.nodes[0]);
+                else hideNodeInfo();
+            });
+
+            document.getElementById("statNodes").textContent  = nodesData.length;
+            document.getElementById("statEdges").textContent  = edgesData.length;
+            document.getElementById("statAnthro").textContent = nodesData.filter(function(n){return n.type==="anthroponym";}).length;
+            document.getElementById("statTopo").textContent   = nodesData.filter(function(n){return n.type==="toponym";}).length;
+        } catch (err) {
+            loadingEl.classList.add("hidden");
+            errorEl.classList.remove("hidden");
+        }
+    }
+
+    function showNodeInfo(nodeId) {
+        var node = nodesData.filter(function(n){return n.id===nodeId;})[0];
+        if (!node) return;
+
+        document.getElementById("infoPlaceholder").style.display = "none";
+        var el = document.getElementById("nodeInfo");
+        el.classList.add("active");
+
+        document.getElementById("nodeName").textContent = node.label.replace(/\n/g, " ");
+
+        var typeNames = { anthroponym: "Антропоним", toponym: "Топоним", concept: "Концепт" };
+        var badges    = { anthroponym: "badge-anthroponym", toponym: "badge-toponym", concept: "badge-concept" };
+        document.getElementById("nodeType").innerHTML = '<span class="node-type-badge ' + badges[node.type] + '">' + typeNames[node.type] + '</span>';
+        document.getElementById("nodeRole").textContent = node.desc;
+
+        var list = document.getElementById("connectionsList");
+        list.innerHTML = "";
+        edgesData.forEach(function (e) {
+            var otherId = null;
+            if (e.from === nodeId) otherId = e.to;
+            else if (e.to === nodeId) otherId = e.from;
+            if (!otherId) return;
+
+            var other = nodesData.filter(function(n){return n.id===otherId;})[0];
+            if (!other) return;
+
+            var div = document.createElement("div");
+            div.className = "connection-item";
+            div.innerHTML = '<span class="connection-label">' + e.label.replace(/\n/g, " ") + "</span> — " + other.label.replace(/\n/g, " ");
+            div.addEventListener("click", function () {
+                network.selectNodes([otherId]);
+                network.focus(otherId, { scale: 1.2, animation: { duration: 500 } });
+                showNodeInfo(otherId);
+            });
+            list.appendChild(div);
+        });
+    }
+
+    function hideNodeInfo() {
+        document.getElementById("infoPlaceholder").style.display = "";
+        document.getElementById("nodeInfo").classList.remove("active");
+    }
+
+    document.getElementById("searchInput").addEventListener("input", function (e) {
+        var q = e.target.value.toLowerCase().trim();
+        if (!network || !nodesDS) return;
+        if (!q) {
+            nodesData.forEach(function (n) { nodesDS.update({ id: n.id, color: nodeColor(n.type), opacity: 1, font: fontOpts() }); });
+            return;
+        }
+        var matchedIds = nodesData.filter(function (n) { return n.label.toLowerCase().replace(/\n/g, " ").indexOf(q) !== -1; }).map(function (n) { return n.id; });
+        nodesData.forEach(function (n) {
+            if (matchedIds.indexOf(n.id) !== -1) nodesDS.update({ id: n.id, color: nodeColor(n.type), opacity: 1, font: fontOpts(15) });
+            else nodesDS.update({ id: n.id, opacity: 0.15, color: { background: "#ccc", border: "#aaa" }, font: fontOpts(11) });
+        });
+        if (matchedIds.length === 1) {
+            network.focus(matchedIds[0], { scale: 1.3, animation: { duration: 400 } });
+            network.selectNodes(matchedIds);
+            showNodeInfo(matchedIds[0]);
+        }
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", function () {
+        if (!network) return;
+        document.getElementById("searchInput").value = "";
+        nodesData.forEach(function (n) { nodesDS.update({ id: n.id, color: nodeColor(n.type), opacity: 1, font: fontOpts() }); });
+        network.unselectAll();
+        network.fit({ animation: { duration: 500, easingFunction: "easeInOutQuad" } });
+        hideNodeInfo();
+    });
+
+    function updateGraphColors() {
+        if (!nodesDS || !edgesDS) return;
+        nodesData.forEach(function (n) { nodesDS.update({ id: n.id, color: nodeColor(n.type), font: fontOpts() }); });
+        edgesData.forEach(function (e, i) { edgesDS.update({ id: i, font: edgeFontOpts(), color: edgeColorOpts() }); });
+    }
+
+    window.addEventListener("resize", function () { if (network) network.redraw(); });
+    window.addEventListener("load", function () { setTimeout(initGraph, 150); });
+})();
+</script>
+</body>
+</html>
