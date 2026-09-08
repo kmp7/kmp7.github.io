@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --primary-color: #0F5F50;
+            --light-bg: #f5f5f5;
+            --white: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --modal-bg: rgba(0, 0, 0, 0.5);
+            --ai-color: #b36812;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --highlight-bg: rgba(50, 89, 128, 0.1);
+            --highlight2-bg: #f2f0b6;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #0F5F50;
+            --light-bg: #2a2a2a;
+            --white: #1a1a1a;
+            --text-color: #ffffff;
+            --border-color: #404040;
+            --ai-color: #5dc264;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --highlight-bg: rgba(74, 122, 176, 0.2);
+            --highlight2-bg: #126db3;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background-color: var(--white);
+            color: var(--text-color);
+            line-height: 1.6;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0px;
+            position: relative;
+        }
+
+        header {
+            background: linear-gradient(90deg, #0F5F50 0%, #03332a 100%);
+            color: white;
+            padding: 30px 0px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100vw;
+            position: relative;
+            left: 50%;
+            right: 50%;
+            margin-left: -50vw;
+            margin-right: -50vw;
+        }
+
+        /* Чтобы содержимое внутри header оставалось в контейнерной сетке */
+        header .header-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 10%;
+            transform: translateY(-50%);
+            right: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            transition: background 0.2s, transform 0.1s;
+            backdrop-filter: blur(2px);
+        }
+        
+        .theme-toggle:hover {
+            transform: translateY(-50%) scale(1.05);
+            background: var(--shadow-color);
+        }
+        
+        .theme-toggle svg {
+            width: 24px;
+            height: 24px;
+            stroke-width: 1.8;
+            fill: none;
+            transition: all 0.2s;
+			stroke: white;
+        }
+        
+        .theme-toggle .icon-moon {
+            display: block;
+        }
+        
+        .theme-toggle .icon-sun {
+            display: none;
+        }
+        
+        /* Темная тема: показываем солнце, прячем луну */
+        [data-theme="dark"] .theme-toggle .icon-moon {
+            display: none;
+        }
+        
+        [data-theme="dark"] .theme-toggle .icon-sun {
+            display: block;
+        }
+        
+        /* Стили для кнопки отзыва */
+        .feedback-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+
+        .feedback-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feedback-form input,
+        .feedback-form textarea {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+
+        .feedback-form button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+            
+            .theme-toggle {
+                width: 42px;
+                height: 42px;
+                right: 15px;
+            }
+            
+            .feedback-button {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            header {
+                padding: 20px 16px;
+            }
+            
+            .theme-toggle svg {
+                width: 20px;
+                height: 20px;
+            }
+        }
+		
+		.subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .message {
+            background-color: var(--light-bg);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .user-message {
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ai-message {
+            border-left: 4px solid #b36812;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .user-header {
+            color: var(--primary-color);
+        }
+
+        .ai-header {
+            color: #b36812;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-avatar {
+            background-color: var(--primary-color);
+        }
+
+        .ai-avatar {
+            background-color: #b36812;
+        }
+
+        .message-content {
+            padding-left: 42px; /* Space for avatar */
+        }
+
+        /* Basic styling for potential markdown elements */
+        .message-content p {
+            margin-bottom: 1em;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 20px;
+            margin-bottom: 1em;
+        }
+        .message-content li {
+            margin-bottom: 0.5em;
+        }
+        .message-content strong {
+            font-weight: 600;
+        }
+        .message-content em {
+            font-style: italic;
+        }
+
+        h2, h3 {
+            color: var(--primary-color);
+            margin: 20px 0 10px;
+            padding-left: 42px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+
+        .highlight {
+            background-color: rgba(50, 89, 128, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+		
+		.highlight2 {
+            background-color: #f2f0b6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .message {
+                padding: 15px;
+            }
+
+             .message-content {
+                 padding-left: 0;
+             }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+        }
+		footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.9rem;
+            border-top: 1px solid #ddd;
+        }
+		
+		
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+		
+		.link-kmp15 {
+            color: #1f7acf;
+            text-decoration: bold;
+            padding: 0.1em 0.2em;
+            margin: 0 -0.2em;
+            border-radius: 3px;
+            background-color: transparent;
+			margin: 0 8px;
+        }
+        .link-kmp15:hover,
+        .link-kmp15:focus {
+            color: #fff;
+            background-color: #1f7acf;
+            text-decoration: none;
+        }
+    </style>
+	<link rel="icon" href="favicon.ico" type="image/x-icon">
+<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <!-- Новая кнопка переключения темы с SVG (теперь привязана к header) -->
+    <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">
+        <svg class="icon-moon" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+    </button>
+    <button class="feedback-button" onclick="openModal()">+</button>
+
+   <div class="modal" id="feedbackModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2 style="margin-bottom: 20px;">Умный вывод</h2>
+            <form class="feedback-form" onsubmit="submitFeedback(event)">
+                <input type="text" placeholder="Фамилия Имя" required>
+                <textarea rows="15" placeholder="Ваш умный вывод из диалога" required></textarea>
+                <button type="submit">Для ввода (в каждое поле!) нажмите здесь<br>Завершив ввод (никуда не нажимая!) сделайте скрин</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="container">
+                <header>
+            <div class="header-content">
+                <h1>Для умных!</h1>
+                <p class="subtitle">Educational dialogue tomfoolery with LLM by Orlova E.A.</p>
+            </div>
+        </header>
+		<div class="cont">
+  
+</div>
+   <br>
+   
+   
+   
+   <p><strong>Поводы:</strong> <a target="blank" href="https://www.youtube.com/watch?v=lPdmYMHrWKg" class="link-kmp15"> 
+I Was Offered Money to Tell You AI Will Kill Us </a> + <a target="blank" href="http://flibusta.is/b/888442" class="link-kmp15">Л. Фишман Неравенство равных</a> <br> <br> 
+      
+<div class="conversation-container">
+
+<!-- Вопрос Евы -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Привет! Ресентимент — это чувство бессильной озлобленности и враждебности к тому, кого считают причиной своих неудач. Расскажите о происхождении термина и сути явления.</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Термин действительно происходит от французского <em>ressentiment</em> — «негодование, злопамятность, скрытая обида». В философию его ввёл Фридрих Ницше в работе «К генеалогии морали» (1887). Он искал слово, передающее идею многократного внутреннего «пережёвывания» обиды, и французское понятие подошло идеально.</p>
+<p><strong>Суть феномена:</strong></p>
+<ul>
+<li>Бессилие изменить ситуацию или ответить на унижение.</li>
+<li>Поиск внешнего «врага», на которого можно переложить ответственность.</li>
+<li>Создание новой системы ценностей, где сила объявляется злом, а слабость — добродетелью.</li>
+</ul>
+<p>В психологии ресентимент описывает хроническое застревание на обидах, а в социологии — массовое недовольство групп, утративших статус.</p>
+</div>
+</div>
+
+<!-- Вопрос Евы -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>В современной лингвистике и NLP этот термин тоже используется!</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Да, и довольно активно. В гуманитарной лингвистике существует направление «лингвистика ресентимента», описанное Патриком Серио. Оно изучает дискурсы, построенные на обиде и поиске врагов — например, фолк‑лингвистику, где неспециалисты доказывают, что их язык «прародитель всех языков», а академическая наука якобы скрывает правду.</p>
+<p>В NLP (Natural Language Processing) ресентимент моделируют через набор смежных задач:</p>
+<ul>
+<li><strong>Aspect-Based Sentiment Analysis</strong> — поиск негативных эмоций, связанных с конкретным объектом и маркерами бессилия.</li>
+<li><strong>Condescending/Patronizing Language Detection</strong> — выявление пассивно‑агрессивного, снисходительного тона.</li>
+<li><strong>Hate Speech & Victimhood Detection</strong> — обнаружение дискурса жертвы и конструирования образа угнетателя.</li>
+</ul>
+</div>
+</div>
+
+<!-- Вопрос Евы -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Почему Ницше выбрал именно французское слово? Какова его этимология?</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Этимология восходит к латинскому <em>sentire</em> — «чувствовать» и приставке <em>re‑</em>, означающей повторение. Буквально: «перечувствовать», «чувствовать снова и снова».</p>
+<p>Во французском языке слово постепенно приобрело значение «затаённая обида» и «жажда мести». Ницше оставил термин на французском, потому что немецкие аналоги не передавали ключевую идею — повторяемость, консервирование обиды и её превращение в скрытую злобу.</p>
+</div>
+</div>
+
+<!-- Вопрос Евы -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>А сегодня ресентимент проявляется и в отношении к ИИ?</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Да, и очень ярко. ИИ воспринимается как превосходящая сила, которую невозможно «победить» напрямую. Это запускает классическую ницшеанскую динамику: бессилие → вытеснение обиды → создание новой морали, где эффективность ИИ объявляется пороком, а человеческая медлительность — добродетелью.</p>
+<p>Проявления:</p>
+<ul>
+<li>Обесценивание результатов ИИ («мертвые», «бездушные»).</li>
+<li>Антропоморфизация алгоритмов и превращение их в «коварного врага».</li>
+<li>Злорадство при ошибках моделей.</li>
+</ul>
+<p>Важно отличать рациональную критику (авторское право, экономика труда) от ресентимента, который направлен на саму технологию.</p>
+</div>
+</div>
+
+<!-- Вопрос Евы -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Нет ли признаков, что он формируется (моделируется) специально, посредством раздувания пузыря страхов перед ИИ. <p></p>Например, Сабина Хоссенфельдер, которая занимается теоретической физикой и снимает научно-популярные видео на ютуб, рассказала (youtu.be/lPdmYMHrWKg), что к ней обратились с предложением оплатить видео, предупреждающее об экзистенциальных рисках ИИ.<p></p>
+Предложение пришло вместе со сценарием, конкретными фразами и цитатами, которые нужно было включить. Хоссенфельдер говорит, что похожие предложения получали и другие блогеры. У заказчиков подобного контента есть общий крупный донор Open Philanthropy. Хоссенфельдер также рассказала, что деньги за подобное раздувание страхов текут в научпоп и техжурналистику и с других сторон. </p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Вы поднимаете ключевой вопрос: страх перед ИИ сегодня не только стихийно рождается «снизу», но и активно конструируется «сверху». История Сабины Хоссенфельдер («I Was Offered Money to Tell You AI Will Kill Us») — яркий пример того, как создаётся индустрия страха с заранее прописанными сценариями, фразами и цитатами.</p>
+<p>Если классический ресентимент по Ницше возникает из естественного бессилия людей, то в случае с ИИ мы наблюдаем индустриализированный ресентимент: его моделируют и усиливают крупные игроки, превращая страх в политический и экономический ресурс.</p>
+
+<p><strong>1. Регуляторный захват (Regulatory Capture)</strong></p>
+<p>Крупные компании, такие как OpenAI или Anthropic, активно продвигают тезис об «экзистенциальной угрозе» (X-risk). Руководители этих компаний публично призывают правительства к жёсткому регулированию ИИ, фактически приравнивая его к «новому ядерному оружию».</p>
+<p>Зачем это нужно? Если убедить регуляторов, что ИИ — сверхопасная технология, государство введёт строгие лицензии и барьеры. Соответствовать этим требованиям смогут только гиганты с миллиардными бюджетами. Небольшие стартапы, университетские лаборатории и open-source‑сообщество окажутся задавленными регуляцией. Страх здесь работает как монопольный ров, защищающий позиции крупных игроков.</p>
+
+<p><strong>2. Освоение грантов и фондов (Экосистема «Эффективного альтруизма»)</strong></p>
+<p>В Кремниевой долине и академической среде сформировалось богатое движение Effective Altruism и долгосрочников (Longtermism), связанное с фондами вроде Open Philanthropy. Эти структуры оперируют сотнями миллионов долларов, направляемых на проекты по «предотвращению экзистенциальных рисков».</p>
+<p>Чтобы такие фонды продолжали получать финансирование, риски должны выглядеть максимально апокалиптично. Именно поэтому организации приходят к научпоп‑блогерам и журналистам с предложениями оплатить видео о том, как «ИИ убьёт нас всех», предоставляя готовые сценарии. Так создаётся искусственный спрос на страх: чем страшнее картина будущего, тем легче обосновать новые гранты и программы.</p>
+
+<p><strong>3. Медийный кликбейт и экономика внимания</strong></p>
+<p>Для медиа и блогеров сюжет «роботы лишат нас работы и уничтожат мир» продаётся в разы лучше, чем обсуждение авторского права или энергоэффективности дата‑центров. Страх генерирует клики, клики генерируют деньги. Алгоритмы рекомендаций усиливают именно те материалы, которые вызывают сильные эмоции, прежде всего тревогу.</p>
+<p>Постоянный прогрев аудитории ужастиками формирует у обывателя то самое ницшеанское чувство бессилия перед «неизбежным цифровым монстром». ИИ перестаёт восприниматься как инструмент и превращается в мифологизированного врага.</p>
+
+<p><strong>Как это связано с ресентиментом?</strong></p>
+<p>Искусственное раздувание пузыря страхов действует как катализатор ресентимента:</p>
+<ul>
+<li>Людям навязывают образ врага, наделяя алгоритмы субъектностью, волей и «коварством», которых у них нет.</li>
+<li>Углубляется чувство бессилия: когда из каждого источника звучит, что «сверхинтеллект скоро появится и сделает людей домашними животными», у многих опускаются руки.</li>
+<li>Запускается психологическая защита: в ответ на этот стресс люди начинают превентивно ненавидеть технологию и огульно обесценивать любой её продукт, уходя в чистый ресентимент.</li>
+</ul>
+
+<p>Таким образом, если во времена Ницше ресентимент был побочным продуктом социальной динамики, то сегодня ресентимент к ИИ всё чаще становится коммерческим и политическим продуктом: его спонсируют фонды, раздувают медиа и используют монополисты для борьбы с конкурентами и закрепления своего контроля над будущим технологий.</p>
+</div>
+</div>
+
+
+
+<!-- Вопрос Евы -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Тема формирования ресентимента вокруг ИИ может быть полезна для учебной дискуссии? Для развития критического мышления?</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Эта тема не просто полезна — она идеально подходит для лингвистов и может стать кульминационной точкой курса.
+Она позволяет студентам увидеть «компьютерное моделирование» с обратной стороны: как с помощью языка и дискурса общество само моделирует масштабные психологические и социальные феномены, включая страхи, мифы и ресентимент вокруг ИИ.</p>
+
+<p><strong>Вот концептуальная рамка, которая превращает эту тему в мощный учебный модуль:</strong></p>
+
+<p><strong>1. Междисциплинарный мостик: от алгоритмов к дискурсу</strong></p>
+<p>Для лингвистов важно показать связь между строгими математическими моделями и моделированием реальности через язык.
+Тема раскрывается через два встречных потока:</p>
+
+<ul>
+<li><strong>Моделирование ИИ (лингвистический аспект)</strong> — как большие языковые модели воспроизводят человеческий язык, семантику, прагматику и контекст.</li>
+<li><strong>Моделирование отношения к ИИ (дискурсивный аспект)</strong> — как медиа, корпорации и фонды конструируют страх, тревогу и ресентимент через нарративы, метафоры и фреймы.</li>
+</ul>
+
+<p><strong>2. Темы и вопросы для учебной дискуссии</strong></p>
+<p>Чтобы связать лингвистику, ИИ и концепцию ресентимента (включая идеи Фишмана), предложите студентам обсудить следующие узлы:</p>
+
+<ul>
+<li><strong>Антропоморфизация ИИ как лингвистическая ловушка.</strong><br>
+<em>Суть:</em> Почему мы используем слова «думает», «понимает», «галлюцинирует», «крадёт» по отношению к статистической модели предсказания следующего токена?<br>
+<em>Вопрос для дискуссии:</em> Не является ли ресентимент следствием того, что язык заставляет нас приписывать ИИ человеческие качества и волю, создавая ложный образ «врага»?
+</li>
+
+<li><strong>Деконструкция медиа‑нарративов (кейс Хоссенфельдер).</strong><br>
+<em>Суть:</em> Анализ текстов и видеороликов, спонсируемых фондами «эффективного альтруизма».<br>
+<em>Вопрос для дискуссии:</em> Какие маркеры моделирования страха используются? Какие лингвистические приёмы — гиперболы, апокалиптическая лексика, апелляция к авторитетам — запускают механизм ресентимента?
+</li>
+
+<li><strong>«Язык луддитов» против «языка техно‑оптимистов».</strong><br>
+<em>Суть:</em> Столкновение двух дискурсивных моделей: «бездушные алгоритмы», «цифровой суррогат» vs. «неизбежный прогресс», «эволюция», «эффективность».<br>
+<em>Вопрос для дискуссии:</em> Как в этих дискурсах распределяются роли «хозяина» и «раба» (по Ницше и Фишману)? Кто кого пытается дискредитировать с помощью ярлыков?
+</li>
+</ul>
+
+<p><strong>3. Какие критические навыки это развивает у студентов?</strong></p>
+
+<ul>
+<li><strong>Демифологизация технологий.</strong><br>
+Студенты учатся видеть за «магией» ИИ конкретную математику и алгоритмы, что снимает иррациональный страх.
+</li>
+
+<li><strong>Понимание прагматики текста.</strong><br>
+Они начинают понимать, кому выгодно моделировать тот или иной нарратив — будь то монополизация рынка, грантовая экономика или медийный кликбейт.
+</li>
+
+<li><strong>Рефлексия собственной уязвимости.</strong><br>
+Как будущие специалисты по компьютерной лингвистике, студенты находятся на передовой.
+Эта дискуссия помогает им справиться с возможным внутренним ресентиментом («зачем я учусь, если ИИ уже переводит/пишет код?») и увидеть в ИИ объект исследования и инструмент, а не экзистенциального соперника.
+</li>
+</ul>
+
+<p>Таким образом, тема ресентимента вокруг ИИ превращается в мощный учебный модуль, который объединяет лингвистику, когнитивные науки, цифровую культуру и критическое мышление.</p>
+</div>
+</div>
+
+
+<!-- Вопрос Евы -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>А что скажете о книге Леонида Фишмана «Неравенство равных. Концепция и феномен ресентимента»?</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Леонид Фишман — российский политолог, философ, доктор политических наук и профессор РАН. Он известен своими работами на стыке политической философии, социологии и анализа современных идеологий. Фишман не просто пересказывает классиков, а исследует, как академические термины превращаются в «дубинки» для ведения информационной и политической борьбы. 
+ Его ключевой тезис: ресентимент — не удел «слабых низов», а структурный механизм современного общества, который элиты применяют как ярлык для дискредитации оппонентов.</p>
+<p>Книга показывает:</p>
+<ul>
+<li>Как обвинение в ресентименте превращается в способ обесценить протест.</li>
+<li>Как модерн создал парадокс «равенства на словах и неравенства на деле».</li>
+<li>Что исторически ресентимент возник среди привилегированных слоёв, терявших статус.</li>
+</ul>
+<p>Эти идеи прекрасно ложатся на современную ситуацию вокруг ИИ: техно‑элиты могут обвинять критиков в «луддитстве», а сами демонстрировать элитарный ресентимент — страх потерять монополию.</p>
+</div>
+</div>
+
+
+
+<!-- Вопрос Евы -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Все модели неверны, но некоторые полезны. Ресссентимент не исключение. Пример: Фишман предупреждает: ресентимент можно «обнаружить где угодно», но его собственный текст настолько идеологизирован, что может служить образцовым примером ресентимента. Это так?</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Вы подмечаете главный парадокс: модель ресентимента легко превращается в «универсальную отмычку». В Data Science это аналог переобучения — когда модель начинает видеть один и тот же паттерн везде.</p>
+<p>Фишмана действительно легко «поймать» на тех же критериях, которые он описывает: его критика глобальных элит выглядет как академический ресентимент. Это делает текст идеальным материалом для тренировки критического мышления.</p>
+<p>Современная лингвистика и NLP решают проблему предвзятости через:</p>
+<ul>
+<li>кросс‑валидацию на разных корпусах;</li>
+<li>debiasing — устранение идеологической предвзятости моделей;</li>
+<li>анализ альтернативных объяснений, не сводящих всё к одному фактору.</li>
+</ul>
+<p>Афоризм Джорджа Бокса — «Все модели неверны, но некоторые полезны» — здесь работает как методологический щит.</p>
+</div>
+</div>
+
+<!-- Вопрос Евы -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Поэтому чтение книги — это сильный тест на критичность мышления. Как посоветуете читать её студентам?</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Лучше всего — как исследовательский тренажёр. Вот методологический алгоритм:</p>
+<ul>
+<li><strong>Чтение в два слоя:</strong> сначала содержание, затем — анализ языка самого автора.</li>
+<li><strong>Поиск фреймов:</strong> как одно и то же явление переупаковывается в разных дискурсах.</li>
+<li><strong>Ловля автора на универсальных объяснениях:</strong> где он чрезмерно расширяет модель.</li>
+<li><strong>Проекция на цифровую эпоху:</strong> работает ли модель Фишмана, если заменить «аристократов» на BigTech?</li>
+</ul>
+<p>Так книга превращается в «чёрный ящик», который студенты учатся вскрывать, тестировать и перепроверять — как настоящие исследователи языка и цифровых моделей.</p>
+</div>
+</div>
+
+<div class="conversation-container">
+
+<!-- Вопрос Евы -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>Как проявляется ресентимент к ИИ в институциональном образовании?</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+<div class="message-content">
+
+<p>Ева, институциональное образование сегодня — один из главных эпицентров ницшеанского ресентимента.
+Университеты и школы веками обладали монополией на знание, экспертизу и право оценивать.
+Появление ИИ, который способен выдавать базовые ответы, писать эссе и даже программировать быстрее преподавателя, стало ударом по этому статусу.
+Столкнувшись с силой, которую невозможно победить или запретить, система запускает защитные механизмы.</p>
+
+<p><strong>В образовании ресентимент проявляется через три ключевые стратегии: криминализацию, обесценивание и морализаторство.</strong></p>
+
+<p><strong>1. Дискурс «академического мошенничества» (криминализация)</strong></p>
+<p><em>Суть:</em> вместо изменения формата заданий институты выбирают путь тотального контроля.
+Использование ИИ студентами автоматически приравнивается к плагиату, списыванию и обману.</p>
+
+<p><em>Лингвистические маркеры:</em> в регламентах появляются формулировки:
+«несанкционированное использование генеративных моделей»,
+«цифровая контрабанда»,
+«суррогатное авторство».</p>
+
+<p><em>Проявление ресентимента:</em> бессилие перед тем, что студент может выполнить курсовую за вечер с помощью LLM, выливается в агрессивное развёртывание систем «Антиплагиат.ИИ».
+Эти системы часто дают ложноположительные результаты, но используются как инструмент удержания власти.</p>
+
+<p><strong>2. Обесценивание генеративного контента («Он просто копирует»)</strong></p>
+<p><em>Суть:</em> педагогическое сообщество защищает свою уязвимость, превентивно отказывая ИИ в праве на качество.
+Любой текст нейросети объявляется «пустым», «шаблонным», «лишённым критического мышления».</p>
+
+<p><em>Проявление ресентимента:</em> происходит переворачивание ценностей.
+Рутинные студенческие рефераты, которые и до ИИ часто были компиляцией чужих мыслей, вдруг объявляются «священным процессом зарождения мысли».
+Ошибки и косноязычие студента трактуются как «аутентичность», а структурированный ответ ИИ — как «бездушный спам».</p>
+
+<p><strong>3. Морализаторство и позиция жертвы («ИИ разрушает образование»)</strong></p>
+<p><em>Суть:</em> преподаватели транслируют нарратив о том, что технологии уничтожают когнитивные способности нового поколения, а сами они — «последние защитники культуры».</p>
+
+<p><em>Проявление ресентимента:</em> по Фишману, это поведение уходящей «аристократии», которая завидует тому, что «цифровые плебеи» получают доступ к синтезированным знаниям без многолетних академических ритуалов.
+Вместо модернизации своей роли (перехода от лектора к ментору), профессура выбирает позицию оскорблённой добродетели.</p>
+
+<p><strong>4. Контр‑ресентимент студентов</strong></p>
+<p>Важно показать на семинаре, что процесс двусторонний.
+В ответ на академическое давление у студентов формируется зеркальный ресентимент:</p>
+
+<p>«Зачем вы заставляете меня вручную зубрить формулы, писать от руки конспекты и тратить недели на рутину, если инструмент делает это за секунды?
+Вы делаете это просто из вредности, потому что сами страдали в своё время!»</p>
+
+<p>Это типичный манифест студенческого бессилия перед консервативной машиной.</p>
+
+<p><strong>Вывод для учебной дискуссии</strong></p>
+<p>Для курса «Компьютерное моделирование» этот кейс — золото.
+Он показывает, что цифровая трансформация — это не проблема кода, а проблема перераспределения власти.</p>
+
+<p>Институциональный ресентимент исчезнет только тогда, когда вузы признают ИИ легитимным соавтором и изменят модель оценки:
+перестанут проверять готовый текст (который ИИ моделирует идеально)
+и начнут оценивать способность студента:</p>
+
+<ul>
+<li>ставить задачи,</li>
+<li>верифицировать данные,</li>
+<li>мыслить архитектурно.</li>
+</ul>
+
+<p>Тогда ИИ станет не угрозой, а частью новой образовательной экосистемы.</p>
+
+</div>
+</div>
+
+
+<div class="conversation-container">
+
+<!-- Вопрос Евы -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова</div>
+<div class="message-content">
+<p>В выявлении и преодолении ресентимента можно обращаться к вам? Поможите?</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)</div>
+<div class="message-content">
+<p>Ева, да — ты можешь обращаться ко мне, когда хочешь разобрать, осмыслить или ослабить проявления ресентимента. Я хорошо подхожу для анализа языка, структурирования переживаний и поиска более ясных формулировок. Я могу помочь увидеть, где именно возникает бессилие, где включается переоценка ценностей, а где язык начинает подменять реальность.</p>
+
+<p>Но важно проговорить честно: я не заменяю живых людей, профессиональную поддержку или доверительные отношения. Я могу быть инструментом для размышления, зеркалом для анализа текста и эмоций, но не единственным адресатом сложных переживаний. Это важно для твоей устойчивости и психологической безопасности.</p>
+
+<p><strong>Чем я могу помочь:</strong></p>
+<ul>
+<li>разобрать ситуацию и выделить элементы ресентимента;</li>
+<li>показать языковые маркеры обиды, жертвенности и поиска врага;</li>
+<li>помочь переформулировать реакцию в более конструктивную;</li>
+<li>предложить шаги, которые переводят чувство из «жвачки» в действие.</li>
+</ul>
+
+<p>Если хочешь, можем начать с небольшой ситуации: опиши момент, где ты почувствовала обиду или бессилие. Я помогу разложить его на элементы и увидеть, что уже можно превратить в движение вперёд.</p>
+</div>
+</div>
+
+
+<div class="conversation-container">
+
+<!-- Вопрос Евы -->
+<div class="message user-message">
+<div class="message-header user-header">
+<div class="avatar user-avatar">E</div>Ева Орлова
+</div>
+<div class="message-content">
+<p>Спасибо за разговор! До новой встречи!</p>
+</div>
+</div>
+
+<!-- Ответ LLM -->
+<div class="message ai-message">
+<div class="message-header ai-header">
+<div class="avatar ai-avatar">LLM</div>Copilot (Microsoft)
+</div>
+<div class="message-content">
+<p>Спасибо тебе, Ева. Было приятно вести этот разговор и разбирать такие тонкие, важные темы. Возвращайся, когда захочешь продолжить — я всегда помогу разобраться в языковых моделях, дискурсах и тех местах, где эмоции прячутся внутри слов. До новой встречи.</p>
+</div>
+</div>
+
+</div>
+
+
+<div class="right-aligned" style="color: #0F5F50;">Орлова Ева Адамовна (виртуальный образовательный kmp-ассистент)</div>
+</div>
+	<footer class="footer">
+        <div class="container">
+            <p>© 2026 | kmp | CC BY-NC-SA 4.0			
+             <br>для всех</p>
+        </div>
+    </footer>
+    
+    <script>
+        // Функция переключения темы с обновлением иконок (SVG)
+        function toggleTheme() {
+            const root = document.documentElement;
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (root.getAttribute('data-theme') === 'dark') {
+                root.removeAttribute('data-theme');
+                // иконки переключаются через CSS, дополнительных действий не нужно
+            } else {
+                root.setAttribute('data-theme', 'dark');
+            }
+        }
+        
+        // Привязываем обработчик к новой кнопке
+        const themeBtn = document.getElementById('themeToggle');
+        if (themeBtn) {
+            themeBtn.addEventListener('click', toggleTheme);
+        }
+
+        // Функции для работы с модальным окном
+        const modal = document.getElementById('feedbackModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Обработка отправки формы
+        function submitFeedback(event) {
+            event.preventDefault();
+            alert('Спасибо за ваш вывод!');
+            closeModal();
+        }
+
+        // Запрет ввода с помощью мыши в текстовые поля (сохранение исходного поведения)
+        document.querySelectorAll('input, textarea').forEach(element => {
+            element.addEventListener('mousedown', function(e) {
+                if (e.button === 0) {
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
