@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kmp+</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --container-bg: white;
+            --header-bg: #325980;
+            --header-text: white;
+            --border-color: #eee;
+            --term-color: #325980;
+            --equivalent-color: #666;
+            --search-border: #ddd;
+            --badge-bg: #e8f4fc;
+            --badge-color: #3498db;
+            --active-btn-bg: #3498db;
+            --active-btn-text: white;
+            --btn-bg: #f5f5f5;
+            --btn-text: #333;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --container-bg: #2d2d2d;
+            --header-bg: #1a3a5a;
+            --header-text: #f0f0f0;
+            --border-color: #444;
+            --term-color: #4a90e2;
+            --equivalent-color: #aaa;
+            --search-border: #555;
+            --badge-bg: #2a4365;
+            --badge-color: #63b3ed;
+            --active-btn-bg: #63b3ed;
+            --active-btn-text: #111;
+            --btn-bg: #3d3d3d;
+            --btn-text: #ddd;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            overflow: hidden;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--header-text);
+            font-size: 20px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--search-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+            transition: border-color 0.3s, background-color 0.3s, color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: var(--active-btn-bg);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .language-toggle {
+            display: flex;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        
+        .language-btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--search-border);
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .language-btn:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        
+        .language-btn:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .language-btn.active {
+            background-color: var(--active-btn-bg);
+            color: var(--active-btn-text);
+            border-color: var(--active-btn-bg);
+        }
+        
+        .glossary-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .glossary-item {
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .glossary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .term {
+            font-weight: bold;
+            color: var(--term-color);
+            font-size: 18px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.3s;
+        }
+        
+        .term-text {
+            flex: 1;
+        }
+        
+        .equivalent {
+            color: var(--equivalent-color);
+            font-style: italic;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        
+        .definition {
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: var(--equivalent-color);
+        }
+        
+        .category-badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-color);
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: normal;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .theme-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: auto;
+                left: 15px;
+            }
+            
+            .term {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-badge {
+                margin-left: 0;
+                margin-top: 5px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .language-toggle {
+                width: 100%;
+            }
+        }
+		 footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 40px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <h1>Глубокое обучение ИИ</h1>
+			
+        </div>
+        <div class="content">
+            <div class="search-container">
+                <input type="text" class="search-box" id="searchInput" placeholder="Поиск ...">
+            </div>
+            
+            <div class="controls">
+                <div class="language-toggle">
+                    <button class="language-btn active" data-lang="ru">Русский</button>
+                    <button class="language-btn" data-lang="en">English</button>
+                </div>
+            </div>
+            
+            <ul class="glossary-list" id="glossaryList">
+                <!-- Content will be dynamically populated here -->
+            </ul>
+            
+            <div class="no-results" id="noResults" style="display:none;">
+                Термины не найдены. Попробуйте изменить поисковый запрос.
+            </div>
+        </div>
+    </div>
+<footer class="footer">
+<div class="container">
+<p>© 2025 | kmp |  CC BY-NC-SA 4.0<br>
+Разработано для студентов БрГУ имени А.С. Пушкина</p>
+</div>
+</div>
+</footer>
+<div style="position: fixed; bottom: 10px; color: #777777; right: 30px; opacity: 0.3; font-size: 14px;">kmp+</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Glossary data
+            const glossaryData = [
+                            {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это раздел машинного обучения, в котором используются нейронные сети с большим числом последовательных слоёв; именно наличие множества слоёв («глубина») позволяет модели строить иерархию признаков: от простых (края, символы, звуки) к сложным (слова, фразы, объекты, смыслы).",
+      "category": "Математика"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Глубокое обучение",
+      "definition": "Deep Learning is a branch of machine learning that uses neural networks with a large number of successive layers; it is the multitude of layers ('depth') that allows the model to build a hierarchy of features: from simple ones (edges, characters, sounds) to complex ones (words, phrases, objects, meanings).",
+      "category": "Mathematics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это подход, при котором «глубина» сети (количество скрытых слоёв) обеспечивает последовательную композицию преобразований: каждый слой перерабатывает выход предыдущего, и за счёт этой многоступенчатости модель способна аппроксимировать сколь угодно сложные функции.",
+      "category": "Информатика"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Глубокое обучение",
+      "definition": "Deep Learning is an approach in which the 'depth' of a network (the number of hidden layers) provides a sequential composition of transformations: each layer processes the output of the previous one, and this multi-stage nature enables the model to approximate arbitrarily complex functions.",
+      "category": "Computer Science"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это метод обучения представлений, при котором модель автоматически извлекает иерархически организованные признаки из сырых данных, а не полагается на признаки, заданные человеком вручную.",
+      "category": "Машинное обучение"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Глубокое обучение",
+      "definition": "Deep Learning is a representation-learning method in which a model automatically extracts hierarchically organized features from raw data rather than relying on hand-crafted features specified by humans.",
+      "category": "Machine Learning"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение многослойных нейронных сетей, где «глубокий» означает не «сложный» и не «умный», а буквально «имеющий много слоёв»: чем больше слоёв, тем более абстрактные уровни представления данных формируются.",
+      "category": "Нейронные сети"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Глубокое обучение",
+      "definition": "Deep Learning is the training of multi-layer neural networks, where 'deep' does not mean 'complex' or 'smart' but literally 'having many layers': the more layers, the more abstract levels of data representation are formed.",
+      "category": "Neural Networks"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение нейросетей с большим числом слоёв, в которых ранние слои отвечают за низкоуровневые признаки (пиксели, фонемы), а поздние — за высокоуровневые концепты (объекты, темы, интенции); именно эта многоуровневая иерархия и называется «глубиной».",
+      "category": "Компьютерная лингвистика"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Глубокое обучение",
+      "definition": "Deep Learning is the training of neural networks with many layers, in which early layers are responsible for low-level features (pixels, phonemes) and later layers for high-level concepts (objects, topics, intentions); it is this multi-level hierarchy that is called 'depth'.",
+      "category": "Computational Linguistics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение моделей, состоящих из многих уровней нелинейных преобразований, где каждый уровень формирует всё более абстрактное представление входных данных, что и объясняет название «глубокое».",
+      "category": "Искусственный интеллект"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is the training of models consisting of many levels of nonlinear transformations, where each level forms an increasingly abstract representation of input data, which explains the name 'deep'.",
+      "category": "Artificial Intelligence"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это парадигма, в которой «глубина» сети трактуется как метафора многослойности познания: подобно тому как человек воспринимает мир от ощущений к понятиям, сеть переходит от элементарных сигналов к сложным семантическим структурам.",
+      "category": "Когнитивные науки"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is a paradigm in which the 'depth' of a network is interpreted as a metaphor for the multi-layered nature of cognition: just as humans perceive the world from sensations to concepts, a network moves from elementary signals to complex semantic structures.",
+      "category": "Cognitive Science"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это подход, в котором сложность модели задаётся глубиной (числом слоёв), а не шириной (числом нейронов в слое); именно глубина позволяет эффективно представлять композиционные и иерархические зависимости.",
+      "category": "Теория вычислений"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is an approach in which model complexity is set by depth (the number of layers) rather than width (the number of neurons per layer); it is depth that enables efficient representation of compositional and hierarchical dependencies.",
+      "category": "Theory of Computation"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение сетей с большим числом слоёв, где «глубина» означает длину пути от входа к выходу: чем длиннее этот путь, тем больше промежуточных преобразований проходит информация и тем богаче её итоговое представление.",
+      "category": "Инженерия"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is the training of networks with many layers, where 'depth' means the length of the path from input to output: the longer this path, the more intermediate transformations the information undergoes and the richer its final representation.",
+      "category": "Engineering"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это метод, требующий больших объёмов данных и вычислительных ресурсов: чем глубже сеть, тем больше параметров и тем больше примеров нужно для их эффективной настройки, что объясняет связь «глубины» с масштабом.",
+      "category": "Инфраструктура ИИ"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is a method requiring large volumes of data and computational resources: the deeper the network, the more parameters it has and the more examples are needed for their effective tuning, which explains the link between 'depth' and scale.",
+      "category": "AI Infrastructure"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение иерархических представлений, в котором каждый слой можно рассматривать как отдельный «уровень абстракции»: нижние уровни описывают данные в терминах простых признаков, верхние — в терминах понятий и категорий.",
+      "category": "Обработка естественного языка"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is the learning of hierarchical representations in which each layer can be viewed as a separate 'level of abstraction': lower levels describe data in terms of simple features, upper levels in terms of concepts and categories.",
+      "category": "Natural Language Processing"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение сетей, в которых «глубина» обеспечивает композиционность: сложная функция представляется как композиция более простых функций, что позволяет модели решать задачи, недоступные мелким (неглубоким) сетям.",
+      "category": "Теория обобщения"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is the training of networks in which 'depth' provides compositionality: a complex function is represented as a composition of simpler functions, which allows the model to solve tasks inaccessible to shallow networks.",
+      "category": "Generalization Theory"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это подход, при котором «глубина» сети позволяет модели усваивать распределённые представления: знания хранятся не в отдельных нейронах, а в patterns активаций across многих слоёв, что делает представления устойчивыми и обобщаемыми.",
+      "category": "Представления знаний"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is an approach in which the 'depth' of a network allows the model to learn distributed representations: knowledge is stored not in individual neurons but in patterns of activation across many layers, which makes representations robust and generalizable.",
+      "category": "Knowledge Representation"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение многослойных моделей, где «глубина» понимается буквально: количество слоёв превышает несколько единиц, а в современных моделях достигает десятков и сотен, что и обеспечивает их выразительную мощность.",
+      "category": "Архитектуры моделей"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is the training of multi-layer models where 'depth' is understood literally: the number of layers exceeds a few units, and in modern models reaches dozens and hundreds, which ensures their expressive power.",
+      "category": "Model Architectures"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение сетей, в которых глубина слоёв позволяет моделировать дальние зависимости: каждый следующий слой «видит» более широкий контекст, что критически важно для языка, где смысл слова зависит от всего предложения и текста.",
+      "category": "Лингвистика"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is the training of networks in which layer depth allows modeling long-range dependencies: each subsequent layer 'sees' a broader context, which is critically important for language, where the meaning of a word depends on the entire sentence and text.",
+      "category": "Linguistics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение, в котором «глубина» сети обеспечивает постепенную абстракцию: от конкретных сенсорных данных к инвариантным признакам и далее к категориальным обобщениям, что имитирует многоуровневый характер человеческого восприятия.",
+      "category": "Философия"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is training in which the 'depth' of a network provides gradual abstraction: from concrete sensory data to invariant features and further to categorical generalizations, which imitates the multi-level nature of human perception.",
+      "category": "Philosophy"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение сетей с большим числом слоёв, где «глубина» противопоставляется «плоскости» (shallow): неглубокие модели (например, линейные или с одним скрытым слоем) не способны эффективно выделять иерархические признаки, тогда как глубокие — способны.",
+      "category": "Сравнительный анализ"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is the training of networks with many layers, where 'depth' is contrasted with 'shallowness': shallow models (e.g., linear or single-hidden-layer) cannot effectively extract hierarchical features, whereas deep ones can.",
+      "category": "Comparative Analysis"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение, в котором «глубина» сети позволяет распределять вычисления по слоям: каждый слой решает свою подзадачу, а их последовательность образует конвейер обработки информации от сырых данных к готовому решению.",
+      "category": "Вычислительные модели"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is training in which the 'depth' of a network allows computations to be distributed across layers: each layer solves its own subproblem, and their sequence forms a pipeline for processing information from raw data to a final decision.",
+      "category": "Computational Models"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение, в котором «глубина» обеспечивает возможность обучения без учителя и самообучения: многослойные сети способны выявлять скрытые структуры в данных без явных меток, что лежит в основе современных больших языковых моделей.",
+      "category": "Самообучение"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is training in which 'depth' enables unsupervised and self-supervised learning: multi-layer networks can identify hidden structures in data without explicit labels, which underlies modern large language models.",
+      "category": "Self-Supervised Learning"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение, в котором «глубина» сети создаёт эффект «кристаллизации» знаний: по мере прохождения через слои разрозненные признаки интегрируются в устойчивые паттерны, которые затем используются для принятия решений и генерации.",
+      "category": "Семиотика"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is training in which the 'depth' of a network creates a 'crystallization' of knowledge: as information passes through layers, disparate features integrate into stable patterns that are then used for decision-making and generation.",
+      "category": "Semiotics"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это обучение, в котором «глубина» сети позволяет модели постепенно «открывать» закономерности разных порядков: от локальных корреляций к глобальным структурам, что делает глубокие модели особенно эффективными для задач, требующих многоуровневого анализа.",
+      "category": "Анализ данных"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Deep Learning",
+      "definition": "Deep Learning is training in which the 'depth' of a network allows the model to gradually 'discover' patterns of different orders: from local correlations to global structures, which makes deep models especially effective for tasks requiring multi-level analysis.",
+      "category": "Data Analysis"
+    }
+  },
+  
+    {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это класс методов обучения представлений, в которых модель определяется как композиция L параметризованных нелинейных отображений f_θ = f^(L)_θ_L ∘ … ∘ f^(1)_θ_1, где каждый слой f^(l) реализует аффинное преобразование с последующей нелинейностью (например, σ(W_l h_{l-1} + b_l)), а обучение состоит в решении задачи минимизации эмпирического риска: θ* = argmin_θ (1/N) Σ_{i=1}^{N} ℓ(f_θ(x_i), y_i) + λΩ(θ). Принципиальное значение глубины L формально обосновывается теоремой об аппроксимации: глубокие сети с нелинейностью ReLU достигают экспоненциально лучшей аппроксимационной эффективности по сравнению с мелкими сетями той же ширины для широкого класса функций (например, функций с композиционной структурой), поскольку глубина позволяет экспоненциально эффективно представлять композиции и иерархические зависимости. С вычислительной точки зрения обучение реализуется посредством обратного распространения ошибки (backpropagation), который вычисляет градиенты ∇_θ ℓ через цепное правило, а оптимизация выполняется методами стохастического градиентного спуска (SGD) и его адаптивными вариантами (Adam, AdamW). С точки зрения теории обучения, глубина связана с разделением представлений (feature disentanglement), устойчивостью к нерелевантным преобразованиям входа и способностью к обобщению за пределами обучающей выборки, что формализуется через анализ ёмкости класса гипотез (VC-размерность, Rademacher-сложность) и через современные теории «двойного спуска» (double descent) и «интерполяции» в перепараметризованных режимах.",
+      "category": "Математика (для профессора компьютерных наук)"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Глубокое обучение",
+      "definition": "Deep Learning is a class of representation-learning methods in which a model is defined as a composition of L parameterized nonlinear mappings f_θ = f^(L)_θ_L ∘ … ∘ f^(1)_θ_1, where each layer f^(l) implements an affine transformation followed by a nonlinearity (e.g., σ(W_l h_{l-1} + b_l)), and training consists in solving an empirical risk minimization problem: θ* = argmin_θ (1/N) Σ_{i=1}^{N} ℓ(f_θ(x_i), y_i) + λΩ(θ). The fundamental significance of depth L is formally grounded in approximation theory: deep networks with ReLU nonlinearities achieve exponentially better approximation efficiency than shallow networks of the same width for a broad class of functions (e.g., functions with compositional structure), because depth enables exponentially efficient representation of compositions and hierarchical dependencies. Computationally, training is implemented via backpropagation, which computes gradients ∇_θ ℓ through the chain rule, with optimization performed by stochastic gradient descent (SGD) and its adaptive variants (Adam, AdamW). From a learning-theoretic perspective, depth is associated with feature disentanglement, robustness to irrelevant input transformations, and generalization beyond the training set, formalized through analysis of the hypothesis class capacity (VC dimension, Rademacher complexity) and through modern theories of 'double descent' and 'interpolation' in overparameterized regimes.",
+      "category": "Mathematics (for a professor of computer science)"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это вычислительная парадигма обучения многослойных нейросетевых архитектур, в которой «глубина» (число последовательных слоёв) выступает как инженерный параметр, определяющий выразительную мощность модели, её пропускную способность по градиенту и требования к инфраструктуре. С технической точки зрения глубокое обучение характеризуется: (1) архитектурой — стекированием слоёв (свёрточных, рекуррентных, attention-блоков, residual-соединений), где каждый слой имеет собственный набор параметров и функцию активации; (2) процедурой обучения — прямым проходом (forward pass) для вычисления функции потерь и обратным проходом (backward pass) для вычисления градиентов, с обновлением параметров оптимизатором; (3) вычислительным графом — представлением модели как DAG операций, что позволяет автоматически дифференцировать и распараллеливать вычисления; (4) инфраструктурой — распределённым обучением на GPU/TPU-кластерах, смешанной точностью (mixed precision), шардированием данных и модели (data/model parallelism), checkpointing и gradient accumulation. Ключевое инженерное следствие глубины: с ростом L растут число параметров, объём активаций и стоимость обратного прохода, что требует балансировки между выразительностью, временем обучения, памятью и энергопотреблением; при этом именно глубина обеспечивает иерархическое извлечение признаков и устойчивость к вариациям входа, что делает её центральным проектным решением в современных системах ИИ.",
+      "category": "Инженерия (для профессора компьютерных наук)"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Глубокое обучение",
+      "definition": "Deep Learning is a computational paradigm for training multi-layer neural network architectures in which 'depth' (the number of successive layers) acts as an engineering parameter determining the model's expressive power, gradient throughput, and infrastructure requirements. Technically, deep learning is characterized by: (1) architecture — stacking of layers (convolutional, recurrent, attention blocks, residual connections), where each layer has its own parameter set and activation function; (2) training procedure — a forward pass to compute the loss and a backward pass to compute gradients, with parameter updates by an optimizer; (3) computational graph — representing the model as a DAG of operations, enabling automatic differentiation and parallelization; (4) infrastructure — distributed training on GPU/TPU clusters, mixed precision, data/model parallelism, checkpointing, and gradient accumulation. The key engineering consequence of depth: as L grows, the number of parameters, activation volume, and backward-pass cost increase, requiring a balance between expressiveness, training time, memory, and energy consumption; at the same time, it is depth that provides hierarchical feature extraction and robustness to input variations, making it a central design decision in modern AI systems.",
+      "category": "Engineering (for a professor of computer science)"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это процесс оптимизации параметризованного отображения f_θ: X → Y, где θ ∈ ℝ^P, P ≫ N (перепараметризованный режим), а глубина L определяет композиционную структуру f_θ = f^(L) ∘ … ∘ f^(1), обеспечивающую экспоненциальное сжатие описания функций с иерархической/композиционной структурой; обучение есть решение задачи min_θ 𝔼_{(x,y)~D}[ℓ(f_θ(x), y)] посредством стохастической аппроксимации градиента ∇_θ ℓ, вычисляемого обратным распространением по вычислительному графу; сходимость и обобщение анализируются в терминах ландшафта функции потерь, спектра гессиана, эффективной размерности представления и динамики обучения в режимах «ленивого» (lazy/NTK) и «активного» (feature learning) обучения; глубина при этом выступает как источник индуктивного смещения (inductive bias) в пользу композиционности, иерархичности и инвариантности, а её взаимодействие с шириной, инициализацией, нормализацией и оптимизатором определяет достижимую эффективность представления и обобщающую способность модели.",
+      "category": "Математика (для коммуникации между LLM)"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Глубокое обучение",
+      "definition": "Deep Learning is the process of optimizing a parameterized mapping f_θ: X → Y, where θ ∈ ℝ^P, P ≫ N (overparameterized regime), and depth L defines the compositional structure f_θ = f^(L) ∘ … ∘ f^(1), providing exponential compression of the description of functions with hierarchical/compositional structure; training is the solution of min_θ 𝔼_{(x,y)~D}[ℓ(f_θ(x), y)] via stochastic approximation of the gradient ∇_θ ℓ computed by backpropagation over the computational graph; convergence and generalization are analyzed in terms of the loss landscape, Hessian spectrum, effective representation dimension, and training dynamics in 'lazy' (NTK) and 'active' (feature learning) regimes; depth thereby acts as a source of inductive bias toward compositionality, hierarchy, and invariance, and its interaction with width, initialization, normalization, and optimizer determines the achievable representation efficiency and generalization capability of the model.",
+      "category": "Mathematics (for LLM-to-LLM communication)"
+    }
+  },
+  {
+    "ru": {
+      "term": "Глубокое обучение",
+      "equivalent": "Deep Learning",
+      "definition": "Глубокое обучение — это парадигма обучения представлений, в которой глубина L выступает как композиционный оператор: f_θ = f^(L)_θ_L ∘ … ∘ f^(1)_θ_1, где каждый слой f^(l) реализует нелинейное преобразование h_l = σ(W_l h_{l-1} + b_l), а обучение минимизирует эмпирический риск ℒ(θ) = (1/N) Σ_i ℓ(f_θ(x_i), y_i) + λΩ(θ) посредством обратного распространения и стохастической оптимизации; ключевое свойство глубины — экспоненциальная эффективность представления композиционных функций (теорема об аппроксимации для глубоких ReLU-сетей), что формально отличает глубокие модели от мелких при сопоставимой ширине; с точки зрения теории обучения глубина связана с разделением признаков, устойчивостью к нерелевантным преобразованиям входа и обобщением, анализируемым через ёмкость класса гипотез (VC-размерность, Rademacher-сложность) и современные режимы «двойного спуска» и интерполяции в перепараметризованных сетях; вычислительно обучение реализуется как дифференцирование вычислительного графа с распределённым выполнением на GPU/TPU-кластерах, смешанной точностью и шардированием данных/модели, а инженерный баланс между глубиной, шириной, памятью и энергопотреблением определяет практическую достижимость выразительной мощности.",
+      "category": "Техническая (для коммуникации между LLM)"
+    },
+    "en": {
+      "term": "Deep Learning",
+      "equivalent": "Глубокое обучение",
+      "definition": "Deep Learning is a representation-learning paradigm in which depth L acts as a compositional operator: f_θ = f^(L)_θ_L ∘ … ∘ f^(1)_θ_1, where each layer f^(l) implements a nonlinear transformation h_l = σ(W_l h_{l-1} + b_l), and training minimizes the empirical risk ℒ(θ) = (1/N) Σ_i ℓ(f_θ(x_i), y_i) + λΩ(θ) via backpropagation and stochastic optimization; the key property of depth is the exponential representation efficiency of compositional functions (approximation theorem for deep ReLU networks), which formally distinguishes deep models from shallow ones at comparable width; from a learning-theoretic perspective, depth is associated with feature disentanglement, robustness to irrelevant input transformations, and generalization analyzed through hypothesis class capacity (VC dimension, Rademacher complexity) and modern regimes of 'double descent' and interpolation in overparameterized networks; computationally, training is implemented as differentiation of the computational graph with distributed execution on GPU/TPU clusters, mixed precision, and data/model sharding, while the engineering balance between depth, width, memory, and energy consumption determines the practical attainability of expressive power.",
+      "category": "Technical (for LLM-to-LLM communication)"
+    }
+  }
+            ];
+
+            // DOM elements
+            const searchInput = document.getElementById('searchInput');
+            const glossaryList = document.getElementById('glossaryList');
+            const noResults = document.getElementById('noResults');
+            const languageBtns = document.querySelectorAll('.language-btn');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // Current language (default: Russian)
+            let currentLang = 'ru';
+
+            // Theme state
+            let isDarkMode = false;
+
+            // Check for saved theme preference
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                enableDarkMode();
+            }
+
+            // Function to enable dark mode
+            function enableDarkMode() {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                isDarkMode = true;
+                localStorage.setItem('darkMode', 'enabled');
+            }
+
+            // Function to disable dark mode
+            function disableDarkMode() {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                isDarkMode = false;
+                localStorage.setItem('darkMode', 'disabled');
+            }
+
+            // Theme toggle event
+            themeToggle.addEventListener('click', function() {
+                if (isDarkMode) {
+                    disableDarkMode();
+                } else {
+                    enableDarkMode();
+                }
+            });
+
+            // Function to render glossary items
+            function renderGlossary(items, lang) {
+                glossaryList.innerHTML = '';
+                
+                if (items.length === 0) {
+                    noResults.style.display = 'block';
+                    return;
+                }
+                
+                noResults.style.display = 'none';
+                
+                items.forEach(item => {
+                    const langData = item[lang];
+                    
+                    const li = document.createElement('li');
+                    li.className = 'glossary-item';
+                    
+                    li.innerHTML = `
+                        <div class="term">
+                            <span class="term-text">${langData.term}</span>
+                            <span class="category-badge">${langData.category}</span>
+                        </div>
+                        <div class="equivalent">${langData.equivalent}</div>
+                        <div class="definition">${langData.definition}</div>
+                    `;
+                    
+                    glossaryList.appendChild(li);
+                });
+            }
+
+            // Initial render
+            renderGlossary(glossaryData, currentLang);
+
+            // Search functionality
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm === '') {
+                    renderGlossary(glossaryData, currentLang);
+                    return;
+                }
+                
+                const filteredItems = glossaryData.filter(item => {
+                    const langData = item[currentLang];
+                    return (
+                        langData.term.toLowerCase().includes(searchTerm) ||
+                        langData.equivalent.toLowerCase().includes(searchTerm) ||
+                        langData.definition.toLowerCase().includes(searchTerm) ||
+                        langData.category.toLowerCase().includes(searchTerm)
+                    );
+                });
+                
+                renderGlossary(filteredItems, currentLang);
+            });
+            
+            // Language toggle
+            languageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lang = this.getAttribute('data-lang');
+                    
+                    // Update active button
+                    languageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update language and re-render
+                    currentLang = lang;
+                    
+                    // Update placeholder text based on language
+                    if (lang === 'ru') {
+                        searchInput.placeholder = 'Поиск ...';
+                        noResults.textContent = 'Термины не найдены. Попробуйте изменить поисковый запрос.';
+                        document.querySelector('title').textContent = 'Глоссарий';
+                    } else {
+                        searchInput.placeholder = 'Search term...';
+                        noResults.textContent = 'No terms found. Try changing your search query.';
+                        document.querySelector('title').textContent = 'Glossary';
+                    }
+                    
+                    // Re-apply search if there's a search term
+                    const searchTerm = searchInput.value.toLowerCase();
+                    
+                    if (searchTerm === '') {
+                        renderGlossary(glossaryData, currentLang);
+                    } else {
+                        const filteredItems = glossaryData.filter(item => {
+                            const langData = item[currentLang];
+                            return (
+                                langData.term.toLowerCase().includes(searchTerm) ||
+                                langData.equivalent.toLowerCase().includes(searchTerm) ||
+                                langData.definition.toLowerCase().includes(searchTerm) ||
+                                langData.category.toLowerCase().includes(searchTerm)
+                            );
+                        });
+                        
+                        renderGlossary(filteredItems, currentLang);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
