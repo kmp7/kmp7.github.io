@@ -1,0 +1,2202 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kmp+</title>
+<style>
+/* ===== CSS RESET & BASE ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-card: #ffffff;
+  --header-bg: #0F5F50;
+  --nav-color: #0F5F50;
+  --heading-color: #0F5F50;
+  --heading-secondary: #269e70;
+  --interactive: #6AB0A6;
+  --accent: #D48B12;
+  --text-primary: #1a1a1a;
+  --text-secondary: #3a3a3a;
+  --text-muted: #5a5a5a;
+  --border-color: #e0e0e0;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-hover: 0 4px 16px rgba(0,0,0,0.12);
+  --code-bg: #f0f4f3;
+  --blockquote-bg: #f0f7f5;
+  --blockquote-border: #6AB0A6;
+  --nav-active-bg: rgba(106,176,166,0.15);
+  --nav-hover-bg: rgba(106,176,166,0.08);
+  --toggle-bg: rgba(255,255,255,0.15);
+  --toggle-hover: rgba(255,255,255,0.25);
+  --table-header-bg: #0F5F50;
+  --table-header-color: #ffffff;
+  --table-stripe: #f5faf8;
+  --example-bg: #fdf8ee;
+  --example-border: #D48B12;
+  --tip-bg: #eef7f5;
+  --tip-border: #269e70;
+  --warning-bg: #fef6e8;
+  --warning-border: #D48B12;
+  --progress-bg: #e0e0e0;
+  --progress-fill: #269e70;
+  --kbd-bg: #f5f5f5;
+  --kbd-border: #ccc;
+  --kbd-shadow: #999;
+  --scroll-thumb: #6AB0A6;
+  --scroll-track: #f5f5f5;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1e1d;
+  --bg-secondary: #222726;
+  --bg-card: #2a2f2e;
+  --header-bg: #0a3f35;
+  --nav-color: #6AB0A6;
+  --heading-color: #6AB0A6;
+  --heading-secondary: #7ec4b8;
+  --interactive: #6AB0A6;
+  --accent: #e8a832;
+  --text-primary: #e0e0e0;
+  --text-secondary: #c0c0c0;
+  --text-muted: #999999;
+  --border-color: #3a3f3e;
+  --shadow: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-hover: 0 4px 16px rgba(0,0,0,0.4);
+  --code-bg: #2a3532;
+  --blockquote-bg: #1e2b28;
+  --blockquote-border: #6AB0A6;
+  --nav-active-bg: rgba(106,176,166,0.2);
+  --nav-hover-bg: rgba(106,176,166,0.1);
+  --toggle-bg: rgba(255,255,255,0.1);
+  --toggle-hover: rgba(255,255,255,0.2);
+  --table-header-bg: #0a3f35;
+  --table-header-color: #e0e0e0;
+  --table-stripe: #252a29;
+  --example-bg: #2a2620;
+  --example-border: #D48B12;
+  --tip-bg: #1e2b28;
+  --tip-border: #269e70;
+  --warning-bg: #2a2620;
+  --warning-border: #D48B12;
+  --progress-bg: #3a3f3e;
+  --progress-fill: #6AB0A6;
+  --kbd-bg: #3a3f3e;
+  --kbd-border: #555;
+  --kbd-shadow: #333;
+  --scroll-thumb: #4a7a72;
+  --scroll-track: #222726;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--heading-secondary);
+}
+
+/* ===== HEADER ===== */
+.site-header {
+  background: linear-gradient(90deg, #0F5F50 0%, #03332a 100%);
+  color: #ffffff;
+  padding: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.header-title-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.header-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+.header-subtitle {
+  font-size: 0.85rem;
+  opacity: 0.85;
+  margin-top: 0.2rem;
+  font-weight: 400;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* ===== THEME TOGGLE ===== */
+.theme-toggle {
+  background: var(--toggle-bg);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease, transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  background: var(--toggle-hover);
+  transform: scale(1.1);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.theme-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.icon-sun {
+  display: none;
+}
+
+[data-theme="dark"] .icon-moon {
+  display: none;
+}
+
+[data-theme="dark"] .icon-sun {
+  display: block;
+}
+
+/* ===== HAMBURGER ===== */
+.hamburger {
+  display: none;
+  background: var(--toggle-bg);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: background 0.3s ease;
+}
+
+.hamburger:hover {
+  background: var(--toggle-hover);
+}
+
+.hamburger span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: #ffffff;
+  border-radius: 1px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.hamburger.active span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress-container {
+  background: var(--progress-bg);
+  height: 3px;
+  width: 100%;
+}
+
+.progress-bar {
+  height: 3px;
+  background: linear-gradient(90deg, var(--interactive), var(--accent));
+  width: 0%;
+  transition: width 0.15s ease-out;
+}
+
+/* ===== LAYOUT ===== */
+.layout {
+  display: flex;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  flex: 1;
+}
+
+/* ===== SIDEBAR NAV ===== */
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 80px;
+  height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding: 1.5rem 1rem;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+
+.sidebar-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  padding: 0 0.75rem;
+}
+
+.nav-list {
+  list-style: none;
+}
+
+.nav-item {
+  margin-bottom: 2px;
+}
+
+.nav-link {
+  display: block;
+  padding: 0.55rem 0.75rem;
+  color: var(--nav-color);
+  text-decoration: none;
+  font-size: 0.88rem;
+  border-radius: 6px;
+  transition: background 0.2s ease, color 0.2s ease;
+  line-height: 1.4;
+  border-left: 3px solid transparent;
+}
+
+.nav-link:hover {
+  background: var(--nav-hover-bg);
+}
+
+.nav-link.active {
+  background: var(--nav-active-bg);
+  font-weight: 600;
+  border-left-color: var(--interactive);
+}
+
+.nav-link:focus-visible {
+  outline: 2px solid var(--interactive);
+  outline-offset: -2px;
+}
+
+.nav-counter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: var(--interactive);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* ===== MAIN CONTENT ===== */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 2rem 2.5rem 3rem;
+}
+
+/* ===== SECTIONS ===== */
+.section {
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border-color);
+  scroll-margin-top: 90px;
+}
+
+.section:last-child {
+  border-bottom: none;
+}
+
+.section-number {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.4rem;
+}
+
+.section h2 {
+  font-size: 1.55rem;
+  color: var(--heading-color);
+  font-weight: 700;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--interactive);
+}
+
+.section h3 {
+  font-size: 1.15rem;
+  color: var(--heading-secondary);
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.6rem;
+  line-height: 1.4;
+}
+
+.section h4 {
+  font-size: 1rem;
+  color: var(--heading-color);
+  font-weight: 600;
+  margin-top: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.section p {
+  margin-bottom: 0.9rem;
+  color: var(--text-secondary);
+  text-align: justify;
+}
+
+.section p.lead {
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  line-height: 1.8;
+}
+
+/* ===== LISTS ===== */
+.content-list {
+  margin: 0.8rem 0 1.2rem 1.5rem;
+  color: var(--text-secondary);
+}
+
+.content-list li {
+  margin-bottom: 0.5rem;
+  padding-left: 0.3rem;
+}
+
+.content-list li::marker {
+  color: var(--interactive);
+}
+
+.content-list.dashed {
+  list-style: none;
+  margin-left: 0;
+}
+
+.content-list.dashed li {
+  padding-left: 1.2rem;
+  position: relative;
+}
+
+.content-list.dashed li::before {
+  content: '\2014';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+ol.content-list {
+  list-style: decimal;
+}
+
+ol.content-list li::marker {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ===== DEFINITION LIST ===== */
+.def-list {
+  margin: 1rem 0;
+}
+
+.def-list dt {
+  font-weight: 600;
+  color: var(--heading-secondary);
+  margin-top: 0.8rem;
+}
+
+.def-list dd {
+  margin-left: 1.2rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+}
+
+/* ===== BLOCKQUOTE ===== */
+.callout {
+  background: var(--blockquote-bg);
+  border-left: 4px solid var(--blockquote-border);
+  padding: 1rem 1.2rem;
+  margin: 1.2rem 0;
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+/* ===== BOXES ===== */
+.info-box {
+  border-radius: 8px;
+  padding: 1.1rem 1.3rem;
+  margin: 1.2rem 0;
+  border-left: 4px solid;
+  line-height: 1.6;
+}
+
+.info-box.example {
+  background: var(--example-bg);
+  border-color: var(--example-border);
+}
+
+.info-box.tip {
+  background: var(--tip-bg);
+  border-color: var(--tip-border);
+}
+
+.info-box.warning {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+}
+
+.info-box-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+}
+
+.info-box.example .info-box-title {
+  color: var(--accent);
+}
+
+.info-box.tip .info-box-title {
+  color: var(--heading-secondary);
+}
+
+.info-box.warning .info-box-title {
+  color: var(--accent);
+}
+
+/* ===== TABLE ===== */
+.table-wrapper {
+  overflow-x: auto;
+  margin: 1.2rem 0;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.data-table th {
+  background: var(--table-header-bg);
+  color: var(--table-header-color);
+  padding: 0.7rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.data-table td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  vertical-align: top;
+}
+
+.data-table tr:nth-child(even) td {
+  background: var(--table-stripe);
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ===== CODE ===== */
+code {
+  background: var(--code-bg);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.88em;
+  font-family: 'Consolas', 'Courier New', monospace;
+  color: var(--heading-secondary);
+}
+
+pre {
+  background: var(--code-bg);
+  padding: 1rem 1.2rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1rem 0;
+  border: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* ===== KBD ===== */
+kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  font-size: 0.85em;
+  font-family: 'Consolas', 'Courier New', monospace;
+  box-shadow: 0 1px 0 var(--kbd-shadow);
+}
+
+/* ===== STRONG / EMPHASIS ===== */
+strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+em {
+  font-style: italic;
+}
+
+/* ===== CARD GRID ===== */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin: 1.2rem 0;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.2rem;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-2px);
+}
+
+.card-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+.card h4 {
+  color: var(--heading-color);
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.card p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0;
+}
+
+/* ===== ACCORDION ===== */
+.accordion {
+  margin: 1rem 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.accordion-item {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.accordion-item:last-child {
+  border-bottom: none;
+}
+
+.accordion-header {
+  width: 100%;
+  background: var(--bg-card);
+  border: none;
+  padding: 0.9rem 1.2rem;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--heading-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  transition: background 0.2s ease;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.accordion-header:hover {
+  background: var(--nav-hover-bg);
+}
+
+.accordion-header:focus-visible {
+  outline: 2px solid var(--interactive);
+  outline-offset: -2px;
+}
+
+.accordion-arrow {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+  stroke: var(--interactive);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.accordion-item.open .accordion-arrow {
+  transform: rotate(180deg);
+}
+
+.accordion-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+  background: var(--bg-primary);
+}
+
+.accordion-body-inner {
+  padding: 1rem 1.2rem;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+/* ===== FOOTER ===== */
+.site-footer {
+  background: var(--header-bg);
+  color: rgba(255,255,255,0.7);
+  text-align: center;
+  padding: 1.2rem;
+  font-size: 0.82rem;
+  margin-top: auto;
+}
+
+.site-footer a {
+  color: var(--interactive);
+  text-decoration: none;
+}
+
+/* ===== BACK TO TOP ===== */
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 44px;
+  height: 44px;
+  background: var(--header-bg);
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.2s ease;
+  z-index: 999;
+}
+
+.back-to-top.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.back-to-top:hover {
+  transform: scale(1.1);
+  background: var(--heading-secondary);
+}
+
+.back-to-top svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ===== MOBILE OVERLAY ===== */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 998;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.visible {
+  opacity: 1;
+}
+
+/* ===== INTERACTIVE DEMO ===== */
+.demo-form-container {
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin: 1.2rem 0;
+  box-shadow: var(--shadow);
+}
+
+.demo-form-container h4 {
+  color: var(--heading-color);
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.05rem;
+}
+
+.demo-field {
+  margin-bottom: 1rem;
+}
+
+.demo-field label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.demo-field .field-hint {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
+
+.demo-field input[type="text"],
+.demo-field input[type="email"],
+.demo-field select,
+.demo-field textarea {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.demo-field input:focus,
+.demo-field select:focus,
+.demo-field textarea:focus {
+  outline: none;
+  border-color: var(--interactive);
+  box-shadow: 0 0 0 3px rgba(106,176,166,0.2);
+}
+
+.demo-field input.error,
+.demo-field select.error {
+  border-color: #d44;
+}
+
+.demo-field .error-msg {
+  color: #d44;
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+  display: none;
+}
+
+.demo-field .error-msg.visible {
+  display: block;
+}
+
+.demo-radio-group {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-top: 0.3rem;
+}
+
+.demo-radio-group label {
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+
+.demo-btn {
+  background: var(--interactive);
+  color: #ffffff;
+  border: none;
+  padding: 0.65rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.demo-btn:hover {
+  background: var(--heading-secondary);
+}
+
+.demo-btn:active {
+  transform: scale(0.97);
+}
+
+.demo-result {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--tip-bg);
+  border: 1px solid var(--tip-border);
+  border-radius: 6px;
+  display: none;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.demo-result.visible {
+  display: block;
+}
+
+/* ===== STEP INDICATOR ===== */
+.steps {
+  display: flex;
+  gap: 0;
+  margin: 1.2rem 0;
+  flex-wrap: wrap;
+}
+
+.step {
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+  padding: 1rem 0.8rem;
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.step:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.step:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: var(--interactive);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.step-text {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .sidebar {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    z-index: 999;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+    padding-top: 5rem;
+  }
+
+  .sidebar.open {
+    display: block;
+  }
+
+  .sidebar-overlay {
+    display: block;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+
+  .main-content {
+    padding: 1.5rem 1.2rem 2rem;
+  }
+
+  .header-title {
+    font-size: 1.1rem;
+  }
+
+  .section h2 {
+    font-size: 1.35rem;
+  }
+
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .steps {
+    flex-direction: column;
+  }
+
+  .step {
+    border-radius: 0;
+  }
+
+  .step:first-child {
+    border-radius: 8px 8px 0 0;
+  }
+
+  .step:last-child {
+    border-radius: 0 0 8px 8px;
+  }
+}
+
+@media (max-width: 500px) {
+  .header-content {
+    padding: 0.8rem 1rem;
+  }
+
+  .header-title {
+    font-size: 0.95rem;
+  }
+
+  .header-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .main-content {
+    padding: 1rem 0.8rem 2rem;
+  }
+
+  .section h2 {
+    font-size: 1.2rem;
+  }
+
+  .data-table {
+    font-size: 0.8rem;
+  }
+
+  .data-table th, .data-table td {
+    padding: 0.5rem 0.6rem;
+  }
+}
+
+/* ===== PRINT ===== */
+@media print {
+  .site-header, .sidebar, .back-to-top, .theme-toggle, .hamburger, .progress-container, .sidebar-overlay {
+    display: none !important;
+  }
+
+  .main-content {
+    padding: 0;
+  }
+
+  .section {
+    page-break-inside: avoid;
+  }
+}
+
+/* ===== FOCUS VISIBLE ===== */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--interactive);
+  outline-offset: 2px;
+}
+
+/* ===== ANIMATIONS ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Highlight accent */
+.hl {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.hl-green {
+  color: var(--heading-secondary);
+  font-weight: 600;
+}
+
+/* Separator */
+.separator {
+  height: 2px;
+  background: linear-gradient(90deg, var(--interactive), var(--accent), var(--interactive));
+  border: none;
+  margin: 2rem 0;
+  border-radius: 1px;
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-content">
+    <div class="header-title-group">
+      <div class="header-title">Modeling Electronic Interactive Forms</div>
+      <div class="header-subtitle">Computer Modeling with AI</div>
+    </div>
+    <div class="header-controls">
+      <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">
+        <svg class="icon-moon" viewBox="0 0 24 24">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </button>
+      <button class="hamburger" id="hamburger" aria-label="Открыть навигацию">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </div>
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+</header>
+
+<!-- OVERLAY -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar" aria-label="Навигация по разделам">
+    <div class="sidebar-title">Содержание</div>
+    <ul class="nav-list" id="navList">
+      <li class="nav-item"><a class="nav-link" href="#section1"><span class="nav-counter">1</span>Понятие интерактивной формы</a></li>
+      <li class="nav-item"><a class="nav-link" href="#section2"><span class="nav-counter">2</span>Назначение и педагогические возможности</a></li>
+      <li class="nav-item"><a class="nav-link" href="#section3"><span class="nav-counter">3</span>Пользовательский сценарий</a></li>
+      <li class="nav-item"><a class="nav-link" href="#section4"><span class="nav-counter">4</span>Структура и логика формы</a></li>
+      <li class="nav-item"><a class="nav-link" href="#section5"><span class="nav-counter">5</span>Интерфейс и доступность</a></li>
+      <li class="nav-item"><a class="nav-link" href="#section6"><span class="nav-counter">6</span>Применение ИИ</a></li>
+      <li class="nav-item"><a class="nav-link" href="#section7"><span class="nav-counter">7</span>Безопасность и данные</a></li>
+      <li class="nav-item"><a class="nav-link" href="#section8"><span class="nav-counter">8</span>Оценка качества и тестирование</a></li>
+      <li class="nav-item"><a class="nav-link" href="#section9"><span class="nav-counter">9</span>Краткая спецификация (промпт-ТЗ)</a></li>
+      <li class="nav-item"><a class="nav-link" href="#section10"><span class="nav-counter">10</span>Интерактивный пример</a></li>
+    </ul>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main-content" id="mainContent">
+
+    <!-- SECTION 1 -->
+    <section class="section" id="section1">
+      <div class="section-number">Раздел 1</div>
+      <h2>Понятие интерактивной электронной формы</h2>
+
+      <h3>Что такое электронная форма</h3>
+      <p class="lead">Электронная форма — это структурированный цифровой документ, предназначенный для ввода, обработки и передачи данных. В отличие от статичного документа (например, PDF-файла или напечатанной анкеты), электронная форма <strong>реагирует на действия пользователя</strong>: принимает данные, проверяет их, выдает сообщения и может изменять свое поведение в зависимости от введенной информации.</p>
+
+      <div class="callout">
+        Ключевое отличие интерактивной формы от статичного документа — наличие <strong>программируемой логики</strong>, которая управляет взаимодействием между пользователем и системой.
+      </div>
+
+      <p>Статичный документ представляет информацию «как есть»: пользователь может его прочитать, распечатать, скопировать текст, но не может повлиять на его содержание или получить от него ответ. Интерактивная форма, напротив, вступает в <strong>диалог</strong> с пользователем. Она задает вопросы, предлагает варианты, указывает на ошибки и выдает результат.</p>
+
+      <h3>Основные элементы форм</h3>
+      <p>Любая электронная форма строится из набора типовых элементов управления. Каждый элемент решает определенную задачу ввода:</p>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Элемент</th>
+              <th>Назначение</th>
+              <th>Пример в образовании</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Поле ввода</strong> (текстовое)</td>
+              <td>Свободный ввод текста: слово, фраза, число</td>
+              <td>Ввод перевода слова, ответ на открытый вопрос</td>
+            </tr>
+            <tr>
+              <td><strong>Переключатели</strong> (radio)</td>
+              <td>Выбор одного варианта из нескольких</td>
+              <td>Выбор правильного ответа в тесте</td>
+            </tr>
+            <tr>
+              <td><strong>Флажки</strong> (checkbox)</td>
+              <td>Выбор нескольких вариантов одновременно</td>
+              <td>Отметка всех подходящих слов в упражнении</td>
+            </tr>
+            <tr>
+              <td><strong>Выпадающий список</strong></td>
+              <td>Выбор из заранее заданного перечня</td>
+              <td>Выбор уровня владения языком (A1–C2)</td>
+            </tr>
+            <tr>
+              <td><strong>Текстовая область</strong></td>
+              <td>Многострочный свободный ввод</td>
+              <td>Написание короткого эссе или комментария</td>
+            </tr>
+            <tr>
+              <td><strong>Кнопки</strong></td>
+              <td>Запуск действия: отправка, сброс, проверка</td>
+              <td>Кнопка «Проверить ответ» или «Отправить»</td>
+            </tr>
+            <tr>
+              <td><strong>Подсказки и сообщения</strong></td>
+              <td>Контекстная помощь и уведомления об ошибках</td>
+              <td>«Введите адрес электронной почты», «Поле обязательно»</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Примеры форм в языковом образовании</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-label">Диагностика</div>
+          <h4>Входная анкета</h4>
+          <p>Сбор сведений об уровне студента, целях обучения и предпочтительном формате занятий при записи на курс.</p>
+        </div>
+        <div class="card">
+          <div class="card-label">Контроль</div>
+          <h4>Лексико-грамматический тест</h4>
+          <p>Проверка усвоения материала с автоматическим подсчетом баллов и указанием на ошибки.</p>
+        </div>
+        <div class="card">
+          <div class="card-label">Тренировка</div>
+          <h4>Интерактивное упражнение</h4>
+          <p>Заполнение пропусков, восстановление порядка слов, выбор нужной формы глагола с мгновенной обратной связью.</p>
+        </div>
+        <div class="card">
+          <div class="card-label">Коммуникация</div>
+          <h4>Форма обратной связи</h4>
+          <p>Отзыв о занятии, оценка преподавателя или учебного материала, предложения по улучшению курса.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2 -->
+    <section class="section" id="section2">
+      <div class="section-number">Раздел 2</div>
+      <h2>Назначение и педагогические возможности</h2>
+
+      <p class="lead">Электронные формы — не просто удобный способ собрать информацию. В контексте языкового образования они становятся <strong>инструментом обучения</strong>, который может поддерживать различные виды учебной деятельности.</p>
+
+      <h3>Основные функции в учебном процессе</h3>
+
+      <dl class="def-list">
+        <dt>Сбор информации</dt>
+        <dd>Анкетирование, регистрация на мероприятия, опросы для исследовательских проектов — задачи, где форма систематизирует и стандартизирует получаемые данные.</dd>
+
+        <dt>Проверка знаний</dt>
+        <dd>Тесты, контрольные работы, экзаменационные задания с автоматической или полуавтоматической оценкой. Форма может немедленно показать результат и указать на ошибки.</dd>
+
+        <dt>Тренировка языковых навыков</dt>
+        <dd>Упражнения на лексику, грамматику, чтение и аудирование, где студент взаимодействует с формой, получает обратную связь и может повторить попытку.</dd>
+
+        <dt>Получение обратной связи</dt>
+        <dd>Рефлексия, самооценка, peer-review — форма структурирует процесс и помогает сформулировать отзыв по заданным критериям.</dd>
+      </dl>
+
+      <h3>Поддержка самостоятельной работы</h3>
+      <p>Грамотно спроектированная форма позволяет студенту работать <strong>без присутствия преподавателя</strong>. Понятные инструкции заменяют устное объяснение, валидация ввода предотвращает случайные ошибки, а мгновенная обратная связь помогает учиться на собственных ошибках.</p>
+
+      <p>Формы могут поддерживать <strong>индивидуальную траекторию обучения</strong>: в зависимости от ответов студента система показывает задания нужного уровня сложности, предлагает дополнительные объяснения или пропускает уже освоенный материал.</p>
+
+      <div class="info-box tip">
+        <div class="info-box-title">Принцип педагогической целесообразности</div>
+        <p>Форма должна решать <strong>учебную задачу</strong>, а не просто демонстрировать технологию. Прежде чем создавать форму, ответьте на вопрос: «Какую образовательную проблему она решает и почему именно такой формат подходит лучше всего?» Если задачу проще решить устным обсуждением или письменным заданием, электронная форма не нужна.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 3 -->
+    <section class="section" id="section3">
+      <div class="section-number">Раздел 3</div>
+      <h2>Пользовательский сценарий</h2>
+
+      <p class="lead">Пользовательский сценарий — это пошаговое описание того, <strong>как конкретный человек будет взаимодействовать с формой</strong> от начала до конца. Проектирование формы начинается с понимания пользователя и его контекста.</p>
+
+      <h3>Кто будет заполнять форму</h3>
+      <p>Определите целевого пользователя и условия работы:</p>
+      <ul class="content-list">
+        <li><strong>Кто?</strong> Студент, преподаватель, абитуриент, участник конференции.</li>
+        <li><strong>Уровень цифровой грамотности?</strong> Уверенный пользователь или человек с минимальным опытом.</li>
+        <li><strong>Устройство?</strong> Компьютер, планшет, смартфон.</li>
+        <li><strong>Ситуация?</strong> На занятии, дома, в транспорте, в условиях ограниченного времени.</li>
+        <li><strong>Язык интерфейса?</strong> Родной язык пользователя может отличаться от языка формы.</li>
+      </ul>
+
+      <h3>Последовательность действий пользователя</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <span class="step-text">Открытие формы, чтение инструкции</span>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <span class="step-text">Ввод данных, выбор ответов</span>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <span class="step-text">Проверка введенного</span>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <span class="step-text">Отправка формы</span>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <span class="step-text">Получение результата / подтверждения</span>
+        </div>
+      </div>
+
+      <p>Каждый шаг необходимо продумать: что пользователь видит, что делает, что ожидает в ответ. Если на каком-то этапе возникает замешательство, форма спроектирована неудачно.</p>
+
+      <h3>Обработка нестандартных ситуаций</h3>
+      <p>Хороший сценарий предусматривает не только «идеальный путь», но и возможные отклонения:</p>
+
+      <ul class="content-list">
+        <li><strong>Неполный ввод:</strong> пользователь пропустил обязательное поле — форма должна указать, какое именно поле нужно заполнить.</li>
+        <li><strong>Неверный формат:</strong> введена дата как «31/13/2025» — сообщение должно объяснить правильный формат.</li>
+        <li><strong>Неожиданный ответ:</strong> в поле «Возраст» введено слово — форма должна сообщить, что ожидается число.</li>
+        <li><strong>Повторная отправка:</strong> пользователь нажал кнопку дважды — форма должна предотвратить дублирование.</li>
+        <li><strong>Потеря данных:</strong> страница случайно обновлена — желательно сохранить уже введенные ответы.</li>
+      </ul>
+
+      <div class="info-box example">
+        <div class="info-box-title">Пример сценария</div>
+        <p>Студент группы B1 открывает на смартфоне тест по грамматике. Он читает инструкцию на русском языке, отвечает на 10 вопросов с выбором ответа, при попытке отправить без ответа на 7-й вопрос получает предупреждение. После заполнения всех полей нажимает «Проверить», видит свой результат (8/10), а рядом с ошибочными ответами — пояснение с правильным вариантом и ссылку на правило.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 4 -->
+    <section class="section" id="section4">
+      <div class="section-number">Раздел 4</div>
+      <h2>Структура и логика формы</h2>
+
+      <p class="lead">Структура формы определяет, <strong>какие данные она собирает, в каком порядке и по каким правилам</strong>. Логика формы описывает условия и зависимости между элементами.</p>
+
+      <h3>Определение цели и необходимой информации</h3>
+      <p>Первый шаг — сформулировать <strong>цель формы одним предложением</strong>. Затем определить, какая именно информация нужна для достижения этой цели, и не запрашивать ничего лишнего.</p>
+
+      <div class="info-box tip">
+        <div class="info-box-title">Правило минимальности</div>
+        <p>Каждое поле в форме должно быть оправдано. Если вы не можете объяснить, зачем нужна конкретная информация, это поле следует убрать. Лишние поля увеличивают время заполнения, снижают мотивацию и создают риски при работе с данными.</p>
+      </div>
+
+      <h3>Выбор типа полей и порядка вопросов</h3>
+      <p>Тип поля должен соответствовать характеру вопроса. Порядок вопросов — следовать логике, понятной пользователю:</p>
+
+      <ul class="content-list">
+        <li>От простого к сложному (сначала выбор варианта, потом открытый ответ).</li>
+        <li>По тематическим блокам (личные данные, затем вопросы по теме, затем обратная связь).</li>
+        <li>Обязательные поля в начале, необязательные — в конце.</li>
+      </ul>
+
+      <h3>Условия и ветвления</h3>
+      <p>Ветвление (условная логика) позволяет <strong>адаптировать форму к ответам пользователя</strong>. Дополнительные вопросы появляются только тогда, когда они релевантны.</p>
+
+      <div class="info-box example">
+        <div class="info-box-title">Примеры ветвлений</div>
+        <ul class="content-list" style="margin-bottom:0">
+          <li>Если студент выбирает «Другой язык» в списке, появляется поле для ввода названия языка.</li>
+          <li>Если в тесте дан неправильный ответ, показывается подсказка и предлагается повторная попытка.</li>
+          <li>Если пользователь указывает уровень A1, ему предлагаются задания базовой сложности, а не продвинутые.</li>
+        </ul>
+      </div>
+
+      <h3>Валидация данных</h3>
+      <p>Валидация — это проверка введенных данных на соответствие ожидаемому формату и правилам. Она может быть:</p>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Тип валидации</th>
+              <th>Описание</th>
+              <th>Пример</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Обязательность</strong></td>
+              <td>Поле не может быть пустым</td>
+              <td>«Пожалуйста, введите ваше имя»</td>
+            </tr>
+            <tr>
+              <td><strong>Формат</strong></td>
+              <td>Данные должны соответствовать шаблону</td>
+              <td>Проверка формата email: user@domain.com</td>
+            </tr>
+            <tr>
+              <td><strong>Диапазон</strong></td>
+              <td>Значение в допустимых границах</td>
+              <td>Оценка от 1 до 10</td>
+            </tr>
+            <tr>
+              <td><strong>Длина</strong></td>
+              <td>Минимальное/максимальное количество символов</td>
+              <td>Комментарий: не менее 10 символов</td>
+            </tr>
+            <tr>
+              <td><strong>Содержательная</strong></td>
+              <td>Проверка правильности ответа</td>
+              <td>В тесте: сравнение введённого с эталоном</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Сообщения об ошибках должны быть <strong>конкретными, вежливыми и конструктивными</strong>. Вместо «Ошибка ввода» — «Пожалуйста, введите корректный адрес электронной почты, например: name@university.ru».</p>
+    </section>
+
+    <!-- SECTION 5 -->
+    <section class="section" id="section5">
+      <div class="section-number">Раздел 5</div>
+      <h2>Интерфейс и доступность</h2>
+
+      <p class="lead">Качество интерфейса определяет, сможет ли пользователь <strong>легко, быстро и без ошибок</strong> заполнить форму. Доступность обеспечивает возможность работы для людей с различными потребностями.</p>
+
+      <h3>Принципы удобного интерфейса</h3>
+      <ul class="content-list">
+        <li><strong>Ясные инструкции:</strong> пользователь должен понимать, что от него требуется, без дополнительных объяснений.</li>
+        <li><strong>Последовательная навигация:</strong> форма заполняется сверху вниз, слева направо; кнопка отправки находится в конце.</li>
+        <li><strong>Читаемые подписи:</strong> каждое поле имеет понятное название, расположенное рядом (обычно сверху или слева).</li>
+        <li><strong>Визуальная иерархия:</strong> обязательные поля выделены, группы вопросов разделены, кнопки заметны.</li>
+        <li><strong>Обратная связь:</strong> после каждого действия пользователь видит результат — подтверждение отправки, указание на ошибку, изменение состояния.</li>
+      </ul>
+
+      <h3>Адаптивность (мобильные устройства)</h3>
+      <p>Значительная часть пользователей заполняет формы со смартфонов. Форма должна корректно работать на экранах разной ширины:</p>
+      <ul class="content-list">
+        <li>Поля ввода занимают всю ширину экрана на мобильном устройстве.</li>
+        <li>Кнопки достаточно крупные для нажатия пальцем (минимум 44x44 пикселя).</li>
+        <li>Текст читается без масштабирования.</li>
+        <li>Выпадающие списки и переключатели удобны для сенсорного управления.</li>
+      </ul>
+
+      <h3>Доступность (accessibility)</h3>
+      <p>Доступность — это проектирование интерфейса, который могут использовать люди с разными физическими и когнитивными возможностями:</p>
+      <ul class="content-list">
+        <li><strong>Контрастность:</strong> текст и фон имеют достаточное соотношение контраста (минимум 4.5:1 для обычного текста).</li>
+        <li><strong>Размер текста:</strong> базовый размер не менее 16 пикселей, возможность увеличения.</li>
+        <li><strong>Навигация с клавиатуры:</strong> все элементы формы доступны через <kbd>Tab</kbd>, активируются через <kbd>Enter</kbd> или <kbd>Пробел</kbd>.</li>
+        <li><strong>Метки для скринридеров:</strong> каждое поле связано с текстовой меткой через атрибут <code>for</code>/<code>id</code> или <code>aria-label</code>.</li>
+        <li><strong>Не только цвет:</strong> ошибки обозначаются не только красным цветом, но и текстовым сообщением или иконкой.</li>
+      </ul>
+
+      <h3>Межкультурные и языковые особенности</h3>
+      <p>При разработке форм для международной или многоязычной аудитории необходимо учитывать:</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>Форматы дат</h4>
+          <p>ДД.ММ.ГГГГ в России, MM/DD/YYYY в США, YYYY-MM-DD в международном стандарте. Указывайте ожидаемый формат явно.</p>
+        </div>
+        <div class="card">
+          <h4>Имена</h4>
+          <p>Не у всех культур есть «имя» и «фамилия» в привычном понимании. Иногда лучше использовать одно поле «Полное имя».</p>
+        </div>
+        <div class="card">
+          <h4>Адреса</h4>
+          <p>Структура адреса различается по странам. Не все страны используют почтовый индекс, штат или область.</p>
+        </div>
+        <div class="card">
+          <h4>Перевод интерфейса</h4>
+          <p>Кнопки, подсказки и сообщения об ошибках должны быть на языке, понятном целевой аудитории. Длина текста может меняться при переводе.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6 -->
+    <section class="section" id="section6">
+      <div class="section-number">Раздел 6</div>
+      <h2>Применение ИИ при моделировании форм</h2>
+
+      <p class="lead">Инструменты искусственного интеллекта способны значительно ускорить процесс создания интерактивных форм. ИИ может помочь на каждом этапе — от проектирования до тестирования. Однако его результаты <strong>всегда требуют критической проверки человеком</strong>.</p>
+
+      <h3>Где ИИ может помочь</h3>
+
+      <div class="accordion" id="accordion1">
+        <div class="accordion-item">
+          <button class="accordion-header" aria-expanded="false">
+            Разработка содержания
+            <svg class="accordion-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body">
+            <div class="accordion-body-inner">
+              <p>ИИ может генерировать формулировки вопросов, варианты ответов, тексты инструкций и пояснений. Для языковых форм это особенно полезно: можно попросить создать вопросы для определенного уровня (A1–C2), сгенерировать примеры употребления слов, подготовить тексты-стимулы для упражнений.</p>
+              <p>Например: «Создай 5 вопросов на Present Perfect для уровня B1, с четырьмя вариантами ответа и пояснением к правильному ответу».</p>
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <button class="accordion-header" aria-expanded="false">
+            Генерация прототипов
+            <svg class="accordion-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body">
+            <div class="accordion-body-inner">
+              <p>ИИ может создать работающий прототип формы в виде HTML/CSS/JavaScript-приложения. Это позволяет быстро увидеть, как будет выглядеть и работать форма, протестировать ее и внести изменения до начала полноценной разработки.</p>
+              <p>Важно: прототип — это <strong>отправная точка</strong>, а не готовый продукт. Его нужно проверять, тестировать и дорабатывать.</p>
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <button class="accordion-header" aria-expanded="false">
+            Сценарии тестирования
+            <svg class="accordion-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body">
+            <div class="accordion-body-inner">
+              <p>ИИ может предложить набор тестовых сценариев: что произойдет, если пользователь оставит поле пустым, введет данные в неверном формате, выберет определенную комбинацию ответов. Это помогает заранее выявить ситуации, которые разработчик мог не предусмотреть.</p>
+            </div>
+          </div>
+        </div>
+        <div class="accordion-item">
+          <button class="accordion-header" aria-expanded="false">
+            Проверка языковой корректности
+            <svg class="accordion-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="accordion-body">
+            <div class="accordion-body-inner">
+              <p>ИИ может проверить грамматику и стиль текстов формы, оценить их соответствие целевому языковому уровню (слишком сложный или слишком простой словарь), предложить более ясные формулировки. Для многоязычных форм — помочь с переводом и адаптацией.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Ограничения и риски</h3>
+      <div class="info-box warning">
+        <div class="info-box-title">Важные ограничения</div>
+        <ul class="content-list" style="margin-bottom:0">
+          <li><strong>Ошибки в содержании:</strong> ИИ может сгенерировать фактически неверные вопросы, неточные переводы или некорректные грамматические объяснения.</li>
+          <li><strong>Ошибки в коде:</strong> сгенерированный код может выглядеть правильно, но содержать ошибки в логике валидации, ветвлении или подсчете результатов.</li>
+          <li><strong>Предвзятость:</strong> формулировки могут содержать культурные стереотипы, неинклюзивный язык или предположения, неприменимые к вашей аудитории.</li>
+          <li><strong>Доступность:</strong> ИИ может не учесть требования доступности — отсутствие aria-атрибутов, недостаточный контраст, невозможность навигации с клавиатуры.</li>
+          <li><strong>Чрезмерное доверие:</strong> самый серьезный риск — принять результат ИИ без проверки. Любой сгенерированный контент и код необходимо проверять, тестировать и при необходимости исправлять.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SECTION 7 -->
+    <section class="section" id="section7">
+      <div class="section-number">Раздел 7</div>
+      <h2>Безопасность и ответственная работа с данными</h2>
+
+      <p class="lead">Любая форма, собирающая информацию от пользователей, поднимает вопросы <strong>конфиденциальности, безопасности и этики</strong>. В образовательном контексте эти вопросы особенно важны.</p>
+
+      <h3>Принцип минимальности данных</h3>
+      <p>Собирайте только те сведения, которые действительно необходимы для достижения цели формы. Если форма — учебный тест, не нужно запрашивать домашний адрес или номер телефона. Если форма — анонимный опрос, не запрашивайте имя.</p>
+
+      <h3>Учебные ответы и персональные данные</h3>
+      <p>Важно различать эти два типа информации:</p>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Учебные ответы</th>
+              <th>Персональные данные</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Ответы на тестовые вопросы</td>
+              <td>Имя и фамилия</td>
+            </tr>
+            <tr>
+              <td>Выполненные упражнения</td>
+              <td>Адрес электронной почты</td>
+            </tr>
+            <tr>
+              <td>Выбранные варианты в опросе</td>
+              <td>Дата рождения</td>
+            </tr>
+            <tr>
+              <td>Текст эссе или комментария</td>
+              <td>Номер студенческого билета</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Персональные данные требуют особой защиты. Если учебную задачу можно решить анонимно, это предпочтительнее.</p>
+
+      <h3>Согласие и прозрачность</h3>
+      <ul class="content-list">
+        <li>Пользователь должен знать, какие данные собираются и зачем.</li>
+        <li>Участие в опросах и необязательных формах должно быть добровольным.</li>
+        <li>Если данные передаются третьим сервисам (например, Google Forms, внешние API ИИ), об этом следует предупредить.</li>
+      </ul>
+
+      <h3>Безопасность при использовании ИИ</h3>
+      <div class="info-box warning">
+        <div class="info-box-title">Предупреждение</div>
+        <p>Не вводите персональные данные студентов в публичные сервисы ИИ. Промпты и загруженные файлы могут использоваться для обучения моделей. При работе с ИИ используйте обезличенные или вымышленные данные. Ознакомьтесь с политикой конфиденциальности используемого сервиса.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 8 -->
+    <section class="section" id="section8">
+      <div class="section-number">Раздел 8</div>
+      <h2>Оценка качества и тестирование</h2>
+
+      <p class="lead">Созданную форму необходимо <strong>систематически проверить</strong>, прежде чем предлагать ее пользователям. Тестирование выявляет проблемы, которые незаметны на этапе проектирования.</p>
+
+      <h3>Критерии качества</h3>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-label">Критерий 1</div>
+          <h4>Понятность</h4>
+          <p>Все инструкции, подписи и сообщения ясны без дополнительного объяснения. Пользователь понимает, что от него требуется.</p>
+        </div>
+        <div class="card">
+          <div class="card-label">Критерий 2</div>
+          <h4>Удобство</h4>
+          <p>Форма заполняется быстро и без затруднений. Навигация интуитивна, элементы расположены логично.</p>
+        </div>
+        <div class="card">
+          <div class="card-label">Критерий 3</div>
+          <h4>Корректность логики</h4>
+          <p>Ветвления работают правильно, валидация срабатывает, результаты подсчитываются верно.</p>
+        </div>
+        <div class="card">
+          <div class="card-label">Критерий 4</div>
+          <h4>Доступность</h4>
+          <p>Форма работает на разных устройствах, доступна с клавиатуры, имеет достаточный контраст.</p>
+        </div>
+        <div class="card">
+          <div class="card-label">Критерий 5</div>
+          <h4>Соответствие цели</h4>
+          <p>Форма решает поставленную учебную задачу и собирает именно ту информацию, которая нужна.</p>
+        </div>
+      </div>
+
+      <h3>Процесс тестирования</h3>
+      <ol class="content-list">
+        <li><strong>Самопроверка:</strong> автор заполняет форму сам, проверяя каждый путь и каждое сообщение об ошибке.</li>
+        <li><strong>Проверка на устройствах:</strong> тестирование на компьютере, планшете и смартфоне; в разных браузерах.</li>
+        <li><strong>Тестовые сценарии:</strong> заполнение с намеренными ошибками, пропуском полей, нестандартными данными.</li>
+        <li><strong>Пользовательское тестирование:</strong> 2–3 представителя целевой аудитории заполняют форму и сообщают о затруднениях.</li>
+        <li><strong>Доработка:</strong> исправление выявленных проблем и повторная проверка.</li>
+      </ol>
+
+      <div class="info-box tip">
+        <div class="info-box-title">Практический совет</div>
+        <p>При пользовательском тестировании наблюдайте за действиями человека, не подсказывая. Если тестировщик замешкался или сделал что-то неожиданное, это указывает на проблему в дизайне формы, а не на ошибку пользователя.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 9 -->
+    <section class="section" id="section9">
+      <div class="section-number">Раздел 9</div>
+      <h2>Краткая спецификация: промпт-техническое задание</h2>
+
+      <p class="lead">Прежде чем просить ИИ создать форму, необходимо составить <strong>промпт-техническое задание</strong> — краткий документ, переводящий учебную идею в понятные требования к интерфейсу, поведению и проверке результата.</p>
+
+      <h3>Структура спецификации</h3>
+      <p>Хорошая спецификация для генерации формы как SPA (одностраничного приложения на HTML/CSS/JavaScript) включает следующие компоненты:</p>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Компонент</th>
+              <th>Что описать</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Цель формы</strong></td>
+              <td>Какую задачу решает форма? Что должен получить пользователь в результате?</td>
+            </tr>
+            <tr>
+              <td><strong>Целевая аудитория</strong></td>
+              <td>Кто будет заполнять форму? Уровень, возраст, язык, устройство.</td>
+            </tr>
+            <tr>
+              <td><strong>Пользовательский сценарий</strong></td>
+              <td>Последовательность действий от открытия до получения результата.</td>
+            </tr>
+            <tr>
+              <td><strong>Структура полей</strong></td>
+              <td>Перечень полей, их тип, обязательность, правила валидации.</td>
+            </tr>
+            <tr>
+              <td><strong>Логика и ветвления</strong></td>
+              <td>Условия показа/скрытия элементов, подсчет результатов.</td>
+            </tr>
+            <tr>
+              <td><strong>Обратная связь</strong></td>
+              <td>Тексты сообщений об ошибках, подтверждений, результатов.</td>
+            </tr>
+            <tr>
+              <td><strong>Оформление</strong></td>
+              <td>Цвета, стиль, адаптивность, язык интерфейса.</td>
+            </tr>
+            <tr>
+              <td><strong>Критерии качества</strong></td>
+              <td>Как проверить, что форма работает правильно.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Принцип последовательной работы с ИИ</h3>
+      <div class="callout">
+        Важно отделить описание требований от просьбы «сразу написать код». Работа с ИИ при создании формы — это последовательный процесс.
+      </div>
+
+      <ol class="content-list">
+        <li><strong>Задайте цель и ограничения:</strong> опишите, что должна делать форма, для кого она предназначена и какие технические ограничения существуют.</li>
+        <li><strong>Попросите ИИ уточнить пробелы:</strong> «Какие аспекты я не учёл в этом описании? Что нужно уточнить перед разработкой?»</li>
+        <li><strong>Запросите план или прототип:</strong> «Предложи структуру формы» или «Опиши пошаговый план реализации».</li>
+        <li><strong>Создайте приложение:</strong> только после согласования структуры попросите сгенерировать код.</li>
+        <li><strong>Протестируйте результат:</strong> проверьте каждый сценарий, каждое ветвление, каждое сообщение об ошибке.</li>
+      </ol>
+
+      <div class="info-box warning">
+        <div class="info-box-title">Критически важно</div>
+        <p>Сгенерированный код может <strong>выглядеть убедительно</strong>, но содержать ошибки в логике, подсчете результатов, валидации или доступности. Код — это не готовый продукт, а черновик, требующий ревизии. Проверяйте каждый путь пользователя, включая нестандартные сценарии.</p>
+      </div>
+
+      <h3>Пример фрагмента промпт-ТЗ</h3>
+      <pre><code>Создай одностраничное HTML/CSS/JS-приложение:
+лексический тест по английскому языку, уровень B1.
+
+Цель: проверить знание 10 слов по теме «Путешествия».
+Аудитория: студенты-лингвисты, русскоязычные.
+Формат: 10 вопросов с 4 вариантами ответа (radio).
+Логика: после отправки — показать результат (N/10),
+  отметить правильные и неправильные ответы,
+  рядом с ошибочными показать правильный вариант.
+Валидация: все 10 вопросов обязательны.
+Интерфейс: русский язык, адаптивный,
+  без внешних зависимостей.
+Доступность: навигация с клавиатуры,
+  метки для скринридеров.</code></pre>
+    </section>
+
+    <!-- SECTION 10 -->
+    <section class="section" id="section10">
+      <div class="section-number">Раздел 10</div>
+      <h2>Интерактивный пример: мини-форма</h2>
+
+      <p class="lead">Ниже представлена демонстрационная форма, иллюстрирующая ключевые концепции, рассмотренные в этом материале: поля разных типов, валидация, условная логика, обратная связь и доступность.</p>
+
+      <div class="demo-form-container">
+        <h4>Мини-анкета: определение учебных предпочтений</h4>
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1.2rem;">Заполните все обязательные поля (отмечены *) и нажмите «Отправить». Форма демонстрирует валидацию и условные элементы.</p>
+
+        <form id="demoForm" novalidate>
+          <div class="demo-field">
+            <label for="demoName">Имя *</label>
+            <span class="field-hint">Как к вам обращаться</span>
+            <input type="text" id="demoName" required placeholder="Введите ваше имя" autocomplete="name">
+            <div class="error-msg" id="demoNameError">Пожалуйста, введите ваше имя</div>
+          </div>
+
+          <div class="demo-field">
+            <label for="demoEmail">Электронная почта *</label>
+            <span class="field-hint">Формат: name@example.com</span>
+            <input type="email" id="demoEmail" required placeholder="name@example.com" autocomplete="email">
+            <div class="error-msg" id="demoEmailError">Введите корректный адрес электронной почты</div>
+          </div>
+
+          <div class="demo-field">
+            <label for="demoLevel">Уровень владения иностранным языком *</label>
+            <select id="demoLevel" required>
+              <option value="">-- Выберите уровень --</option>
+              <option value="A1">A1 — Начальный</option>
+              <option value="A2">A2 — Элементарный</option>
+              <option value="B1">B1 — Средний</option>
+              <option value="B2">B2 — Выше среднего</option>
+              <option value="C1">C1 — Продвинутый</option>
+              <option value="C2">C2 — Владение в совершенстве</option>
+            </select>
+            <div class="error-msg" id="demoLevelError">Пожалуйста, выберите уровень</div>
+          </div>
+
+          <div class="demo-field">
+            <label>Предпочтительный формат занятий *</label>
+            <div class="demo-radio-group">
+              <label><input type="radio" name="format" value="online" required> Онлайн</label>
+              <label><input type="radio" name="format" value="offline"> Очно</label>
+              <label><input type="radio" name="format" value="hybrid"> Гибридный</label>
+            </div>
+            <div class="error-msg" id="demoFormatError">Пожалуйста, выберите формат</div>
+          </div>
+
+          <div class="demo-field" id="demoOnlineToolField" style="display:none;">
+            <label for="demoOnlineTool">Какую платформу вы предпочитаете?</label>
+            <span class="field-hint">Это поле появилось, потому что вы выбрали «Онлайн» или «Гибридный»</span>
+            <input type="text" id="demoOnlineTool" placeholder="Например: Zoom, Teams, Moodle">
+          </div>
+
+          <div class="demo-field">
+            <label for="demoComment">Комментарий</label>
+            <span class="field-hint">Необязательно. Не менее 10 символов, если заполняете</span>
+            <textarea id="demoComment" rows="3" placeholder="Расскажите о ваших целях и пожеланиях..."></textarea>
+            <div class="error-msg" id="demoCommentError">Комментарий должен содержать не менее 10 символов</div>
+          </div>
+
+          <button type="submit" class="demo-btn">Отправить</button>
+        </form>
+
+        <div class="demo-result" id="demoResult"></div>
+      </div>
+
+      <div class="info-box tip">
+        <div class="info-box-title">Обратите внимание</div>
+        <p>Эта форма демонстрирует несколько принципов из пройденного материала: обязательные и необязательные поля, разные типы ввода (текст, email, список, переключатели, текстовая область), условное появление поля (платформа показывается только при выборе «Онлайн» или «Гибридный»), валидация формата (email) и длины (комментарий), а также ясные сообщения об ошибках.</p>
+      </div>
+
+      <hr class="separator">
+
+      <p style="text-align:center; color: var(--text-muted); font-size: 0.9rem;">Материал для курса «Компьютерное моделирование» <br>студентам-лингвистам и преподавателям иностранных языков.</p>
+    </section>
+
+  </main>
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <p>© 2026 | kmp | CC BY-NC-SA 4.0<br>для всех</p>
+</footer>
+
+<!-- BACK TO TOP -->
+<button class="back-to-top" id="backToTop" aria-label="Вернуться наверх">
+  <svg viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+</button>
+
+<script>
+(function() {
+  'use strict';
+
+  // === THEME TOGGLE ===
+  const themeToggle = document.getElementById('themeToggle');
+  const savedTheme = localStorage.getItem('theme');
+
+  if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+
+  themeToggle.addEventListener('click', function() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+  });
+
+  // === HAMBURGER / SIDEBAR ===
+  const hamburger = document.getElementById('hamburger');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('visible');
+    hamburger.classList.remove('active');
+    setTimeout(function() {
+      if (!sidebar.classList.contains('open')) {
+        overlay.style.display = '';
+      }
+    }, 300);
+  }
+
+  function openSidebar() {
+    overlay.style.display = 'block';
+    requestAnimationFrame(function() {
+      sidebar.classList.add('open');
+      overlay.classList.add('visible');
+      hamburger.classList.add('active');
+    });
+  }
+
+  hamburger.addEventListener('click', function() {
+    if (sidebar.classList.contains('open')) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
+  });
+
+  overlay.addEventListener('click', closeSidebar);
+
+  // Close sidebar on nav link click (mobile)
+  document.querySelectorAll('.nav-link').forEach(function(link) {
+    link.addEventListener('click', function() {
+      if (window.innerWidth <= 900) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // === ACTIVE NAV TRACKING ===
+  const sections = document.querySelectorAll('.section');
+  const navLinks = document.querySelectorAll('.nav-link');
+
+  function updateActiveNav() {
+    let current = '';
+    var scrollPos = window.scrollY + 120;
+
+    sections.forEach(function(section) {
+      if (section.offsetTop <= scrollPos) {
+        current = section.getAttribute('id');
+      }
+    });
+
+    navLinks.forEach(function(link) {
+      link.classList.remove('active');
+      if (link.getAttribute('href') === '#' + current) {
+        link.classList.add('active');
+      }
+    });
+  }
+
+  // === PROGRESS BAR ===
+  const progressBar = document.getElementById('progressBar');
+
+  function updateProgress() {
+    var scrollTop = window.scrollY;
+    var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    var progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    progressBar.style.width = Math.min(progress, 100) + '%';
+  }
+
+  // === BACK TO TOP ===
+  const backToTop = document.getElementById('backToTop');
+
+  function updateBackToTop() {
+    if (window.scrollY > 400) {
+      backToTop.classList.add('visible');
+    } else {
+      backToTop.classList.remove('visible');
+    }
+  }
+
+  backToTop.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Combined scroll handler
+  var scrollTimer = null;
+  window.addEventListener('scroll', function() {
+    if (scrollTimer) return;
+    scrollTimer = requestAnimationFrame(function() {
+      updateActiveNav();
+      updateProgress();
+      updateBackToTop();
+      scrollTimer = null;
+    });
+  });
+
+  // Initial calls
+  updateActiveNav();
+  updateProgress();
+  updateBackToTop();
+
+  // === ACCORDION ===
+  document.querySelectorAll('.accordion-header').forEach(function(header) {
+    header.addEventListener('click', function() {
+      var item = this.parentElement;
+      var body = item.querySelector('.accordion-body');
+      var inner = body.querySelector('.accordion-body-inner');
+      var isOpen = item.classList.contains('open');
+
+      // Close all items in same accordion
+      var accordion = item.parentElement;
+      accordion.querySelectorAll('.accordion-item').forEach(function(otherItem) {
+        if (otherItem !== item && otherItem.classList.contains('open')) {
+          otherItem.classList.remove('open');
+          var otherBody = otherItem.querySelector('.accordion-body');
+          otherBody.style.maxHeight = '0';
+          otherItem.querySelector('.accordion-header').setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      if (isOpen) {
+        item.classList.remove('open');
+        body.style.maxHeight = '0';
+        this.setAttribute('aria-expanded', 'false');
+      } else {
+        item.classList.add('open');
+        body.style.maxHeight = inner.scrollHeight + 32 + 'px';
+        this.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+
+  // === DEMO FORM ===
+  var demoForm = document.getElementById('demoForm');
+  var demoResult = document.getElementById('demoResult');
+  var onlineToolField = document.getElementById('demoOnlineToolField');
+
+  // Conditional field: show platform field for online/hybrid
+  var formatRadios = document.querySelectorAll('input[name="format"]');
+  formatRadios.forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      if (this.value === 'online' || this.value === 'hybrid') {
+        onlineToolField.style.display = 'block';
+      } else {
+        onlineToolField.style.display = 'none';
+      }
+    });
+  });
+
+  // Clear error on input
+  function clearErrorOnInput(inputId, errorId) {
+    var input = document.getElementById(inputId);
+    var error = document.getElementById(errorId);
+    if (input && error) {
+      input.addEventListener('input', function() {
+        input.classList.remove('error');
+        error.classList.remove('visible');
+      });
+      input.addEventListener('change', function() {
+        input.classList.remove('error');
+        error.classList.remove('visible');
+      });
+    }
+  }
+
+  clearErrorOnInput('demoName', 'demoNameError');
+  clearErrorOnInput('demoEmail', 'demoEmailError');
+  clearErrorOnInput('demoLevel', 'demoLevelError');
+  clearErrorOnInput('demoComment', 'demoCommentError');
+
+  formatRadios.forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      document.getElementById('demoFormatError').classList.remove('visible');
+    });
+  });
+
+  // Form submission
+  demoForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    var isValid = true;
+
+    // Name
+    var name = document.getElementById('demoName');
+    var nameErr = document.getElementById('demoNameError');
+    if (!name.value.trim()) {
+      name.classList.add('error');
+      nameErr.classList.add('visible');
+      isValid = false;
+    } else {
+      name.classList.remove('error');
+      nameErr.classList.remove('visible');
+    }
+
+    // Email
+    var email = document.getElementById('demoEmail');
+    var emailErr = document.getElementById('demoEmailError');
+    var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.value.trim() || !emailPattern.test(email.value.trim())) {
+      email.classList.add('error');
+      emailErr.classList.add('visible');
+      isValid = false;
+    } else {
+      email.classList.remove('error');
+      emailErr.classList.remove('visible');
+    }
+
+    // Level
+    var level = document.getElementById('demoLevel');
+    var levelErr = document.getElementById('demoLevelError');
+    if (!level.value) {
+      level.classList.add('error');
+      levelErr.classList.add('visible');
+      isValid = false;
+    } else {
+      level.classList.remove('error');
+      levelErr.classList.remove('visible');
+    }
+
+    // Format
+    var formatErr = document.getElementById('demoFormatError');
+    var selectedFormat = document.querySelector('input[name="format"]:checked');
+    if (!selectedFormat) {
+      formatErr.classList.add('visible');
+      isValid = false;
+    } else {
+      formatErr.classList.remove('visible');
+    }
+
+    // Comment (optional but min 10 chars if filled)
+    var comment = document.getElementById('demoComment');
+    var commentErr = document.getElementById('demoCommentError');
+    if (comment.value.trim().length > 0 && comment.value.trim().length < 10) {
+      comment.classList.add('error');
+      commentErr.classList.add('visible');
+      isValid = false;
+    } else {
+      comment.classList.remove('error');
+      commentErr.classList.remove('visible');
+    }
+
+    if (!isValid) {
+      // Scroll to first error
+      var firstError = demoForm.querySelector('.error, .error-msg.visible');
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    // Success
+    var formatNames = { online: 'Онлайн', offline: 'Очно', hybrid: 'Гибридный' };
+    var formatLabel = selectedFormat ? formatNames[selectedFormat.value] : '';
+    var onlineTool = document.getElementById('demoOnlineTool').value.trim();
+
+    var resultHTML = '<strong>Форма успешно отправлена!</strong><br><br>';
+    resultHTML += '<strong>Имя:</strong> ' + escapeHtml(name.value.trim()) + '<br>';
+    resultHTML += '<strong>Email:</strong> ' + escapeHtml(email.value.trim()) + '<br>';
+    resultHTML += '<strong>Уровень:</strong> ' + escapeHtml(level.value) + '<br>';
+    resultHTML += '<strong>Формат:</strong> ' + escapeHtml(formatLabel) + '<br>';
+    if (onlineTool) {
+      resultHTML += '<strong>Платформа:</strong> ' + escapeHtml(onlineTool) + '<br>';
+    }
+    if (comment.value.trim()) {
+      resultHTML += '<strong>Комментарий:</strong> ' + escapeHtml(comment.value.trim()) + '<br>';
+    }
+    resultHTML += '<br><em>Это демонстрационная форма. Данные не сохраняются и не передаются.</em>';
+
+    demoResult.innerHTML = resultHTML;
+    demoResult.classList.add('visible');
+    demoResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+})();
+</script>
+</body>
+</html>
