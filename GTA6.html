@@ -1,0 +1,1501 @@
+
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>kmp+</title>
+  <style>
+    /* ---------- ПЕРЕМЕННЫЕ: СВЕТЛАЯ ТЕМА ---------- */
+    :root {
+      --bg-main: #ffffff;
+      --bg-secondary: #f5f5f5;
+      --header-bg: #0F5F50;
+      --nav-bg: #0F5F50;
+      --heading: #0F5F50;
+      --subheading: #269e70;
+      --interactive: #6AB0A6;
+      --accent: #D48B12;
+      --text-primary: #1e2b2a;
+      --text-secondary: #3a4a48;
+      --card-bg: #ffffff;
+      --border: #e2e8e6;
+      --sonnet-bg: #fafbfb;
+      --shadow-sm: 0 3px 10px rgba(0,0,0,0.03);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.06);
+      --transition: 0.25s ease;
+      --overlay: rgba(15,95,80,0.06);
+    }
+
+    /* ---------- ПЕРЕМЕННЫЕ: ТЁМНАЯ ТЕМА ---------- */
+    [data-theme="dark"] {
+      --bg-main: #121a19;
+      --bg-secondary: #1a2423;
+      --header-bg: #0d3f35;
+      --nav-bg: #0d3f35;
+      --heading: #9ae0ce;
+      --subheading: #6ec4b0;
+      --interactive: #6AB0A6;
+      --accent: #e0a23a;
+      --text-primary: #e6eeec;
+      --text-secondary: #b8c8c4;
+      --card-bg: #1c2826;
+      --border: #2c3a37;
+      --sonnet-bg: #16201e;
+      --shadow-sm: 0 3px 10px rgba(0,0,0,0.3);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.4);
+      --overlay: rgba(106,176,166,0.08);
+    }
+
+    /* ---------- СБРОС И БАЗОВЫЕ СТИЛИ ---------- */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 72px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      line-height: 1.7;
+      transition: background-color var(--transition), color var(--transition);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---------- ШАПКА ---------- */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--header-bg);
+      color: #ffffff;
+      padding: 0 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      transition: background-color var(--transition);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-mark {
+      width: 60px;
+      height: 38px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-family: 'Courier New', monospace;
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 0.7rem;
+      opacity: 0.7;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ---------- ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ ---------- */
+    .theme-toggle {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      color: #ffffff;
+      transition: background var(--transition), transform var(--transition);
+      flex-shrink: 0;
+    }
+
+    .theme-toggle:hover {
+      background: rgba(255,255,255,0.22);
+      transform: scale(1.05);
+    }
+
+    .theme-toggle svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .theme-toggle .icon-sun { display: none; }
+    .theme-toggle .icon-moon { display: block; }
+    [data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+    [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+
+    /* ---------- НАВИГАЦИЯ ---------- */
+    .site-nav {
+      position: sticky;
+      top: 56px;
+      z-index: 90;
+      background: var(--nav-bg);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 0px 2px rgba(0,0,0,0.08);
+      transition: background-color var(--transition);
+    }
+
+    .nav-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .nav-inner::-webkit-scrollbar { display: none; }
+
+    .nav-link {
+      padding: 0.45rem 1rem;
+      color: rgba(255,255,255,0.78);
+      text-decoration: none;
+      font-family: 'Courier New', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+      transition: color var(--transition), border-color var(--transition), background var(--transition);
+    }
+
+    .nav-link:hover {
+      color: #ffffff;
+      background: rgba(255,255,255,0.06);
+    }
+
+    .nav-link.active {
+      color: #ffffff;
+      border-bottom-color: var(--accent);
+    }
+
+    /* ---------- ОСНОВНОЙ КОНТЕНТ ---------- */
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+
+    section {
+      margin-bottom: 3.5rem;
+    }
+
+    .section-header {
+      margin-bottom: 1.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border);
+      position: relative;
+    }
+
+    .section-header::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 70px;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .section-number {
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 0.35rem;
+    }
+
+    h1, h2, h3, h4 {
+      color: var(--heading);
+      font-weight: 600;
+      line-height: 1.3;
+      transition: color var(--transition);
+    }
+
+    h2 {
+      font-size: 1.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      color: var(--subheading);
+      margin: 1.75rem 0 0.75rem;
+    }
+
+    h4 {
+      font-size: 1.02rem;
+      color: var(--subheading);
+      margin: 1.25rem 0 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    /* ---------- КАРТОЧКИ ---------- */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      transition: background-color var(--transition), border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .card + .card { margin-top: 1.25rem; }
+
+    .info-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    @media (min-width: 640px) {
+      .info-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .info-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--interactive);
+      border-radius: 10px;
+      padding: 1rem 1.15rem;
+      box-shadow: var(--shadow-sm);
+      transition: background-color var(--transition), border-color var(--transition), transform var(--transition);
+    }
+
+    .info-item:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .info-item strong {
+      display: block;
+      color: var(--subheading);
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .info-item p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    /* ---------- СОНЕТЫ ---------- */
+    .sonnet-card {
+      background: var(--sonnet-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      transition: background-color var(--transition), border-color var(--transition);
+    }
+
+    .sonnet-title {
+      color: var(--heading);
+      font-size: 1.35rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .sonnet-meta {
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.25rem;
+    }
+
+    .sonnet-text {
+      font-style: italic;
+      font-size: 1.05rem;
+      line-height: 1.2;
+      color: var(--text-primary);
+      padding-left: 1rem;
+      border-left: 3px solid var(--accent);
+      margin-bottom: 1.5rem;
+      white-space: pre-line;
+    }
+
+    .sonnet-text p {
+      margin: 0 0 1rem;
+    }
+
+    .sonnet-text p:last-child { margin-bottom: 0; }
+
+    /* ---------- АККОРДЕОНЫ (анализ, перевод) ---------- */
+    .accordion {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 0.85rem;
+      background: var(--card-bg);
+      transition: border-color var(--transition), background-color var(--transition);
+    }
+
+    .accordion-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.9rem 1.15rem;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--heading);
+      text-align: left;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    .accordion-header:hover {
+      background: var(--overlay);
+    }
+
+    .accordion-header .acc-icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      border: 1.5px solid var(--interactive);
+      border-radius: 50%;
+      position: relative;
+      transition: transform var(--transition), border-color var(--transition);
+    }
+
+    .accordion-header .acc-icon::before,
+    .accordion-header .acc-icon::after {
+      content: '';
+      position: absolute;
+      background: var(--interactive);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: background var(--transition);
+    }
+
+    .accordion-header .acc-icon::before {
+      width: 8px;
+      height: 1.5px;
+    }
+
+    .accordion-header .acc-icon::after {
+      width: 1.5px;
+      height: 8px;
+    }
+
+    .accordion.open .acc-icon {
+      transform: rotate(45deg);
+      border-color: var(--accent);
+    }
+
+    .accordion.open .acc-icon::before,
+    .accordion.open .acc-icon::after {
+      background: var(--accent);
+    }
+
+    .accordion-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+
+    .accordion.open .accordion-body {
+      max-height: 5000px;
+    }
+
+    .accordion-inner {
+      padding: 0 1.15rem 1.25rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+      color: var(--text-secondary);
+      font-size: 0.94rem;
+    }
+
+    .accordion-inner h4 {
+      margin-top: 1rem;
+      font-size: 0.98rem;
+    }
+
+    .accordion-inner h4:first-child { margin-top: 0; }
+
+    .accordion-inner p {
+      margin-bottom: 0.7rem;
+      font-size: 0.94rem;
+    }
+
+    .accordion-inner ul {
+      margin: 0 0 0.75rem 1.2rem;
+      padding: 0;
+    }
+
+    .accordion-inner li {
+      margin-bottom: 0.4rem;
+      font-size: 0.93rem;
+    }
+
+    .accordion-inner blockquote {
+      margin: 0.75rem 0;
+      padding: 0.5rem 1rem;
+      border-left: 3px solid var(--interactive);
+      background: var(--overlay);
+      font-style: italic;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.93rem;
+    }
+
+    /* ---------- ПЕРЕВОДЫ ---------- */
+    .translation-block {
+      margin-bottom: 1.5rem;
+    }
+
+    .translation-block:last-child { margin-bottom: 0; }
+
+    .translation-label {
+      display: inline-block;
+      font-family: 'Courier New', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #ffffff;
+      background: var(--subheading);
+      padding: 0.2rem 0.65rem;
+      border-radius: 4px;
+      margin-bottom: 0.6rem;
+      transition: background var(--transition);
+    }
+
+    .translation-label.alt {
+      background: var(--accent);
+    }
+
+    .translation-text {
+      font-style: italic;
+      line-height: 1.85;
+      color: var(--text-primary);
+      white-space: pre-line;
+      padding: 0.75rem 1rem;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.95rem;
+      transition: background-color var(--transition), border-color var(--transition);
+    }
+
+    .translation-text p { margin: 0 0 0.6rem; }
+    .translation-text p:last-child { margin-bottom: 0; }
+
+    .glossary-list {
+      margin: 0.5rem 0 0 1.2rem;
+      padding: 0;
+      font-size: 0.92rem;
+    }
+
+    .glossary-list li {
+      margin-bottom: 0.45rem;
+    }
+
+    .glossary-list strong {
+      color: var(--subheading);
+    }
+
+    /* ---------- РАЗДЕЛИТЕЛЬ ---------- */
+    .divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      margin: 2rem 0;
+      color: var(--accent);
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--border), transparent);
+    }
+
+    .divider-diamond {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      transform: rotate(45deg);
+    }
+
+    /* ---------- ПОДВАЛ ---------- */
+    .site-footer {
+      background: var(--header-bg);
+      color: rgba(100,255,255,0.7);
+      text-align: center;
+      padding: 1.5rem 1.25rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+	  letter-spacing: 0.5px;
+      transition: background-color var(--transition);
+    }
+
+    .site-footer span { color: var(--accent); }
+
+    /* ---------- КНОПКА "НАВЕРХ" ---------- */
+    .back-to-top {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--subheading);
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(12px);
+      transition: opacity var(--transition), visibility var(--transition), transform var(--transition), background var(--transition);
+      z-index: 80;
+    }
+
+    .back-to-top.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .back-to-top:hover {
+      background: var(--accent);
+    }
+
+    .back-to-top svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ---------- АДАПТИВ ---------- */
+    @media (max-width: 640px) {
+      .site-header { height: 58px; padding: 0 0.9rem; }
+      .site-nav { top: 58px; }
+      .brand-title { font-size: 0.95rem; }
+      .brand-sub { font-size: 0.62rem; }
+      .brand-mark { width: 30px; height: 30px; font-size: 0.75rem; }
+      .theme-toggle { width: 36px; height: 36px; }
+      .theme-toggle svg { width: 18px; height: 18px; }
+
+      main { padding: 1.5rem 1rem 3rem; }
+      h2 { font-size: 1.45rem; }
+      h3 { font-size: 1.15rem; }
+      .sonnet-card { padding: 1.35rem 1.1rem; }
+      .sonnet-text { font-size: 0.98rem; padding-left: 0.85rem; }
+      .sonnet-title { font-size: 1.2rem; }
+      .card { padding: 1.15rem; }
+      .accordion-header { padding: 0.8rem 0.95rem; font-size: 0.74rem; }
+      .accordion-inner { padding: 0.85rem 0.95rem 1rem; }
+      .nav-link { padding: 0.75rem 1rem; font-size: 0.72rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+
+  <!-- ================= ШАПКА ================= -->
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-mark">GTA6</div>
+      <div>
+        <div class="brand-title">AI FIRST</div>
+        <div class="brand-sub"> Сонеты·Поэтика·Дидактика·Перевод</div>
+      </div>
+    </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">
+      <svg class="icon-moon" viewBox="0 0 24 24">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+      </svg>
+      <svg class="icon-sun" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- ================= НАВИГАЦИЯ ================= -->
+  <nav class="site-nav" aria-label="Основная навигация">
+    <div class="nav-inner" id="navInner">
+      <a href="#intro" class="nav-link active">GTA 6</a>
+      <a href="#sonnet-1" class="nav-link">Сонет 1</a>
+      <a href="#sonnet-2" class="nav-link">Сонет 2</a>
+	  <a href="#sonnet-3" class="nav-link">Сонет 3</a>
+    </div>
+  </nav>
+
+  <!-- ================= ОСНОВНОЙ КОНТЕНТ ================= -->
+  <main>
+
+    <!-- ========== СЕКЦИЯ 1: ИНФОРМАЦИОННАЯ ========== -->
+    <section id="intro">
+      <div class="section-header">
+        <h2>GTA VI</h2>
+		<span class="section-number">как среда изучения английского языка</span>
+        
+      </div>
+
+      <p>
+        Grand Theft Auto VI — это не просто видеоигра с открытым миром. Для будущих
+        преподавателей английского языка это мощный <strong>симулятор аутентичной
+        языковой среды</strong>, который объединяет иммерсивность, социокультурный
+        контекст и живую речь носителей. В парадигме <em>AI First</em> игра
+        рассматривается как источник учебного материала и катализатор
+        коммуникативно-деятельностного подхода.
+      </p>
+
+      <div class="info-grid" style="margin-top: 1.5rem;">
+        <div class="info-item">
+          <strong>Иммерсивность (Immersion)</strong>
+          <p>Виртуальный мир Леониды погружает игрока в языковую среду, где английский — единственный язык коммуникации, интерфейса и повествования.</p>
+        </div>
+        <div class="info-item">
+          <strong>Социолингвистическая вариативность</strong>
+          <p>AAVE, испано-английский билингвизм, южные акценты и криминальный арго — игра моделирует реальный языковой ландшафт США.</p>
+        </div>
+        <div class="info-item">
+          <strong>Аутентичные аудиоматериалы</strong>
+          <p>Внутриигровое радио, диалоги NPC и катсцены дают образцы быстрой, редуцированной речи в шумовой среде.</p>
+        </div>
+        <div class="info-item">
+          <strong>Снижение аффективного фильтра</strong>
+          <p>Игровая мотивация и состояние потока уменьшают страх ошибки, характерный для традиционного урока.</p>
+        </div>
+        <div class="info-item">
+          <strong>Task-Based Language Learning</strong>
+          <p>Язык используется как инструмент выполнения неязыковых задач: понять напарника, пройти миссию, отреагировать на угрозу.</p>
+        </div>
+        <div class="info-item">
+          <strong>Edutainment и автономность</strong>
+          <p>Обучение через развлечение формирует внутреннюю мотивацию и навыки автономного освоения языка.</p>
+        </div>
+      </div>
+
+      <div class="divider"><span class="divider-diamond"></span></div>
+
+      <div class="card">
+        <h3 style="margin-top: 0;">Ключевая идея</h3>
+        <p style="margin-bottom: 0;">
+          Сонеты, представленные ниже, — не просто поэтические тексты, а 
+           <strong>методические манифесты</strong>, в которых классическая
+          форма (петрарковско-шекспировский канон) сталкивается с поп-культурным
+          содержанием. Такой контраст делает их идеальным материалом для
+          обсуждения на занятиях по лингводидактике, стилистике и
+          лингвокультурологии.
+        </p>
+      </div>
+    </section>
+
+    <!-- ========== КОНТЕЙНЕР ДЛЯ СОНЕТОВ (генерируется из данных) ========== -->
+    <div id="sonnetsContainer"></div>
+
+  </main>
+
+  <!-- ================= ПОДВАЛ ================= -->
+  <footer class="site-footer">
+    <p>© 2026 | kmp+ | CC BY-NC-SA 4.0			
+             <br>для всех</p>
+  </footer>
+
+  <!-- ================= КНОПКА "НАВЕРХ" ================= -->
+  <button class="back-to-top" id="backToTop" aria-label="Наверх">
+    <svg viewBox="0 0 24 24">
+      <polyline points="18 15 12 9 6 15"/>
+    </svg>
+  </button>
+
+  <!-- ================= JAVASCRIPT ================= -->
+  <script>
+    /* ============================================================
+       ДАННЫЕ СОНЕТОВ
+       ------------------------------------------------------------
+       Чтобы добавить новый сонет, просто добавьте объект в массив
+       SONNETS_DATA. Каждый объект содержит:
+         id        — уникальный идентификатор (для якоря)
+         number    — номер/название секции (например, "Секция 02")
+         title     — заголовок сонета
+         meta      — краткая мета-информация (форма, метр)
+         text      — массив строк сонета (каждая строка — абзац)
+         analysis  — массив блоков анализа: { heading, html }
+         translations — массив переводов:
+             { label, variant ("classic" | "street"), text, glossary? }
+       ============================================================ */
+    const SONNETS_DATA = [
+      /* ---------- СОНЕТ 1 ---------- */
+      {
+        id: "sonnet-1",
+        number: "AI First Sonnet I",
+        title: "Новый взгляд",
+        meta: "Классический сонет · пятистопный ямб · ABAB ABAB CDC DCD",
+        text: [
+          "Забудьте пыльный оксфордский словарь,",
+          "Учебников унылые страницы.",
+          "Вайс-Сити зажигает свой фонарь,",
+          "Стирая старых правил все границы.",
+          "",
+          "Здесь каждый диалог — живой букварь,",
+          "Эфиры дарят знаний нам крупицы,",
+          "Нас учит сленгу уличный бунтарь",
+          "В безумном ритме солнечной столицы.",
+          "",
+          "Нырни в культуру штата Леониды!",
+          "Здесь идиомы сыплются как град,",
+          "И, на учителей забыв обиды,",
+          "",
+          "Ты ловишь в перестрелках всё подряд.",
+          "Люсия с Джейсоном — лихие гиды —",
+          "Откроют на английский новый взгляд!"
+        ],
+        analysis: [
+          {
+            heading: "1. Жанрово-композиционный и метрический уровень",
+            html: `<ul>
+              <li><strong>Жанр:</strong> классический сонет — 14 строк, два катрена и два терцета.</li>
+              <li><strong>Рифмовка:</strong> перекрёстная в катренах (ABAB ABAB), цепная в терцетах (CDC DCD); чередование мужских и женских рифм.</li>
+              <li><strong>Метр:</strong> пятистопный ямб с пиррихиями, придающими ритму живость.</li>
+              <li><strong>Композиция:</strong> тезис (отказ от академизма) → развитие (механика обучения через игру) → синтез (призыв и вывод).</li>
+            </ul>`
+          },
+          {
+            heading: "2. Лексический уровень: стилистический контраст",
+            html: `<p>Главная особенность — столкновение пластов:</p>
+              <ul>
+                <li><strong>Академическая лексика:</strong> оксфордский словарь, учебники, правила, букварь, сленг, идиомы.</li>
+                <li><strong>Игровая топонимика:</strong> Вайс-Сити, штат Леонида, Люсия и Джейсон.</li>
+                <li><strong>Криминально-динамическая лексика:</strong> уличный бунтарь, перестрелки, лихие.</li>
+                <li><strong>Поэтическая лексика:</strong> крупицы, зажигает фонарь, сыплются как град.</li>
+              </ul>
+              <p>«Мёртвому» академизму (<em>пыльный, унылые, старых</em>) противопоставлена витальность игры (<em>живой, безумном, солнечной, лихие</em>).</p>`
+          },
+          {
+            heading: "3. Тропы и фигуры речи",
+            html: `<ul>
+              <li><strong>Антитеза:</strong> Оксфорд (консервативный английский) vs. Вайс-Сити (живой сленг).</li>
+              <li><strong>Метафоры:</strong> «Вайс-Сити зажигает свой фонарь», «диалог — живой букварь», «нырни в культуру».</li>
+              <li><strong>Сравнение с двойным дном:</strong> «идиомы сыплются как град» + «в перестрелках» — образ лингвистического экшена.</li>
+              <li><strong>Эпитеты:</strong> негативные в первой строфе, экспрессивно-позитивные при описании игры.</li>
+            </ul>`
+          },
+          {
+            heading: "4. Морфолого-синтаксический уровень",
+            html: `<ul>
+              <li><strong>Смена адресации:</strong> «Забудьте» (лекторское обращение) → «Нырни!» (переход на «ты», вовлечение в геймплей).</li>
+              <li><strong>Инверсия:</strong> «Учебников унылые страницы», «старых правил все границы» — поддержка классического ритма.</li>
+              <li><strong>Пунктуация:</strong> обилие тире во второй половине делает синтаксис рубленым и энергичным.</li>
+            </ul>`
+          },
+          {
+            heading: "5. Фонетический уровень (звукопись)",
+            html: `<p>Аллитерация на свистящие и шипящие (С, З, Ц) в начале создаёт шелест страниц, переходящий в шум прибоя. В терцетах аллитерация на сонорный «Р» и взрывные «Г», «Д», «Т», «П» имитирует «стреляющую» динамику перестрелок.</p>`
+          },
+          {
+            heading: "Вывод",
+            html: `<p>Перед нами <strong>неоклассическая стилизация</strong>: строгая архаичная форма служит каркасом для актуального сюжета о геймификации образования. Конфликт «высокого» штиля и «низкого» предмета доказывает главную мысль: язык — живая стихия, не знающая границ.</p>`
+          },
+          {
+            heading: "Лингводидактический аспект",
+            html: `<ul>
+              <li><strong>Критика грамматико-переводного метода:</strong> отказ от «мёртвых» правил в пользу живого узуса (дескриптивизм).</li>
+              <li><strong>Иммерсивность:</strong> игра как VLE (Virtual Learning Environment), погружение в культуру Леониды.</li>
+              <li><strong>Социолингвистическая компетенция:</strong> сленг, AAVE, Spanglish — вариативность языка.</li>
+              <li><strong>Лексический подход:</strong> идиомы как готовые лексические единства (chunks) в контексте.</li>
+              <li><strong>Аудирование:</strong> аутентичные аудиоматериалы с быстрой речью и шумом.</li>
+              <li><strong>Аффективный фильтр Крашена:</strong> игровая мотивация снимает страх ошибки.</li>
+              <li><strong>Task-Based Learning:</strong> язык как инструмент выживания в игре.</li>
+              <li><strong>Роль преподавателя:</strong> переход от «диктатора» к фасилитатору и гиду.</li>
+            </ul>`
+          }
+        ],
+        translations: [
+          {
+            label: "Классический перевод · The Oxford Edition",
+            variant: "classic",
+            text: `Cast off the dusty Oxford tome of yore,
+And leave the dreary textbook’s barren page;
+Vice City lights its neon-colored shore,
+Erasing borders of a bygone age.
+
+Here every dialogue is living lore,
+The airwaves drop their wisdom on the stage;
+A streetwise rebel teaches at the core
+Amidst the sunlit capital's mad rage.
+
+Now plunge into Leonida’s vibrant sea!
+Where idioms like heavy hailstones fall,
+From memories of bitter tutors free,
+
+Amidst the crossfire thou shalt catch it all.
+With Jason and Lucia guiding thee,
+New English realms shall answer to thy call!`
+          },
+          {
+            label: "Перевод в стиле GTA VI · Leonida Street Edition",
+            variant: "street",
+            text: `Yo, trash that dusty Oxford book, no cap,
+Them boring textbooks? Leave ’em on the shelf.
+Vice City’s neon puts us on the map,
+We breakin' grammar rules—go see yourself.
+
+Here every cutscene’s spittin' real-life facts,
+The radio drops knowledge in the whip,
+A local jit will school you on the tracks
+Inside this sun-soaked city’s crazy trip.
+
+Just slide into that Leonida scene!
+The slang is bussin’, pourin’ down like rain.
+Forget the teachers who were deadass mean—
+
+In heavy shootouts, you gon' train your brain.
+Lucia and Jason—ride-or-dies supreme—
+Will make your English next-level insane!`,
+            glossary: [
+              { term: "No cap", def: "без шуток, чистая правда, зуб даю" },
+              { term: "Spittin' facts", def: "говорить правду, рубить правду-матку" },
+              { term: "In the whip", def: "в тачке, в крутом автомобиле" },
+              { term: "Jit", def: "эксклюзивный сленг Флориды: молодой дерзкий парень, уличный шпана" },
+              { term: "To school (someone)", def: "научить жизни, преподать урок" },
+              { term: "To slide (into)", def: "залететь, подрулить, плавно войти в тусовку" },
+              { term: "Bussin'", def: "невероятно крутой, топовый, «разрывной»" },
+              { term: "Deadass", def: "абсолютно, серьёзно, в натуре" },
+              { term: "You gon'", def: "грамматическая редукция от you are going to (AAVE)" },
+              { term: "Ride-or-die", def: "верный до гроба напарник, с которым и в огонь, и в воду" }
+            ]
+          }
+        ]
+      },
+
+      /* ---------- СОНЕТ 2 ---------- */
+      {
+        id: "sonnet-2",
+        number: "AI First Sonnet II",
+        title: "Лучший гид",
+        meta: "Английский (шекспировский) сонет · пятистопный ямб · 4 + 4 + 4 + 2",
+        text: [
+          "В неоновом чаду Вайс-Сити вечном",
+          "Забудь про скуку правил и таблиц:",
+          "В потоке брани, дерзком и беспечном,",
+          "Звучит язык без рамок и границ.",
+          "",
+          "Бандитский сленг, акценты побережий,",
+          "На радио — сатира, рэп и бит.",
+          "Английский здесь — раскованный и свежий,",
+          "На нём сама эпоха говорит.",
+          "",
+          "В погонях жарких, в перестрелках диких",
+          "Вникаешь в юмор местных соцсетей.",
+          "Среди безумцев, мелких и великих,",
+          "Хватаешь суть без школьных степеней.",
+          "",
+          "Шестая часть — не просто звон патронов,",
+          "А лучший гид по речи миллионов."
+        ],
+        analysis: [
+          {
+            heading: "1. Жанрово-композиционная структура и метрика",
+            html: `<ul>
+              <li><strong>Форма:</strong> английский (шекспировский) сонет — 4 + 4 + 4 + 2.</li>
+              <li><strong>Метр:</strong> пятистопный ямб с естественными пиррихиями.</li>
+              <li><strong>Рифмовка:</strong> катрены — перекрёстная (AbAb CdCd EfEf), двустишие — смежная (GG).</li>
+              <li><strong>Композиция:</strong> экспозиция → детализация языковой среды → вольта (переход к геймплею) → афористическая кода.</li>
+            </ul>`
+          },
+          {
+            heading: "2. Идейно-тематический уровень",
+            html: `<p>В основе — <strong>парадокс</strong>: криминальная видеоигра провозглашается инструментом иммерсивного изучения языка. Центральная антитеза: «скука правил и таблиц» / «школьные степени» (мёртвый язык) vs. «поток брани» / «раскованный и свежий» (живой узус).</p>`
+          },
+          {
+            heading: "3. Лексико-семантический уровень",
+            html: `<p>Стиль строится на диффузии регистров:</p>
+              <ul>
+                <li><strong>Культурно-игровые маркеры:</strong> Вайс-Сити, сленг, рэп, бит, соцсети, шестая часть, патроны.</li>
+                <li><strong>Академически-абстрактная лексика:</strong> эпоха, гид, степени, границы.</li>
+                <li><strong>Экспрессивные эпитеты:</strong> дерзкий, беспечный, раскованный, жаркие, дикие.</li>
+              </ul>
+              <p>Столкновение возвышенного пафоса («на нём сама эпоха говорит») и сниженной тематики («поток брани», «бандитский сленг») создаёт продуктивное стилистическое напряжение.</p>`
+          },
+          {
+            heading: "4. Тропы и стилистические фигуры",
+            html: `<ul>
+              <li><strong>Метафоры:</strong> «в неоновом чаду», «поток брани», «шестая часть — лучший гид».</li>
+              <li><strong>Олицетворение:</strong> «на нём сама эпоха говорит».</li>
+              <li><strong>Перифраз и метонимия:</strong> «звон патронов» замещает криминальный экшен.</li>
+              <li><strong>Парцелляция и тире:</strong> «На радио — сатира, рэп и бит», «Английский здесь — раскованный и свежий».</li>
+            </ul>`
+          },
+          {
+            heading: "5. Морфология и грамматика",
+            html: `<p>Сонет открывается императивом («Забудь»), вовлекая читателя в действие. В третьем катрене — переход к обобщённо-личному 2-му лицу («вникаешь», «хватаешь»), что моделирует интерактивность и проецирует читателя на игрока.</p>`
+          },
+          {
+            heading: "6. Фоника и звукопись",
+            html: `<p>Во второй строке аллитерация на [с], [к], [п], [т] передаёт сухость академической грамматики. В третьей строке обилие сонорных и взрывных [б], [р], [д] имитирует агрессивный ритм хип-хопа. Финал «патронов — миллионов» строится на глубоком [о] в сочетании с [н], придавая замку резонирующее звучание.</p>`
+          },
+          {
+            heading: "Резюме",
+            html: `<p>С лингвопоэтической точки зрения текст — <strong>пастиш</strong>, соединяющий строгую петрарковско-шекспировскую дисциплину с социолингвистической апологией масс-медиа. Сонет доказывает собственный тезис: высокая форма может говорить о поп-культуре, а видеоигра — служить проводником в современный язык.</p>`
+          },
+          {
+            heading: "Лингводидактический аспект",
+            html: `<ul>
+              <li><strong>Acquisition vs. Learning:</strong> отказ от «правил и таблиц» в пользу естественного усвоения.</li>
+              <li><strong>Социолингвистическая компетенция:</strong> «бандитский сленг, акценты побережий» — полифония вариантов языка.</li>
+              <li><strong>Аутентичность:</strong> «поток брани» как объективная часть живого узуса.</li>
+              <li><strong>Лингвокультурология:</strong> понимание юмора, сатиры и мемов соцсетей — уровень C1–C2.</li>
+              <li><strong>Мультимодальность:</strong> цифровой дискурс, CMC, мемы и короткие видео.</li>
+              <li><strong>Геймификация:</strong> снижение аффективного фильтра, состояние потока.</li>
+              <li><strong>Task-Based Learning:</strong> «хватаешь суть» — стратегия listening for gist и толерантность к неопределённости.</li>
+              <li><strong>Синхронный срез языка:</strong> игра как живой речевой корпус современного английского.</li>
+            </ul>`
+          }
+        ],
+        translations: [
+          {
+            label: "Классический перевод · Literary Shakespearean Sonnet",
+            variant: "classic",
+            text: `Beneath Vice City’s vibrant neon glow,
+Forget dry drills and grammar's dull design:
+Where profanations recklessly o'erflow,
+A living tongue bursts free of rule and line.
+
+The hoodlum slang, the sun-drenched coastal drawl,
+Sharp satire, rap, and beats that ride the air;
+Here English sheds its stiff, pedantic pall,
+To voice an era's spirit raw and bare.
+
+Through wild pursuits and firefights untamed,
+You grasp the humor of the local feed;
+Midst freaks and villains, infamous or famed,
+You seize the drift—no scholar’s rank you need.
+
+For Chapter Six is more than whistling rounds:
+It is the guide where millions’ speech resounds.`
+          },
+          {
+            label: "Перевод в стиле GTA VI · Vice City Street Sonnet",
+            variant: "street",
+            text: `Drenched in Vice City’s neon-tinted haze,
+Ditch all them dusty books and grammar sheets:
+Raw, reckless cussin' sets the block ablaze,
+Unfiltered English wildin’ on the streets.
+
+Trap slang, that 305 coastal drawl,
+Satire and drill beats pumpin’ on repeat—
+This language hits, no cap, it runs it all,
+The culture speakin’ through a Florida heat.
+
+In five-star chases, bustin’ through the smoke,
+You clock the brainrot on the local feeds;
+Amongst the Florida Mans and psycho folk,
+You catch the drift—no damn degree you need.
+
+GTA Six ain't just hot lead and beef:
+It’s Duolingo for the fuckin’ street.`,
+            glossary: [
+              { term: "305", def: "телефонный код Майами" },
+              { term: "Florida Man", def: "вирусный мем о безумцах из криминальных хроник Флориды" },
+              { term: "Five-star chases", def: "погони с пятью звёздами розыска" },
+              { term: "Wildin'", def: "безумствовать, отрываться, вести себя без тормозов" },
+              { term: "No cap", def: "без шуток, чистая правда" },
+              { term: "Clock the brainrot", def: "замечать интернет-безумие, мемный контент" },
+              { term: "Beef", def: "конфликт, вражда, разборка" },
+              { term: "Hits", def: "круто, топово, «заходит»" },
+              { term: "Duolingo", def: "ироничное обыгрывание приложения для изучения языков" }
+            ]
+          }
+        ]
+      },
+	  
+	  /* ---------- СОНЕТ 3 ---------- */
+	  
+	  {
+  id: "sonnet-3",
+  number: "AI First Sonnet III",
+  title: "Больше, чем ответ",
+  meta: "Шекспировская композиция 4 + 4 + 4 + 2 · Силлабо-тонический ритм",
+  text: [
+    "Не жди, что чат проложит путь за нас,",
+    "Спроси, проверь, оспорь его ответ;",
+    "Контекст меняет смысл привычных фраз,",
+    "И в уточненьях проступает свет.",
+    "",
+    "В игре звучит десяток разных слов,",
+    "И каждый голос выбирает тон;",
+    "За шуткой может скрыться властный зов,",
+    "А за бравадой — нежности канон.",
+    "",
+    "Не верь, что гладкий текст всегда правдив,",
+    "Спроси, какой опорой подкреплён;",
+    "Сравни его с контекстом, уловив,",
+    "Где факт, где и домысел внушён.",
+    "",
+    "Не отдавай машине выбор свой:",
+    "Пусть диалог расширит разум твой!"
+  ],
+  analysis: [
+    {
+      heading: "1. Жанрово-композиционный и метрический уровень",
+      html: `<ul>
+        <li><strong>Жанр:</strong> современная философско-дидактическая стилизация сонета.</li>
+        <li><strong>Композиция:</strong> шекспировская модель — три катрена и заключительное двустишие (4 + 4 + 4 + 2).</li>
+        <li><strong>Рифмовка:</strong> преимущественно перекрёстная в катренах с парным заключительным двустишием; схема приближена к ABAB CDCD EFEF GG.</li>
+        <li><strong>Ритм:</strong> свободная силлабо-тоника с разговорными интонационными сдвигами.</li>
+        <li><strong>Композиционное развитие:</strong> диалог как метод → язык как социальное взаимодействие → критическая проверка → человеческая самостоятельность.</li>
+        <li><strong>Вольта:</strong> в третьем катрене происходит переход от языкового погружения к эпистемической ответственности.</li>
+      </ul>`
+    },
+    {
+      heading: "2. Идейно-философский уровень: AI First",
+      html: `<p>Центральный тезис сонета — <strong>диалог ценнее отдельного ответа</strong>. Взаимодействие с LLM рассматривается не как получение готовой информации, а как последовательное развитие познавательной деятельности.</p>
+      <ul>
+        <li><strong>Dialogue over Prompting:</strong> результат зависит не только от первоначального запроса, но и от способности уточнять, возражать и развивать разговор.</li>
+        <li><strong>Human–AI Collaboration:</strong> человек и LLM совместно исследуют проблему, но не обладают одинаковыми функциями и ответственностью.</li>
+        <li><strong>Epistemic Agency:</strong> пользователь самостоятельно формирует суждения, проверяет основания и принимает решения.</li>
+        <li><strong>Augmentation, not Replacement:</strong> интеллектуальная система расширяет возможности человека, а не подменяет его познавательную деятельность.</li>
+      </ul>
+      <p>AI First здесь означает не просто использование искусственного интеллекта в учебном процессе, а изменение самой организации обучения: диалог с LLM становится одной из центральных образовательных практик.</p>`
+    },
+    {
+      heading: "3. Лексико-семантический уровень",
+      html: `<p>В тексте взаимодействуют три основных лексических пласта:</p>
+      <ul>
+        <li><strong>Коммуникативный:</strong> чат, спроси, ответ, фразы, голоса, тон, шутка.</li>
+        <li><strong>Когнитивный:</strong> проверь, оспорь, контекст, правдив, подкреплён, факт, домысел.</li>
+        <li><strong>Аксиологический:</strong> выбор, разум, самостоятельность, ответственность (последние два понятия выражены имплицитно).</li>
+      </ul>
+      <p>Особенно значима оппозиция «гладкий текст — правдивое содержание». Она отражает одну из важнейших особенностей LLM: лингвистическая убедительность генерации не является гарантией фактической достоверности.</p>
+      <p>Слово «контекст» выполняет двойную функцию: обозначает и языковое окружение высказывания, и более широкий контекст взаимодействия человека с интеллектуальной системой.</p>`
+    },
+    {
+      heading: "4. Тропы и стилистические фигуры",
+      html: `<ul>
+        <li><strong>Метафора:</strong> «чат проложит путь» — представление LLM как навигационной системы познания.</li>
+        <li><strong>Метафора света:</strong> «в уточненьях проступает свет» — прояснение смысла в процессе диалога.</li>
+        <li><strong>Метонимия:</strong> «десяток разных слов» представляет многообразие речевых ситуаций и коммуникативных голосов.</li>
+        <li><strong>Антитеза:</strong> «гладкий текст» / «правдив» — противопоставление формы высказывания и его содержательной надёжности.</li>
+        <li><strong>Градация:</strong> «спроси, проверь, оспорь» — последовательное усложнение интеллектуальных действий.</li>
+        <li><strong>Параллелизм:</strong> заключительные строки противопоставляют передачу выбора машине и расширение человеческого разума.</li>
+      </ul>
+      <p>Финальное двустишие выполняет функцию афористической коды и формулирует этический принцип взаимодействия человека с ИИ.</p>`
+    },
+    {
+      heading: "5. Прагматический и социолингвистический уровень",
+      html: `<p>Второй катрен обращает внимание на то, что язык существует не в виде изолированного набора слов, а в системе социальных отношений.</p>
+      <ul>
+        <li><strong>Speaker identity:</strong> индивидуальные особенности говорящего и его социальная позиция.</li>
+        <li><strong>Register:</strong> выбор языковых средств в зависимости от ситуации общения.</li>
+        <li><strong>Pragmatic meaning:</strong> различие между буквальным значением и коммуникативным намерением.</li>
+        <li><strong>Implicature:</strong> скрытые смыслы, ирония, намёки и косвенные высказывания.</li>
+        <li><strong>Face and stance:</strong> самопрезентация, бравада, эмоциональная позиция и социальная роль.</li>
+      </ul>
+      <p>Игровая среда позволяет наблюдать, как меняется значение высказывания в зависимости от персонажа, ситуации, отношений между собеседниками и культурного контекста.</p>`
+    },
+    {
+      heading: "6. Когнитивный и эпистемический уровень",
+      html: `<p>Третий катрен переводит внимание с языкового понимания на оценку знания и достоверности.</p>
+      <ul>
+        <li><strong>Hallucination awareness:</strong> способность распознавать потенциально вымышленные сведения в ответах LLM.</li>
+        <li><strong>Source evaluation:</strong> проверка происхождения информации и надёжности источников.</li>
+        <li><strong>Contextual verification:</strong> сопоставление утверждения с исходной ситуацией и другими свидетельствами.</li>
+        <li><strong>Critical questioning:</strong> поиск оснований ответа, альтернативных интерпретаций и противоречий.</li>
+        <li><strong>Epistemic humility:</strong> признание неопределённости и ограниченности собственных знаний, а также возможностей модели.</li>
+      </ul>
+      <p>Важно различать уверенную языковую генерацию и обоснованное знание. Проверка — не заключительная формальность, а органическая часть диалога.</p>`
+    },
+    {
+      heading: "7. Морфология, синтаксис и речевые действия",
+      html: `<ul>
+        <li><strong>Императивы:</strong> «спроси», «проверь», «оспорь», «сравни» формируют последовательность активных познавательных действий.</li>
+        <li><strong>Второе лицо:</strong> непосредственное обращение к читателю превращает сонет в инструкцию к самостоятельному действию.</li>
+        <li><strong>Синтаксический параллелизм:</strong> перечисление глаголов создаёт ритм исследовательского протокола.</li>
+        <li><strong>Модальность:</strong> отрицательные конструкции «не жди», «не верь», «не отдавай» обозначают отказ от пассивности и некритического доверия.</li>
+        <li><strong>Финальное противопоставление:</strong> «машине» / «твой» подчёркивает различие между вычислительной системой и ответственным человеческим субъектом.</li>
+      </ul>`
+    },
+    {
+      heading: "Вывод",
+      html: `<p>Сонет представляет собой <strong>манифест когнитивного партнёрства человека и LLM</strong>. Его центральная идея — переход от модели «запрос — ответ» к модели «вопрос — диалог — исследование — проверка — самостоятельное решение».</p>
+      <p>Искусственный интеллект не освобождает человека от необходимости думать. Напротив, эффективное взаимодействие с LLM требует более развитой языковой, когнитивной и эпистемической грамотности.</p>
+      <p><strong>LLM + человек + ответственность = сила.</strong></p>`
+    },
+    {
+      heading: "Лингводидактический аспект",
+      html: `<ul>
+        <li><strong>AI First Learning:</strong> интеграция LLM в повседневную учебную деятельность, а не использование ИИ только как дополнительного инструмента.</li>
+        <li><strong>Dialogic Learning:</strong> обучение через последовательность вопросов, уточнений, возражений и совместных открытий.</li>
+        <li><strong>Critical AI Literacy:</strong> понимание возможностей, ограничений и вероятностной природы генеративных моделей.</li>
+        <li><strong>Prompt Literacy:</strong> управление контекстом взаимодействия, а не механическое применение готовых шаблонов промптов.</li>
+        <li><strong>Pragmatic Competence:</strong> интерпретация коммуникативных намерений, импликатур, иронии и речевых регистров.</li>
+        <li><strong>Corpus-Based Learning:</strong> использование игровых диалогов и других аутентичных цифровых материалов как источников языковых наблюдений.</li>
+        <li><strong>Scaffolding:</strong> постепенное усложнение задач при поддержке LLM и преподавателя.</li>
+        <li><strong>Metacognition:</strong> рефлексия над собственными стратегиями понимания, обучения и взаимодействия с ИИ.</li>
+        <li><strong>Collaborative Verification:</strong> сопоставление ответов разных моделей, словарей, корпусов и независимых источников.</li>
+        <li><strong>Human Agency:</strong> сохранение за обучающимся ответственности за интерпретацию, оценку и окончательное решение.</li>
+        <li><strong>Teacher as Facilitator:</strong> преподаватель организует исследовательскую среду, поддерживает диалог и помогает развивать самостоятельность.</li>
+      </ul>
+      <p><strong>Предлагаемое учебное задание:</strong> попросить LLM интерпретировать одну и ту же реплику игрового персонажа в нескольких коммуникативных ситуациях, затем оспорить полученные интерпретации и проверить их с помощью контекста. Результатом становится не готовый перевод, а аргументированное лингвистическое решение студента.</p>`
+    }
+  ],
+  translations: [
+    {
+      label: "Классический перевод · The Cognitive Partnership Edition",
+      variant: "classic",
+      text: `Do not expect the chat to lead the way,
+Ask, test, object; make it earn its claim;
+Context can turn familiar words astray,
+And questions bring the hidden sense to flame.
+
+A dozen voices fill the streets with sound,
+Each speaker shapes a tone, a world, a role;
+A joke may hide a challenge underground,
+And bravado mask the fears beneath the soul.
+
+Do not assume a fluent text is true,
+Ask what the evidence can truly show;
+Compare the source, the setting, and the view,
+Distinguish fact from what mere words bestow.
+
+Do not surrender your own choice away:
+Let dialogue expand your mind each day!`
+    },
+    {
+      label: "Перевод в стиле GTA VI · Vice City AI Street Edition",
+      variant: "street",
+      text: `Don't let the chatbot drive your whole damn ride,
+Ask questions, push back, make it prove its game;
+The context flips the meaning on its side,
+Keep digging till the truth comes into frame.
+
+Vice City voices, everybody's got a style,
+Each one talks different, plays a different role;
+A joke can hide a threat behind a smile,
+And big talk might conceal a wounded soul.
+
+That smooth AI talk? Don't take it as fact,
+Ask where it got the info, check the source;
+Cross-check the context, see if claims hold up,
+Don't let some slick-ass answer run its course.
+
+Don't let the machine decide your way:
+Keep your own mind in the driver's seat, okay?`,
+      glossary: [
+        {
+          term: "Drive your whole damn ride",
+          def: "Полностью управлять твоей поездкой; метафора передачи контроля ИИ."
+        },
+        {
+          term: "Push back",
+          def: "Возражать, оспаривать, не принимать утверждение без проверки."
+        },
+        {
+          term: "Prove its game",
+          def: "Подтвердить состоятельность своих утверждений; доказать, что ответ не пустая бравада."
+        },
+        {
+          term: "Got a style",
+          def: "Иметь собственную манеру речи, индивидуальный речевой стиль."
+        },
+        {
+          term: "Big talk",
+          def: "Громкие заявления, бравада, самоуверенные высказывания."
+        },
+        {
+          term: "Take it as fact",
+          def: "Принимать что-либо за установленный факт."
+        },
+        {
+          term: "Cross-check",
+          def: "Перепроверять информацию по независимым источникам."
+        },
+        {
+          term: "Hold up",
+          def: "Выдерживать проверку, оставаться убедительным при сопоставлении с фактами."
+        },
+        {
+          term: "Slick-ass answer",
+          def: "Гладкий, эффектный, но потенциально поверхностный или сомнительный ответ."
+        },
+        {
+          term: "In the driver's seat",
+          def: "Быть за рулём, контролировать ситуацию; сохранять самостоятельность и право принятия решений."
+        }
+      ]
+    }
+  ]
+}
+    ];
+
+    /* ============================================================
+       РЕНДЕРИНГ СЕКЦИЙ СОНЕТОВ
+       ============================================================ */
+    function renderSonnets() {
+      const container = document.getElementById('sonnetsContainer');
+      if (!container) return;
+
+      container.innerHTML = SONNETS_DATA.map((sonnet, index) => {
+        /* --- Анализ: аккордеоны --- */
+        const analysisHTML = sonnet.analysis.map((block, i) => `
+          <div class="accordion" data-accordion>
+            <button class="accordion-header" type="button" aria-expanded="false">
+              <span>${block.heading}</span>
+              <span class="acc-icon" aria-hidden="true"></span>
+            </button>
+            <div class="accordion-body">
+              <div class="accordion-inner">${block.html}</div>
+            </div>
+          </div>
+        `).join('');
+
+        /* --- Переводы --- */
+        const translationsHTML = sonnet.translations.map(tr => {
+          const labelClass = tr.variant === 'street' ? 'translation-label alt' : 'translation-label';
+          const textHTML = tr.text.split('\n').map(line =>
+            line.trim() ? `<p>${line}</p>` : ''
+          ).join('');
+
+          let glossaryHTML = '';
+          if (tr.glossary && tr.glossary.length) {
+            glossaryHTML = `
+              <h4>Лингвистический бонус: глоссарий</h4>
+              <ul class="glossary-list">
+                ${tr.glossary.map(g => `<li><strong>${g.term}</strong> — ${g.def}</li>`).join('')}
+              </ul>
+            `;
+          }
+
+          return `
+            <div class="translation-block">
+              <span class="${labelClass}">${tr.label}</span>
+              <div class="translation-text">${textHTML}</div>
+              ${glossaryHTML}
+            </div>
+          `;
+        }).join('');
+
+        /* --- Текст сонета (каждая строка — абзац, пустые строки — отступ) --- */
+        const sonnetTextHTML = sonnet.text.map(line =>
+          line.trim() ? `<p>${line}</p>` : '<p style="margin:0;height:0.6rem;"></p>'
+        ).join('');
+
+        /* --- Секция --- */
+        return `
+          <section id="${sonnet.id}">
+            <div class="section-header">
+              <span class="section-number">${sonnet.number}</span>
+              <h2>${sonnet.title}</h2>
+            </div>
+
+            <div class="sonnet-card">
+              <h3 class="sonnet-title">${sonnet.title}</h3>
+              <div class="sonnet-meta">${sonnet.meta}</div>
+              <div class="sonnet-text">${sonnetTextHTML}</div>
+            </div>
+
+            <h3>Лингво-поэтический анализ</h3>
+            ${analysisHTML}
+
+            <h3 style="margin-top:1.75rem;">Переводы</h3>
+            ${translationsHTML}
+          </section>
+        `;
+      }).join('');
+
+      /* --- Инициализация аккордеонов --- */
+      initAccordions();
+    }
+
+    /* ============================================================
+       АККОРДЕОНЫ
+       ============================================================ */
+    function initAccordions() {
+      document.querySelectorAll('[data-accordion]').forEach(acc => {
+        const header = acc.querySelector('.accordion-header');
+        const body = acc.querySelector('.accordion-body');
+        if (!header || !body) return;
+
+        header.addEventListener('click', () => {
+          const isOpen = acc.classList.contains('open');
+          /* Закрываем все остальные в этой же секции (по желанию можно убрать) */
+          const parentSection = acc.closest('section');
+          if (parentSection) {
+            parentSection.querySelectorAll('[data-accordion].open').forEach(other => {
+              if (other !== acc) {
+                other.classList.remove('open');
+                const otherHeader = other.querySelector('.accordion-header');
+                if (otherHeader) otherHeader.setAttribute('aria-expanded', 'false');
+              }
+            });
+          }
+
+          acc.classList.toggle('open', !isOpen);
+          header.setAttribute('aria-expanded', String(!isOpen));
+        });
+      });
+    }
+
+    /* ============================================================
+       ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ
+       ============================================================ */
+    function initTheme() {
+      const toggle = document.getElementById('themeToggle');
+      const html = document.documentElement;
+      if (!toggle) return;
+
+      /* Восстановление из localStorage */
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark') {
+        html.setAttribute('data-theme', 'dark');
+      } else if (saved === 'light') {
+        html.setAttribute('data-theme', 'light');
+      } else {
+        /* Системная тема */
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        html.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      }
+
+      toggle.addEventListener('click', () => {
+        const current = html.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+      });
+    }
+
+    /* ============================================================
+       НАВИГАЦИЯ (АКТИВНЫЙ ПУНКТ + ПЛАВНЫЙ СКРОЛЛ)
+       ============================================================ */
+    function initNavigation() {
+      const navLinks = document.querySelectorAll('.nav-link');
+      const sections = document.querySelectorAll('section[id]');
+
+      /* Плавный скролл с учётом фиксированной навигации */
+      navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+          const href = link.getAttribute('href');
+          if (!href || !href.startsWith('#')) return;
+          const target = document.querySelector(href);
+          if (!target) return;
+          e.preventDefault();
+
+          const headerH = document.querySelector('.site-header')?.offsetHeight || 64;
+          const navH = document.querySelector('.site-nav')?.offsetHeight || 44;
+          const offset = headerH + navH + 12;
+          const top = target.getBoundingClientRect().top + window.pageYOffset - offset;
+
+          window.scrollTo({ top, behavior: 'smooth' });
+        });
+      });
+
+      /* Обновление активного пункта при скролле */
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const id = entry.target.getAttribute('id');
+          navLinks.forEach(link => {
+            link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+          });
+        });
+      }, {
+        rootMargin: '-25% 0px -65% 0px',
+        threshold: 0
+      });
+
+      sections.forEach(sec => observer.observe(sec));
+    }
+
+    /* ============================================================
+       КНОПКА "НАВЕРХ"
+       ============================================================ */
+    function initBackToTop() {
+      const btn = document.getElementById('backToTop');
+      if (!btn) return;
+
+      window.addEventListener('scroll', () => {
+        btn.classList.toggle('show', window.pageYOffset > 400);
+      }, { passive: true });
+
+      btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
+    /* ============================================================
+       ИНИЦИАЛИЗАЦИЯ
+       ============================================================ */
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSonnets();
+      initTheme();
+      initNavigation();
+      initBackToTop();
+    });
+  </script>
+</body>
+</html>
